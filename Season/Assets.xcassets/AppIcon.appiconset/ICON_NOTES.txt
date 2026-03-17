@@ -1,0 +1,10 @@
+Season app icon (first concept)
+
+Current master icon file:
+- season_app_icon_1024.png
+
+How to replace with final artwork:
+1. Keep a 1024x1024 PNG file.
+2. Replace season_app_icon_1024.png with your final image.
+3. Keep the same filename to avoid editing Contents.json.
+
