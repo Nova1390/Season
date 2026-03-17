@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var viewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
 
     var body: some View {
         List {
@@ -35,7 +36,11 @@ struct HomeView: View {
 
                     ForEach(items) { item in
                         NavigationLink {
-                            ProduceDetailView(item: item, viewModel: viewModel)
+                            ProduceDetailView(
+                                item: item,
+                                viewModel: viewModel,
+                                shoppingListViewModel: shoppingListViewModel
+                            )
                         } label: {
                             Text(item.displayName(languageCode: viewModel.localizer.languageCode))
                         }

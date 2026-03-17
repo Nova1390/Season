@@ -19,10 +19,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 enum AppTextKey: String {
     case homeTab
     case searchTab
+    case listTab
     case settingsTab
     case language
     case inSeasonNow
     case notInSeasonNow
+    case inSeason
+    case notInSeason
     case currentMonth
     case fruit
     case vegetables
@@ -31,6 +34,9 @@ enum AppTextKey: String {
     case seasonMonths
     case noResults
     case searchPlaceholder
+    case addToList
+    case alreadyInList
+    case shoppingListEmpty
 }
 
 struct AppLocalizer {
@@ -57,10 +63,13 @@ struct AppLocalizer {
         "en": [
             .homeTab: "Home",
             .searchTab: "Search",
+            .listTab: "List",
             .settingsTab: "Settings",
             .language: "Language",
             .inSeasonNow: "In season now",
             .notInSeasonNow: "Not in season now",
+            .inSeason: "In season",
+            .notInSeason: "Not in season",
             .currentMonth: "Current month",
             .fruit: "Fruit",
             .vegetables: "Vegetables",
@@ -68,15 +77,21 @@ struct AppLocalizer {
             .category: "Category",
             .seasonMonths: "Season months",
             .noResults: "No results",
-            .searchPlaceholder: "Search produce"
+            .searchPlaceholder: "Search produce",
+            .addToList: "Add to List",
+            .alreadyInList: "Already in List",
+            .shoppingListEmpty: "Your shopping list is empty."
         ],
         "it": [
             .homeTab: "Home",
             .searchTab: "Cerca",
+            .listTab: "Lista",
             .settingsTab: "Impostazioni",
             .language: "Lingua",
             .inSeasonNow: "Di stagione ora",
             .notInSeasonNow: "Fuori stagione ora",
+            .inSeason: "Di stagione",
+            .notInSeason: "Fuori stagione",
             .currentMonth: "Mese corrente",
             .fruit: "Frutta",
             .vegetables: "Verdure",
@@ -84,7 +99,10 @@ struct AppLocalizer {
             .category: "Categoria",
             .seasonMonths: "Mesi di stagione",
             .noResults: "Nessun risultato",
-            .searchPlaceholder: "Cerca prodotti"
+            .searchPlaceholder: "Cerca prodotti",
+            .addToList: "Aggiungi alla Lista",
+            .alreadyInList: "Già in Lista",
+            .shoppingListEmpty: "La tua lista della spesa è vuota."
         ]
     ]
 }

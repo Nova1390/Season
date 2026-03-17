@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @ObservedObject var viewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @State private var query = ""
 
     var body: some View {
@@ -14,7 +15,11 @@ struct SearchView: View {
             } else {
                 ForEach(results) { item in
                     NavigationLink {
-                        ProduceDetailView(item: item, viewModel: viewModel)
+                        ProduceDetailView(
+                            item: item,
+                            viewModel: viewModel,
+                            shoppingListViewModel: shoppingListViewModel
+                        )
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.displayName(languageCode: viewModel.localizer.languageCode))

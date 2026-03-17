@@ -3,21 +3,38 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
+    @StateObject private var shoppingListViewModel = ShoppingListViewModel()
 
     var body: some View {
         TabView {
             NavigationStack {
-                HomeView(viewModel: viewModel)
+                HomeView(
+                    viewModel: viewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
             }
             .tabItem {
                 Label(viewModel.localizer.text(.homeTab), systemImage: "house")
             }
 
             NavigationStack {
-                SearchView(viewModel: viewModel)
+                SearchView(
+                    viewModel: viewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
             }
             .tabItem {
                 Label(viewModel.localizer.text(.searchTab), systemImage: "magnifyingglass")
+            }
+
+            NavigationStack {
+                ShoppingListView(
+                    produceViewModel: viewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            }
+            .tabItem {
+                Label(viewModel.localizer.text(.listTab), systemImage: "list.bullet")
             }
 
             NavigationStack {
