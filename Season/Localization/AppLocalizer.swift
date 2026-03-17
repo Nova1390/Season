@@ -37,6 +37,8 @@ enum AppTextKey: String {
     case addToList
     case alreadyInList
     case shoppingListEmpty
+    case seasonalScore
+    case itemsInSeasonFormat
 }
 
 struct AppLocalizer {
@@ -80,7 +82,9 @@ struct AppLocalizer {
             .searchPlaceholder: "Search produce",
             .addToList: "Add to List",
             .alreadyInList: "Already in List",
-            .shoppingListEmpty: "Your shopping list is empty."
+            .shoppingListEmpty: "Your shopping list is empty.",
+            .seasonalScore: "Seasonal Score",
+            .itemsInSeasonFormat: "%d of %d items are currently in season"
         ],
         "it": [
             .homeTab: "Home",
@@ -102,7 +106,14 @@ struct AppLocalizer {
             .searchPlaceholder: "Cerca prodotti",
             .addToList: "Aggiungi alla Lista",
             .alreadyInList: "Già in Lista",
-            .shoppingListEmpty: "La tua lista della spesa è vuota."
+            .shoppingListEmpty: "La tua lista della spesa è vuota.",
+            .seasonalScore: "Punteggio Stagionale",
+            .itemsInSeasonFormat: "%d di %d elementi sono attualmente di stagione"
         ]
     ]
+
+    func itemsInSeasonText(inSeasonCount: Int, totalCount: Int) -> String {
+        let format = text(.itemsInSeasonFormat)
+        return String(format: format, inSeasonCount, totalCount)
+    }
 }
