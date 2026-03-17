@@ -14,7 +14,7 @@ struct ContentView: View {
                 )
             }
             .tabItem {
-                Label(viewModel.localizer.text(.homeTab), systemImage: "house")
+                Label(viewModel.localizer.text(.homeTab), systemImage: "house.fill")
             }
 
             NavigationStack {
@@ -34,7 +34,7 @@ struct ContentView: View {
                 )
             }
             .tabItem {
-                Label(viewModel.localizer.text(.listTab), systemImage: "list.bullet")
+                Label(viewModel.localizer.text(.listTab), systemImage: "cart.fill")
             }
 
             NavigationStack {
@@ -44,7 +44,7 @@ struct ContentView: View {
                 )
             }
             .tabItem {
-                Label(viewModel.localizer.text(.settingsTab), systemImage: "gearshape")
+                Label(viewModel.localizer.text(.settingsTab), systemImage: "gearshape.fill")
             }
         }
         .onAppear {

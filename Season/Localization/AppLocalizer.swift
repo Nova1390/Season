@@ -39,6 +39,11 @@ enum AppTextKey: String {
     case shoppingListEmpty
     case seasonalScore
     case itemsInSeasonFormat
+    case searchEmptyTitle
+    case searchEmptySubtitle
+    case shoppingListEmptyTitle
+    case shoppingListEmptySubtitle
+    case seasonalStatus
 }
 
 struct AppLocalizer {
@@ -84,7 +89,12 @@ struct AppLocalizer {
             .alreadyInList: "Already in List",
             .shoppingListEmpty: "Your shopping list is empty.",
             .seasonalScore: "Seasonal Score",
-            .itemsInSeasonFormat: "%d of %d items are currently in season"
+            .itemsInSeasonFormat: "%d of %d items are currently in season",
+            .searchEmptyTitle: "No matching produce",
+            .searchEmptySubtitle: "Try a different name or browse seasonal categories on Home.",
+            .shoppingListEmptyTitle: "Your list is empty",
+            .shoppingListEmptySubtitle: "Add produce from Home or Search to start planning.",
+            .seasonalStatus: "Seasonal status"
         ],
         "it": [
             .homeTab: "Home",
@@ -108,7 +118,12 @@ struct AppLocalizer {
             .alreadyInList: "Già in Lista",
             .shoppingListEmpty: "La tua lista della spesa è vuota.",
             .seasonalScore: "Punteggio Stagionale",
-            .itemsInSeasonFormat: "%d di %d elementi sono attualmente di stagione"
+            .itemsInSeasonFormat: "%d di %d elementi sono attualmente di stagione",
+            .searchEmptyTitle: "Nessun prodotto trovato",
+            .searchEmptySubtitle: "Prova un nome diverso o guarda le categorie stagionali nella Home.",
+            .shoppingListEmptyTitle: "La tua lista è vuota",
+            .shoppingListEmptySubtitle: "Aggiungi prodotti da Home o Cerca per iniziare.",
+            .seasonalStatus: "Stato stagionale"
         ]
     ]
 

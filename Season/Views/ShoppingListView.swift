@@ -7,37 +7,74 @@ struct ShoppingListView: View {
     var body: some View {
         List {
             if shoppingListViewModel.items.isEmpty {
-                Text(produceViewModel.localizer.text(.shoppingListEmpty))
-                    .foregroundStyle(.secondary)
+                EmptyStateCard(
+                    symbol: "cart",
+                    title: produceViewModel.localizer.text(.shoppingListEmptyTitle),
+                    subtitle: produceViewModel.localizer.text(.shoppingListEmptySubtitle)
+                )
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             } else {
-                Section(produceViewModel.localizer.text(.seasonalScore)) {
-                    Text("\(seasonalScore)%")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                Section {
+                    SeasonCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label(produceViewModel.localizer.text(.seasonalScore), systemImage: "leaf.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
 
-                    Text(
-                        produceViewModel.localizer.itemsInSeasonText(
-                            inSeasonCount: inSeasonCount,
-                            totalCount: shoppingListViewModel.items.count
-                        )
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
+                            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                                Text("\(seasonalScore)")
+                                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                                Text("%")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
 
-                ForEach(shoppingListViewModel.items) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.displayName(languageCode: produceViewModel.languageCode))
-                            .font(.body)
+                            ProgressView(value: Double(seasonalScore), total: 100)
+                                .tint(.green)
 
-                        Text(seasonStatus(for: item))
-                            .font(.caption)
+                            Text(
+                                produceViewModel.localizer.itemsInSeasonText(
+                                    inSeasonCount: inSeasonCount,
+                                    totalCount: shoppingListViewModel.items.count
+                                )
+                            )
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
+                        }
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
-                .onDelete(perform: shoppingListViewModel.remove)
+
+                Section {
+                    ForEach(shoppingListViewModel.items) { item in
+                        SeasonCard {
+                            HStack(alignment: .center, spacing: 14) {
+                                ProduceThumbnailView(item: item, size: 46)
+
+                                Text(item.displayName(languageCode: produceViewModel.languageCode))
+                                    .font(.body)
+
+                                Spacer()
+
+                                SeasonalStatusBadge(
+                                    isInSeason: item.isInSeason(month: produceViewModel.currentMonth),
+                                    localizer: produceViewModel.localizer
+                                )
+                            }
+                        }
+                        .padding(.vertical, 2)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
+                    .onDelete(perform: shoppingListViewModel.remove)
+                }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(produceViewModel.localizer.text(.listTab))
     }
 
@@ -54,11 +91,4 @@ struct ShoppingListView: View {
         return Int(percentage.rounded())
     }
 
-    private func seasonStatus(for item: ProduceItem) -> String {
-        if item.isInSeason(month: produceViewModel.currentMonth) {
-            return produceViewModel.localizer.text(.inSeason)
-        } else {
-            return produceViewModel.localizer.text(.notInSeason)
-        }
-    }
 }

@@ -6,7 +6,8 @@
     "localizedNames": {
       "en": "Apple",
       "it": "Mela"
-    }
+    },
+    "imageName": "apple"
   },
   {
     "id": "pear",
@@ -15,7 +16,8 @@
     "localizedNames": {
       "en": "Pear",
       "it": "Pera"
-    }
+    },
+    "imageName": "pear"
   },
   {
     "id": "strawberry",
@@ -24,7 +26,8 @@
     "localizedNames": {
       "en": "Strawberry",
       "it": "Fragola"
-    }
+    },
+    "imageName": "strawberry"
   },
   {
     "id": "peach",
@@ -33,7 +36,8 @@
     "localizedNames": {
       "en": "Peach",
       "it": "Pesca"
-    }
+    },
+    "imageName": "peach"
   },
   {
     "id": "tomato",
@@ -42,7 +46,8 @@
     "localizedNames": {
       "en": "Tomato",
       "it": "Pomodoro"
-    }
+    },
+    "imageName": "tomato"
   },
   {
     "id": "zucchini",
@@ -51,7 +56,8 @@
     "localizedNames": {
       "en": "Zucchini",
       "it": "Zucchina"
-    }
+    },
+    "imageName": "zucchini"
   },
   {
     "id": "spinach",
@@ -60,7 +66,8 @@
     "localizedNames": {
       "en": "Spinach",
       "it": "Spinaci"
-    }
+    },
+    "imageName": "spinach"
   },
   {
     "id": "cauliflower",
@@ -69,7 +76,8 @@
     "localizedNames": {
       "en": "Cauliflower",
       "it": "Cavolfiore"
-    }
+    },
+    "imageName": "cauliflower"
   },
   {
     "id": "potato",
@@ -78,7 +86,8 @@
     "localizedNames": {
       "en": "Potato",
       "it": "Patata"
-    }
+    },
+    "imageName": "potato"
   },
   {
     "id": "sweet_potato",
@@ -87,7 +96,8 @@
     "localizedNames": {
       "en": "Sweet Potato",
       "it": "Patata Dolce"
-    }
+    },
+    "imageName": "sweet_potato"
   },
   {
     "id": "carrot",
@@ -96,6 +106,7 @@
     "localizedNames": {
       "en": "Carrot",
       "it": "Carota"
-    }
+    },
+    "imageName": "carrot"
   }
 ]
