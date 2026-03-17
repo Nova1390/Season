@@ -1,0 +1,101 @@
+[
+  {
+    "id": "apple",
+    "category": "fruit",
+    "seasonMonths": [9, 10, 11, 12],
+    "localizedNames": {
+      "en": "Apple",
+      "it": "Mela"
+    }
+  },
+  {
+    "id": "pear",
+    "category": "fruit",
+    "seasonMonths": [9, 10, 11],
+    "localizedNames": {
+      "en": "Pear",
+      "it": "Pera"
+    }
+  },
+  {
+    "id": "strawberry",
+    "category": "fruit",
+    "seasonMonths": [4, 5, 6],
+    "localizedNames": {
+      "en": "Strawberry",
+      "it": "Fragola"
+    }
+  },
+  {
+    "id": "peach",
+    "category": "fruit",
+    "seasonMonths": [6, 7, 8],
+    "localizedNames": {
+      "en": "Peach",
+      "it": "Pesca"
+    }
+  },
+  {
+    "id": "tomato",
+    "category": "vegetable",
+    "seasonMonths": [6, 7, 8, 9],
+    "localizedNames": {
+      "en": "Tomato",
+      "it": "Pomodoro"
+    }
+  },
+  {
+    "id": "zucchini",
+    "category": "vegetable",
+    "seasonMonths": [6, 7, 8, 9],
+    "localizedNames": {
+      "en": "Zucchini",
+      "it": "Zucchina"
+    }
+  },
+  {
+    "id": "spinach",
+    "category": "vegetable",
+    "seasonMonths": [2, 3, 4, 10, 11],
+    "localizedNames": {
+      "en": "Spinach",
+      "it": "Spinaci"
+    }
+  },
+  {
+    "id": "cauliflower",
+    "category": "vegetable",
+    "seasonMonths": [10, 11, 12, 1, 2],
+    "localizedNames": {
+      "en": "Cauliflower",
+      "it": "Cavolfiore"
+    }
+  },
+  {
+    "id": "potato",
+    "category": "tuber",
+    "seasonMonths": [1, 2, 3, 9, 10, 11, 12],
+    "localizedNames": {
+      "en": "Potato",
+      "it": "Patata"
+    }
+  },
+  {
+    "id": "sweet_potato",
+    "category": "tuber",
+    "seasonMonths": [9, 10, 11, 12],
+    "localizedNames": {
+      "en": "Sweet Potato",
+      "it": "Patata Dolce"
+    }
+  },
+  {
+    "id": "carrot",
+    "category": "tuber",
+    "seasonMonths": [1, 2, 3, 10, 11, 12],
+    "localizedNames": {
+      "en": "Carrot",
+      "it": "Carota"
+    }
+  }
+]
