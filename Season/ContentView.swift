@@ -1,19 +1,35 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
+    private enum MainTab: Int {
+        case home
+        case search
+        case today
+        case account
+    }
+
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
     @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
+    @StateObject private var fridgeViewModel = FridgeViewModel()
+    @State private var selectedTab: MainTab = .home
+    @State private var showingCreateRecipe = false
+
+    init() {
+        UITabBar.appearance().isHidden = true
+    }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 HomeView(
                     viewModel: viewModel,
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .tag(MainTab.home)
             .tabItem {
                 Label(viewModel.localizer.text(.homeTab), systemImage: "house.fill")
             }
@@ -24,6 +40,7 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .tag(MainTab.search)
             .tabItem {
                 Label(viewModel.localizer.text(.searchTab), systemImage: "magnifyingglass")
             }
@@ -34,30 +51,86 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .tag(MainTab.today)
             .tabItem {
                 Label(viewModel.localizer.text(.todayTab), systemImage: "sun.max.fill")
             }
 
             NavigationStack {
-                ShoppingListView(
-                    produceViewModel: viewModel,
+                AccountView(
+                    selectedLanguage: $selectedLanguage,
+                    nutritionGoalsRaw: $nutritionGoalsRaw,
+                    viewModel: viewModel,
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .tag(MainTab.account)
             .tabItem {
-                Label(viewModel.localizer.text(.listTab), systemImage: "cart.fill")
+                Label(viewModel.localizer.text(.accountTab), systemImage: "person.crop.circle.fill")
             }
+        }
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color(.separator).opacity(0.35))
+                    .frame(height: 0.5)
 
-            NavigationStack {
-                SettingsView(
-                    selectedLanguage: $selectedLanguage,
-                    nutritionGoalsRaw: $nutritionGoalsRaw,
-                    localizer: viewModel.localizer
-                )
+                HStack(spacing: 0) {
+                    tabBarButton(
+                        tab: .home,
+                        title: viewModel.localizer.text(.homeTab),
+                        imageName: "house.fill"
+                    )
+
+                    tabBarButton(
+                        tab: .search,
+                        title: viewModel.localizer.text(.searchTab),
+                        imageName: "magnifyingglass"
+                    )
+
+                    Button {
+                        showingCreateRecipe = true
+                    } label: {
+                        VStack(spacing: 2) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundStyle(Color.primary)
+                                .frame(width: 26, height: 26)
+                                .background(
+                                    Circle()
+                                        .fill(Color(.tertiarySystemFill))
+                                )
+                            Text(viewModel.localizer.text(.createTab))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.primary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    tabBarButton(
+                        tab: .today,
+                        title: viewModel.localizer.text(.todayTab),
+                        imageName: "sun.max.fill"
+                    )
+
+                    tabBarButton(
+                        tab: .account,
+                        title: viewModel.localizer.text(.accountTab),
+                        imageName: "person.crop.circle.fill"
+                    )
+                }
+                .padding(.horizontal, 6)
+                .padding(.top, 6)
+                .padding(.bottom, 6)
             }
-            .tabItem {
-                Label(viewModel.localizer.text(.settingsTab), systemImage: "gearshape.fill")
-            }
+            .background(Color(.secondarySystemBackground))
+        }
+        .fullScreenCover(isPresented: $showingCreateRecipe) {
+            CreateRecipeView(viewModel: viewModel)
         }
         .onAppear {
             selectedLanguage = viewModel.setLanguage(selectedLanguage)
@@ -69,6 +142,27 @@ struct ContentView: View {
         .onChange(of: nutritionGoalsRaw) { _, newValue in
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(newValue)
         }
+        .environmentObject(fridgeViewModel)
+    }
+
+    private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {
+        let isActive = selectedTab == tab
+
+        return Button {
+            selectedTab = tab
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: imageName)
+                    .font(.system(size: 18, weight: isActive ? .bold : .semibold))
+                Text(title)
+                    .font(.caption2.weight(isActive ? .semibold : .regular))
+            }
+            .foregroundStyle(isActive ? Color.primary : Color.secondary.opacity(0.78))
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

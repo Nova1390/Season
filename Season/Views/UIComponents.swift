@@ -1,33 +1,99 @@
 import SwiftUI
 import UIKit
+import Foundation
+
+enum SeasonSpacing {
+    static let xs: CGFloat = 8
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 24
+}
+
+enum SeasonLayout {
+    // Keeps scroll content comfortably above the custom bottom navigation bar.
+    static let bottomBarContentClearance: CGFloat = 84
+}
 
 struct SeasonCard<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
         content
-            .padding(14)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground))
             )
     }
 }
 
+struct PressableCardButtonStyle: ButtonStyle {
+    var pressedScale: CGFloat = 0.97
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? pressedScale : 1.0)
+            .animation(.easeOut(duration: 0.18), value: configuration.isPressed)
+    }
+}
+
 struct SeasonalStatusBadge: View {
-    let isInSeason: Bool
+    let score: Double
+    let delta: Double
     let localizer: AppLocalizer
 
+    init(score: Double, delta: Double = 0, localizer: AppLocalizer) {
+        self.score = min(1.0, max(0.0, score))
+        self.delta = delta
+        self.localizer = localizer
+    }
+
+    init(isInSeason: Bool, localizer: AppLocalizer) {
+        self.score = isInSeason ? 0.72 : 0.10
+        self.delta = 0
+        self.localizer = localizer
+    }
+
     var body: some View {
-        Text(localizer.text(isInSeason ? .inSeason : .notInSeason))
+        Text(localizer.seasonalityPhaseTitle(phase))
             .font(.caption.weight(.bold))
-            .foregroundStyle(isInSeason ? Color.green : Color.orange)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(
-                Capsule(style: .continuous)
-                    .fill(isInSeason ? Color.green.opacity(0.18) : Color.orange.opacity(0.14))
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(backgroundColor)
             )
+    }
+
+    private var phase: SeasonalityPhase {
+        ProduceItem.seasonalityPhase(score: score, delta: delta)
+    }
+
+    private var foregroundColor: Color {
+        switch phase {
+        case .inSeason:
+            return Color(red: 0.16, green: 0.65, blue: 0.30)
+        case .earlySeason:
+            return Color(red: 0.24, green: 0.58, blue: 0.25)
+        case .endingSoon:
+            return Color(red: 0.84, green: 0.58, blue: 0.18)
+        case .outOfSeason:
+            return Color(red: 0.78, green: 0.36, blue: 0.33)
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch phase {
+        case .inSeason:
+            return Color(red: 0.16, green: 0.65, blue: 0.30).opacity(0.18)
+        case .earlySeason:
+            return Color(red: 0.24, green: 0.58, blue: 0.25).opacity(0.15)
+        case .endingSoon:
+            return Color(red: 0.84, green: 0.58, blue: 0.18).opacity(0.14)
+        case .outOfSeason:
+            return Color(red: 0.78, green: 0.36, blue: 0.33).opacity(0.13)
+        }
     }
 }
 
@@ -53,6 +119,40 @@ struct EmptyStateCard: View {
     }
 }
 
+struct UserBadgePill: View {
+    let badge: UserBadge
+    let localizer: AppLocalizer
+
+    var body: some View {
+        Label(localizer.userBadgeTitle(badge.kind), systemImage: badge.symbol)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(.tertiarySystemGroupedBackground))
+            )
+    }
+}
+
+struct RecipeDietaryTagPill: View {
+    let tag: RecipeDietaryTag
+    let localizer: AppLocalizer
+
+    var body: some View {
+        Text(localizer.dietaryTagTitle(tag))
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color(.tertiarySystemGroupedBackground))
+            )
+    }
+}
+
 func symbolName(for category: ProduceCategoryKey) -> String {
     switch category {
     case .fruit:
@@ -61,6 +161,8 @@ func symbolName(for category: ProduceCategoryKey) -> String {
         return "carrot.fill"
     case .tuber:
         return "square.grid.2x2.fill"
+    case .legume:
+        return "leaf.circle.fill"
     }
 }
 
@@ -72,6 +174,8 @@ func categoryAssetName(for category: ProduceCategoryKey) -> String {
         return "category_vegetable"
     case .tuber:
         return "category_tuber"
+    case .legume:
+        return "category_legume"
     }
 }
 
@@ -138,7 +242,7 @@ struct ProduceThumbnailView: View {
         let resolvedName = resolvedProduceImageName(for: item)
 
         ZStack {
-            Circle()
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color(.tertiarySystemGroupedBackground))
 
             if let resolvedName {
@@ -151,6 +255,7 @@ struct ProduceThumbnailView: View {
             }
         }
         .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -162,7 +267,7 @@ struct ProduceHeroImageView: View {
         let resolvedName = resolvedProduceImageName(for: item)
 
         ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
@@ -175,12 +280,129 @@ struct ProduceHeroImageView: View {
                 Image(resolvedName)
                     .resizable()
                     .scaledToFit()
-                    .padding(22)
+                    .padding(SeasonSpacing.md)
             } else {
                 CategoryIconView(category: item.category, size: 74)
             }
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
+    }
+}
+
+struct RecipeThumbnailView: View {
+    private let imageName: String?
+    private let recipe: Recipe?
+    var size: CGFloat = 52
+
+    init(imageName: String?, size: CGFloat = 52) {
+        self.imageName = imageName
+        self.recipe = nil
+        self.size = size
+    }
+
+    init(recipe: Recipe, size: CGFloat = 52) {
+        self.imageName = nil
+        self.recipe = recipe
+        self.size = size
+    }
+
+    var body: some View {
+        let legacyImageName = imageName ?? recipe?.coverImageName
+        let trimmedName = legacyImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hasImage = !trimmedName.isEmpty && hasAsset(named: trimmedName)
+
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.tertiarySystemGroupedBackground))
+
+            if let recipe, let cover = resolvedRecipeCoverImage(for: recipe), let image = recipeUIImage(from: cover) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else if hasImage {
+                Image(trimmedName)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else if let recipe,
+                      let cover = resolvedRecipeCoverImage(for: recipe),
+                      let remoteURLString = cover.remoteURL,
+                      let remoteURL = URL(string: remoteURLString) {
+                AsyncImage(url: remoteURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Image(systemName: "fork.knife.circle.fill")
+                            .font(.system(size: size * 0.45, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Image(systemName: "fork.knife.circle.fill")
+                    .font(.system(size: size * 0.45, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+func resolvedRecipeCoverImage(for recipe: Recipe) -> RecipeImage? {
+    recipe.coverImage
+}
+
+func recipeImageFileURL(for localPath: String?) -> URL? {
+    guard let localPath, !localPath.isEmpty else { return nil }
+    if localPath.hasPrefix("/") {
+        return URL(fileURLWithPath: localPath)
+    }
+    let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    return documentsURL?.appendingPathComponent(localPath)
+}
+
+func recipeUIImage(from image: RecipeImage) -> UIImage? {
+    guard let fileURL = recipeImageFileURL(for: image.localPath) else { return nil }
+    return UIImage(contentsOfFile: fileURL.path)
+}
+
+struct CartToolbarItems: ToolbarContent {
+    @ObservedObject var produceViewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
+    @EnvironmentObject private var fridgeViewModel: FridgeViewModel
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink {
+                ShoppingListView(
+                    produceViewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
+                Image(systemName: "bag")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(produceViewModel.localizer.text(.listTab))
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink {
+                FridgeView(
+                    produceViewModel: produceViewModel,
+                    fridgeViewModel: fridgeViewModel
+                )
+            } label: {
+                Image(systemName: "snowflake")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(produceViewModel.localizer.text(.fridgeTab))
+        }
     }
 }

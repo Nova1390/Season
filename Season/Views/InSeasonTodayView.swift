@@ -38,7 +38,8 @@ struct InSeasonTodayView: View {
                                 Spacer()
 
                                 SeasonalStatusBadge(
-                                    isInSeason: true,
+                                    score: ranked.item.seasonalityScore(month: viewModel.currentMonth),
+                                    delta: ranked.item.seasonalityDelta(month: viewModel.currentMonth),
                                     localizer: viewModel.localizer
                                 )
                             }
@@ -64,6 +65,15 @@ struct InSeasonTodayView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
         .navigationTitle(viewModel.localizer.text(.inSeasonTodayTitle))
+        .toolbar {
+            CartToolbarItems(
+                produceViewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel
+            )
+        }
+        .safeAreaInset(edge: .bottom) {
+            Color.clear
+                .frame(height: SeasonLayout.bottomBarContentClearance)
+        }
     }
 }
-

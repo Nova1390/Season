@@ -2,7 +2,13 @@
   {
     "id": "apple",
     "category": "fruit",
-    "seasonMonths": [9, 10, 11, 12],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      9,
+      10,
+      11,
+      12
+    ],
     "localizedNames": {
       "en": "Apple",
       "it": "Mela"
@@ -19,13 +25,27 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_NEEDED",
-    "nutritionMappingNote": "TODO: Exact USDA FDC mapping for generic apple with skin is ambiguous across cultivar records."
+    "nutritionReference": "USDA FDC: Apples, raw, with skin",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 182.0,
+      "g": 1.0
+    }
   },
   {
     "id": "pear",
     "category": "fruit",
-    "seasonMonths": [9, 10, 11],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      8,
+      9,
+      10,
+      11
+    ],
     "localizedNames": {
       "en": "Pear",
       "it": "Pera"
@@ -42,34 +62,231 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "FDC ID 169118"
+    "nutritionReference": "USDA FDC: Pears, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 178.0,
+      "g": 1.0
+    }
   },
   {
-    "id": "strawberry",
+    "id": "banana",
     "category": "fruit",
-    "seasonMonths": [4, 5, 6],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
     "localizedNames": {
-      "en": "Strawberry",
-      "it": "Fragola"
+      "en": "Banana",
+      "it": "Banana"
     },
-    "imageName": "strawberry",
+    "imageName": "banana",
     "nutrition": {
-      "calories": 32,
-      "protein": 0.67,
-      "carbs": 7.68,
-      "fat": 0.3,
-      "fiber": 2.0,
-      "vitaminC": 58.8,
-      "potassium": 153.0
+      "calories": 89,
+      "protein": 1.09,
+      "carbs": 22.84,
+      "fat": 0.33,
+      "fiber": 2.6,
+      "vitaminC": 8.7,
+      "potassium": 358.0
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "FDC ID 167762"
+    "nutritionReference": "USDA FDC: Bananas, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 118.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "orange",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      11,
+      12,
+      1,
+      2,
+      3,
+      4
+    ],
+    "localizedNames": {
+      "en": "Orange",
+      "it": "Arancia"
+    },
+    "imageName": "orange",
+    "nutrition": {
+      "calories": 47,
+      "protein": 0.94,
+      "carbs": 11.75,
+      "fat": 0.12,
+      "fiber": 2.4,
+      "vitaminC": 53.2,
+      "potassium": 181.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oranges, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 140.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "lemon",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Lemon",
+      "it": "Limone"
+    },
+    "imageName": "lemon",
+    "nutrition": {
+      "calories": 29,
+      "protein": 1.1,
+      "carbs": 9.32,
+      "fat": 0.3,
+      "fiber": 2.8,
+      "vitaminC": 53.0,
+      "potassium": 138.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Lemons, raw, without peel",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 84.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "kiwi",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      11,
+      12,
+      1,
+      2,
+      3,
+      4
+    ],
+    "localizedNames": {
+      "en": "Kiwi",
+      "it": "Kiwi"
+    },
+    "imageName": "kiwi",
+    "nutrition": {
+      "calories": 61,
+      "protein": 1.14,
+      "carbs": 14.66,
+      "fat": 0.52,
+      "fiber": 3.0,
+      "vitaminC": 92.7,
+      "potassium": 312.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Kiwifruit, green, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 76.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "grape",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      8,
+      9,
+      10
+    ],
+    "localizedNames": {
+      "en": "Grape",
+      "it": "Uva"
+    },
+    "imageName": "grapes",
+    "nutrition": {
+      "calories": 69,
+      "protein": 0.72,
+      "carbs": 18.1,
+      "fat": 0.16,
+      "fiber": 0.9,
+      "vitaminC": 3.2,
+      "potassium": 191.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Grapes, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 5.0
+    }
   },
   {
     "id": "peach",
     "category": "fruit",
-    "seasonMonths": [6, 7, 8],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
     "localizedNames": {
       "en": "Peach",
       "it": "Pesca"
@@ -86,12 +303,171 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "FDC ID 169928"
+    "nutritionReference": "USDA FDC: Peaches, yellow, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 150.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "apricot",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      5,
+      6,
+      7
+    ],
+    "localizedNames": {
+      "en": "Apricot",
+      "it": "Albicocca"
+    },
+    "imageName": "apricot",
+    "nutrition": {
+      "calories": 48,
+      "protein": 1.4,
+      "carbs": 11.12,
+      "fat": 0.39,
+      "fiber": 2.0,
+      "vitaminC": 10.0,
+      "potassium": 259.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Apricots, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 35.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "cherry",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      5,
+      6,
+      7
+    ],
+    "localizedNames": {
+      "en": "Cherry",
+      "it": "Ciliegia"
+    },
+    "imageName": "cherry",
+    "nutrition": {
+      "calories": 63,
+      "protein": 1.06,
+      "carbs": 16.01,
+      "fat": 0.2,
+      "fiber": 2.1,
+      "vitaminC": 7.0,
+      "potassium": 222.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cherries, sweet, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 8.0
+    }
+  },
+  {
+    "id": "strawberry",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      4,
+      5,
+      6
+    ],
+    "localizedNames": {
+      "en": "Strawberry",
+      "it": "Fragola"
+    },
+    "imageName": "strawberry",
+    "nutrition": {
+      "calories": 32,
+      "protein": 0.67,
+      "carbs": 7.68,
+      "fat": 0.3,
+      "fiber": 2.0,
+      "vitaminC": 58.8,
+      "potassium": 153.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Strawberries, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 12.0
+    }
+  },
+  {
+    "id": "blueberry",
+    "category": "fruit",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "localizedNames": {
+      "en": "Blueberry",
+      "it": "Mirtillo"
+    },
+    "imageName": "blueberry",
+    "nutrition": {
+      "calories": 57,
+      "protein": 0.74,
+      "carbs": 14.49,
+      "fat": 0.33,
+      "fiber": 2.4,
+      "vitaminC": 9.7,
+      "potassium": 77.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Blueberries, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 2.0
+    }
   },
   {
     "id": "tomato",
     "category": "vegetable",
-    "seasonMonths": [6, 7, 8, 9],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
     "localizedNames": {
       "en": "Tomato",
       "it": "Pomodoro"
@@ -108,12 +484,28 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "FDC ID 170457"
+    "nutritionReference": "USDA FDC: Tomatoes, red, ripe, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 123.0,
+      "g": 1.0
+    }
   },
   {
     "id": "zucchini",
     "category": "vegetable",
-    "seasonMonths": [6, 7, 8, 9],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
     "localizedNames": {
       "en": "Zucchini",
       "it": "Zucchina"
@@ -130,12 +522,143 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "FDC ID 169291"
+    "nutritionReference": "USDA FDC: Squash, summer, zucchini, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 196.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "eggplant",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Eggplant",
+      "it": "Melanzana"
+    },
+    "imageName": "eggplant",
+    "nutrition": {
+      "calories": 25,
+      "protein": 0.98,
+      "carbs": 5.88,
+      "fat": 0.18,
+      "fiber": 3.0,
+      "vitaminC": 2.2,
+      "potassium": 229.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Eggplant, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 458.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "cucumber",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Cucumber",
+      "it": "Cetriolo"
+    },
+    "imageName": "cucumber",
+    "nutrition": {
+      "calories": 15,
+      "protein": 0.65,
+      "carbs": 3.63,
+      "fat": 0.11,
+      "fiber": 0.5,
+      "vitaminC": 2.8,
+      "potassium": 147.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cucumber, with peel, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 201.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "bell_pepper",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "localizedNames": {
+      "en": "Bell pepper",
+      "it": "Peperone"
+    },
+    "imageName": "bell_pepper",
+    "nutrition": {
+      "calories": 31,
+      "protein": 1.0,
+      "carbs": 6.03,
+      "fat": 0.3,
+      "fiber": 2.1,
+      "vitaminC": 127.7,
+      "potassium": 211.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peppers, sweet, red, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 119.0,
+      "g": 1.0
+    }
   },
   {
     "id": "spinach",
     "category": "vegetable",
-    "seasonMonths": [2, 3, 4, 10, 11],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      2,
+      3,
+      4,
+      5,
+      9,
+      10,
+      11
+    ],
     "localizedNames": {
       "en": "Spinach",
       "it": "Spinaci"
@@ -152,78 +675,115 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_VERIFY"
+    "nutritionReference": "USDA FDC: Spinach, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 30.0
+    }
   },
   {
-    "id": "cauliflower",
+    "id": "lettuce",
     "category": "vegetable",
-    "seasonMonths": [10, 11, 12, 1, 2],
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "localizedNames": {
-      "en": "Cauliflower",
-      "it": "Cavolfiore"
+      "en": "Lettuce",
+      "it": "Lattuga"
     },
-    "imageName": "cauliflower",
+    "imageName": "lettuce",
+    "nutrition": {
+      "calories": 15,
+      "protein": 1.36,
+      "carbs": 2.87,
+      "fat": 0.15,
+      "fiber": 1.3,
+      "vitaminC": 9.2,
+      "potassium": 194.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Lettuce, green leaf, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 40.0
+    }
+  },
+  {
+    "id": "rocket",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "localizedNames": {
+      "en": "Rocket",
+      "it": "Rucola"
+    },
+    "imageName": "arugula",
     "nutrition": {
       "calories": 25,
-      "protein": 1.92,
-      "carbs": 4.97,
-      "fat": 0.28,
-      "fiber": 2.0,
-      "vitaminC": 48.2,
-      "potassium": 299.0
+      "protein": 2.58,
+      "carbs": 3.65,
+      "fat": 0.66,
+      "fiber": 1.6,
+      "vitaminC": 15.0,
+      "potassium": 369.0
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_VERIFY"
-  },
-  {
-    "id": "potato",
-    "category": "tuber",
-    "seasonMonths": [1, 2, 3, 9, 10, 11, 12],
-    "localizedNames": {
-      "en": "Potato",
-      "it": "Patata"
-    },
-    "imageName": "potato",
-    "nutrition": {
-      "calories": 77,
-      "protein": 2.05,
-      "carbs": 17.58,
-      "fat": 0.09,
-      "fiber": 2.1,
-      "vitaminC": 19.7,
-      "potassium": 425.0
-    },
-    "nutritionSource": "USDA FoodData Central",
-    "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_VERIFY"
-  },
-  {
-    "id": "sweet_potato",
-    "category": "tuber",
-    "seasonMonths": [9, 10, 11, 12],
-    "localizedNames": {
-      "en": "Sweet Potato",
-      "it": "Patata Dolce"
-    },
-    "imageName": "sweet_potato",
-    "nutrition": {
-      "calories": 86,
-      "protein": 1.57,
-      "carbs": 20.12,
-      "fat": 0.05,
-      "fiber": 3.0,
-      "vitaminC": 2.4,
-      "potassium": 337.0
-    },
-    "nutritionSource": "USDA FoodData Central",
-    "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_VERIFY"
+    "nutritionReference": "USDA FDC: Arugula, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 30.0
+    }
   },
   {
     "id": "carrot",
-    "category": "tuber",
-    "seasonMonths": [1, 2, 3, 10, 11, 12],
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      9,
+      10,
+      11,
+      12
+    ],
     "localizedNames": {
       "en": "Carrot",
       "it": "Carota"
@@ -240,6 +800,931 @@
     },
     "nutritionSource": "USDA FoodData Central",
     "nutritionBasis": "per_100g",
-    "nutritionReference": "TODO_USDA_FDC_REFERENCE_VERIFY"
+    "nutritionReference": "USDA FDC: Carrots, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 61.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "onion",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Onion",
+      "it": "Cipolla"
+    },
+    "imageName": "onion",
+    "nutrition": {
+      "calories": 40,
+      "protein": 1.1,
+      "carbs": 9.34,
+      "fat": 0.1,
+      "fiber": 1.7,
+      "vitaminC": 7.4,
+      "potassium": 146.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Onions, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 110.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "garlic",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "localizedNames": {
+      "en": "Garlic",
+      "it": "Aglio"
+    },
+    "imageName": "garlic",
+    "nutrition": {
+      "calories": 149,
+      "protein": 6.36,
+      "carbs": 33.06,
+      "fat": 0.5,
+      "fiber": 2.1,
+      "vitaminC": 31.2,
+      "potassium": 401.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Garlic, raw",
+    "defaultUnit": "clove",
+    "supportedUnits": [
+      "clove",
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "clove": 3.0,
+      "g": 1.0,
+      "piece": 3.0
+    }
+  },
+  {
+    "id": "celery",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      9,
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+    ],
+    "localizedNames": {
+      "en": "Celery",
+      "it": "Sedano"
+    },
+    "imageName": "celery",
+    "nutrition": {
+      "calories": 14,
+      "protein": 0.69,
+      "carbs": 2.97,
+      "fat": 0.17,
+      "fiber": 1.6,
+      "vitaminC": 3.1,
+      "potassium": 260.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Celery, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 40.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "broccoli",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+    ],
+    "localizedNames": {
+      "en": "Broccoli",
+      "it": "Broccoli"
+    },
+    "imageName": "broccoli",
+    "nutrition": {
+      "calories": 34,
+      "protein": 2.82,
+      "carbs": 6.64,
+      "fat": 0.37,
+      "fiber": 2.6,
+      "vitaminC": 89.2,
+      "potassium": 316.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Broccoli, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 150.0
+    }
+  },
+  {
+    "id": "cauliflower",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+    ],
+    "localizedNames": {
+      "en": "Cauliflower",
+      "it": "Cavolfiore"
+    },
+    "imageName": "cauliflower",
+    "nutrition": {
+      "calories": 25,
+      "protein": 1.92,
+      "carbs": 4.97,
+      "fat": 0.28,
+      "fiber": 2.0,
+      "vitaminC": 48.2,
+      "potassium": 299.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cauliflower, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 575.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "cabbage",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+    ],
+    "localizedNames": {
+      "en": "Cabbage",
+      "it": "Cavolo"
+    },
+    "imageName": "cabbage",
+    "nutrition": {
+      "calories": 25,
+      "protein": 1.28,
+      "carbs": 5.8,
+      "fat": 0.1,
+      "fiber": 2.5,
+      "vitaminC": 36.6,
+      "potassium": 170.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cabbage, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 900.0
+    }
+  },
+  {
+    "id": "leek",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+    ],
+    "localizedNames": {
+      "en": "Leek",
+      "it": "Porro"
+    },
+    "imageName": "leek",
+    "nutrition": {
+      "calories": 61,
+      "protein": 1.5,
+      "carbs": 14.15,
+      "fat": 0.3,
+      "fiber": 1.8,
+      "vitaminC": 12.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Leeks, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 89.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "fennel",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3,
+      4
+    ],
+    "localizedNames": {
+      "en": "Fennel",
+      "it": "Finocchio"
+    },
+    "nutrition": {
+      "calories": 31,
+      "protein": 1.24,
+      "carbs": 7.3,
+      "fat": 0.2,
+      "fiber": 3.1,
+      "vitaminC": 12.0,
+      "potassium": 414.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fennel, bulb, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 234.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "pumpkin",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Pumpkin",
+      "it": "Zucca"
+    },
+    "imageName": "pumpkin",
+    "nutrition": {
+      "calories": 26,
+      "protein": 1.0,
+      "carbs": 6.5,
+      "fat": 0.1,
+      "fiber": 0.5,
+      "vitaminC": 9.0,
+      "potassium": 340.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pumpkin, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 1000.0
+    }
+  },
+  {
+    "id": "asparagus",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "localizedNames": {
+      "en": "Asparagus",
+      "it": "Asparagi"
+    },
+    "nutrition": {
+      "calories": 20,
+      "protein": 2.2,
+      "carbs": 3.88,
+      "fat": 0.12,
+      "fiber": 2.1,
+      "vitaminC": 5.6,
+      "potassium": 202.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Asparagus, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 12.0
+    }
+  },
+  {
+    "id": "artichoke",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      11,
+      12,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "localizedNames": {
+      "en": "Artichoke",
+      "it": "Carciofo"
+    },
+    "imageName": "artichoke",
+    "nutrition": {
+      "calories": 47,
+      "protein": 3.27,
+      "carbs": 10.51,
+      "fat": 0.15,
+      "fiber": 5.4,
+      "vitaminC": 11.7,
+      "potassium": 370.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Artichokes, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 128.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "mushroom",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      9,
+      10,
+      11
+    ],
+    "localizedNames": {
+      "en": "Mushroom",
+      "it": "Fungo"
+    },
+    "imageName": "mushroom",
+    "nutrition": {
+      "calories": 22,
+      "protein": 3.09,
+      "carbs": 3.26,
+      "fat": 0.34,
+      "fiber": 1.0,
+      "vitaminC": 2.1,
+      "potassium": 318.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Mushrooms, white, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 18.0
+    }
+  },
+  {
+    "id": "potato",
+    "category": "tuber",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Potato",
+      "it": "Patata"
+    },
+    "imageName": "potato",
+    "nutrition": {
+      "calories": 77,
+      "protein": 2.05,
+      "carbs": 17.58,
+      "fat": 0.09,
+      "fiber": 2.1,
+      "vitaminC": 19.7,
+      "potassium": 425.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Potatoes, flesh and skin, raw",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 173.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "sweet_potato",
+    "category": "tuber",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      9,
+      10,
+      11,
+      12,
+      1,
+      2
+    ],
+    "localizedNames": {
+      "en": "Sweet potato",
+      "it": "Patata dolce"
+    },
+    "imageName": "sweet_potato",
+    "nutrition": {
+      "calories": 86,
+      "protein": 1.57,
+      "carbs": 20.12,
+      "fat": 0.05,
+      "fiber": 3.0,
+      "vitaminC": 2.4,
+      "potassium": 337.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sweet potato, raw, unprepared",
+    "defaultUnit": "piece",
+    "supportedUnits": [
+      "piece",
+      "g"
+    ],
+    "gramsPerUnit": {
+      "piece": 130.0,
+      "g": 1.0
+    }
+  },
+  {
+    "id": "green_beans",
+    "category": "legume",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Green beans",
+      "it": "Fagiolini"
+    },
+    "nutrition": {
+      "calories": 31,
+      "protein": 1.83,
+      "carbs": 6.97,
+      "fat": 0.22,
+      "fiber": 2.7,
+      "vitaminC": 12.2,
+      "potassium": 209.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beans, snap, green, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 5.0
+    }
+  },
+  {
+    "id": "peas",
+    "category": "legume",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      4,
+      5,
+      6
+    ],
+    "localizedNames": {
+      "en": "Peas",
+      "it": "Piselli"
+    },
+    "imageName": "peas",
+    "nutrition": {
+      "calories": 81,
+      "protein": 5.42,
+      "carbs": 14.45,
+      "fat": 0.4,
+      "fiber": 5.1,
+      "vitaminC": 40.0,
+      "potassium": 244.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peas, green, raw",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "piece"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "piece": 0.4
+    }
+  },
+  {
+    "id": "chickpeas",
+    "category": "legume",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Chickpeas",
+      "it": "Ceci"
+    },
+    "nutrition": {
+      "calories": 164,
+      "protein": 8.86,
+      "carbs": 27.42,
+      "fat": 2.59,
+      "fiber": 7.6,
+      "vitaminC": 1.3,
+      "potassium": 291.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Chickpeas (garbanzo beans), mature seeds, cooked, boiled",
+    "nutritionMappingNote": "Mapped to cooked chickpeas for everyday use; dry values differ significantly.",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tbsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tbsp": 10.0
+    }
+  },
+  {
+    "id": "lentils",
+    "category": "legume",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Lentils",
+      "it": "Lenticchie"
+    },
+    "nutrition": {
+      "calories": 116,
+      "protein": 9.02,
+      "carbs": 20.13,
+      "fat": 0.38,
+      "fiber": 7.9,
+      "vitaminC": 1.5,
+      "potassium": 369.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Lentils, mature seeds, cooked, boiled",
+    "nutritionMappingNote": "Mapped to cooked lentils for practicality; dry values are higher.",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tbsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tbsp": 12.0
+    }
+  },
+  {
+    "id": "beans",
+    "category": "legume",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Beans",
+      "it": "Fagioli"
+    },
+    "nutrition": {
+      "calories": 127,
+      "protein": 8.67,
+      "carbs": 22.8,
+      "fat": 0.54,
+      "fiber": 6.4,
+      "vitaminC": 0.0,
+      "potassium": 405.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beans, kidney, all types, mature seeds, cooked, boiled",
+    "nutritionMappingNote": "Generic bean entry mapped to cooked kidney bean profile.",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tbsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tbsp": 12.0
+    }
+  },
+  {
+    "id": "basil",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "localizedNames": {
+      "en": "Basil",
+      "it": "Basilico"
+    },
+    "nutrition": {
+      "calories": 23,
+      "protein": 3.15,
+      "carbs": 2.65,
+      "fat": 0.64,
+      "fiber": 1.6,
+      "vitaminC": 18.0,
+      "potassium": 295.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Basil, fresh",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tbsp",
+      "tsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tbsp": 2.5,
+      "tsp": 0.8
+    }
+  },
+  {
+    "id": "parsley",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Parsley",
+      "it": "Prezzemolo"
+    },
+    "nutrition": {
+      "calories": 36,
+      "protein": 2.97,
+      "carbs": 6.33,
+      "fat": 0.79,
+      "fiber": 3.3,
+      "vitaminC": 133.0,
+      "potassium": 554.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Parsley, fresh",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tbsp",
+      "tsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tbsp": 3.8,
+      "tsp": 1.2
+    }
+  },
+  {
+    "id": "rosemary",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Rosemary",
+      "it": "Rosmarino"
+    },
+    "nutrition": {
+      "calories": 131,
+      "protein": 3.31,
+      "carbs": 20.7,
+      "fat": 5.86,
+      "fiber": 14.1,
+      "vitaminC": 21.8,
+      "potassium": 668.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Rosemary, dried",
+    "nutritionMappingNote": "Fresh rosemary is more common in recipes; mapped using dried rosemary profile as conservative fallback.",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tsp",
+      "tbsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tsp": 1.0,
+      "tbsp": 3.0
+    }
+  },
+  {
+    "id": "thyme",
+    "category": "vegetable",
+    "ingredientQualityLevel": "core",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "localizedNames": {
+      "en": "Thyme",
+      "it": "Timo"
+    },
+    "nutrition": {
+      "calories": 101,
+      "protein": 5.56,
+      "carbs": 24.45,
+      "fat": 1.68,
+      "fiber": 14.0,
+      "vitaminC": 160.1,
+      "potassium": 609.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Thyme, dried",
+    "nutritionMappingNote": "Fresh thyme is common in home cooking; mapped to dried thyme USDA entry due clearer reference.",
+    "defaultUnit": "g",
+    "supportedUnits": [
+      "g",
+      "tsp",
+      "tbsp"
+    ],
+    "gramsPerUnit": {
+      "g": 1.0,
+      "tsp": 1.0,
+      "tbsp": 3.0
+    }
   }
 ]

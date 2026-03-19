@@ -1,52 +1,428 @@
 import Foundation
 import Combine
 
-final class ShoppingListViewModel: ObservableObject {
-    @Published private var itemIDs: [String] = []
+struct ShoppingListEntry: Identifiable, Codable, Hashable {
+    let id: String
+    let produceID: String?
+    let basicIngredientID: String?
+    let name: String
+    let quantity: String?
+    let sourceRecipeID: String?
+    let sourceRecipeTitle: String?
 
-    var items: [ProduceItem] {
-        itemIDs.compactMap { catalogByID[$0] }
+    var isCustom: Bool { produceID == nil && basicIngredientID == nil }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case produceID
+        case basicIngredientID
+        case name
+        case quantity
+        case sourceRecipeID
+        case sourceRecipeTitle
+    }
+
+    init(
+        id: String,
+        produceID: String?,
+        basicIngredientID: String?,
+        name: String,
+        quantity: String?,
+        sourceRecipeID: String?,
+        sourceRecipeTitle: String?
+    ) {
+        self.id = id
+        self.produceID = produceID
+        self.basicIngredientID = basicIngredientID
+        self.name = name
+        self.quantity = quantity
+        self.sourceRecipeID = sourceRecipeID
+        self.sourceRecipeTitle = sourceRecipeTitle
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        produceID = try container.decodeIfPresent(String.self, forKey: .produceID)
+        basicIngredientID = try container.decodeIfPresent(String.self, forKey: .basicIngredientID)
+        name = try container.decode(String.self, forKey: .name)
+        quantity = try container.decodeIfPresent(String.self, forKey: .quantity)
+        sourceRecipeID = try container.decodeIfPresent(String.self, forKey: .sourceRecipeID)
+        sourceRecipeTitle = try container.decodeIfPresent(String.self, forKey: .sourceRecipeTitle)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(produceID, forKey: .produceID)
+        try container.encodeIfPresent(basicIngredientID, forKey: .basicIngredientID)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(quantity, forKey: .quantity)
+        try container.encodeIfPresent(sourceRecipeID, forKey: .sourceRecipeID)
+        try container.encodeIfPresent(sourceRecipeTitle, forKey: .sourceRecipeTitle)
+    }
+
+    static func produce(
+        _ item: ProduceItem,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) -> ShoppingListEntry {
+        ShoppingListEntry(
+            id: "produce:\(item.id)",
+            produceID: item.id,
+            basicIngredientID: nil,
+            name: item.displayName(languageCode: "en"),
+            quantity: nil,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+    }
+
+    static func basic(
+        _ item: BasicIngredient,
+        quantity: String? = nil,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) -> ShoppingListEntry {
+        let normalizedQuantity = quantity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let quantityPart = normalizedQuantity?.lowercased() ?? ""
+        return ShoppingListEntry(
+            id: "basic:\(item.id)|\(quantityPart)",
+            produceID: nil,
+            basicIngredientID: item.id,
+            name: item.displayName(languageCode: "en"),
+            quantity: normalizedQuantity?.isEmpty == false ? normalizedQuantity : nil,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+    }
+
+    static func custom(
+        name: String,
+        quantity: String?,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) -> ShoppingListEntry {
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedQuantity = quantity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let quantityPart = normalizedQuantity?.lowercased() ?? ""
+        return ShoppingListEntry(
+            id: "custom:\(normalizedName.lowercased())|\(quantityPart)",
+            produceID: nil,
+            basicIngredientID: nil,
+            name: normalizedName,
+            quantity: normalizedQuantity?.isEmpty == false ? normalizedQuantity : nil,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+    }
+}
+
+final class ShoppingListViewModel: ObservableObject {
+    @Published private var entries: [ShoppingListEntry] = []
+
+    var items: [ShoppingListEntry] {
+        entries
     }
 
     private let catalogByID: [String: ProduceItem]
+    private let basicCatalogByID: [String: BasicIngredient]
     private let storage: UserDefaults
-    private let storageKey = "shoppingListItemIDs"
+    private let storageKey = "shoppingListEntries"
 
-    init(catalog: [ProduceItem] = ProduceStore.loadFromBundle(), storage: UserDefaults = .standard) {
+    init(
+        catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
+        basicCatalog: [BasicIngredient] = BasicIngredientCatalog.all,
+        storage: UserDefaults = .standard
+    ) {
         self.catalogByID = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        self.basicCatalogByID = Dictionary(uniqueKeysWithValues: basicCatalog.map { ($0.id, $0) })
         self.storage = storage
         load()
     }
 
-    func add(_ item: ProduceItem) {
+    func add(_ item: ProduceItem, sourceRecipeID: String? = nil, sourceRecipeTitle: String? = nil) {
         guard catalogByID[item.id] != nil else { return }
-        guard !contains(item) else { return }
-        itemIDs.append(item.id)
+        let entry = ShoppingListEntry.produce(item, sourceRecipeID: sourceRecipeID, sourceRecipeTitle: sourceRecipeTitle)
+        if contains(entry) {
+            if sourceRecipeID != nil || sourceRecipeTitle != nil {
+                attachRecipeSourceIfNeeded(
+                    toMatchingEntryID: entry.id,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+            }
+            return
+        }
+        entries.append(entry)
+        save()
+    }
+
+    func addCustom(
+        name: String,
+        quantity: String?,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) {
+        let entry = ShoppingListEntry.custom(
+            name: name,
+            quantity: quantity,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+        guard !entry.name.isEmpty else { return }
+        if contains(entry) {
+            if sourceRecipeID != nil || sourceRecipeTitle != nil {
+                attachRecipeSourceIfNeeded(
+                    toMatchingEntryID: entry.id,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+            }
+            return
+        }
+        entries.append(entry)
+        save()
+    }
+
+    func add(
+        _ item: BasicIngredient,
+        quantity: String? = nil,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) {
+        guard basicCatalogByID[item.id] != nil else { return }
+        let entry = ShoppingListEntry.basic(
+            item,
+            quantity: quantity,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+        if contains(entry) {
+            if sourceRecipeID != nil || sourceRecipeTitle != nil {
+                attachRecipeSourceIfNeeded(
+                    toMatchingEntryID: entry.id,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+            }
+            return
+        }
+        entries.append(entry)
         save()
     }
 
     func remove(_ item: ProduceItem) {
-        itemIDs.removeAll { $0 == item.id }
+        entries.removeAll { $0.produceID == item.id }
+        save()
+    }
+
+    func remove(_ item: BasicIngredient) {
+        entries.removeAll { $0.basicIngredientID == item.id }
+        save()
+    }
+
+    func remove(_ entry: ShoppingListEntry) {
+        entries.removeAll { $0.id == entry.id }
         save()
     }
 
     func remove(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
-            itemIDs.remove(at: index)
+            entries.remove(at: index)
         }
         save()
     }
 
     func contains(_ item: ProduceItem) -> Bool {
-        itemIDs.contains(item.id)
+        entries.contains { $0.produceID == item.id }
+    }
+
+    func contains(_ item: BasicIngredient) -> Bool {
+        entries.contains { $0.basicIngredientID == item.id }
+    }
+
+    func contains(_ entry: ShoppingListEntry) -> Bool {
+        entries.contains { $0.id == entry.id }
+    }
+
+    func containsCustom(named name: String) -> Bool {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return false }
+        return entries.contains { entry in
+            guard entry.produceID == nil && entry.basicIngredientID == nil else { return false }
+            return entry.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
+        }
+    }
+
+    func removeCustom(named name: String) {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return }
+        entries.removeAll { entry in
+            guard entry.produceID == nil && entry.basicIngredientID == nil else { return false }
+            return entry.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
+        }
+        save()
+    }
+
+    @discardableResult
+    func addAll(_ items: [ProduceItem]) -> (added: Int, alreadyInList: Int) {
+        var added = 0
+        var alreadyInList = 0
+
+        for item in items {
+            if contains(item) {
+                alreadyInList += 1
+            } else {
+                add(item)
+                added += 1
+            }
+        }
+
+        return (added, alreadyInList)
+    }
+
+    @discardableResult
+    func addAllRecipeIngredients(
+        _ ingredients: [RecipeIngredient],
+        sourceRecipeID: String?,
+        sourceRecipeTitle: String?,
+        produceLookup: (String) -> ProduceItem?,
+        basicLookup: (String) -> BasicIngredient?
+    ) -> (added: Int, alreadyInList: Int) {
+        var added = 0
+        var alreadyInList = 0
+
+        for ingredient in ingredients {
+            if let produceID = ingredient.produceID,
+               let produceItem = produceLookup(produceID) {
+                if contains(produceItem) {
+                    alreadyInList += 1
+                    attachRecipeSourceIfNeeded(
+                        toMatchingEntryID: ShoppingListEntry.produce(produceItem).id,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                } else {
+                    add(
+                        produceItem,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                    added += 1
+                }
+                continue
+            }
+
+            if let basicID = ingredient.basicIngredientID,
+               let basicItem = basicLookup(basicID) {
+                let basicEntry = ShoppingListEntry.basic(basicItem, quantity: ingredient.quantity)
+                if contains(basicItem) || contains(basicEntry) {
+                    alreadyInList += 1
+                    attachRecipeSourceIfNeeded(
+                        toMatchingEntryID: basicEntry.id,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                } else {
+                    add(
+                        basicItem,
+                        quantity: ingredient.quantity,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                    added += 1
+                }
+                continue
+            }
+
+            let customEntry = ShoppingListEntry.custom(name: ingredient.name, quantity: ingredient.quantity)
+            if contains(customEntry) {
+                alreadyInList += 1
+                attachRecipeSourceIfNeeded(
+                    toMatchingEntryID: customEntry.id,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+            } else {
+                addCustom(
+                    name: ingredient.name,
+                    quantity: ingredient.quantity,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+                added += 1
+            }
+        }
+
+        return (added, alreadyInList)
+    }
+
+    func resolveProduceItem(for entry: ShoppingListEntry) -> ProduceItem? {
+        guard let produceID = entry.produceID else { return nil }
+        return catalogByID[produceID]
+    }
+
+    func resolveBasicIngredient(for entry: ShoppingListEntry) -> BasicIngredient? {
+        guard let basicID = entry.basicIngredientID else { return nil }
+        return basicCatalogByID[basicID]
     }
 
     private func save() {
-        storage.set(itemIDs, forKey: storageKey)
+        let encoded = try? JSONEncoder().encode(entries)
+        storage.set(encoded, forKey: storageKey)
+    }
+
+    private func attachRecipeSourceIfNeeded(
+        toMatchingEntryID entryID: String,
+        sourceRecipeID: String?,
+        sourceRecipeTitle: String?
+    ) {
+        guard sourceRecipeID != nil || sourceRecipeTitle != nil else { return }
+        guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
+
+        let entry = entries[index]
+        guard entry.sourceRecipeID == nil && entry.sourceRecipeTitle == nil else { return }
+
+        entries[index] = ShoppingListEntry(
+            id: entry.id,
+            produceID: entry.produceID,
+            basicIngredientID: entry.basicIngredientID,
+            name: entry.name,
+            quantity: entry.quantity,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+        save()
     }
 
     private func load() {
-        let savedIDs = storage.stringArray(forKey: storageKey) ?? []
-        itemIDs = savedIDs.filter { catalogByID[$0] != nil }
+        guard let data = storage.data(forKey: storageKey) else {
+            // Backward compatibility with older list format based on pure produce IDs.
+            let oldIDs = storage.stringArray(forKey: "shoppingListItemIDs") ?? []
+            entries = oldIDs
+                .compactMap { catalogByID[$0] }
+                .map { ShoppingListEntry.produce($0) }
+            save()
+            return
+        }
+
+        guard let decoded = try? JSONDecoder().decode([ShoppingListEntry].self, from: data) else {
+            entries = []
+            return
+        }
+
+        entries = decoded.filter { entry in
+            if let produceID = entry.produceID {
+                return catalogByID[produceID] != nil
+            }
+            if let basicID = entry.basicIngredientID {
+                return basicCatalogByID[basicID] != nil
+            }
+            if entry.produceID == nil && entry.basicIngredientID == nil {
+                return !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            return false
+        }
     }
 }
