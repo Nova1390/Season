@@ -3,7 +3,6 @@ import SwiftUI
 struct SearchView: View {
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
-    @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
     @State private var query = ""
 
     var body: some View {
@@ -50,40 +49,43 @@ struct SearchView: View {
     @ViewBuilder
     private func ingredientsSection(results: [IngredientSearchResult]) -> some View {
         if !results.isEmpty {
-            Section(header: Text(viewModel.localizer.text(.ingredients)).textCase(nil)) {
+            Section(header: SectionTitleCountRow(
+                title: viewModel.localizer.text(.ingredients),
+                countText: String(format: viewModel.localizer.text(.ingredientsCountFormat), results.count)
+            ).textCase(nil)) {
                 ForEach(results) { result in
-                    SeasonCard {
-                        HStack(alignment: .center, spacing: 14) {
-                            ingredientThumbnail(for: result)
+                    HStack(alignment: .center, spacing: 12) {
+                        ingredientThumbnail(for: result)
 
-                            NavigationLink {
-                                ingredientDestination(for: result)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(result.title)
-                                        .font(.body)
-                                    Text(result.subtitle)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                if case .produce(let item) = result.source {
-                                    SeasonalStatusBadge(
-                                        score: item.seasonalityScore(month: viewModel.currentMonth),
-                                        delta: item.seasonalityDelta(month: viewModel.currentMonth),
-                                        localizer: viewModel.localizer
-                                    )
-                                }
+                        NavigationLink {
+                            ingredientDestination(for: result)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(result.title)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Text(result.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
                             }
-                            .buttonStyle(.plain)
-
-                            quickAddIngredientButton(for: result)
                         }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        if case .produce(let item) = result.source {
+                            SeasonalStatusBadge(
+                                score: item.seasonalityScore(month: viewModel.currentMonth),
+                                delta: item.seasonalityDelta(month: viewModel.currentMonth),
+                                localizer: viewModel.localizer
+                            )
+                        }
+
+                        quickAddIngredientButton(for: result)
                     }
-                    .padding(.vertical, 2)
-                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 4)
+                    .listRowSeparator(.visible)
                     .listRowBackground(Color.clear)
                 }
             }
@@ -93,57 +95,56 @@ struct SearchView: View {
     @ViewBuilder
     private func recipesSection(results: [RankedRecipe]) -> some View {
         if !results.isEmpty {
-            Section(header: Text(viewModel.localizer.text(.recipes)).textCase(nil)) {
+            Section(header: SectionTitleCountRow(
+                title: viewModel.localizer.text(.recipes),
+                countText: String(format: viewModel.localizer.text(.recipeCountFormat), results.count)
+            ).textCase(nil)) {
                 ForEach(results) { ranked in
-                    SeasonCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            NavigationLink {
-                                RecipeDetailView(
-                                    rankedRecipe: ranked,
-                                    viewModel: viewModel,
-                                    shoppingListViewModel: shoppingListViewModel,
-                                    isFollowingAuthor: isFollowing(author: ranked.recipe.author),
-                                    onToggleFollow: { toggleFollow(for: ranked.recipe.author) }
-                                )
-                            } label: {
-                                HStack(spacing: 12) {
-                                    RecipeThumbnailView(recipe: ranked.recipe, size: 48)
+                    VStack(alignment: .leading, spacing: 6) {
+                        NavigationLink {
+                            RecipeDetailView(
+                                rankedRecipe: ranked,
+                                viewModel: viewModel,
+                                shoppingListViewModel: shoppingListViewModel
+                            )
+                        } label: {
+                            HStack(spacing: 10) {
+                                RecipeThumbnailView(recipe: ranked.recipe, size: 44)
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(ranked.recipe.title)
-                                            .font(.body.weight(.semibold))
-                                            .lineLimit(2)
-                                            .foregroundStyle(.primary)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(ranked.recipe.title)
+                                        .font(.body.weight(.semibold))
+                                        .lineLimit(2)
+                                        .foregroundStyle(.primary)
 
-                                        Text(ranked.recipe.author)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
-
-                                    Spacer()
-
-                                    Text("\(ranked.seasonalMatchPercent)%")
-                                        .font(.caption.weight(.semibold))
+                                    Text(ranked.recipe.author)
+                                        .font(.caption)
                                         .foregroundStyle(.secondary)
+                                        .lineLimit(1)
                                 }
-                            }
-                            .buttonStyle(.plain)
 
-                            let confirmedDietaryTags = viewModel.confirmedDietaryTags(for: ranked.recipe)
-                            if !confirmedDietaryTags.isEmpty {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 6) {
-                                        ForEach(confirmedDietaryTags) { tag in
-                                            RecipeDietaryTagPill(tag: tag, localizer: viewModel.localizer)
-                                        }
+                                Spacer()
+
+                                Text("\(ranked.seasonalMatchPercent)%")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        let confirmedDietaryTags = viewModel.confirmedDietaryTags(for: ranked.recipe)
+                        if !confirmedDietaryTags.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) {
+                                    ForEach(confirmedDietaryTags) { tag in
+                                        RecipeDietaryTagPill(tag: tag, localizer: viewModel.localizer)
                                     }
                                 }
                             }
                         }
                     }
-                    .padding(.vertical, 2)
-                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 4)
+                    .listRowSeparator(.visible)
                     .listRowBackground(Color.clear)
                 }
             }
@@ -214,26 +215,4 @@ struct SearchView: View {
         }
     }
 
-    private var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map { String($0) }
-                .filter { !$0.isEmpty }
-        )
-    }
-
-    private func isFollowing(author: String) -> Bool {
-        followedAuthorsSet.contains(author)
-    }
-
-    private func toggleFollow(for author: String) {
-        var updated = followedAuthorsSet
-        if updated.contains(author) {
-            updated.remove(author)
-        } else {
-            updated.insert(author)
-        }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
-    }
 }

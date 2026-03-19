@@ -8,14 +8,13 @@ struct AccountView: View {
     @AppStorage("accountUsername") private var accountUsername = "Anna"
     @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
     @State private var showingCreateRecipeAlert = false
+    @State private var showNutritionPreferences = false
 
     var body: some View {
         List {
-            profileSection
-            savedRecipesSection
-            activeRecipesSection
-            archivedRecipesSection
-            settingsSection
+            profileHeaderSection
+            librarySection
+            preferencesSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -30,47 +29,45 @@ struct AccountView: View {
         }
     }
 
-    private var profileSection: some View {
+    private var profileHeaderSection: some View {
         Section(header: Text(viewModel.localizer.text(.profile)).textCase(nil)) {
-            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-                HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+                HStack(alignment: .top, spacing: 12) {
                     Circle()
                         .fill(Color(.tertiarySystemGroupedBackground))
-                        .frame(width: 52, height: 52)
+                        .frame(width: 68, height: 68)
                         .overlay(
                             Image(systemName: "person.fill")
-                                .font(.system(size: 20))
+                                .font(.system(size: 26, weight: .semibold))
                                 .foregroundStyle(.secondary)
                         )
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(accountUsername)
-                            .font(.title3.weight(.semibold))
-                        Text(viewModel.localizer.text(.accountTab))
+                            .font(.title2.weight(.semibold))
+                        Text("@\(accountUsername.lowercased())")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer()
                 }
 
-                HStack(spacing: 12) {
-                    profileStat(
-                        value: String(myRecipeTotalCount),
-                        label: String(format: viewModel.localizer.text(.recipeCountFormat), myRecipeTotalCount)
-                    )
-                    profileStat(
-                        value: String(followedAuthorsCount),
-                        label: String(format: viewModel.localizer.text(.followedAuthorsCountFormat), followedAuthorsCount)
-                    )
-                }
+                InlineStatsRow(
+                    stats: [
+                        String(format: viewModel.localizer.text(.recipeCountFormat), myRecipeTotalCount),
+                        String(format: viewModel.localizer.text(.followedAuthorsCountFormat), followedAuthorsCount),
+                        "\(savedRecipes.count) \(viewModel.localizer.text(.savedRecipes).lowercased())"
+                    ]
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.localizer.text(.badges))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
 
                     if myBadges.isEmpty {
                         Text(viewModel.localizer.text(.noBadgesYet))
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -83,20 +80,18 @@ struct AccountView: View {
                     }
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 6)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
         }
     }
 
-    private var savedRecipesSection: some View {
-        Section(header: Text(viewModel.localizer.text(.savedRecipes)).textCase(nil)) {
+    private var librarySection: some View {
+        Section(header: Text(viewModel.localizer.text(.myRecipes)).textCase(nil)) {
+            librarySubheader(title: viewModel.localizer.text(.savedRecipes), count: savedRecipes.count)
+
             if savedRecipes.isEmpty {
-                EmptyStateCard(
-                    symbol: "bookmark",
-                    title: viewModel.localizer.text(.savedRecipes),
-                    subtitle: viewModel.localizer.text(.savedRecipesEmptySubtitle)
-                )
+                libraryEmptyRow(symbol: "bookmark", subtitle: viewModel.localizer.text(.savedRecipesEmptySubtitle))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
@@ -104,17 +99,11 @@ struct AccountView: View {
                     recipeRow(ranked: ranked, managementMode: nil)
                 }
             }
-        }
-    }
 
-    private var activeRecipesSection: some View {
-        Section(header: Text(viewModel.localizer.text(.myRecipes)).textCase(nil)) {
+            librarySubheader(title: viewModel.localizer.text(.myRecipes), count: myActiveRankedRecipes.count)
+
             if myActiveRankedRecipes.isEmpty {
-                EmptyStateCard(
-                    symbol: "fork.knife",
-                    title: viewModel.localizer.text(.myRecipes),
-                    subtitle: viewModel.localizer.text(.noResults)
-                )
+                libraryEmptyRow(symbol: "fork.knife", subtitle: viewModel.localizer.text(.noResults))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
@@ -132,11 +121,9 @@ struct AccountView: View {
             .buttonStyle(.borderedProminent)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
-        }
-    }
 
-    private var archivedRecipesSection: some View {
-        Section(header: Text(viewModel.localizer.text(.archivedRecipes)).textCase(nil)) {
+            librarySubheader(title: viewModel.localizer.text(.archivedRecipes), count: myArchivedRankedRecipes.count)
+
             if myArchivedRankedRecipes.isEmpty {
                 Text(viewModel.localizer.text(.archivedRecipesEmptySubtitle))
                     .font(.footnote)
@@ -151,7 +138,7 @@ struct AccountView: View {
         }
     }
 
-    private var settingsSection: some View {
+    private var preferencesSection: some View {
         Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.text(.language), systemImage: "globe")
@@ -168,25 +155,34 @@ struct AccountView: View {
                 .pickerStyle(.segmented)
             }
             .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label(viewModel.localizer.text(.nutritionPreferences), systemImage: "heart.text.square")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                DisclosureGroup(isExpanded: $showNutritionPreferences) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(NutritionPriorityDimension.allCases) { dimension in
+                            preferenceRow(for: dimension)
+                        }
 
-                ForEach(NutritionPriorityDimension.allCases) { dimension in
-                    preferenceRow(for: dimension)
+                        Text(viewModel.localizer.text(.nutritionComparisonBasisNote))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Label(viewModel.localizer.text(.nutritionPreferences), systemImage: "heart.text.square")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
 
                 Text(viewModel.localizer.text(.nutritionPreferencesHint))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-
-                Text(viewModel.localizer.text(.nutritionComparisonBasisNote))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
             .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -201,9 +197,7 @@ struct AccountView: View {
             RecipeDetailView(
                 rankedRecipe: ranked,
                 viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel,
-                isFollowingAuthor: isFollowing(author: ranked.recipe.author),
-                onToggleFollow: { toggleFollow(for: ranked.recipe.author) }
+                shoppingListViewModel: shoppingListViewModel
             )
         } label: {
             HStack(spacing: 10) {
@@ -309,22 +303,29 @@ struct AccountView: View {
         ).count
     }
 
-    @ViewBuilder
-    private func profileStat(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.headline)
-            Text(label)
-                .font(.caption)
+    private func librarySubheader(title: String, count: Int) -> some View {
+        SectionTitleCountRow(
+            title: title,
+            countText: String(format: viewModel.localizer.text(.recipeCountFormat), count)
+        )
+        .padding(.top, 6)
+    }
+
+    private func libraryEmptyRow(symbol: String, subtitle: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(Color(.tertiarySystemGroupedBackground))
+                )
+
+            Text(subtitle)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(.tertiarySystemGroupedBackground))
-        )
     }
 
     private func preferenceRow(for dimension: NutritionPriorityDimension) -> some View {
@@ -352,26 +353,4 @@ struct AccountView: View {
         }
     }
 
-    private var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        )
-    }
-
-    private func isFollowing(author: String) -> Bool {
-        followedAuthorsSet.contains(author)
-    }
-
-    private func toggleFollow(for author: String) {
-        var updated = followedAuthorsSet
-        if updated.contains(author) {
-            updated.remove(author)
-        } else {
-            updated.insert(author)
-        }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
-    }
 }

@@ -1,6 +1,8 @@
 import Foundation
 
 enum RecipeStore {
+    private static var cachedRecipes: [Recipe]?
+
     static func loadProfiles() -> [UserProfile] {
         [
             UserProfile(id: "anna", name: "Anna"),
@@ -11,7 +13,11 @@ enum RecipeStore {
     }
 
     static func loadRecipes() -> [Recipe] {
-        [
+        if let cachedRecipes {
+            return cachedRecipes
+        }
+
+        let curated: [Recipe] = [
             Recipe(
                 id: "recipe_1",
                 title: "Spring Green Bowl",
@@ -58,7 +64,7 @@ enum RecipeStore {
                     RecipeIngredient(produceID: "lettuce", basicIngredientID: nil, quality: .coreSeasonal, name: "Lettuce", quantityValue: 150, quantityUnit: .g),
                     RecipeIngredient(produceID: "carrot", basicIngredientID: nil, quality: .coreSeasonal, name: "Carrot", quantityValue: 1, quantityUnit: .piece),
                     RecipeIngredient(produceID: nil, basicIngredientID: "olive_oil", quality: .basic, name: "Olive oil", quantityValue: 8, quantityUnit: .g),
-                    RecipeIngredient(produceID: nil, basicIngredientID: "garlic", quality: .basic, name: "Garlic", quantityValue: 2, quantityUnit: .clove)
+                    RecipeIngredient(produceID: "garlic", basicIngredientID: nil, quality: .coreSeasonal, name: "Garlic", quantityValue: 2, quantityUnit: .clove)
                 ],
                 preparationSteps: [
                     "Slice orange into thin rounds.",
@@ -95,7 +101,7 @@ enum RecipeStore {
                     RecipeIngredient(produceID: "sweet_potato", basicIngredientID: nil, quality: .coreSeasonal, name: "Sweet potato", quantityValue: 200, quantityUnit: .g),
                     RecipeIngredient(produceID: "onion", basicIngredientID: nil, quality: .coreSeasonal, name: "Onion", quantityValue: 1, quantityUnit: .piece),
                     RecipeIngredient(produceID: nil, basicIngredientID: "olive_oil", quality: .basic, name: "Olive oil", quantityValue: 1, quantityUnit: .tbsp),
-                    RecipeIngredient(produceID: nil, basicIngredientID: "garlic", quality: .basic, name: "Garlic", quantityValue: 2, quantityUnit: .clove)
+                    RecipeIngredient(produceID: "garlic", basicIngredientID: nil, quality: .coreSeasonal, name: "Garlic", quantityValue: 2, quantityUnit: .clove)
                 ],
                 preparationSteps: [
                     "Cut potatoes and onion into bite-sized pieces.",
@@ -203,7 +209,7 @@ enum RecipeStore {
                     RecipeIngredient(produceID: "pumpkin", basicIngredientID: nil, quality: .coreSeasonal, name: "Pumpkin", quantityValue: 300, quantityUnit: .g),
                     RecipeIngredient(produceID: "carrot", basicIngredientID: nil, quality: .coreSeasonal, name: "Carrot", quantityValue: 2, quantityUnit: .piece),
                     RecipeIngredient(produceID: "potato", basicIngredientID: nil, quality: .coreSeasonal, name: "Potato", quantityValue: 1, quantityUnit: .piece),
-                    RecipeIngredient(produceID: nil, basicIngredientID: "onion_basic", quality: .basic, name: "Onion", quantityValue: 80, quantityUnit: .g),
+                    RecipeIngredient(produceID: "onion", basicIngredientID: nil, quality: .coreSeasonal, name: "Onion", quantityValue: 80, quantityUnit: .g),
                     RecipeIngredient(produceID: nil, basicIngredientID: "butter", quality: .basic, name: "Butter", quantityValue: 8, quantityUnit: .g)
                 ],
                 preparationSteps: [
@@ -233,9 +239,342 @@ enum RecipeStore {
                 originalAuthorName: nil
             )
         ]
+
+        let seedRecipes = loadSeedRecipesFromBundle()
+        var seen = Set<String>()
+        let merged = (curated + seedRecipes).filter { recipe in
+            seen.insert(recipe.id).inserted
+        }
+        cachedRecipes = merged
+        return merged
     }
 
     private static func daysAgo(_ days: Int) -> Date {
         Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+    }
+
+    private static func loadSeedRecipesFromBundle() -> [Recipe] {
+        guard let url = Bundle.main.url(forResource: "seed_recipes", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let payloads = try? JSONDecoder().decode([SeedRecipePayload].self, from: data) else {
+            return []
+        }
+
+        let normalizer = SeedRecipeImportNormalizer(
+            produceByID: Dictionary(uniqueKeysWithValues: ProduceStore.loadFromBundle().map { ($0.id, $0) }),
+            basicByID: Dictionary(uniqueKeysWithValues: BasicIngredientCatalog.all.map { ($0.id, $0) })
+        )
+        let iso8601 = ISO8601DateFormatter()
+        return payloads.compactMap { payload in
+            let createdAt = iso8601.date(from: payload.createdAtISO8601) ?? Date()
+            let sourcePlatform = SocialSourcePlatform(rawValue: payload.sourcePlatform ?? "")
+            let sourceType = RecipeSourceType(rawValue: payload.sourceType) ?? .seedWeb
+            let dietaryTags = payload.dietaryTags.compactMap(RecipeDietaryTag.init(rawValue:))
+
+            let ingredients = payload.ingredients.map { ingredient in
+                normalizer.normalizedSeedIngredient(from: ingredient)
+            }
+
+            let images = payload.images.map { RecipeImage(id: $0.id, localPath: $0.localPath, remoteURL: $0.remoteURL) }
+            let coverImageID = images.contains(where: { $0.id == payload.coverImageID }) ? payload.coverImageID : images.first?.id
+
+            let servings = normalizer.normalizedServings(
+                payload.servings,
+                ingredientsCount: ingredients.count,
+                prepTimeMinutes: payload.prepTimeMinutes,
+                cookTimeMinutes: payload.cookTimeMinutes
+            )
+
+            return Recipe(
+                id: payload.id,
+                title: payload.title,
+                author: payload.author,
+                ingredients: ingredients,
+                preparationSteps: payload.preparationSteps,
+                prepTimeMinutes: payload.prepTimeMinutes,
+                cookTimeMinutes: payload.cookTimeMinutes,
+                difficulty: payload.difficulty.flatMap(RecipeDifficulty.init(rawValue:)),
+                servings: servings,
+                crispy: payload.crispy,
+                dietaryTags: dietaryTags,
+                seasonalMatchPercent: payload.seasonalMatchPercent,
+                createdAt: createdAt,
+                externalMedia: [],
+                images: images,
+                coverImageID: coverImageID,
+                coverImageName: payload.coverImageName,
+                mediaLinkURL: payload.mediaLinkURL,
+                sourceURL: payload.sourceURL,
+                sourceName: payload.sourceName,
+                sourcePlatform: sourcePlatform,
+                sourceCaptionRaw: payload.sourceCaptionRaw,
+                importedFromSocial: payload.importedFromSocial,
+                sourceType: sourceType,
+                isUserGenerated: payload.isUserGenerated,
+                imageURL: payload.imageURL,
+                imageSource: payload.imageSource,
+                attributionText: payload.attributionText,
+                isRemix: payload.isRemix,
+                originalRecipeID: payload.originalRecipeID,
+                originalRecipeTitle: payload.originalRecipeTitle,
+                originalAuthorName: payload.originalAuthorName
+            )
+        }
+    }
+}
+
+private struct SeedRecipePayload: Codable {
+    let id: String
+    let title: String
+    let author: String
+    let ingredients: [SeedIngredientPayload]
+    let preparationSteps: [String]
+    let prepTimeMinutes: Int?
+    let cookTimeMinutes: Int?
+    let servings: Int?
+    let difficulty: String?
+    let crispy: Int
+    let dietaryTags: [String]
+    let seasonalMatchPercent: Int
+    let createdAtISO8601: String
+    let images: [SeedRecipeImagePayload]
+    let coverImageID: String?
+    let coverImageName: String?
+    let mediaLinkURL: String?
+    let sourceURL: String?
+    let sourceName: String?
+    let sourcePlatform: String?
+    let sourceCaptionRaw: String?
+    let importedFromSocial: Bool
+    let sourceType: String
+    let isUserGenerated: Bool
+    let imageURL: String?
+    let imageSource: String?
+    let attributionText: String?
+    let isRemix: Bool
+    let originalRecipeID: String?
+    let originalRecipeTitle: String?
+    let originalAuthorName: String?
+}
+
+private struct SeedIngredientPayload: Codable {
+    let produceID: String?
+    let basicIngredientID: String?
+    let quality: String
+    let name: String
+    let quantityValue: Double
+    let quantityUnit: String
+    let rawIngredientLine: String?
+    let mappingConfidence: String
+}
+
+private struct SeedRecipeImagePayload: Codable {
+    let id: String
+    let localPath: String?
+    let remoteURL: String?
+}
+
+private struct SeedRecipeImportNormalizer {
+    let produceByID: [String: ProduceItem]
+    let basicByID: [String: BasicIngredient]
+
+    func normalizedSeedIngredient(from payload: SeedIngredientPayload) -> RecipeIngredient {
+        let mappedUnit = RecipeQuantityUnit(rawValue: payload.quantityUnit) ?? .piece
+        var normalized = normalizedQuantityAndUnit(
+            from: payload.rawIngredientLine,
+            fallbackValue: payload.quantityValue,
+            fallbackUnit: mappedUnit
+        )
+
+        let unitProfile = unitProfile(forProduceID: payload.produceID, basicID: payload.basicIngredientID)
+        normalized = normalizedToUnitProfile(
+            normalized,
+            profile: unitProfile,
+            ingredientName: payload.name
+        )
+
+        return RecipeIngredient(
+            produceID: payload.produceID,
+            basicIngredientID: payload.basicIngredientID,
+            quality: RecipeIngredientQuality(rawValue: payload.quality) ?? .basic,
+            name: payload.name,
+            quantityValue: normalized.value,
+            quantityUnit: normalized.unit,
+            rawIngredientLine: payload.rawIngredientLine,
+            mappingConfidence: RecipeIngredientMappingConfidence(rawValue: payload.mappingConfidence) ?? .unmapped
+        )
+    }
+
+    func normalizedServings(
+        _ payloadValue: Int?,
+        ingredientsCount: Int,
+        prepTimeMinutes: Int?,
+        cookTimeMinutes: Int?
+    ) -> Int {
+        if let payloadValue, payloadValue > 0 {
+            return min(12, max(1, payloadValue))
+        }
+
+        let totalMinutes = (prepTimeMinutes ?? 0) + (cookTimeMinutes ?? 0)
+        if ingredientsCount <= 4 && totalMinutes <= 20 {
+            return 2
+        }
+        if ingredientsCount <= 8 {
+            return 4
+        }
+        return 6
+    }
+
+    private func unitProfile(forProduceID produceID: String?, basicID: String?) -> IngredientUnitProfile? {
+        if let produceID,
+           let produce = produceByID[produceID],
+           let defaultUnit = produce.defaultUnit {
+            let supported = produce.supportedUnits ?? [defaultUnit]
+            var grams: [RecipeQuantityUnit: Double] = [:]
+            var ml: [RecipeQuantityUnit: Double] = [:]
+            for (rawUnit, value) in produce.gramsPerUnit ?? [:] {
+                if let unit = RecipeQuantityUnit(rawValue: rawUnit) {
+                    grams[unit] = value
+                }
+            }
+            for (rawUnit, value) in produce.mlPerUnit ?? [:] {
+                if let unit = RecipeQuantityUnit(rawValue: rawUnit) {
+                    ml[unit] = value
+                }
+            }
+            if grams[.g] == nil { grams[.g] = 1 }
+            if ml[.ml] == nil { ml[.ml] = 1 }
+            return IngredientUnitProfile(
+                defaultUnit: defaultUnit,
+                supportedUnits: supported,
+                gramsPerUnit: grams,
+                mlPerUnit: ml,
+                gramsPerMl: produce.gramsPerMl
+            )
+        }
+
+        if let basicID, let basic = basicByID[basicID] {
+            return basic.unitProfile
+        }
+
+        return nil
+    }
+
+    private func normalizedToUnitProfile(
+        _ quantity: (value: Double, unit: RecipeQuantityUnit),
+        profile: IngredientUnitProfile?,
+        ingredientName: String
+    ) -> (value: Double, unit: RecipeQuantityUnit) {
+        guard let profile else {
+            return (max(0.1, quantity.value), quantity.unit)
+        }
+
+        var value = quantity.value
+        var unit = quantity.unit
+
+        let shouldAvoidPiece = profile.defaultUnit == .g || profile.defaultUnit == .ml
+        if unit == .piece && shouldAvoidPiece {
+            if let converted = convert(value: value, from: unit, to: profile.defaultUnit, profile: profile) {
+                value = converted
+                unit = profile.defaultUnit
+            } else if ingredientName.lowercased() != "onion" && ingredientName.lowercased() != "garlic" {
+                value *= 100
+                unit = profile.defaultUnit
+            }
+        } else if !profile.supportedUnits.contains(unit) {
+            if let converted = convert(value: value, from: unit, to: profile.defaultUnit, profile: profile) {
+                value = converted
+            } else {
+                value = max(0.1, value)
+            }
+            unit = profile.defaultUnit
+        }
+
+        return (roundedQuantityValue(value), unit)
+    }
+
+    private func convert(
+        value: Double,
+        from sourceUnit: RecipeQuantityUnit,
+        to targetUnit: RecipeQuantityUnit,
+        profile: IngredientUnitProfile
+    ) -> Double? {
+        let safeValue = max(0.0001, value)
+        if sourceUnit == targetUnit { return safeValue }
+
+        if targetUnit == .g {
+            if sourceUnit == .ml {
+                return safeValue * (profile.gramsPerMl ?? 1)
+            }
+            if let grams = profile.gramsPerUnit[sourceUnit] {
+                return safeValue * grams
+            }
+            if let ml = profile.mlPerUnit[sourceUnit] {
+                return safeValue * ml * (profile.gramsPerMl ?? 1)
+            }
+        }
+
+        if targetUnit == .ml {
+            if sourceUnit == .g {
+                return safeValue / (profile.gramsPerMl ?? 1)
+            }
+            if let ml = profile.mlPerUnit[sourceUnit] {
+                return safeValue * ml
+            }
+            if let grams = profile.gramsPerUnit[sourceUnit] {
+                return (safeValue * grams) / (profile.gramsPerMl ?? 1)
+            }
+        }
+
+        if sourceUnit == .tbsp && targetUnit == .g { return safeValue * 15 }
+        if sourceUnit == .tsp && targetUnit == .g { return safeValue * 5 }
+        if sourceUnit == .tbsp && targetUnit == .ml { return safeValue * 15 }
+        if sourceUnit == .tsp && targetUnit == .ml { return safeValue * 5 }
+        if sourceUnit == .piece && targetUnit == .g { return safeValue * 100 }
+        if sourceUnit == .piece && targetUnit == .ml { return safeValue * 100 }
+
+        return nil
+    }
+
+    private func normalizedQuantityAndUnit(
+        from rawIngredientLine: String?,
+        fallbackValue: Double,
+        fallbackUnit: RecipeQuantityUnit
+    ) -> (value: Double, unit: RecipeQuantityUnit) {
+        guard let raw = rawIngredientLine?.lowercased() else {
+            return (max(0.1, fallbackValue), fallbackUnit)
+        }
+
+        let value = parsedFirstNumber(in: raw) ?? max(0.1, fallbackValue)
+        if raw.contains("kg") { return (value * 1000, .g) }
+        if raw.contains("lb") { return (value * 453.6, .g) }
+        if raw.contains("oz") { return (value * 28.35, .g) }
+        if raw.contains("ml") { return (value, .ml) }
+        if raw.contains(" g") || raw.contains("g ") || raw.hasSuffix("g") { return (value, .g) }
+        if raw.contains("tbsp") || raw.contains(" tbs") || raw.contains("tablespoon") { return (value, .tbsp) }
+        if raw.contains("tsp") || raw.contains("teaspoon") { return (value, .tsp) }
+        if raw.contains("clove") { return (value, .clove) }
+        if raw.contains("cup") { return (value * 240, .ml) }
+
+        return (max(0.1, fallbackValue), fallbackUnit)
+    }
+
+    private func parsedFirstNumber(in raw: String) -> Double? {
+        let pattern = #"(\d+(?:[\.,]\d+)?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let nsRange = NSRange(raw.startIndex..<raw.endIndex, in: raw)
+        guard let match = regex.firstMatch(in: raw, range: nsRange),
+              let range = Range(match.range(at: 1), in: raw) else { return nil }
+        let token = raw[range].replacingOccurrences(of: ",", with: ".")
+        return Double(token)
+    }
+
+    private func roundedQuantityValue(_ value: Double) -> Double {
+        let clamped = max(0.1, value)
+        let rounded = (clamped * 10).rounded() / 10
+        if rounded >= 10 {
+            return rounded.rounded()
+        }
+        return rounded
     }
 }

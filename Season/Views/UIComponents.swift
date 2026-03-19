@@ -136,6 +136,50 @@ struct UserBadgePill: View {
     }
 }
 
+struct InlineStatsRow: View {
+    let stats: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(stats.enumerated()), id: \.offset) { index, value in
+                    Text(value)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    if index < stats.count - 1 {
+                        Circle()
+                            .fill(Color.secondary.opacity(0.35))
+                            .frame(width: 3, height: 3)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct SectionTitleCountRow: View {
+    let title: String
+    let countText: String?
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Spacer()
+            if let countText {
+                Text(countText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+}
+
 struct RecipeDietaryTagPill: View {
     let tag: RecipeDietaryTag
     let localizer: AppLocalizer

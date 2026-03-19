@@ -39,6 +39,7 @@ struct BasicIngredient: Identifiable, Hashable {
     let nutritionBasis: NutritionBasis
     let nutritionReference: String?
     let nutritionMappingNote: String?
+    let nutritionMappingConfidence: NutritionMappingConfidence
     let unitProfile: IngredientUnitProfile
     let dietaryFlags: BasicIngredientDietaryFlags
 

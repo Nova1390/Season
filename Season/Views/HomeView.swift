@@ -33,8 +33,8 @@ struct HomeView: View {
             }
 
             topRightActions
-                .padding(.top, 10)
-                .padding(.trailing, SeasonSpacing.sm)
+                .padding(.top, 6)
+                .padding(.trailing, SeasonSpacing.md)
         }
         .onAppear(perform: refreshHomeFeedCache)
         .onChange(of: cacheSignature) {
@@ -48,7 +48,7 @@ struct HomeView: View {
     }
 
     private var topRightActions: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             NavigationLink {
                 FridgeView(
                     produceViewModel: viewModel,
@@ -56,8 +56,8 @@ struct HomeView: View {
                 )
             } label: {
                 Image(systemName: "snowflake")
-                    .font(.system(size: 19, weight: .semibold))
-                    .frame(width: 38, height: 38)
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 40, height: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -69,12 +69,13 @@ struct HomeView: View {
                 )
             } label: {
                 Image(systemName: "bag")
-                    .font(.system(size: 19, weight: .semibold))
-                    .frame(width: 38, height: 38)
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 40, height: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 2)
     }
 
     @ViewBuilder
@@ -90,9 +91,7 @@ struct HomeView: View {
                         RecipeDetailView(
                             rankedRecipe: featured,
                             viewModel: viewModel,
-                            shoppingListViewModel: shoppingListViewModel,
-                            isFollowingAuthor: false,
-                            onToggleFollow: {}
+                            shoppingListViewModel: shoppingListViewModel
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 10) {
@@ -133,7 +132,7 @@ struct HomeView: View {
     private var fromFridgeSection: some View {
         VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
             HStack {
-                Text(viewModel.localizer.text(.fromYourFridge))
+                Text(viewModel.localizer.text(.quickActionCookNowFromFridge))
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
@@ -144,7 +143,7 @@ struct HomeView: View {
                         fridgeViewModel: fridgeViewModel
                     )
                 } label: {
-                    Text(viewModel.localizer.text(.viewRecipeAction))
+                    Text(viewModel.localizer.text(.cookNowAction))
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.plain)
@@ -164,8 +163,8 @@ struct HomeView: View {
                 )
             } else {
                 VStack(spacing: SeasonSpacing.sm) {
-                    ForEach(fridgeMatches) { match in
-                        fridgeSuggestionCard(match)
+                    ForEach(Array(fridgeMatches.enumerated()), id: \.element.id) { index, match in
+                        fridgeSuggestionCard(match, emphasize: index == 0)
                     }
                 }
             }
@@ -239,8 +238,8 @@ struct HomeView: View {
             .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
             .animation(.easeInOut(duration: 0.18), value: selectedQuickFilter)
 
-            ForEach(continuousEditorialBlocks) { block in
-                switch block {
+            ForEach(indexedContinuousEditorialBlocks) { indexedBlock in
+                switch indexedBlock.block {
                 case .largeRecipe(let card):
                     largeRecipeCard(ranked: card.ranked, hook: card.hook)
                 case .compactPair(let first, let second):
@@ -253,6 +252,12 @@ struct HomeView: View {
                     fridgeSuggestionCard(match)
                 }
             }
+        }
+    }
+
+    private var indexedContinuousEditorialBlocks: [IndexedContinuousBlock] {
+        continuousEditorialBlocks.enumerated().map { index, block in
+            IndexedContinuousBlock(id: "\(index)-\(block.identityKey)", block: block)
         }
     }
 
@@ -485,7 +490,7 @@ struct HomeView: View {
     ) -> [RankedRecipe] {
         candidates
             .map { ranked in
-                let baseScore = viewModel.homeRankingScore(for: ranked.recipe)
+                let baseScore = min(1.0, max(0.0, ranked.score / 100.0))
                 let boost = smartSuggestionBoost(for: filter, ranked: ranked, fridgeItemIDs: fridgeItemIDs)
                 return (ranked: ranked, score: baseScore + boost)
             }
@@ -542,7 +547,7 @@ struct HomeView: View {
 
     private func featuredSelectionScore(for ranked: RankedRecipe, fridgeItemIDs: Set<String>) -> Double {
         let recipe = ranked.recipe
-        let home = viewModel.homeRankingScore(for: recipe)
+        let home = min(1.0, max(0.0, ranked.score / 100.0))
         let seasonal = Double(ranked.seasonalMatchPercent) / 100.0
         let trending = (0.6 * viewModel.crispyScore(for: recipe)) + (0.4 * viewModel.viewsScore(for: recipe))
         let fridge = fridgeItemIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: recipe, fridgeItemIDs: fridgeItemIDs)
@@ -900,7 +905,9 @@ struct HomeView: View {
 
     private func debugHomeFeed(_ message: String) {
         #if DEBUG
-        print("HOME FEED DEBUG: \(message)")
+        if ProcessInfo.processInfo.environment["SEASON_HOME_DEBUG"] == "1" {
+            print("HOME FEED DEBUG: \(message)")
+        }
         #endif
     }
 
@@ -960,9 +967,7 @@ struct HomeView: View {
                 RecipeDetailView(
                     rankedRecipe: ranked,
                     viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel,
-                    isFollowingAuthor: false,
-                    onToggleFollow: {}
+                    shoppingListViewModel: shoppingListViewModel
                 )
             } label: {
                 VStack(alignment: .leading, spacing: 8) {
@@ -992,9 +997,7 @@ struct HomeView: View {
                 RecipeDetailView(
                     rankedRecipe: ranked,
                     viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel,
-                    isFollowingAuthor: false,
-                    onToggleFollow: {}
+                    shoppingListViewModel: shoppingListViewModel
                 )
             } label: {
                 HStack(spacing: 10) {
@@ -1035,9 +1038,7 @@ struct HomeView: View {
                 RecipeDetailView(
                     rankedRecipe: ranked,
                     viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel,
-                    isFollowingAuthor: false,
-                    onToggleFollow: {}
+                    shoppingListViewModel: shoppingListViewModel
                 )
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
@@ -1059,15 +1060,13 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func fridgeSuggestionCard(_ match: FridgeMatchedRecipe) -> some View {
+    private func fridgeSuggestionCard(_ match: FridgeMatchedRecipe, emphasize: Bool = false) -> some View {
         SeasonCard {
             NavigationLink {
                 RecipeDetailView(
                     rankedRecipe: match.rankedRecipe,
                     viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel,
-                    isFollowingAuthor: false,
-                    onToggleFollow: {}
+                    shoppingListViewModel: shoppingListViewModel
                 )
             } label: {
                 HStack(spacing: 10) {
@@ -1075,17 +1074,18 @@ struct HomeView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(match.rankedRecipe.recipe.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(emphasize ? .body.weight(.semibold) : .subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
 
                         Text(fridgePrimaryMessage(for: match))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(emphasize ? .primary : .secondary)
+                            .lineLimit(1)
                     }
                     Spacer()
                 }
+                .padding(.vertical, emphasize ? 1 : 0)
             }
             .buttonStyle(PressableCardButtonStyle())
         }
@@ -1093,15 +1093,18 @@ struct HomeView: View {
 
     private func fridgePrimaryMessage(for match: FridgeMatchedRecipe) -> String {
         if match.missingCount == 0 {
-            return viewModel.localizer.text(.quickActionReadyToCook)
+            return viewModel.localizer.text(.quickActionYouHaveEverything)
         }
         if match.missingCount == 1 {
-            return String(format: viewModel.localizer.text(.onlyMissingFormat), 1)
+            return viewModel.localizer.text(.quickActionOnlyOneIngredientMissing)
         }
         if match.missingCount == 2 {
             return viewModel.localizer.text(.almostReady)
         }
-        return String(format: viewModel.localizer.text(.ingredientsAwayFormat), match.missingCount)
+        return String(
+            format: viewModel.localizer.text(.quickActionOnlyIngredientsMissingFormat),
+            match.missingCount
+        )
     }
 
     @ViewBuilder
@@ -1394,27 +1397,32 @@ private enum HomeFeedItem: Identifiable {
     }
 }
 
-private enum HomeContinuousBlock: Identifiable {
+private enum HomeContinuousBlock {
     case largeRecipe(HookedRecipeCard)
     case compactPair(first: HookedRecipeCard, second: HookedRecipeCard)
     case compactSingle(HookedRecipeCard)
     case spotlight(RankedInSeasonItem)
     case fridgeRecipe(FridgeMatchedRecipe)
 
-    var id: String {
+    var identityKey: String {
         switch self {
         case .largeRecipe(let card):
-            return "block-large-\(card.ranked.recipe.id)"
+            return "large-\(card.ranked.recipe.id)"
         case .compactPair(let first, let second):
-            return "block-pair-\(first.ranked.recipe.id)-\(second.ranked.recipe.id)"
+            return "pair-\(first.ranked.recipe.id)-\(second.ranked.recipe.id)"
         case .compactSingle(let card):
-            return "block-compact-single-\(card.ranked.recipe.id)"
+            return "compact-\(card.ranked.recipe.id)"
         case .spotlight(let item):
-            return "block-spotlight-\(item.item.id)"
+            return "spotlight-\(item.item.id)"
         case .fridgeRecipe(let match):
-            return "block-fridge-\(match.rankedRecipe.recipe.id)"
+            return "fridge-\(match.rankedRecipe.recipe.id)"
         }
     }
+}
+
+private struct IndexedContinuousBlock: Identifiable {
+    let id: String
+    let block: HomeContinuousBlock
 }
 
 private struct HookedRecipeCard: Identifiable {
@@ -1516,7 +1524,6 @@ private struct FridgeRecipeMatchesView: View {
     @ObservedObject var produceViewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @ObservedObject var fridgeViewModel: FridgeViewModel
-    @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
     @State private var feedbackMessage = ""
     @State private var showingFeedbackAlert = false
 
@@ -1536,9 +1543,13 @@ private struct FridgeRecipeMatchesView: View {
             }
 
             Section(header: Text(produceViewModel.localizer.text(.fridgePreviewTitle)).textCase(nil)) {
-                Group {
-                    if isCompactFridgePreview {
-                        VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if fridgeViewModel.allItemCount == 0 {
+                        Text(produceViewModel.localizer.text(.fromFridgeSubtitleEmpty))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(fridgePreviewItems) { item in
                                     HStack(spacing: 6) {
@@ -1555,66 +1566,29 @@ private struct FridgeRecipeMatchesView: View {
                                     )
                                 }
                             }
-
-                            NavigationLink {
-                                FridgeView(
-                                    produceViewModel: produceViewModel,
-                                    fridgeViewModel: fridgeViewModel
-                                )
-                            } label: {
-                                Text(produceViewModel.localizer.text(.editFridge))
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding(.vertical, 4)
-                    } else {
-                        SeasonCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                if fridgeViewModel.allItemCount == 0 {
-                                    Text(produceViewModel.localizer.text(.fromFridgeSubtitleEmpty))
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 8) {
-                                            ForEach(fridgePreviewItems) { item in
-                                                HStack(spacing: 6) {
-                                                    fridgePreviewIcon(item: item, size: 28)
-                                                    Text(item.title)
-                                                        .font(.caption)
-                                                        .lineLimit(1)
-                                                }
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 6)
-                                                .background(
-                                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                        .fill(Color(.tertiarySystemGroupedBackground))
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                NavigationLink {
-                                    FridgeView(
-                                        produceViewModel: produceViewModel,
-                                        fridgeViewModel: fridgeViewModel
-                                    )
-                                } label: {
-                                    Text(produceViewModel.localizer.text(.editFridge))
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .buttonStyle(.bordered)
-                            }
                         }
                     }
+
+                    NavigationLink {
+                        FridgeView(
+                            produceViewModel: produceViewModel,
+                            fridgeViewModel: fridgeViewModel
+                        )
+                    } label: {
+                        Text(produceViewModel.localizer.text(.editFridge))
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
                 }
+                .padding(.vertical, 2)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
 
-            Section(header: Text(produceViewModel.localizer.text(.bestMatches)).textCase(nil)) {
+            Section(header: SectionTitleCountRow(
+                title: produceViewModel.localizer.text(.bestMatches),
+                countText: "\(bestMatches.count)"
+            ).textCase(nil)) {
                 if bestMatches.isEmpty {
                     EmptyStateCard(
                         symbol: "fork.knife",
@@ -1625,15 +1599,18 @@ private struct FridgeRecipeMatchesView: View {
                     .listRowBackground(Color.clear)
                 } else {
                     ForEach(bestMatches) { match in
-                        fridgeRecipeCard(match)
+                        fridgeRecipeRow(match)
                     }
                 }
             }
 
             if !quickOptions.isEmpty {
-                Section(header: Text(produceViewModel.localizer.text(.quickOptions)).textCase(nil)) {
+                Section(header: SectionTitleCountRow(
+                    title: produceViewModel.localizer.text(.quickOptions),
+                    countText: "\(quickOptions.count)"
+                ).textCase(nil)) {
                     ForEach(quickOptions) { match in
-                        fridgeRecipeCard(match)
+                        fridgeRecipeRow(match)
                     }
                 }
             }
@@ -1641,7 +1618,7 @@ private struct FridgeRecipeMatchesView: View {
             if !needsIngredients.isEmpty {
                 Section(header: Text(produceViewModel.localizer.text(.needsIngredients)).textCase(nil)) {
                     ForEach(needsIngredients) { match in
-                        fridgeRecipeCard(match)
+                        fridgeRecipeRow(match)
                     }
                 }
             }
@@ -1677,15 +1654,21 @@ private struct FridgeRecipeMatchesView: View {
     }
 
     @ViewBuilder
-    private func fridgeRecipeCard(_ match: FridgeMatchedRecipe) -> some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
+    private func fridgeRecipeRow(_ match: FridgeMatchedRecipe) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            NavigationLink {
+                RecipeDetailView(
+                    rankedRecipe: match.rankedRecipe,
+                    viewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
                 HStack(spacing: 10) {
-                    RecipeThumbnailView(recipe: match.rankedRecipe.recipe, size: 50)
+                    RecipeThumbnailView(recipe: match.rankedRecipe.recipe, size: 44)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(match.rankedRecipe.recipe.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
                         Text(match.rankedRecipe.recipe.author)
@@ -1695,51 +1678,54 @@ private struct FridgeRecipeMatchesView: View {
                     }
 
                     Spacer()
+
+                    SeasonalStatusBadge(
+                        score: match.rankedRecipe.seasonalityScore,
+                        localizer: produceViewModel.localizer
+                    )
                 }
+            }
+            .buttonStyle(.plain)
 
-                HStack(spacing: 8) {
-                    Text(String(
-                        format: produceViewModel.localizer.text(.ingredientMatchCountFormat),
-                        match.matchingCount,
-                        match.totalCount
-                    ))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
+            HStack(spacing: 8) {
+                Text(String(
+                    format: produceViewModel.localizer.text(.ingredientMatchCountFormat),
+                    match.matchingCount,
+                    match.totalCount
+                ))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
 
-                    Text(produceViewModel.recipeTimingTitle(for: match.rankedRecipe))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+                Text(produceViewModel.recipeTimingTitle(for: match.rankedRecipe))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
-                if missingIngredientNames(for: match).isEmpty {
-                    Text(produceViewModel.localizer.text(.readyNow))
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                } else {
+            if missingIngredientNames(for: match).isEmpty {
+                Text(produceViewModel.localizer.text(.readyNow))
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else {
+                HStack(alignment: .center, spacing: 8) {
                     Text("\(produceViewModel.localizer.text(.missingIngredients)): \(missingIngredientNames(for: match).joined(separator: ", "))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
-                }
 
-                HStack(spacing: 8) {
-                    recipeDetailLink(for: match, textKey: .viewRecipeAction)
-                        .buttonStyle(.borderedProminent)
+                    Spacer(minLength: 0)
 
-                    if match.missingCount > 0 {
-                        Button {
-                            addMissingIngredients(for: match)
-                        } label: {
-                            Text(produceViewModel.localizer.text(.addMissingAction))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
+                    Button {
+                        addMissingIngredients(for: match)
+                    } label: {
+                        Text(produceViewModel.localizer.text(.addMissingAction))
                     }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
                 }
             }
         }
-        .padding(.vertical, 2)
-        .listRowSeparator(.hidden)
+        .padding(.vertical, 4)
+        .listRowSeparator(.visible)
         .listRowBackground(Color.clear)
     }
 
@@ -1758,17 +1744,15 @@ private struct FridgeRecipeMatchesView: View {
             match.matchRatio >= 0.66 && match.missingCount <= 2
         }
         if preferred.isEmpty {
-            return Array(matchingRecommendations.prefix(3))
+            return Array(matchingRecommendations.prefix(4))
         }
-        return Array(preferred.prefix(3))
+        return Array(preferred.prefix(4))
     }
 
     private var quickOptions: [FridgeMatchedRecipe] {
         let excludedIDs = Set(bestMatches.map(\.id))
         return matchingRecommendations.filter { match in
             !excludedIDs.contains(match.id)
-            && match.matchRatio >= 0.35
-            && match.missingCount <= 3
         }
     }
 
@@ -1786,10 +1770,6 @@ private struct FridgeRecipeMatchesView: View {
         return Array((produce + basic).prefix(8))
     }
 
-    private var isCompactFridgePreview: Bool {
-        fridgeViewModel.allItemCount > 0 && fridgeViewModel.allItemCount <= 2
-    }
-
     private var headerSubtitle: String {
         guard fridgeViewModel.allItemCount > 0 else {
             return produceViewModel.localizer.text(.fromFridgeSubtitleEmpty)
@@ -1801,14 +1781,10 @@ private struct FridgeRecipeMatchesView: View {
     private func missingIngredientNames(for match: FridgeMatchedRecipe) -> [String] {
         var names: [String] = []
         for ingredient in match.rankedRecipe.recipe.ingredients {
-            if let produceID = ingredient.produceID,
-               let item = produceViewModel.produceItem(forID: produceID),
-               fridgeViewModel.contains(item) {
-                continue
-            }
-            if let basicID = ingredient.basicIngredientID,
-               let basic = produceViewModel.basicIngredient(forID: basicID),
-               fridgeViewModel.contains(basic) {
+            if produceViewModel.isRecipeIngredientAvailable(
+                ingredient,
+                fridgeIngredientIDs: fridgeViewModel.allIngredientIDSet
+            ) {
                 continue
             }
             names.append(produceViewModel.recipeIngredientDisplayName(ingredient))
@@ -1819,17 +1795,22 @@ private struct FridgeRecipeMatchesView: View {
     private func addMissingIngredients(for match: FridgeMatchedRecipe) {
         var added = 0
         for ingredient in match.rankedRecipe.recipe.ingredients {
+            if produceViewModel.isRecipeIngredientAvailable(
+                ingredient,
+                fridgeIngredientIDs: fridgeViewModel.allIngredientIDSet
+            ) {
+                continue
+            }
             if let produceID = ingredient.produceID,
                let item = produceViewModel.produceItem(forID: produceID) {
-                if fridgeViewModel.contains(item) || shoppingListViewModel.contains(item) {
+                if shoppingListViewModel.contains(item) {
                     continue
                 }
                 shoppingListViewModel.add(item, sourceRecipeID: match.rankedRecipe.recipe.id, sourceRecipeTitle: match.rankedRecipe.recipe.title)
                 added += 1
             } else if let basicID = ingredient.basicIngredientID,
                       let basic = produceViewModel.basicIngredient(forID: basicID) {
-                if fridgeViewModel.contains(basic)
-                    || shoppingListViewModel.contains(basic) {
+                if shoppingListViewModel.contains(basic) {
                     continue
                 }
                 shoppingListViewModel.add(
@@ -1879,43 +1860,6 @@ private struct FridgeRecipeMatchesView: View {
         }
     }
 
-    private func recipeDetailLink(for match: FridgeMatchedRecipe, textKey: AppTextKey) -> some View {
-        NavigationLink {
-            RecipeDetailView(
-                rankedRecipe: match.rankedRecipe,
-                viewModel: produceViewModel,
-                shoppingListViewModel: shoppingListViewModel,
-                isFollowingAuthor: isFollowing(author: match.rankedRecipe.recipe.author),
-                onToggleFollow: { toggleFollow(for: match.rankedRecipe.recipe.author) }
-            )
-        } label: {
-            Text(produceViewModel.localizer.text(textKey))
-                .frame(maxWidth: .infinity)
-        }
-    }
-
-    private var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        )
-    }
-
-    private func isFollowing(author: String) -> Bool {
-        followedAuthorsSet.contains(author)
-    }
-
-    private func toggleFollow(for author: String) {
-        var updated = followedAuthorsSet
-        if updated.contains(author) {
-            updated.remove(author)
-        } else {
-            updated.insert(author)
-        }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
-    }
 }
 
 private struct FridgePreviewItem: Identifiable {

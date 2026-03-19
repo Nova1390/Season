@@ -45,6 +45,12 @@ enum NutritionBasis: String, Codable, Hashable {
     case per100g = "per_100g"
 }
 
+enum NutritionMappingConfidence: String, Codable, Hashable {
+    case high
+    case approximate
+    case unmapped
+}
+
 enum IngredientQualityLevel: String, Codable, Hashable {
     case core
     case basic
@@ -72,6 +78,7 @@ struct ProduceItem: Identifiable, Codable, Hashable {
     let nutritionBasis: NutritionBasis?
     let nutritionReference: String?
     let nutritionMappingNote: String?
+    let nutritionMappingConfidence: NutritionMappingConfidence?
     let defaultUnit: RecipeQuantityUnit?
     let supportedUnits: [RecipeQuantityUnit]?
     let gramsPerUnit: [String: Double]?
@@ -90,6 +97,7 @@ struct ProduceItem: Identifiable, Codable, Hashable {
         case nutritionBasis
         case nutritionReference
         case nutritionMappingNote
+        case nutritionMappingConfidence
         case defaultUnit
         case supportedUnits
         case gramsPerUnit
@@ -109,6 +117,7 @@ struct ProduceItem: Identifiable, Codable, Hashable {
         nutritionBasis: NutritionBasis?,
         nutritionReference: String?,
         nutritionMappingNote: String?,
+        nutritionMappingConfidence: NutritionMappingConfidence?,
         defaultUnit: RecipeQuantityUnit?,
         supportedUnits: [RecipeQuantityUnit]?,
         gramsPerUnit: [String: Double]?,
@@ -126,6 +135,7 @@ struct ProduceItem: Identifiable, Codable, Hashable {
         self.nutritionBasis = nutritionBasis
         self.nutritionReference = nutritionReference
         self.nutritionMappingNote = nutritionMappingNote
+        self.nutritionMappingConfidence = nutritionMappingConfidence
         self.defaultUnit = defaultUnit
         self.supportedUnits = supportedUnits
         self.gramsPerUnit = gramsPerUnit
@@ -146,6 +156,7 @@ struct ProduceItem: Identifiable, Codable, Hashable {
         nutritionBasis = try container.decodeIfPresent(NutritionBasis.self, forKey: .nutritionBasis)
         nutritionReference = try container.decodeIfPresent(String.self, forKey: .nutritionReference)
         nutritionMappingNote = try container.decodeIfPresent(String.self, forKey: .nutritionMappingNote)
+        nutritionMappingConfidence = try container.decodeIfPresent(NutritionMappingConfidence.self, forKey: .nutritionMappingConfidence)
         defaultUnit = try container.decodeIfPresent(RecipeQuantityUnit.self, forKey: .defaultUnit)
         supportedUnits = try container.decodeIfPresent([RecipeQuantityUnit].self, forKey: .supportedUnits)
         gramsPerUnit = try container.decodeIfPresent([String: Double].self, forKey: .gramsPerUnit)

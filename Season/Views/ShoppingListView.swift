@@ -19,7 +19,6 @@ struct ShoppingListView: View {
     @ObservedObject var produceViewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
-    @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
 
     @State private var isSelectionMode = false
     @State private var selectedIngredientIDs: Set<String> = []
@@ -227,9 +226,7 @@ struct ShoppingListView: View {
                     RecipeDetailView(
                         rankedRecipe: ranked,
                         viewModel: produceViewModel,
-                        shoppingListViewModel: shoppingListViewModel,
-                        isFollowingAuthor: isFollowing(author: ranked.recipe.author),
-                        onToggleFollow: { toggleFollow(for: ranked.recipe.author) }
+                        shoppingListViewModel: shoppingListViewModel
                     )
                 } label: {
                     Image(systemName: "arrow.up.right.square")
@@ -573,30 +570,5 @@ struct ShoppingListView: View {
         }
         let percentage = (totalScore / Double(items.count)) * 100
         return Int(percentage.rounded())
-    }
-}
-
-private extension ShoppingListView {
-    var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        )
-    }
-
-    func isFollowing(author: String) -> Bool {
-        followedAuthorsSet.contains(author)
-    }
-
-    func toggleFollow(for author: String) {
-        var updated = followedAuthorsSet
-        if updated.contains(author) {
-            updated.remove(author)
-        } else {
-            updated.insert(author)
-        }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
     }
 }

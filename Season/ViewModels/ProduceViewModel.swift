@@ -73,6 +73,25 @@ final class ProduceViewModel: ObservableObject {
     private let deletedRecipeIDsStorageKey = "deletedRecipeIDsRaw"
     private let recipeViewCountsStorageKey = "recipeViewCountsData"
     private let basicIngredients: [BasicIngredient]
+    private let produceByID: [String: ProduceItem]
+    private let basicByID: [String: BasicIngredient]
+    private let basicByNormalizedName: [String: BasicIngredient]
+    private let fallbackUnitProfile = IngredientUnitProfile(
+        defaultUnit: .g,
+        supportedUnits: [.g, .piece],
+        gramsPerUnit: [.g: 1, .piece: 100],
+        mlPerUnit: [:],
+        gramsPerMl: nil
+    )
+
+    private var cachedDiscoverableRankedRecipes: [RankedRecipe] = []
+    private var cachedDiscoverableRankedByID: [String: RankedRecipe] = [:]
+    private var cachedDiscoverableRankedMonth: Int?
+    private var cachedRecipeNutritionSummaries: [String: RecipeNutritionSummary?] = [:]
+    private var cachedMaxRecipeNutritionValues: [NutritionPriorityDimension: Double] = [:]
+    private var cachedMaxProduceNutritionValues: [NutritionPriorityDimension: Double] = [:]
+    private var cachedMaxCrispy: Int?
+    private var cachedMaxViews: Int?
 
     var localizer: AppLocalizer {
         AppLocalizer(languageCode: languageCode)
@@ -80,10 +99,23 @@ final class ProduceViewModel: ObservableObject {
 
     init(languageCode: String = "en") {
         self.languageCode = AppLanguage(rawValue: languageCode)?.rawValue ?? AppLanguage.english.rawValue
-        self.produceItems = ProduceStore.loadFromBundle()
-        self.basicIngredients = BasicIngredientCatalog.all
-        self.recipes = RecipeStore.loadRecipes()
-        self.userProfiles = RecipeStore.loadProfiles()
+        let loadedProduce = ProduceStore.loadFromBundle()
+        self.produceItems = loadedProduce
+        let loadedBasic = BasicIngredientCatalog.all
+        self.basicIngredients = loadedBasic
+        self.produceByID = Dictionary(uniqueKeysWithValues: loadedProduce.map { ($0.id, $0) })
+        self.basicByID = Dictionary(uniqueKeysWithValues: loadedBasic.map { ($0.id, $0) })
+        var normalizedNameIndex: [String: BasicIngredient] = [:]
+        for ingredient in loadedBasic {
+            let normalizedID = ingredient.id.replacingOccurrences(of: "_", with: " ").lowercased()
+            normalizedNameIndex[normalizedID] = ingredient
+            for localizedName in ingredient.localizedNames.values {
+                normalizedNameIndex[localizedName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = ingredient
+            }
+        }
+        self.basicByNormalizedName = normalizedNameIndex
+        self.recipes = []
+        self.userProfiles = []
         let rawNutritionGoals = UserDefaults.standard.string(forKey: nutritionGoalsStorageKey) ?? ""
         self.nutritionPriorities = Self.parseNutritionPriorities(from: rawNutritionGoals)
         self.nutritionGoals = Self.legacyGoals(from: self.nutritionPriorities)
@@ -92,6 +124,7 @@ final class ProduceViewModel: ObservableObject {
         self.archivedRecipeIDs = Self.parseStringSet(from: UserDefaults.standard.string(forKey: archivedRecipeIDsStorageKey) ?? "")
         self.deletedRecipeIDs = Self.parseStringSet(from: UserDefaults.standard.string(forKey: deletedRecipeIDsStorageKey) ?? "")
         self.recipeViewCounts = Self.parseViewCounts(from: UserDefaults.standard.data(forKey: recipeViewCountsStorageKey))
+        loadBootstrapContent()
     }
 
     @discardableResult
@@ -101,6 +134,49 @@ final class ProduceViewModel: ObservableObject {
             languageCode = resolved
         }
         return resolved
+    }
+
+    private func loadBootstrapContent() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let startedAt = CFAbsoluteTimeGetCurrent()
+            let loadedRecipes = RecipeStore.loadRecipes()
+            let loadedProfiles = RecipeStore.loadProfiles()
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.recipes = loadedRecipes
+                self.userProfiles = loadedProfiles
+                self.invalidateRecipeCaches()
+                let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000.0).rounded())
+                self.debugLoadTimingIfNeeded(label: "bootstrap recipes", count: loadedRecipes.count, elapsedMs: elapsedMs)
+            }
+        }
+    }
+
+    private func debugLoadTimingIfNeeded(label: String, count: Int, elapsedMs: Int) {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SEASON_LOAD_DEBUG"] == "1" {
+            print("LOAD DEBUG [\(label)] count=\(count) time_ms=\(elapsedMs)")
+        }
+        #endif
+    }
+
+    private func invalidateRecipeCaches() {
+        cachedDiscoverableRankedRecipes = []
+        cachedDiscoverableRankedByID = [:]
+        cachedDiscoverableRankedMonth = nil
+        cachedRecipeNutritionSummaries.removeAll(keepingCapacity: true)
+        cachedMaxRecipeNutritionValues.removeAll(keepingCapacity: true)
+        cachedMaxCrispy = nil
+        cachedMaxViews = nil
+    }
+
+    private func invalidateRankingCaches() {
+        cachedDiscoverableRankedRecipes = []
+        cachedDiscoverableRankedByID = [:]
+        cachedDiscoverableRankedMonth = nil
+        cachedMaxRecipeNutritionValues.removeAll(keepingCapacity: true)
+        cachedMaxCrispy = nil
+        cachedMaxViews = nil
     }
 
     var currentMonth: Int {
@@ -193,7 +269,7 @@ final class ProduceViewModel: ObservableObject {
             .split(separator: " ")
             .map { String($0) }
             .filter { !$0.isEmpty }
-        let ranked = rankedHomeRecipes(from: discoverableRecipes)
+        let ranked = rankedDiscoverableRecipes()
         guard !trimmedQuery.isEmpty else { return ranked }
 
         let scoredResults: [(recipe: RankedRecipe, relevance: Int)] = ranked.compactMap { rankedRecipe -> (recipe: RankedRecipe, relevance: Int)? in
@@ -286,17 +362,15 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedTrendingRecipes(limit: Int = 6) -> [RankedRecipe] {
-        Array(rankedHomeRecipes(from: discoverableRecipes).prefix(max(1, limit)))
+        Array(rankedDiscoverableRecipes().prefix(max(1, limit)))
     }
 
     func homeRankedRecipes(limit: Int = 12) -> [RankedRecipe] {
-        Array(rankedHomeRecipes(from: discoverableRecipes).prefix(max(1, limit)))
+        Array(rankedDiscoverableRecipes().prefix(max(1, limit)))
     }
 
     func rankedTrendingNowRecipes(limit: Int = 6) -> [RankedRecipe] {
-        let homeResolved = Dictionary(
-            uniqueKeysWithValues: rankedHomeRecipes(from: discoverableRecipes).map { ($0.recipe.id, $0) }
-        )
+        let homeResolved = rankedDiscoverableByID()
 
         return discoverableRecipes
             .sorted { lhs, rhs in
@@ -313,7 +387,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedSmartSuggestionRecipes(limit: Int = 6) -> [RankedRecipe] {
-        rankedHomeRecipes(from: discoverableRecipes)
+        rankedDiscoverableRecipes()
             .map { ranked in
                 let homeScore = min(1.0, max(0.0, ranked.score / 100.0))
                 let nutrition = nutritionPreferenceScore(for: ranked.recipe)
@@ -331,17 +405,19 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedFollowedRecipes(followedAuthors: Set<String>, limit: Int = 6) -> [RankedRecipe] {
-        let followed = discoverableRecipes.filter { followedAuthors.contains($0.author) }
-        return Array(rankedHomeRecipes(from: followed).prefix(max(1, limit)))
+        let followed = rankedDiscoverableRecipes().filter { followedAuthors.contains($0.recipe.author) }
+        return Array(followed.prefix(max(1, limit)))
     }
 
     func rankedRecipesByAuthor(_ author: String) -> [RankedRecipe] {
-        let authored = discoverableRecipes.filter { $0.author == author }
-        return rankedHomeRecipes(from: authored)
+        rankedDiscoverableRecipes().filter { $0.recipe.author == author }
     }
 
     func rankedRecipe(forID id: String) -> RankedRecipe? {
-        rankedHomeRecipes(from: nonDeletedRecipes).first { $0.recipe.id == id }
+        if let discoverable = rankedDiscoverableByID()[id] {
+            return discoverable
+        }
+        return rankedHomeRecipes(from: nonDeletedRecipes).first { $0.recipe.id == id }
     }
 
     func remixCount(forOriginalRecipeID id: String) -> Int {
@@ -370,6 +446,7 @@ final class ProduceViewModel: ObservableObject {
         }
         crispiedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: crispiedRecipeIDsStorageKey)
+        invalidateRankingCaches()
     }
 
     func toggleSavedRecipe(_ recipe: Recipe) {
@@ -397,6 +474,7 @@ final class ProduceViewModel: ObservableObject {
         updated.insert(recipe.id)
         archivedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: archivedRecipeIDsStorageKey)
+        invalidateRecipeCaches()
     }
 
     func unarchiveRecipe(_ recipe: Recipe) {
@@ -404,6 +482,7 @@ final class ProduceViewModel: ObservableObject {
         updated.remove(recipe.id)
         archivedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: archivedRecipeIDsStorageKey)
+        invalidateRecipeCaches()
     }
 
     func deleteRecipe(_ recipe: Recipe) {
@@ -427,6 +506,7 @@ final class ProduceViewModel: ObservableObject {
         archivedUpdated.remove(recipe.id)
         archivedRecipeIDs = archivedUpdated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: archivedUpdated), forKey: archivedRecipeIDsStorageKey)
+        invalidateRecipeCaches()
     }
 
     func activeRecipes(for author: String) -> [Recipe] {
@@ -453,6 +533,7 @@ final class ProduceViewModel: ObservableObject {
         if let encoded = try? JSONEncoder().encode(updated) {
             UserDefaults.standard.set(encoded, forKey: recipeViewCountsStorageKey)
         }
+        invalidateRankingCaches()
     }
 
     func compactCountText(_ value: Int) -> String {
@@ -486,7 +567,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func matchedRecipesForFridge(fridgeItemIDs: Set<String>) -> [FridgeMatchedRecipe] {
-        rankedHomeRecipes(from: discoverableRecipes)
+        rankedDiscoverableRecipes()
             .map { rankedRecipe in
                 let weighted = weightedFridgeMatch(for: rankedRecipe.recipe, fridgeItemIDs: fridgeItemIDs)
                 return FridgeMatchedRecipe(
@@ -515,11 +596,11 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func produceItem(forID id: String) -> ProduceItem? {
-        produceItems.first { $0.id == id }
+        produceByID[id]
     }
 
     func basicIngredient(forID id: String) -> BasicIngredient? {
-        basicIngredients.first { $0.id == id }
+        basicByID[id]
     }
 
     func quantityProfile(forProduceID produceID: String) -> IngredientUnitProfile {
@@ -601,6 +682,10 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func recipeNutritionSummary(for recipe: Recipe) -> RecipeNutritionSummary? {
+        if let cached = cachedRecipeNutritionSummaries[recipe.id] {
+            return cached
+        }
+
         var totalCalories = 0.0
         var totalProtein = 0.0
         var totalCarbs = 0.0
@@ -631,8 +716,11 @@ final class ProduceViewModel: ObservableObject {
             totalPotassium += nutrition.potassium * factor
         }
 
-        guard hasAnyNutritionData else { return nil }
-        return RecipeNutritionSummary(
+        guard hasAnyNutritionData else {
+            cachedRecipeNutritionSummaries[recipe.id] = nil
+            return nil
+        }
+        let summary = RecipeNutritionSummary(
             calories: totalCalories,
             protein: totalProtein,
             carbs: totalCarbs,
@@ -641,6 +729,8 @@ final class ProduceViewModel: ObservableObject {
             vitaminC: totalVitaminC,
             potassium: totalPotassium
         )
+        cachedRecipeNutritionSummaries[recipe.id] = summary
+        return summary
     }
 
     func ingredientsForRecipe(_ recipe: Recipe) -> [ProduceItem] {
@@ -678,6 +768,7 @@ final class ProduceViewModel: ObservableObject {
         sourcePlatform: SocialSourcePlatform?,
         sourceCaptionRaw: String?,
         importedFromSocial: Bool,
+        servings: Int = 2,
         prepTimeMinutes: Int? = nil,
         cookTimeMinutes: Int? = nil,
         difficulty: RecipeDifficulty? = nil,
@@ -705,6 +796,7 @@ final class ProduceViewModel: ObservableObject {
         let validImages = images.filter {
             ($0.localPath?.isEmpty == false) || ($0.remoteURL?.isEmpty == false)
         }
+        let normalizedServings = max(1, min(12, servings))
         let validCoverID = validImages.contains(where: { $0.id == coverImageID }) ? coverImageID : nil
         let trimmedImageName = coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedMediaLink = mediaLinkURL?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -720,6 +812,7 @@ final class ProduceViewModel: ObservableObject {
             prepTimeMinutes: prepTimeMinutes,
             cookTimeMinutes: cookTimeMinutes,
             difficulty: difficulty,
+            servings: normalizedServings,
             crispy: 0,
             dietaryTags: confirmedDietary,
             seasonalMatchPercent: seasonalPercent,
@@ -740,6 +833,7 @@ final class ProduceViewModel: ObservableObject {
         )
 
         recipes.insert(recipe, at: 0)
+        invalidateRecipeCaches()
         return recipe
     }
 
@@ -834,6 +928,21 @@ final class ProduceViewModel: ObservableObject {
         return Double(total) / Double(authored.count)
     }
 
+    func followerCount(for author: String, isFollowedByCurrentUser: Bool) -> Int {
+        let authored = nonDeletedRecipes.filter { $0.author == author }
+        guard !authored.isEmpty else { return isFollowedByCurrentUser ? 1 : 0 }
+
+        let recipeCount = authored.count
+        let crispy = totalCrispy(for: author)
+        let totalViews = authored.reduce(0) { partialResult, recipe in
+            partialResult + viewCount(for: recipe)
+        }
+
+        // Local estimate until a backend social graph is available.
+        let estimatedBase = max(12, (recipeCount * 18) + (crispy / 6) + (totalViews / 120))
+        return isFollowedByCurrentUser ? estimatedBase + 1 : estimatedBase
+    }
+
     func badges(for author: String) -> [UserBadge] {
         let authoredRecipes = nonDeletedRecipes.filter { $0.author == author }
         let recipeCount = authoredRecipes.count
@@ -901,6 +1010,7 @@ final class ProduceViewModel: ObservableObject {
 
         if nutritionPriorities != priorities {
             nutritionPriorities = priorities
+            invalidateRankingCaches()
         }
 
         let legacy = Self.legacyGoals(from: priorities)
@@ -974,6 +1084,25 @@ final class ProduceViewModel: ObservableObject {
             }
     }
 
+    private func rankedDiscoverableRecipes() -> [RankedRecipe] {
+        if cachedDiscoverableRankedMonth == currentMonth {
+            return cachedDiscoverableRankedRecipes
+        }
+
+        let ranked = rankedHomeRecipes(from: discoverableRecipes)
+        cachedDiscoverableRankedRecipes = ranked
+        cachedDiscoverableRankedByID = Dictionary(uniqueKeysWithValues: ranked.map { ($0.recipe.id, $0) })
+        cachedDiscoverableRankedMonth = currentMonth
+        return ranked
+    }
+
+    private func rankedDiscoverableByID() -> [String: RankedRecipe] {
+        if cachedDiscoverableRankedByID.isEmpty {
+            _ = rankedDiscoverableRecipes()
+        }
+        return cachedDiscoverableRankedByID
+    }
+
     func homeRankingScore(for recipe: Recipe) -> Double {
         let seasonality = recipeSeasonalityScore(for: recipe)
         let crispy = crispyScore(for: recipe)
@@ -1033,7 +1162,14 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func crispyScore(for recipe: Recipe) -> Double {
-        let maxCrispy = max(1, discoverableRecipes.map(\.crispy).max() ?? 1)
+        let maxCrispy: Int
+        if let cachedMaxCrispy {
+            maxCrispy = cachedMaxCrispy
+        } else {
+            let computed = max(1, discoverableRecipes.map(\.crispy).max() ?? 1)
+            cachedMaxCrispy = computed
+            maxCrispy = computed
+        }
         let numerator = log(1.0 + Double(recipe.crispy))
         let denominator = log(1.0 + Double(maxCrispy))
         guard denominator > 0 else { return 0 }
@@ -1041,8 +1177,14 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func viewsScore(for recipe: Recipe) -> Double {
-        let allViewCounts = discoverableRecipes.map { viewCount(for: $0) }
-        let maxViews = max(1, allViewCounts.max() ?? 1)
+        let maxViews: Int
+        if let cachedMaxViews {
+            maxViews = cachedMaxViews
+        } else {
+            let computed = max(1, discoverableRecipes.map { viewCount(for: $0) }.max() ?? 1)
+            cachedMaxViews = computed
+            maxViews = computed
+        }
         let numerator = log(1.0 + Double(viewCount(for: recipe)))
         let denominator = log(1.0 + Double(maxViews))
         guard denominator > 0 else { return 0 }
@@ -1069,11 +1211,27 @@ final class ProduceViewModel: ObservableObject {
         weightedFridgeMatch(for: recipe, fridgeItemIDs: fridgeItemIDs).score
     }
 
+    func isRecipeIngredientAvailable(
+        _ ingredient: RecipeIngredient,
+        fridgeIngredientIDs: Set<String>
+    ) -> Bool {
+        guard let ingredientID = ingredient.produceID ?? ingredient.basicIngredientID else {
+            return false
+        }
+        return fridgeIngredientIDs.contains(ingredientID)
+    }
+
     func recipeTimingLabel(for recipe: Recipe) -> RecipeTimingLabel {
         recipeTimingInsight(for: recipe).label
     }
 
-    private var rankingDebugEnabled: Bool { true }
+    private var rankingDebugEnabled: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["SEASON_RANK_DEBUG"] == "1"
+        #else
+        false
+        #endif
+    }
 
     private func debugRankingIfNeeded(
         recipeName: String,
@@ -1182,10 +1340,10 @@ final class ProduceViewModel: ObservableObject {
         var matchingCount = 0
 
         for ingredient in recipe.ingredients {
-            guard let ingredientID = ingredient.produceID ?? ingredient.basicIngredientID else { continue }
+            guard ingredient.produceID != nil || ingredient.basicIngredientID != nil else { continue }
             let weight = fallbackEqualWeight ? 1.0 : ingredientWeight(for: ingredient)
             totalWeight += weight
-            if fridgeItemIDs.contains(ingredientID) {
+            if isRecipeIngredientAvailable(ingredient, fridgeIngredientIDs: fridgeItemIDs) {
                 availableWeight += weight
                 matchingCount += 1
             }
@@ -1246,6 +1404,9 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func maxRecipeNutritionValue(for dimension: NutritionPriorityDimension) -> Double {
+        if let cached = cachedMaxRecipeNutritionValues[dimension] {
+            return cached
+        }
         let values: [Double] = discoverableRecipes.compactMap { recipe in
             guard let summary = recipeNutritionSummary(for: recipe) else { return nil }
             switch dimension {
@@ -1263,7 +1424,9 @@ final class ProduceViewModel: ObservableObject {
                 return summary.potassium
             }
         }
-        return max(0.0001, values.max() ?? 0.0001)
+        let maxValue = max(0.0001, values.max() ?? 0.0001)
+        cachedMaxRecipeNutritionValues[dimension] = maxValue
+        return maxValue
     }
 
     private func rankingReasons(for item: ProduceItem) -> [String] {
@@ -1316,6 +1479,9 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func maxNutritionValue(for dimension: NutritionPriorityDimension) -> Double {
+        if let cached = cachedMaxProduceNutritionValues[dimension] {
+            return cached
+        }
         let values: [Double] = produceItems.compactMap { item in
             guard let nutrition = item.nutrition else { return nil }
             switch dimension {
@@ -1333,7 +1499,9 @@ final class ProduceViewModel: ObservableObject {
                 return nutrition.potassium
             }
         }
-        return max(0.0001, values.max() ?? 0.0001)
+        let maxValue = max(0.0001, values.max() ?? 0.0001)
+        cachedMaxProduceNutritionValues[dimension] = maxValue
+        return maxValue
     }
 
     private func reasonText(for dimension: NutritionPriorityDimension) -> String {
@@ -1513,23 +1681,11 @@ final class ProduceViewModel: ObservableObject {
         }
 
         let normalizedName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if let fallbackBasic = basicIngredients.first(where: { basic in
-            basic.localizedNames.values.map { $0.lowercased() }.contains(normalizedName)
-            || basic.id.replacingOccurrences(of: "_", with: " ").lowercased() == normalizedName
-        }) {
+        if let fallbackBasic = basicByNormalizedName[normalizedName] {
             return (fallbackBasic.nutrition, fallbackBasic.unitProfile)
         }
 
-        return (
-            nil,
-            IngredientUnitProfile(
-                defaultUnit: .g,
-                supportedUnits: [.g, .piece],
-                gramsPerUnit: [.g: 1, .piece: 100],
-                mlPerUnit: [:],
-                gramsPerMl: nil
-            )
-        )
+        return (nil, fallbackUnitProfile)
     }
 
     private func quantityInGrams(value: Double, unit: RecipeQuantityUnit, profile: IngredientUnitProfile) -> Double {

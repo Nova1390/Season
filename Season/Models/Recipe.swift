@@ -53,6 +53,13 @@ enum RecipeQuantityUnit: String, Codable, CaseIterable, Hashable, Identifiable {
     var id: String { rawValue }
 }
 
+enum RecipeIngredientMappingConfidence: String, Codable, Hashable {
+    case high
+    case medium
+    case low
+    case unmapped
+}
+
 struct RecipeIngredient: Identifiable, Hashable {
     var id: String {
         let base = produceID ?? basicIngredientID ?? name.lowercased()
@@ -64,6 +71,8 @@ struct RecipeIngredient: Identifiable, Hashable {
     let name: String
     let quantityValue: Double
     let quantityUnit: RecipeQuantityUnit
+    var rawIngredientLine: String? = nil
+    var mappingConfidence: RecipeIngredientMappingConfidence = .high
 
     var quantity: String {
         let rounded = quantityValue.rounded()
@@ -77,6 +86,11 @@ struct RecipeIngredient: Identifiable, Hashable {
     }
 }
 
+enum RecipeSourceType: String, Hashable {
+    case userGenerated = "user_generated"
+    case seedWeb = "seed_web"
+}
+
 struct Recipe: Identifiable, Hashable {
     let id: String
     let title: String
@@ -86,6 +100,7 @@ struct Recipe: Identifiable, Hashable {
     let prepTimeMinutes: Int?
     let cookTimeMinutes: Int?
     let difficulty: RecipeDifficulty?
+    var servings: Int = 2
     let crispy: Int
     let viewCount: Int = 0
     let dietaryTags: [RecipeDietaryTag]
@@ -98,9 +113,15 @@ struct Recipe: Identifiable, Hashable {
     let coverImageName: String?
     let mediaLinkURL: String?
     let sourceURL: String?
+    var sourceName: String? = nil
     let sourcePlatform: SocialSourcePlatform?
     let sourceCaptionRaw: String?
     let importedFromSocial: Bool
+    var sourceType: RecipeSourceType = .userGenerated
+    var isUserGenerated: Bool = true
+    var imageURL: String? = nil
+    var imageSource: String? = nil
+    var attributionText: String? = nil
     let isRemix: Bool
     let originalRecipeID: String?
     let originalRecipeTitle: String?

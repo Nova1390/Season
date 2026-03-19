@@ -130,6 +130,7 @@ enum AppTextKey: String {
     case difficultyEasy
     case difficultyMedium
     case difficultyHard
+    case servesFormat
     case minutesShort
     case profile
     case myRecipes
@@ -190,6 +191,10 @@ enum AppTextKey: String {
     case publishHint
     case recipeCountFormat
     case followedAuthorsCountFormat
+    case followersCountFormat
+    case followers
+    case publishedRecipes
+    case creatorProfileSubtitle
     case comingSoon
     case crispyCountFormat
     case totalCrispyReceivedFormat
@@ -200,6 +205,7 @@ enum AppTextKey: String {
     case freshScoreGreat
     case freshScoreGood
     case recipeNutritionSummaryTitle
+    case recipeNutritionPerServingBasisFormat
     case recipeNutritionEstimatedNote
     case createRecipeSubtitle
     case done
@@ -215,6 +221,11 @@ enum AppTextKey: String {
     case highlightedIngredientsCountFormat
     case ingredientsCountFormat
     case quickActionReadyToCook
+    case quickActionCookNowFromFridge
+    case quickActionYouHaveEverything
+    case cookNowAction
+    case quickActionOnlyOneIngredientMissing
+    case quickActionOnlyIngredientsMissingFormat
     case quickActionFreshToday
     case quickActionNoMatchesYet
     case quickActionAddIngredientsHint
@@ -532,6 +543,7 @@ struct AppLocalizer {
             .difficultyEasy: "Easy",
             .difficultyMedium: "Medium",
             .difficultyHard: "Hard",
+            .servesFormat: "Serves %d",
             .minutesShort: "min",
             .profile: "Profile",
             .myRecipes: "My Recipes",
@@ -592,6 +604,10 @@ struct AppLocalizer {
             .publishHint: "Keep it simple and seasonal.",
             .recipeCountFormat: "%d recipes",
             .followedAuthorsCountFormat: "%d followed authors",
+            .followersCountFormat: "%d followers",
+            .followers: "Followers",
+            .publishedRecipes: "Published recipes",
+            .creatorProfileSubtitle: "Season creator",
             .comingSoon: "Coming soon",
             .crispyCountFormat: "%d crispy",
             .totalCrispyReceivedFormat: "%d crispy received",
@@ -601,8 +617,9 @@ struct AppLocalizer {
             .freshScoreExcellent: "Excellent",
             .freshScoreGreat: "Great",
             .freshScoreGood: "Good",
-            .recipeNutritionSummaryTitle: "Recipe nutrition total",
-            .recipeNutritionEstimatedNote: "Estimated total for this recipe, using ingredient values per 100 g.",
+            .recipeNutritionSummaryTitle: "Recipe nutrition (per serving)",
+            .recipeNutritionPerServingBasisFormat: "Based on %d servings",
+            .recipeNutritionEstimatedNote: "Estimated values per serving using ingredient nutrition per 100 g.",
             .createRecipeSubtitle: "Recipe creation editor is coming soon.",
             .done: "Done",
             .homeHeroSubtitle: "Seasonal recipes and ingredients picked for you",
@@ -617,6 +634,11 @@ struct AppLocalizer {
             .highlightedIngredientsCountFormat: "%d highlighted ingredients",
             .ingredientsCountFormat: "%d ingredients",
             .quickActionReadyToCook: "Ready to cook",
+            .quickActionCookNowFromFridge: "Cook now from your fridge",
+            .quickActionYouHaveEverything: "You have everything",
+            .cookNowAction: "Cook now",
+            .quickActionOnlyOneIngredientMissing: "Only 1 ingredient missing",
+            .quickActionOnlyIngredientsMissingFormat: "Only %d ingredients missing",
             .quickActionFreshToday: "Fresh today",
             .quickActionNoMatchesYet: "No matches yet",
             .quickActionAddIngredientsHint: "Add ingredients to see recipes",
@@ -777,6 +799,7 @@ struct AppLocalizer {
             .difficultyEasy: "Facile",
             .difficultyMedium: "Media",
             .difficultyHard: "Difficile",
+            .servesFormat: "Per %d persone",
             .minutesShort: "min",
             .profile: "Profilo",
             .myRecipes: "Le mie ricette",
@@ -837,6 +860,10 @@ struct AppLocalizer {
             .publishHint: "Mantienila semplice e stagionale.",
             .recipeCountFormat: "%d ricette",
             .followedAuthorsCountFormat: "%d autori seguiti",
+            .followersCountFormat: "%d follower",
+            .followers: "Follower",
+            .publishedRecipes: "Ricette pubblicate",
+            .creatorProfileSubtitle: "Creator Season",
             .comingSoon: "In arrivo",
             .crispyCountFormat: "%d crispy",
             .totalCrispyReceivedFormat: "%d crispy ricevuti",
@@ -846,8 +873,9 @@ struct AppLocalizer {
             .freshScoreExcellent: "Excellent",
             .freshScoreGreat: "Great",
             .freshScoreGood: "Good",
-            .recipeNutritionSummaryTitle: "Totale nutrizionale ricetta",
-            .recipeNutritionEstimatedNote: "Totale stimato della ricetta, calcolato con valori ingredienti per 100 g.",
+            .recipeNutritionSummaryTitle: "Nutrizione ricetta (per porzione)",
+            .recipeNutritionPerServingBasisFormat: "Basato su %d porzioni",
+            .recipeNutritionEstimatedNote: "Valori stimati per porzione, calcolati da nutrienti per 100 g.",
             .createRecipeSubtitle: "L'editor ricette completo arrivera presto.",
             .done: "Fine",
             .homeHeroSubtitle: "Ricette e ingredienti stagionali scelti per te",
@@ -862,6 +890,11 @@ struct AppLocalizer {
             .highlightedIngredientsCountFormat: "%d ingredienti evidenziati",
             .ingredientsCountFormat: "%d ingredienti",
             .quickActionReadyToCook: "Pronte da cucinare",
+            .quickActionCookNowFromFridge: "Cucina ora dal tuo frigo",
+            .quickActionYouHaveEverything: "Hai tutto",
+            .cookNowAction: "Cucina ora",
+            .quickActionOnlyOneIngredientMissing: "Manca solo 1 ingrediente",
+            .quickActionOnlyIngredientsMissingFormat: "Mancano solo %d ingredienti",
             .quickActionFreshToday: "Freschi oggi",
             .quickActionNoMatchesYet: "Nessuna corrispondenza",
             .quickActionAddIngredientsHint: "Aggiungi ingredienti per vedere ricette",

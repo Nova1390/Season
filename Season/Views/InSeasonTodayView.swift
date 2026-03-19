@@ -17,11 +17,16 @@ struct InSeasonTodayView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(rankedItems) { ranked in
-                    SeasonCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(alignment: .center, spacing: 14) {
-                                ProduceThumbnailView(item: ranked.item, size: 46)
+                Section(
+                    header: SectionTitleCountRow(
+                        title: viewModel.localizer.text(.inSeasonTodayTitle),
+                        countText: String(format: viewModel.localizer.text(.ingredientsCountFormat), rankedItems.count)
+                    ).textCase(nil)
+                ) {
+                    ForEach(rankedItems) { ranked in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .center, spacing: 12) {
+                                ProduceThumbnailView(item: ranked.item, size: 44)
 
                                 NavigationLink {
                                     ProduceDetailView(
@@ -31,7 +36,8 @@ struct InSeasonTodayView: View {
                                     )
                                 } label: {
                                     Text(ranked.item.displayName(languageCode: viewModel.localizer.languageCode))
-                                        .font(.body)
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(.primary)
                                 }
                                 .buttonStyle(.plain)
 
@@ -44,20 +50,21 @@ struct InSeasonTodayView: View {
                                 )
                             }
 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(viewModel.localizer.text(.rankingWhy))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
 
                                 Text(ranked.reasons.joined(separator: " • "))
-                                    .font(.subheadline)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
                         }
+                        .padding(.vertical, 4)
+                        .listRowSeparator(.visible)
+                        .listRowBackground(Color.clear)
                     }
-                    .padding(.vertical, 2)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
                 }
             }
         }

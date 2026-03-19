@@ -16,6 +16,7 @@ struct ContentView: View {
     @StateObject private var fridgeViewModel = FridgeViewModel()
     @State private var selectedTab: MainTab = .home
     @State private var showingCreateRecipe = false
+    @State private var homeRootResetID = UUID()
 
     init() {
         UITabBar.appearance().isHidden = true
@@ -29,6 +30,7 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .id(homeRootResetID)
             .tag(MainTab.home)
             .tabItem {
                 Label(viewModel.localizer.text(.homeTab), systemImage: "house.fill")
@@ -149,6 +151,9 @@ struct ContentView: View {
         let isActive = selectedTab == tab
 
         return Button {
+            if tab == .home {
+                homeRootResetID = UUID()
+            }
             selectedTab = tab
         } label: {
             VStack(spacing: 2) {

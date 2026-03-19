@@ -9,47 +9,57 @@ struct AuthorProfileView: View {
     var body: some View {
         List {
             Section {
-                SeasonCard {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(Color(.tertiarySystemGroupedBackground))
-                                .frame(width: 48, height: 48)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .foregroundStyle(.secondary)
-                                )
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(authorName)
-                                    .font(.title3.weight(.semibold))
-                                Text(String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count))
-                                    .font(.caption)
+                VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+                    HStack(alignment: .top, spacing: SeasonSpacing.sm) {
+                        Circle()
+                            .fill(Color(.tertiarySystemGroupedBackground))
+                            .frame(width: 68, height: 68)
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 26, weight: .semibold))
                                     .foregroundStyle(.secondary)
-                            }
+                            )
 
-                            Spacer()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(authorName)
+                                .font(.title2.weight(.semibold))
+                            Text(viewModel.localizer.text(.creatorProfileSubtitle))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
+
+                        Spacer()
 
                         Button {
                             toggleFollow()
                         } label: {
                             Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                                .frame(maxWidth: .infinity)
+                                .font(.subheadline.weight(.semibold))
+                                .frame(minWidth: 112)
                         }
                         .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                        .controlSize(.regular)
+                    }
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(String(format: viewModel.localizer.text(.totalCrispyReceivedFormat), totalCrispy))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(String(format: viewModel.localizer.text(.averageSeasonalMatchFormat), averageSeasonalMatch))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                    InlineStatsRow(
+                        stats: [
+                            String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count),
+                            String(format: viewModel.localizer.text(.followersCountFormat), followerCount),
+                            String(format: viewModel.localizer.text(.totalCrispyReceivedFormat), totalCrispy),
+                            "\(Int(averageSeasonalMatch.rounded()))% \(viewModel.localizer.text(.seasonalMatch).lowercased())"
+                        ]
+                    )
 
-                        if !authorBadges.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(viewModel.localizer.text(.badges))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        if authorBadges.isEmpty {
+                            Text(viewModel.localizer.text(.noBadgesYet))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(authorBadges) { badge in
@@ -64,45 +74,62 @@ struct AuthorProfileView: View {
                 .listRowBackground(Color.clear)
             }
 
-            Section(header: Text(viewModel.localizer.text(.myRecipes)).textCase(nil)) {
-                ForEach(rankedRecipes) { ranked in
-                    SeasonCard {
-                        HStack(spacing: 12) {
-                            RecipeThumbnailView(recipe: ranked.recipe, size: 48)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                NavigationLink {
-                                    RecipeDetailView(
-                                        rankedRecipe: ranked,
-                                        viewModel: viewModel,
-                                        shoppingListViewModel: shoppingListViewModel,
-                                        isFollowingAuthor: isFollowing,
-                                        onToggleFollow: { toggleFollow() }
-                                    )
-                                } label: {
-                                    Text(ranked.recipe.title)
-                                        .font(.body.weight(.semibold))
-                                }
-                                .buttonStyle(.plain)
-
-                                Text(viewModel.recipeReasonText(for: ranked))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-
-                            Spacer()
-
-                            SeasonalStatusBadge(
-                                score: ranked.seasonalityScore,
-                                localizer: viewModel.localizer
-                            )
-                        }
-                    }
-                    .padding(.vertical, 1)
+            Section {
+                if rankedRecipes.isEmpty {
+                    EmptyStateCard(
+                        symbol: "fork.knife.circle",
+                        title: viewModel.localizer.text(.publishedRecipes),
+                        subtitle: viewModel.localizer.text(.searchEmptySubtitle)
+                    )
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                } else {
+                    ForEach(rankedRecipes) { ranked in
+                        NavigationLink {
+                            RecipeDetailView(
+                                rankedRecipe: ranked,
+                                viewModel: viewModel,
+                                shoppingListViewModel: shoppingListViewModel
+                            )
+                        } label: {
+                            HStack(spacing: 10) {
+                                RecipeThumbnailView(recipe: ranked.recipe, size: 44)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(ranked.recipe.title)
+                                        .font(.body.weight(.semibold))
+                                        .lineLimit(2)
+                                        .foregroundStyle(.primary)
+
+                                    Text(viewModel.recipeReasonText(for: ranked))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+
+                                    Text("\(viewModel.compactCountText(ranked.recipe.crispy)) \(viewModel.localizer.text(.crispyAction).lowercased())")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                SeasonalStatusBadge(
+                                    score: ranked.seasonalityScore,
+                                    localizer: viewModel.localizer
+                                )
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.visible)
+                        .listRowBackground(Color.clear)
+                    }
                 }
+            } header: {
+                SectionTitleCountRow(
+                    title: viewModel.localizer.text(.publishedRecipes),
+                    countText: String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count)
+                )
             }
         }
         .listStyle(.insetGrouped)
@@ -133,6 +160,10 @@ struct AuthorProfileView: View {
 
     private var isFollowing: Bool {
         followedAuthorsSet.contains(authorName)
+    }
+
+    private var followerCount: Int {
+        viewModel.followerCount(for: authorName, isFollowedByCurrentUser: isFollowing)
     }
 
     private var totalCrispy: Int {

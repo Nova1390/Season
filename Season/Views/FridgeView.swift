@@ -7,7 +7,10 @@ struct FridgeView: View {
 
     var body: some View {
         List {
-            Section(header: Text(produceViewModel.localizer.text(.fridgeTab)).textCase(nil)) {
+            Section(header: SectionTitleCountRow(
+                title: produceViewModel.localizer.text(.fridgePreviewTitle),
+                countText: "\(fridgeEntries.count)"
+            ).textCase(nil)) {
                 if fridgeEntries.isEmpty {
                     EmptyStateCard(
                         symbol: "snowflake",
@@ -23,37 +26,41 @@ struct FridgeView: View {
                 }
             }
 
-            Section(header: Text(produceViewModel.localizer.text(.addIngredient)).textCase(nil)) {
+            Section(header: SectionTitleCountRow(
+                title: produceViewModel.localizer.text(.addIngredient),
+                countText: String(format: produceViewModel.localizer.text(.ingredientsCountFormat), addableResults.count)
+            ).textCase(nil)) {
                 ForEach(addableResults) { item in
-                    SeasonCard {
-                        HStack(spacing: 12) {
-                            ingredientThumbnail(for: item)
+                    HStack(spacing: 12) {
+                        ingredientThumbnail(for: item)
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(item.title)
-                                    .font(.body)
-                                Text(item.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            let hasItem = isInFridge(item)
-
-                            Button {
-                                addToFridge(item)
-                            } label: {
-                                Image(systemName: hasItem ? "checkmark.circle.fill" : "plus.circle")
-                                    .font(.title3)
-                                    .foregroundStyle(hasItem ? .green : .secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(hasItem)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.title)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(item.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
+
+                        Spacer()
+
+                        let hasItem = isInFridge(item)
+
+                        Button {
+                            addToFridge(item)
+                        } label: {
+                            Image(systemName: hasItem ? "checkmark.circle.fill" : "plus.circle")
+                                .font(.title3)
+                                .foregroundStyle(hasItem ? .green : .secondary)
+                                .frame(width: 28, height: 28)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(hasItem)
                     }
-                    .padding(.vertical, 1)
-                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 4)
+                    .listRowSeparator(.visible)
                     .listRowBackground(Color.clear)
                 }
             }
@@ -82,54 +89,55 @@ struct FridgeView: View {
 
     @ViewBuilder
     private func fridgeEntryRow(_ entry: FridgeEntry) -> some View {
-        SeasonCard {
-            HStack(spacing: 12) {
-                switch entry.source {
-                case .produce(let item):
-                    ProduceThumbnailView(item: item, size: 44)
-                case .basic:
-                    Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Image(systemName: "leaf")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        )
-                case .custom:
-                    Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Image(systemName: "text.badge.plus")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        )
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.title)
-                        .font(.body)
-                    Text(entry.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button(role: .destructive) {
-                    removeFromFridge(entry)
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel(produceViewModel.localizer.text(.remove))
+        HStack(spacing: 12) {
+            switch entry.source {
+            case .produce(let item):
+                ProduceThumbnailView(item: item, size: 46)
+            case .basic:
+                Circle()
+                    .fill(Color(.tertiarySystemGroupedBackground))
+                    .frame(width: 46, height: 46)
+                    .overlay(
+                        Image(systemName: "leaf")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    )
+            case .custom:
+                Circle()
+                    .fill(Color(.tertiarySystemGroupedBackground))
+                    .frame(width: 46, height: 46)
+                    .overlay(
+                        Image(systemName: "text.badge.plus")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    )
             }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(entry.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button(role: .destructive) {
+                removeFromFridge(entry)
+            } label: {
+                Image(systemName: "trash.circle")
+                    .font(.title3)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(produceViewModel.localizer.text(.remove))
         }
-        .padding(.vertical, 1)
-        .listRowSeparator(.hidden)
+        .padding(.vertical, 4)
+        .listRowSeparator(.visible)
         .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
@@ -144,11 +152,11 @@ struct FridgeView: View {
     private func ingredientThumbnail(for result: IngredientSearchResult) -> some View {
         switch result.source {
         case .produce(let item):
-            ProduceThumbnailView(item: item, size: 42)
+            ProduceThumbnailView(item: item, size: 46)
         case .basic:
             Circle()
                 .fill(Color(.tertiarySystemGroupedBackground))
-                .frame(width: 42, height: 42)
+                .frame(width: 46, height: 46)
                 .overlay(
                     Image(systemName: "leaf")
                         .font(.subheadline.weight(.semibold))
