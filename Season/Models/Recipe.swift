@@ -46,9 +46,11 @@ enum RecipeQuantityUnit: String, Codable, CaseIterable, Hashable, Identifiable {
     case g
     case ml
     case piece
+    case slice
     case clove
     case tbsp
     case tsp
+    case cup
 
     var id: String { rawValue }
 }

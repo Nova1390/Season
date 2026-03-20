@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 struct AccountView: View {
     @Binding var selectedLanguage: String
@@ -7,8 +8,14 @@ struct AccountView: View {
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @AppStorage("accountUsername") private var accountUsername = "Anna"
     @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
+    @AppStorage("linkedSocialAccountsRaw") private var linkedSocialAccountsRaw = ""
+    @AppStorage("accountProfileImageURL") private var accountProfileImageURL = ""
     @State private var showingCreateRecipeAlert = false
     @State private var showNutritionPreferences = false
+    @State private var linkingInProgressProvider: SocialAuthProvider?
+    @State private var authErrorMessage = ""
+    private let socialAuthService: SocialAuthServicing = SocialAuthService.live
+    private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
 
     var body: some View {
         List {
@@ -27,6 +34,16 @@ struct AccountView: View {
         .alert(viewModel.localizer.text(.comingSoon), isPresented: $showingCreateRecipeAlert) {
             Button("OK", role: .cancel) {}
         }
+        .alert("Authentication Error", isPresented: Binding(
+            get: { !authErrorMessage.isEmpty },
+            set: { newValue in
+                if !newValue { authErrorMessage = "" }
+            }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(authErrorMessage)
+        }
     }
 
     private var profileHeaderSection: some View {
@@ -36,11 +53,7 @@ struct AccountView: View {
                     Circle()
                         .fill(Color(.tertiarySystemGroupedBackground))
                         .frame(width: 68, height: 68)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 26, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                        )
+                        .overlay(profileAvatarContent)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(accountUsername)
@@ -140,6 +153,19 @@ struct AccountView: View {
 
     private var preferencesSection: some View {
         Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                Label("Connected accounts", systemImage: "person.crop.circle.badge.checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                socialLinkRow(for: .instagram)
+                socialLinkRow(for: .tiktok)
+                socialLinkRow(for: .apple)
+            }
+            .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.text(.language), systemImage: "globe")
                     .font(.subheadline.weight(.semibold))
@@ -353,4 +379,169 @@ struct AccountView: View {
         }
     }
 
+    @ViewBuilder
+    private var profileAvatarContent: some View {
+        if let url = URL(string: accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines)),
+           !accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                default:
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .clipShape(Circle())
+        } else {
+            Image(systemName: "person.fill")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var linkedAccounts: [LinkedSocialAccount] {
+        SocialAccountLinkStore.decode(linkedSocialAccountsRaw)
+    }
+
+    private func linkedAccount(for provider: SocialAuthProvider) -> LinkedSocialAccount? {
+        linkedAccounts.first(where: { $0.provider == provider })
+    }
+
+    private func providerTitle(_ provider: SocialAuthProvider) -> String {
+        switch provider {
+        case .instagram: return "Instagram"
+        case .tiktok: return "TikTok"
+        case .apple: return "Apple"
+        }
+    }
+
+    private func socialLinkRow(for provider: SocialAuthProvider) -> some View {
+        let linked = linkedAccount(for: provider)
+        return HStack(spacing: 10) {
+            Text(providerTitle(provider))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            if let linked {
+                Text(linked.handle ?? linked.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Button("Unlink", role: .destructive) {
+                    removeLinkedAccount(provider: provider)
+                }
+                .buttonStyle(.borderless)
+                .font(.caption.weight(.semibold))
+            } else {
+                Button("Connect") {
+                    link(provider: provider)
+                }
+                .buttonStyle(.borderless)
+                .font(.caption.weight(.semibold))
+            }
+        }
+    }
+
+    private func upsertLinkedAccount(_ account: LinkedSocialAccount) {
+        var accounts = linkedAccounts
+        if let index = accounts.firstIndex(where: { $0.provider == account.provider }) {
+            accounts[index] = account
+        } else {
+            accounts.append(account)
+        }
+        linkedSocialAccountsRaw = SocialAccountLinkStore.encode(accounts)
+
+        if let profileURL = account.profileImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !profileURL.isEmpty {
+            accountProfileImageURL = profileURL
+        }
+
+        let name = account.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty {
+            accountUsername = name
+        }
+    }
+
+    private func removeLinkedAccount(provider: SocialAuthProvider) {
+        let updated = linkedAccounts.filter { $0.provider != provider }
+        linkedSocialAccountsRaw = SocialAccountLinkStore.encode(updated)
+    }
+
+    private func link(provider: SocialAuthProvider) {
+        guard linkingInProgressProvider == nil else { return }
+        authErrorMessage = ""
+        linkingInProgressProvider = provider
+        let attemptID = UUID().uuidString
+        authLogger.debug("[\(attemptID, privacy: .public)] UI tap provider=\(provider.rawValue, privacy: .public)")
+
+        Task {
+            defer { linkingInProgressProvider = nil }
+            do {
+                authLogger.debug("[\(attemptID, privacy: .public)] Calling auth service for provider=\(provider.rawValue, privacy: .public)")
+                let result = try await socialAuthService.authenticate(with: provider)
+                authLogger.debug("[\(attemptID, privacy: .public)] Auth success provider=\(result.provider.rawValue, privacy: .public) userID=\(result.providerUserID, privacy: .public)")
+                let account = LinkedSocialAccount(
+                    provider: provider,
+                    providerUserID: result.providerUserID,
+                    displayName: result.displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                        ? (result.displayName ?? "")
+                        : accountUsername,
+                    handle: result.handle,
+                    profileImageURL: result.profileImageURL,
+                    accessToken: result.accessToken,
+                    isVerified: true,
+                    eligiblePostURLs: linkedAccount(for: provider)?.eligiblePostURLs ?? [],
+                    linkedAt: Date()
+                )
+                upsertLinkedAccount(account)
+            } catch {
+                let scopedMessage = providerScopedAuthErrorMessage(error, provider: provider)
+                authLogger.error("[\(attemptID, privacy: .public)] Auth failure provider=\(provider.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)")
+                authLogger.error("[\(attemptID, privacy: .public)] Assigning authErrorMessage='\(scopedMessage, privacy: .public)'")
+                authErrorMessage = scopedMessage
+            }
+        }
+    }
+
+    private func providerScopedAuthErrorMessage(_ error: Error, provider: SocialAuthProvider) -> String {
+        if let socialError = error as? SocialAuthError {
+            switch socialError {
+            case .oauthNotConfigured:
+                switch provider {
+                case .instagram: return "Instagram OAuth is not configured yet."
+                case .tiktok: return "TikTok OAuth is not configured yet."
+                case .apple: return "Apple Sign In is not configured yet."
+                }
+            case .missingPresentationAnchor:
+                return "Unable to start Apple Sign In on this screen."
+            case .cancelled:
+                return "Authentication was cancelled."
+            case .unknown:
+                switch provider {
+                case .instagram: return "Instagram authentication failed."
+                case .tiktok: return "TikTok authentication failed."
+                case .apple: return "Apple authentication failed."
+                }
+            case .appleAuthorizationFailed(let details):
+                return details
+            }
+        }
+
+        if let localized = (error as? LocalizedError)?.errorDescription, !localized.isEmpty {
+            return localized
+        }
+
+        switch provider {
+        case .instagram: return "Instagram authentication failed."
+        case .tiktok: return "TikTok authentication failed."
+        case .apple: return "Apple authentication failed."
+        }
+    }
 }

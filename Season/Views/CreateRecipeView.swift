@@ -30,6 +30,7 @@ struct CreateRecipeView: View {
         let prepTimeMinutes: Int?
         let cookTimeMinutes: Int?
         let difficulty: RecipeDifficulty?
+        let servings: Int
         let isRemix: Bool
         let originalRecipeID: String?
         let originalRecipeTitle: String?
@@ -39,6 +40,7 @@ struct CreateRecipeView: View {
     @ObservedObject var viewModel: ProduceViewModel
     private let prefillDraft: PrefillDraft?
     @AppStorage("accountUsername") private var accountUsername = "Anna"
+    @AppStorage("linkedSocialAccountsRaw") private var linkedSocialAccountsRaw = ""
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
@@ -54,6 +56,11 @@ struct CreateRecipeView: View {
     @State private var stepDrafts: [CreateStepDraft] = [CreateStepDraft()]
     @State private var showPublishError = false
     @State private var importFeedbackText = ""
+    @State private var showImportTools = false
+    @State private var selectedImportProviderRaw = SocialAuthProvider.instagram.rawValue
+    @State private var selectedOwnedPostURL = ""
+    @State private var selectedServings = 2
+    @State private var showCameraUnavailableAlert = false
     @FocusState private var focusedIngredientID: UUID?
 
     private var localizer: AppLocalizer { viewModel.localizer }
@@ -69,6 +76,7 @@ struct CreateRecipeView: View {
         _mediaLink = State(initialValue: initialMediaLink)
         _uploadedImages = State(initialValue: prefillDraft?.images ?? [])
         _coverImageID = State(initialValue: prefillDraft?.coverImageID ?? prefillDraft?.images.first?.id)
+        _selectedServings = State(initialValue: max(1, prefillDraft?.servings ?? 2))
 
         if let prefillDraft {
             _ingredientDrafts = State(initialValue: prefillDraft.ingredients.map {
@@ -102,29 +110,40 @@ struct CreateRecipeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    importFromLinkSection
-                    mediaSection
+                VStack(alignment: .leading, spacing: 16) {
+                    heroComposerSection
                     titleSection
+                    servingsSection
+                    importFromLinkSection
                     ingredientsSection
                     stepsSection
                     previewSection
-                    publishButton
+                    Color.clear.frame(height: 12)
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .navigationTitle(localizer.text(.createRecipe))
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .bottom) {
+                publishBar
+            }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(localizer.text(.done)) {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
                     }
                 }
             }
             .alert(localizer.text(.createRecipeSubtitle), isPresented: $showPublishError) {
                 Button("OK", role: .cancel) {}
+            }
+            .alert("Camera Unavailable", isPresented: $showCameraUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This device does not have an available camera. You can still add photos from your library.")
             }
             .sheet(isPresented: $showingCameraPicker) {
                 CameraImagePicker { image in
@@ -142,73 +161,81 @@ struct CreateRecipeView: View {
                 if detectedSourcePlatform == nil {
                     detectedSourcePlatform = detectedPlatform(for: mediaLink)
                 }
+                if let firstProvider = importableLinkedAccounts.first?.provider.rawValue {
+                    selectedImportProviderRaw = firstProvider
+                }
             }
         }
     }
 
-    private var mediaSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle(localizer.text(.mediaSectionTitle))
+    private var heroComposerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack(alignment: .bottomLeading) {
+                heroImageContent
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 208)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                HStack(spacing: 10) {
+                LinearGradient(
+                    colors: [.clear, Color.black.opacity(0.34)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                HStack(spacing: 8) {
                     PhotosPicker(
                         selection: $selectedPhotoItems,
                         maxSelectionCount: 8,
                         matching: .images,
                         photoLibrary: .shared()
                     ) {
-                        Label(localizer.text(.mediaAddPhotos), systemImage: "photo.on.rectangle.angled")
+                        Label(localizer.text(.mediaAddPhotos), systemImage: "photo")
                             .font(.subheadline.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.white.opacity(0.92))
 
                     Button {
-                        showingCameraPicker = true
+                        openCameraIfAvailable()
                     } label: {
                         Label(localizer.text(.mediaUseCamera), systemImage: "camera")
                             .font(.subheadline.weight(.semibold))
                     }
                     .buttonStyle(.bordered)
+                    .tint(.white.opacity(0.92))
+                }
+                .padding(12)
+            }
+
+            TextField(localizer.text(.mediaExternalLink), text: $mediaLink)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textFieldStyle(.plain)
+                .font(.subheadline)
+                .padding(.vertical, 8)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(Color(.separator).opacity(0.4))
+                        .frame(height: 1)
+                }
+                .onChange(of: mediaLink) { _, newValue in
+                    detectedSourcePlatform = detectedPlatform(for: newValue)
                 }
 
-                TextField(localizer.text(.mediaExternalLink), text: $mediaLink)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
-                    .onChange(of: mediaLink) { _, newValue in
-                        detectedSourcePlatform = detectedPlatform(for: newValue)
-                    }
+            if let platform = detectedSourcePlatform,
+               let platformLabel = platformDisplayName(platform) {
+                Text(String(format: localizer.text(.detectedPlatformFormat), platformLabel))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
-                if let platform = detectedSourcePlatform,
-                   let platformLabel = platformDisplayName(platform) {
-                    Text(String(format: localizer.text(.detectedPlatformFormat), platformLabel))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if uploadedImages.isEmpty {
-                    if let legacyName = prefillDraft?.imageAssetName,
-                       hasAsset(named: legacyName) {
-                        Image(legacyName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 160)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    } else {
-                        Text(localizer.text(.mediaNoImagesYet))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(uploadedImages, id: \.id) { image in
-                                mediaItemCard(image: image)
-                            }
+            if !uploadedImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(uploadedImages, id: \.id) { image in
+                            mediaItemCard(image: image)
                         }
                     }
                 }
@@ -217,32 +244,87 @@ struct CreateRecipeView: View {
     }
 
     private var importFromLinkSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle(localizer.text(.importFromLinkSectionTitle))
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureGroup(isExpanded: $showImportTools) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if importableLinkedAccounts.isEmpty {
+                        Text("Connect TikTok or Instagram in Account to import your own content.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Provider", selection: $selectedImportProviderRaw) {
+                            ForEach(importableLinkedAccounts) { account in
+                                Text(providerDisplayName(account.provider))
+                                    .tag(account.provider.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
 
-                TextField(localizer.text(.socialLink), text: $importLink)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
+                        if selectedImportableAccount?.eligiblePostURLs.isEmpty == true {
+                            Text("No eligible posts found for this account. Add your own post URLs in Account.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ScrollView {
+                                VStack(spacing: 8) {
+                                    ForEach(selectedImportableAccount?.eligiblePostURLs ?? [], id: \.self) { url in
+                                        Button {
+                                            selectedOwnedPostURL = url
+                                            importLink = url
+                                        } label: {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: selectedOwnedPostURL == url ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundStyle(selectedOwnedPostURL == url ? .green : .secondary)
+                                                Text(url)
+                                                    .font(.caption)
+                                                    .lineLimit(1)
+                                                    .foregroundStyle(.primary)
+                                                Spacer()
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                    .fill(Color(.secondarySystemGroupedBackground))
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 150)
+                        }
+                    }
 
-                TextField(localizer.text(.socialCaptionRaw), text: $importCaptionRaw, axis: .vertical)
-                    .lineLimit(3...6)
-                    .textInputAutocapitalization(.sentences)
-                    .textFieldStyle(.roundedBorder)
+                    TextField(localizer.text(.socialCaptionRaw), text: $importCaptionRaw, axis: .vertical)
+                        .lineLimit(3...5)
+                        .textInputAutocapitalization(.sentences)
+                        .textFieldStyle(.roundedBorder)
 
-                Button {
-                    applySocialImport()
-                } label: {
-                    Label(localizer.text(.importDraft), systemImage: "wand.and.stars")
-                        .font(.subheadline.weight(.semibold))
+                    Button {
+                        applySocialImport()
+                    } label: {
+                        Label(localizer.text(.importDraft), systemImage: "wand.and.stars")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!canImportFromConnectedAccount)
+
+                    if !importFeedbackText.isEmpty {
+                        Text(importFeedbackText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-
-                if !importFeedbackText.isEmpty {
-                    Text(importFeedbackText)
-                        .font(.caption)
+                .padding(.top, 8)
+            } label: {
+                HStack {
+                    Text(localizer.text(.importFromLinkSectionTitle))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "wand.and.stars")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -250,222 +332,258 @@ struct CreateRecipeView: View {
     }
 
     private var titleSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle(localizer.text(.titleSectionTitle))
+        TextField(localizer.text(.createRecipe), text: $title, axis: .vertical)
+            .font(.system(size: 32, weight: .semibold, design: .default))
+            .lineLimit(2...3)
+            .textFieldStyle(.plain)
+            .padding(.vertical, 6)
+    }
 
-                TextField(localizer.text(.createRecipe), text: $title, axis: .vertical)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(2...3)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color(.tertiarySystemGroupedBackground))
-                    )
+    private var servingsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Stepper(value: $selectedServings, in: 1...12) {
+                Text(String(format: localizer.text(.servesFormat), selectedServings))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
             }
         }
     }
 
     private var ingredientsSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionTitle(localizer.text(.ingredientsSectionTitle))
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle(localizer.text(.ingredientsSectionTitle))
 
-                ForEach($ingredientDrafts) { $ingredient in
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Line 1: ingredient selection / custom input
-                        HStack(alignment: .center, spacing: 8) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField(
-                                    localizer.text(.ingredientName),
-                                    text: bindingForIngredientSearch(id: ingredient.id)
-                                )
-                                .textFieldStyle(.roundedBorder)
-                                .focused($focusedIngredientID, equals: ingredient.id)
+            ForEach($ingredientDrafts) { $ingredient in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField(
+                                localizer.text(.ingredientName),
+                                text: bindingForIngredientSearch(id: ingredient.id)
+                            )
+                            .textFieldStyle(.roundedBorder)
+                            .focused($focusedIngredientID, equals: ingredient.id)
 
-                                if ingredientIsCustom(ingredient) {
-                                    Text(localizer.text(.customIngredient))
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(Color(.secondarySystemGroupedBackground))
-                                        )
-                                }
-
-                                let matches = ingredientMatches(for: ingredient)
-                                if shouldShowIngredientSuggestions(for: ingredient) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(Array(matches.prefix(6))) { result in
-                                            Button {
-                                                applyIngredientSelection(result, for: ingredient.id)
-                                            } label: {
-                                                HStack(spacing: 8) {
-                                                    Text(result.title)
-                                                        .font(.subheadline)
-                                                        .foregroundStyle(.primary)
-                                                        .lineLimit(1)
-                                                    Spacer()
-                                                    Text(result.subtitle)
-                                                        .font(.caption)
-                                                        .foregroundStyle(.secondary)
-                                                        .lineLimit(1)
-                                                }
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 6)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-
-                                        if matches.isEmpty {
-                                            Button {
-                                                applyCustomIngredientFallback(for: ingredient.id)
-                                            } label: {
-                                                HStack(spacing: 8) {
-                                                    Image(systemName: "plus.circle")
-                                                        .font(.caption.weight(.semibold))
-                                                        .foregroundStyle(.secondary)
-                                                    Text(localizer.text(.cantFindAddCustom))
-                                                        .font(.caption)
-                                                        .foregroundStyle(.secondary)
-                                                    Spacer()
-                                                }
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 6)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
+                            if ingredientIsCustom(ingredient) {
+                                Text(localizer.text(.customIngredient))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                                             .fill(Color(.secondarySystemGroupedBackground))
                                     )
-                                }
                             }
 
-                            Button(role: .destructive) {
-                                removeIngredient(id: ingredient.id)
-                            } label: {
-                                Image(systemName: "minus.circle")
-                                    .font(.title3)
-                                    .foregroundStyle(.secondary)
+                            let matches = ingredientMatches(for: ingredient)
+                            if shouldShowIngredientSuggestions(for: ingredient) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(Array(matches.prefix(6))) { result in
+                                        Button {
+                                            applyIngredientSelection(result, for: ingredient.id)
+                                        } label: {
+                                            HStack(spacing: 8) {
+                                                Text(result.title)
+                                                    .font(.subheadline)
+                                                    .foregroundStyle(.primary)
+                                                    .lineLimit(1)
+                                                Spacer()
+                                                Text(result.subtitle)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(1)
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 6)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+
+                                    if matches.isEmpty {
+                                        Button {
+                                            applyCustomIngredientFallback(for: ingredient.id)
+                                        } label: {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "plus.circle")
+                                                    .font(.caption.weight(.semibold))
+                                                    .foregroundStyle(.secondary)
+                                                Text(localizer.text(.cantFindAddCustom))
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                Spacer()
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 6)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(Color(.secondarySystemGroupedBackground))
+                                )
                             }
-                            .buttonStyle(.plain)
                         }
 
-                        // Line 2: quantity and unit
-                        HStack(spacing: 8) {
-                            TextField(localizer.text(.quantity), text: $ingredient.quantityValue)
-                                .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 96)
-
-                            Picker(localizer.text(.quantity), selection: $ingredient.quantityUnit) {
-                                ForEach(supportedUnits(for: ingredient)) { unit in
-                                    Text(localizer.quantityUnitTitle(unit)).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button(role: .destructive) {
+                            removeIngredient(id: ingredient.id)
+                        } label: {
+                            Image(systemName: "minus.circle")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color(.tertiarySystemGroupedBackground))
-                    )
-                }
 
-                Button {
-                    let draft = CreateIngredientDraft()
-                    ingredientDrafts.append(draft)
-                    focusedIngredientID = draft.id
-                } label: {
-                    Label(localizer.text(.addIngredient), systemImage: "plus")
-                        .font(.subheadline.weight(.semibold))
+                    HStack(spacing: 8) {
+                        TextField(localizer.text(.quantity), text: $ingredient.quantityValue)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 96)
+
+                        Picker(localizer.text(.quantity), selection: $ingredient.quantityUnit) {
+                            ForEach(supportedUnits(for: ingredient)) { unit in
+                                Text(localizer.quantityUnitTitle(unit)).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-                .buttonStyle(.bordered)
+                .padding(.vertical, 2)
+
+                if ingredient.id != ingredientDrafts.last?.id {
+                    Divider()
+                }
             }
+
+            Button {
+                let draft = CreateIngredientDraft()
+                ingredientDrafts.append(draft)
+                focusedIngredientID = draft.id
+            } label: {
+                Label(localizer.text(.addIngredient), systemImage: "plus")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
         }
     }
 
     private var stepsSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle(localizer.text(.stepsSectionTitle))
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle(localizer.text(.stepsSectionTitle))
 
-                ForEach(Array(stepDrafts.enumerated()), id: \.element.id) { index, step in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("\(index + 1).")
-                            .font(.subheadline.weight(.semibold))
+            ForEach(Array(stepDrafts.enumerated()), id: \.element.id) { index, step in
+                HStack(alignment: .top, spacing: 8) {
+                    Text("\(index + 1).")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, alignment: .leading)
+
+                    TextField(localizer.text(.stepPlaceholder), text: bindingForStep(step.id), axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button(role: .destructive) {
+                        removeStep(id: step.id)
+                    } label: {
+                        Image(systemName: "minus.circle")
                             .foregroundStyle(.secondary)
-                            .frame(width: 22, alignment: .leading)
-
-                        TextField(localizer.text(.stepPlaceholder), text: bindingForStep(step.id), axis: .vertical)
-                            .textFieldStyle(.roundedBorder)
-
-                        Button(role: .destructive) {
-                            removeStep(id: step.id)
-                        } label: {
-                            Image(systemName: "minus.circle")
-                                .foregroundStyle(.secondary)
-                        }
                     }
                 }
 
-                Button {
-                    stepDrafts.append(CreateStepDraft())
-                } label: {
-                    Label(localizer.text(.addStep), systemImage: "plus")
-                        .font(.subheadline.weight(.semibold))
+                if step.id != stepDrafts.last?.id {
+                    Divider()
                 }
-                .buttonStyle(.bordered)
             }
+
+            Button {
+                stepDrafts.append(CreateStepDraft())
+            } label: {
+                Label(localizer.text(.addStep), systemImage: "plus")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
         }
     }
 
     private var previewSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle(localizer.text(.previewSectionTitle))
+        VStack(alignment: .leading, spacing: 8) {
+            sectionTitle(localizer.text(.previewSectionTitle))
 
-                if validIngredientProduceIDs.isEmpty {
-                    Text(localizer.text(.seasonalFeedbackEmpty))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("\(localizer.text(.seasonalMatch)): \(seasonalMatchPercent)%")
-                        .font(.headline)
+            if validIngredientProduceIDs.isEmpty {
+                Text(localizer.text(.seasonalFeedbackEmpty))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("\(localizer.text(.seasonalMatch)): \(seasonalMatchPercent)%")
+                    .font(.headline)
 
-                    Text(seasonalFeedbackLabel)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(seasonalFeedbackColor)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(seasonalFeedbackColor.opacity(0.14))
-                        )
-                }
+                Text(seasonalFeedbackLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(seasonalFeedbackColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(seasonalFeedbackColor.opacity(0.14))
+                    )
             }
         }
     }
 
-    private var publishButton: some View {
-        Button {
-            publish()
-        } label: {
-            Text(localizer.text(.publishRecipe))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .font(.headline)
+    private var publishBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color(.separator).opacity(0.25))
+                .frame(height: 1)
+
+            HStack {
+                Button {
+                    publish()
+                } label: {
+                    Text(localizer.text(.publishRecipe))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canPublish)
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .background(Color(.systemBackground))
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(!canPublish)
+    }
+
+    @ViewBuilder
+    private var heroImageContent: some View {
+        if let cover = uploadedImages.first, let uiImage = recipeUIImage(from: cover) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+        } else if let legacyName = prefillDraft?.imageAssetName, hasAsset(named: legacyName) {
+            Image(legacyName)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: 6) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text(localizer.text(.mediaNoImagesYet))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     private var validIngredientProduceIDs: [String] {
@@ -563,7 +681,7 @@ struct CreateRecipeView: View {
     }
 
     private var normalizedImportLink: String? {
-        let trimmed = importLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = selectedOwnedPostURL.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 
@@ -593,6 +711,7 @@ struct CreateRecipeView: View {
             sourcePlatform: detectedSourcePlatform,
             sourceCaptionRaw: normalizedImportCaption,
             importedFromSocial: normalizedImportLink != nil,
+            servings: selectedServings,
             prepTimeMinutes: prefillDraft?.prepTimeMinutes,
             cookTimeMinutes: prefillDraft?.cookTimeMinutes,
             difficulty: prefillDraft?.difficulty,
@@ -635,8 +754,13 @@ struct CreateRecipeView: View {
     }
 
     private func applySocialImport() {
+        guard canImportFromConnectedAccount else {
+            importFeedbackText = "Import only works from your connected account content."
+            return
+        }
+
         let suggestion = SocialImportParser.parse(
-            sourceURLRaw: importLink,
+            sourceURLRaw: selectedOwnedPostURL,
             captionRaw: importCaptionRaw,
             produceItems: viewModel.produceItems,
             languageCode: localizer.languageCode
@@ -667,6 +791,43 @@ struct CreateRecipeView: View {
         if let sourceURL = suggestion.sourceURL,
            mediaLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             mediaLink = sourceURL
+        }
+    }
+
+    private var linkedSocialAccounts: [LinkedSocialAccount] {
+        SocialAccountLinkStore.decode(linkedSocialAccountsRaw)
+    }
+
+    private var importableLinkedAccounts: [LinkedSocialAccount] {
+        linkedSocialAccounts.filter { $0.provider.supportsRecipeImport }
+    }
+
+    private var selectedImportProvider: SocialAuthProvider? {
+        SocialAuthProvider(rawValue: selectedImportProviderRaw)
+    }
+
+    private var selectedImportableAccount: LinkedSocialAccount? {
+        guard let selectedImportProvider else { return importableLinkedAccounts.first }
+        return importableLinkedAccounts.first(where: { $0.provider == selectedImportProvider })
+    }
+
+    private var canImportFromConnectedAccount: Bool {
+        guard let account = selectedImportableAccount else { return false }
+        let trimmed = selectedOwnedPostURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return account.eligiblePostURLs.contains(where: {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmed) == .orderedSame
+        })
+    }
+
+    private func providerDisplayName(_ provider: SocialAuthProvider) -> String {
+        switch provider {
+        case .instagram:
+            return "Instagram"
+        case .tiktok:
+            return "TikTok"
+        case .apple:
+            return "Apple"
         }
     }
 
@@ -788,7 +949,7 @@ struct CreateRecipeView: View {
         switch unit {
         case .g, .ml:
             return "100"
-        case .piece, .clove, .tbsp, .tsp:
+        case .piece, .slice, .clove, .tbsp, .tsp, .cup:
             return "1"
         }
     }
@@ -865,6 +1026,14 @@ struct CreateRecipeView: View {
         if coverImageID == nil {
             coverImageID = uploadedImages.first?.id
         }
+    }
+
+    private func openCameraIfAvailable() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            showCameraUnavailableAlert = true
+            return
+        }
+        showingCameraPicker = true
     }
 
     private func saveImageDataToDocuments(_ data: Data) -> String? {

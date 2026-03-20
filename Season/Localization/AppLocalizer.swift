@@ -412,18 +412,22 @@ struct AppLocalizer {
             case .g: return "g"
             case .ml: return "ml"
             case .piece: return "pezzo"
+            case .slice: return "fetta"
             case .clove: return "spicchio"
             case .tbsp: return "cucchiaio"
             case .tsp: return "cucchiaino"
+            case .cup: return "tazza"
             }
         default:
             switch unit {
             case .g: return "g"
             case .ml: return "ml"
             case .piece: return "piece"
+            case .slice: return "slice"
             case .clove: return "clove"
             case .tbsp: return "tbsp"
             case .tsp: return "tsp"
+            case .cup: return "cup"
             }
         }
     }

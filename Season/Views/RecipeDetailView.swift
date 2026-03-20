@@ -15,6 +15,7 @@ struct RecipeDetailView: View {
     @State private var followButtonPulse = false
     @State private var hasTrackedView = false
     @State private var showingTimingExplanation = false
+    @State private var selectedServings = 2
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -95,6 +96,15 @@ struct RecipeDetailView: View {
                         }
                     }
 
+                    HStack {
+                        Text(String(format: viewModel.localizer.text(.servesFormat), selectedServings))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Stepper("", value: $selectedServings, in: 1...12)
+                            .labelsHidden()
+                    }
+
                     if !rankedRecipe.recipe.externalMedia.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(viewModel.localizer.text(.watchVideo))
@@ -152,7 +162,7 @@ struct RecipeDetailView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(ingredient.name)
                                         .font(.body)
-                                    Text(ingredient.quantity)
+                                    Text(displayQuantityText(for: ingredient.recipeIngredient))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -173,7 +183,7 @@ struct RecipeDetailView: View {
                             Text(viewModel.localizer.text(.recipeNutritionSummaryTitle))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                            Text(String(format: viewModel.localizer.text(.recipeNutritionPerServingBasisFormat), servingsCount))
+                            Text(String(format: viewModel.localizer.text(.recipeNutritionPerServingBasisFormat), baseServingsCount))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -205,6 +215,14 @@ struct RecipeDetailView: View {
                                 title: viewModel.localizer.text(.potassium),
                                 value: "\(formattedNumber(nutritionSummary.potassium)) mg"
                             )
+
+                            if selectedServings != 1 {
+                                Divider()
+                                nutritionRow(
+                                    title: "Total (\(selectedServings) servings)",
+                                    value: "\(Int((nutritionSummary.calories * Double(selectedServings)).rounded())) kcal"
+                                )
+                            }
 
                             Text(viewModel.localizer.text(.recipeNutritionEstimatedNote))
                                 .font(.caption2)
@@ -267,6 +285,7 @@ struct RecipeDetailView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, SeasonSpacing.xs)
+                .animation(.easeInOut(duration: 0.2), value: selectedServings)
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 2)
@@ -325,6 +344,7 @@ struct RecipeDetailView: View {
                     prepTimeMinutes: rankedRecipe.recipe.prepTimeMinutes,
                     cookTimeMinutes: rankedRecipe.recipe.cookTimeMinutes,
                     difficulty: rankedRecipe.recipe.difficulty,
+                    servings: rankedRecipe.recipe.servings,
                     isRemix: true,
                     originalRecipeID: rankedRecipe.recipe.id,
                     originalRecipeTitle: rankedRecipe.recipe.title,
@@ -337,6 +357,7 @@ struct RecipeDetailView: View {
                 viewModel.registerRecipeView(rankedRecipe.recipe)
                 hasTrackedView = true
             }
+            selectedServings = max(1, rankedRecipe.recipe.servings)
         }
     }
 
@@ -347,42 +368,41 @@ struct RecipeDetailView: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(alignment: .center, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    NavigationLink {
-                        AuthorProfileView(
-                            authorName: rankedRecipe.recipe.author,
-                            viewModel: viewModel,
-                            shoppingListViewModel: shoppingListViewModel
-                        )
+            if showsUserAuthorshipMetadata {
+                HStack(alignment: .center, spacing: 10) {
+                    if let author = trimmedAuthorName {
+                        NavigationLink {
+                            AuthorProfileView(
+                                authorName: author,
+                                viewModel: viewModel,
+                                shoppingListViewModel: shoppingListViewModel
+                            )
+                        } label: {
+                            Text(author)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        toggleFollowAuthor()
+                        pulse(.follow)
                     } label: {
-                        Text(rankedRecipe.recipe.author)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Text(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
                     }
-                    .buttonStyle(.plain)
-
-                    if let source = rankedRecipe.recipe.sourceName,
-                       !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(source)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .scaleEffect(followButtonPulse ? 0.96 : 1.0)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.72), value: followButtonPulse)
                 }
-
-                Spacer()
-
-                Button {
-                    toggleFollowAuthor()
-                    pulse(.follow)
-                } label: {
-                    Text(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .scaleEffect(followButtonPulse ? 0.96 : 1.0)
-                .animation(.spring(response: 0.22, dampingFraction: 0.72), value: followButtonPulse)
+            } else if let seedAttributionLine {
+                Text(seedAttributionLine)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             HStack {
@@ -494,6 +514,29 @@ struct RecipeDetailView: View {
         return "\(crispyText) · \(viewsText)"
     }
 
+    private var showsUserAuthorshipMetadata: Bool {
+        rankedRecipe.recipe.isUserGenerated || rankedRecipe.recipe.sourceType == .userGenerated
+    }
+
+    private var trimmedAuthorName: String? {
+        guard showsUserAuthorshipMetadata else { return nil }
+        let trimmed = rankedRecipe.recipe.author.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var seedAttributionLine: String? {
+        guard !showsUserAuthorshipMetadata else { return nil }
+        let attribution = rankedRecipe.recipe.attributionText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let attribution, !attribution.isEmpty {
+            return "via \(attribution)"
+        }
+        let source = rankedRecipe.recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let source, !source.isEmpty {
+            return "via \(source)"
+        }
+        return nil
+    }
+
     private var followedAuthorsSet: Set<String> {
         Set(
             followedAuthorsRaw
@@ -531,17 +574,16 @@ struct RecipeDetailView: View {
         if let difficulty = rankedRecipe.recipe.difficulty {
             parts.append(viewModel.localizer.recipeDifficultyTitle(difficulty))
         }
-        parts.append(String(format: viewModel.localizer.text(.servesFormat), servingsCount))
         return parts.joined(separator: " · ")
     }
 
-    private var servingsCount: Int {
+    private var baseServingsCount: Int {
         max(1, rankedRecipe.recipe.servings)
     }
 
     private var perServingNutritionSummary: RecipeNutritionSummary? {
         guard let total = viewModel.recipeNutritionSummary(for: rankedRecipe.recipe) else { return nil }
-        let divisor = Double(servingsCount)
+        let divisor = Double(baseServingsCount)
         return RecipeNutritionSummary(
             calories: total.calories / divisor,
             protein: total.protein / divisor,
@@ -594,9 +636,101 @@ struct RecipeDetailView: View {
     }
 
     private func ingredientStatusText(for ingredient: IngredientRow) -> String {
-        hasIngredientInFridge(ingredient)
-        ? viewModel.localizer.text(.youHave)
-        : viewModel.localizer.text(.missing)
+        if hasIngredientInFridge(ingredient) {
+            return viewModel.localizer.text(.youHave)
+        }
+        return "\(viewModel.localizer.text(.missing)) · \(displayQuantityText(for: ingredient.recipeIngredient))"
+    }
+
+    private var servingsScaleFactor: Double {
+        Double(selectedServings) / Double(baseServingsCount)
+    }
+
+    private func isScalable(_ ingredient: RecipeIngredient) -> Bool {
+        if ingredient.quantityValue <= 0 {
+            return false
+        }
+
+        let raw = ingredient.rawIngredientLine?.lowercased() ?? ""
+        if raw.contains("to taste") || raw.contains("as needed") || raw.contains("q.b.") || raw.contains("qb") {
+            return false
+        }
+        return true
+    }
+
+    private func scaledQuantityValue(for ingredient: RecipeIngredient) -> Double {
+        guard isScalable(ingredient) else { return ingredient.quantityValue }
+        let scaled = ingredient.quantityValue * servingsScaleFactor
+        return roundedScaledQuantity(scaled, unit: ingredient.quantityUnit)
+    }
+
+    private func roundedScaledQuantity(_ value: Double, unit: RecipeQuantityUnit) -> Double {
+        switch unit {
+        case .g, .ml:
+            if value >= 10 { return value.rounded() }
+            return (value * 10).rounded() / 10
+        case .tbsp, .tsp, .cup:
+            return (value * 4).rounded() / 4
+        case .piece, .slice, .clove:
+            return roundedToSupportedFractions(value)
+        }
+    }
+
+    private func roundedToSupportedFractions(_ value: Double) -> Double {
+        let whole = floor(value)
+        let fractional = value - whole
+        let supported: [Double] = [0.0, 0.25, 1.0 / 3.0, 0.5, 2.0 / 3.0, 0.75]
+        let closest = supported.min(by: { abs($0 - fractional) < abs($1 - fractional) }) ?? 0
+        let result = whole + closest
+        return result <= 0 ? max(0.25, result) : result
+    }
+
+    private func displayQuantityText(for ingredient: RecipeIngredient) -> String {
+        if !isScalable(ingredient),
+           let raw = ingredient.rawIngredientLine?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !raw.isEmpty {
+            return raw
+        }
+
+        let value = scaledQuantityValue(for: ingredient)
+        let valueText: String
+        switch ingredient.quantityUnit {
+        case .piece, .clove, .slice:
+            valueText = formattedFractionValue(value)
+        case .g, .ml:
+            valueText = value.rounded() == value ? "\(Int(value))" : formattedNumber(value)
+        case .tbsp, .tsp, .cup:
+            let rounded = value.rounded()
+            if abs(value - rounded) < 0.001 {
+                valueText = "\(Int(rounded))"
+            } else {
+                valueText = String(format: "%.2f", value)
+                    .replacingOccurrences(of: #"(\.\d*?[1-9])0+$"#, with: "$1", options: .regularExpression)
+                    .replacingOccurrences(of: #"\.0+$"#, with: "", options: .regularExpression)
+            }
+        }
+        return "\(valueText) \(viewModel.localizer.quantityUnitTitle(ingredient.quantityUnit))"
+    }
+
+    private func formattedFractionValue(_ value: Double) -> String {
+        let whole = Int(floor(value))
+        let fractional = value - Double(whole)
+
+        let options: [(value: Double, symbol: String)] = [
+            (0.25, "¼"),
+            (1.0 / 3.0, "⅓"),
+            (0.5, "½"),
+            (2.0 / 3.0, "⅔"),
+            (0.75, "¾")
+        ]
+
+        let best = options.min(by: { abs($0.value - fractional) < abs($1.value - fractional) })
+        let fractionSymbol = (best != nil && abs((best?.value ?? 0) - fractional) <= 0.13) ? (best?.symbol ?? "") : ""
+
+        if whole == 0 {
+            return fractionSymbol.isEmpty ? "0" : fractionSymbol
+        }
+        return fractionSymbol.isEmpty ? "\(whole)" : "\(whole)\(fractionSymbol)"
     }
 
     private enum PulseTarget {
@@ -750,7 +884,6 @@ struct RecipeDetailView: View {
             return IngredientRow(
                 id: ingredient.id,
                 name: name,
-                quantity: ingredient.quantity,
                 item: item,
                 recipeIngredient: ingredient
             )
@@ -775,13 +908,16 @@ struct RecipeDetailView: View {
 
     private func addIngredients() {
         let resolvedIngredients = rankedRecipe.recipe.ingredients.map { ingredient in
-            RecipeIngredient(
+            let scaledValue = scaledQuantityValue(for: ingredient)
+            return RecipeIngredient(
                 produceID: ingredient.produceID,
                 basicIngredientID: ingredient.basicIngredientID,
                 quality: ingredient.quality,
                 name: viewModel.recipeIngredientDisplayName(ingredient),
-                quantityValue: ingredient.quantityValue,
-                quantityUnit: ingredient.quantityUnit
+                quantityValue: scaledValue,
+                quantityUnit: ingredient.quantityUnit,
+                rawIngredientLine: ingredient.rawIngredientLine,
+                mappingConfidence: ingredient.mappingConfidence
             )
         }
 
@@ -816,7 +952,6 @@ struct RecipeDetailView: View {
 private struct IngredientRow {
     let id: String
     let name: String
-    let quantity: String
     let item: ProduceItem?
     let recipeIngredient: RecipeIngredient
 }

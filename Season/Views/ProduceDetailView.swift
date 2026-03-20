@@ -33,193 +33,14 @@ struct ProduceDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 18) {
+            VStack(spacing: SeasonSpacing.md) {
+                topSection
+                actionsSection
                 if let produceItem {
-                    ProduceHeroImageView(item: produceItem, height: 214)
-                } else if let basicIngredient {
-                    basicHeroImage(for: basicIngredient)
+                    seasonalitySection(for: produceItem)
                 }
-
-                SeasonCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(ingredientDisplayName)
-                            .font(.title3.weight(.semibold))
-
-                        if let produceItem {
-                            HStack {
-                                Text(viewModel.localizer.text(.seasonalStatus))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                SeasonalStatusBadge(
-                                    score: produceItem.seasonalityScore(month: viewModel.currentMonth),
-                                    delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
-                                    localizer: viewModel.localizer
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if let produceItem {
-                    SeasonCard {
-                        HStack(spacing: 14) {
-                            CategoryIconView(category: produceItem.category, size: 20)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(viewModel.localizer.text(.category))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Text(viewModel.localizer.categoryTitle(for: produceItem.category))
-                                    .font(.body.weight(.medium))
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-
-                if let produceItem {
-                    SeasonCard {
-                        HStack(spacing: 14) {
-                            Image(systemName: "calendar")
-                                .foregroundStyle(.secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(viewModel.localizer.text(.seasonMonths))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Text(viewModel.monthNames(for: produceItem.seasonMonths))
-                                    .font(.body.weight(.medium))
-                            }
-                            Spacer()
-                        }
-                    }
-                }
-
-                if let produceItem {
-                    SeasonCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(viewModel.localizer.text(.seasonalityChart))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-
-                            StylizedSeasonalityChart(
-                                inSeasonMonths: produceItem.seasonMonths,
-                                currentMonth: viewModel.currentMonth,
-                                languageCode: viewModel.languageCode
-                            )
-                        }
-                    }
-                }
-
                 if let nutrition = ingredientNutrition {
-                    SeasonCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(viewModel.localizer.text(.nutrition))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-
-                            nutritionRow(
-                                title: viewModel.localizer.text(.calories),
-                                value: "\(nutrition.calories) kcal"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.protein),
-                                value: "\(formatted(nutrition.protein)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.carbs),
-                                value: "\(formatted(nutrition.carbs)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.fat),
-                                value: "\(formatted(nutrition.fat)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.fiber),
-                                value: "\(formatted(nutrition.fiber)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.vitaminC),
-                                value: "\(formatted(nutrition.vitaminC)) mg"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.potassium),
-                                value: "\(formatted(nutrition.potassium)) mg"
-                            )
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(viewModel.localizer.text(.nutritionSourceCaption))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-
-                                if let nutritionReference = validNutritionReference {
-                                    Text(nutritionReference)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .padding(.top, 2)
-                        }
-                    }
-                }
-
-                SeasonCard {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            statusChip(
-                                text: viewModel.localizer.text(.inShoppingList),
-                                systemImage: isInShoppingList ? "bag.fill" : "bag",
-                                isActive: isInShoppingList
-                            )
-
-                            if supportsFridgeState {
-                                statusChip(
-                                    text: viewModel.localizer.text(.inFridge),
-                                    systemImage: isInFridge ? "snowflake" : "snowflake.slash",
-                                    isActive: isInFridge
-                                )
-                            }
-                        }
-
-                        HStack(spacing: 10) {
-                            Button {
-                                toggleShoppingListState()
-                                pulseShoppingButton()
-                            } label: {
-                                Label(
-                                    isInShoppingList
-                                    ? viewModel.localizer.text(.removeFromList)
-                                    : viewModel.localizer.text(.addToList),
-                                    systemImage: isInShoppingList ? "minus.circle" : "plus.circle"
-                                )
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(isInShoppingList ? .red.opacity(0.85) : .accentColor)
-                            .controlSize(.small)
-                            .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
-                            .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
-
-                            if supportsFridgeState {
-                                Button {
-                                    toggleFridgeState()
-                                    pulseFridgeButton()
-                                } label: {
-                                    Label(
-                                        isInFridge
-                                        ? viewModel.localizer.text(.removeFromFridge)
-                                        : viewModel.localizer.text(.addToFridge),
-                                        systemImage: isInFridge ? "snowflake.slash" : "snowflake"
-                                    )
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(isInFridge ? .red.opacity(0.85) : .accentColor)
-                                .controlSize(.small)
-                                .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
-                                .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
-                            }
-                        }
-                    }
+                    nutritionSection(nutrition)
                 }
             }
             .padding(.horizontal)
@@ -230,13 +51,207 @@ struct ProduceDetailView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
-        .navigationTitle(ingredientDisplayName)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             CartToolbarItems(
                 produceViewModel: viewModel,
                 shoppingListViewModel: shoppingListViewModel
             )
+        }
+    }
+
+    @ViewBuilder
+    private var topSection: some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            if let produceItem {
+                ProduceHeroImageView(item: produceItem, height: 214)
+            } else if let basicIngredient {
+                basicHeroImage(for: basicIngredient)
+            }
+
+            SeasonCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(ingredientDisplayName)
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 8)
+                        if let produceItem {
+                            SeasonalStatusBadge(
+                                score: produceItem.seasonalityScore(month: viewModel.currentMonth),
+                                delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
+                                localizer: viewModel.localizer
+                            )
+                        }
+                    }
+
+                    if let produceItem {
+                        Text(viewModel.localizer.categoryTitle(for: produceItem.category))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(viewModel.localizer.text(.basicIngredient))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var actionsSection: some View {
+        SeasonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    statusChip(
+                        text: viewModel.localizer.text(.inShoppingList),
+                        systemImage: isInShoppingList ? "bag.fill" : "bag",
+                        isActive: isInShoppingList
+                    )
+
+                    if supportsFridgeState {
+                        statusChip(
+                            text: viewModel.localizer.text(.inFridge),
+                            systemImage: isInFridge ? "snowflake" : "snowflake.slash",
+                            isActive: isInFridge
+                        )
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button {
+                        toggleShoppingListState()
+                        pulseShoppingButton()
+                    } label: {
+                        Label(
+                            isInShoppingList
+                            ? viewModel.localizer.text(.removeFromList)
+                            : viewModel.localizer.text(.addToList),
+                            systemImage: isInShoppingList ? "minus.circle" : "plus.circle"
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(isInShoppingList ? .red.opacity(0.85) : .accentColor)
+                    .controlSize(.small)
+                    .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
+                    .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
+
+                    if supportsFridgeState {
+                        Button {
+                            toggleFridgeState()
+                            pulseFridgeButton()
+                        } label: {
+                            Label(
+                                isInFridge
+                                ? viewModel.localizer.text(.removeFromFridge)
+                                : viewModel.localizer.text(.addToFridge),
+                                systemImage: isInFridge ? "snowflake.slash" : "snowflake"
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(isInFridge ? .red.opacity(0.85) : .accentColor)
+                        .controlSize(.small)
+                        .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
+                        .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
+                    }
+                }
+            }
+        }
+    }
+
+    private func seasonalitySection(for produceItem: ProduceItem) -> some View {
+        SeasonCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(viewModel.localizer.text(.seasonalityChart))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    CategoryIconView(category: produceItem.category, size: 18)
+                }
+
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.localizer.text(.category))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(viewModel.localizer.categoryTitle(for: produceItem.category))
+                            .font(.subheadline.weight(.medium))
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(viewModel.localizer.text(.seasonMonths))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(viewModel.monthNames(for: produceItem.seasonMonths))
+                            .font(.subheadline.weight(.medium))
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+
+                Divider()
+
+                StylizedSeasonalityChart(
+                    inSeasonMonths: produceItem.seasonMonths,
+                    currentMonth: viewModel.currentMonth,
+                    languageCode: viewModel.languageCode
+                )
+            }
+        }
+    }
+
+    private func nutritionSection(_ nutrition: ProduceNutrition) -> some View {
+        SeasonCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(viewModel.localizer.text(.nutrition))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                nutritionRow(
+                    title: viewModel.localizer.text(.calories),
+                    value: "\(nutrition.calories) kcal"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.protein),
+                    value: "\(formatted(nutrition.protein)) g"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.carbs),
+                    value: "\(formatted(nutrition.carbs)) g"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.fat),
+                    value: "\(formatted(nutrition.fat)) g"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.fiber),
+                    value: "\(formatted(nutrition.fiber)) g"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.vitaminC),
+                    value: "\(formatted(nutrition.vitaminC)) mg"
+                )
+                nutritionRow(
+                    title: viewModel.localizer.text(.potassium),
+                    value: "\(formatted(nutrition.potassium)) mg"
+                )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.localizer.text(.nutritionSourceCaption))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if let nutritionReference = validNutritionReference {
+                        Text(nutritionReference)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
     }
 
