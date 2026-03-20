@@ -206,13 +206,48 @@ def seasonality_percent(mapped_produce_ids):
         return 58
     return int(round((sum(vals)/len(vals))*100))
 
-def split_paraphrased_steps(_instructions):
-    # Keep concise/non-verbatim for safety.
-    return [
-        'Prepare the listed ingredients and set up your cooking tools.',
-        'Cook and combine ingredients following the original source method.',
-        'Taste, adjust seasoning, and serve.'
-    ]
+def split_preparation_steps(instructions):
+    raw = (instructions or '').replace('\r', '\n')
+    if not raw.strip():
+        return [
+            'Prepare the listed ingredients and set up your cooking tools.',
+            'Cook and combine ingredients following the original source method.',
+            'Taste, adjust seasoning, and serve.'
+        ]
+
+    cleaned = re.sub(r'(?i)\bstep\s*\d+[:.)-]?\s*', '\n', raw)
+    chunks = [c.strip(' \t-•') for c in re.split(r'\n+|;+', cleaned) if c.strip()]
+
+    steps = []
+    for chunk in chunks:
+        sentences = re.split(r'(?<=[.!?])\s+', chunk)
+        for sentence in sentences:
+            step = sentence.strip(' \t-•')
+            if len(step) < 8:
+                continue
+            step = step.rstrip('.')
+            if not step:
+                continue
+            step = step[0].upper() + step[1:]
+            steps.append(step)
+
+    deduped = []
+    seen = set()
+    for step in steps:
+        key = norm(step)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(step)
+
+    if not deduped:
+        return [
+            'Prepare the listed ingredients and set up your cooking tools.',
+            'Cook and combine ingredients following the original source method.',
+            'Taste, adjust seasoning, and serve.'
+        ]
+
+    return deduped[:20]
 
 # collect meal IDs
 meal_ids = []
@@ -282,7 +317,7 @@ for mid in ordered_ids:
         'title': meal.get('strMeal') or 'Untitled Meal',
         'author': 'TheMealDB',
         'ingredients': ing_rows,
-        'preparationSteps': split_paraphrased_steps(meal.get('strInstructions') or ''),
+        'preparationSteps': split_preparation_steps(meal.get('strInstructions') or ''),
         'prepTimeMinutes': None,
         'cookTimeMinutes': None,
         'difficulty': None,

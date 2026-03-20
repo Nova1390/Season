@@ -32,17 +32,20 @@ struct AccountView: View {
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
         .alert(viewModel.localizer.text(.comingSoon), isPresented: $showingCreateRecipeAlert) {
-            Button("OK", role: .cancel) {}
+            Button(viewModel.localizer.text(.commonOK), role: .cancel) {}
         }
-        .alert("Authentication Error", isPresented: Binding(
+        .alert(viewModel.localizer.text(.authErrorTitle), isPresented: Binding(
             get: { !authErrorMessage.isEmpty },
             set: { newValue in
                 if !newValue { authErrorMessage = "" }
             }
         )) {
-            Button("OK", role: .cancel) {}
+            Button(viewModel.localizer.text(.commonOK), role: .cancel) {}
         } message: {
             Text(authErrorMessage)
+        }
+        .onAppear {
+            migrateLegacyAccessTokensIfNeeded()
         }
     }
 
@@ -154,7 +157,7 @@ struct AccountView: View {
     private var preferencesSection: some View {
         Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label("Connected accounts", systemImage: "person.crop.circle.badge.checkmark")
+                Label(viewModel.localizer.text(.connectedAccounts), systemImage: "person.crop.circle.badge.checkmark")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
@@ -434,13 +437,13 @@ struct AccountView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                Button("Unlink", role: .destructive) {
+                Button(viewModel.localizer.text(.unlinkAction), role: .destructive) {
                     removeLinkedAccount(provider: provider)
                 }
                 .buttonStyle(.borderless)
                 .font(.caption.weight(.semibold))
             } else {
-                Button("Connect") {
+                Button(viewModel.localizer.text(.connectAction)) {
                     link(provider: provider)
                 }
                 .buttonStyle(.borderless)
@@ -450,28 +453,78 @@ struct AccountView: View {
     }
 
     private func upsertLinkedAccount(_ account: LinkedSocialAccount) {
+        var sanitizedAccount = account
+        if let token = sanitizedAccount.accessToken?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !token.isEmpty {
+            _ = SocialAccessTokenStore.saveToken(
+                token,
+                provider: sanitizedAccount.provider,
+                providerUserID: sanitizedAccount.providerUserID
+            )
+        }
+        sanitizedAccount.accessToken = nil
+
         var accounts = linkedAccounts
-        if let index = accounts.firstIndex(where: { $0.provider == account.provider }) {
-            accounts[index] = account
+        if let index = accounts.firstIndex(where: { $0.provider == sanitizedAccount.provider }) {
+            let previous = accounts[index]
+            if previous.providerUserID != sanitizedAccount.providerUserID {
+                _ = SocialAccessTokenStore.deleteToken(
+                    provider: previous.provider,
+                    providerUserID: previous.providerUserID
+                )
+            }
+            accounts[index] = sanitizedAccount
         } else {
-            accounts.append(account)
+            accounts.append(sanitizedAccount)
         }
         linkedSocialAccountsRaw = SocialAccountLinkStore.encode(accounts)
 
-        if let profileURL = account.profileImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let profileURL = sanitizedAccount.profileImageURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !profileURL.isEmpty {
             accountProfileImageURL = profileURL
         }
 
-        let name = account.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = sanitizedAccount.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !name.isEmpty {
             accountUsername = name
         }
     }
 
     private func removeLinkedAccount(provider: SocialAuthProvider) {
+        if let existing = linkedAccount(for: provider) {
+            _ = SocialAccessTokenStore.deleteToken(
+                provider: existing.provider,
+                providerUserID: existing.providerUserID
+            )
+        }
         let updated = linkedAccounts.filter { $0.provider != provider }
         linkedSocialAccountsRaw = SocialAccountLinkStore.encode(updated)
+    }
+
+    private func migrateLegacyAccessTokensIfNeeded() {
+        let accounts = linkedAccounts
+        guard !accounts.isEmpty else { return }
+
+        var migrated = false
+        var sanitizedAccounts = accounts
+
+        for index in sanitizedAccounts.indices {
+            let token = sanitizedAccounts[index].accessToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !token.isEmpty {
+                _ = SocialAccessTokenStore.saveToken(
+                    token,
+                    provider: sanitizedAccounts[index].provider,
+                    providerUserID: sanitizedAccounts[index].providerUserID
+                )
+                sanitizedAccounts[index].accessToken = nil
+                migrated = true
+            }
+        }
+
+        if migrated {
+            linkedSocialAccountsRaw = SocialAccountLinkStore.encode(sanitizedAccounts)
+            authLogger.debug("Migrated legacy social access tokens from AppStorage JSON to Keychain.")
+        }
     }
 
     private func link(provider: SocialAuthProvider) {
@@ -515,19 +568,19 @@ struct AccountView: View {
             switch socialError {
             case .oauthNotConfigured:
                 switch provider {
-                case .instagram: return "Instagram OAuth is not configured yet."
-                case .tiktok: return "TikTok OAuth is not configured yet."
-                case .apple: return "Apple Sign In is not configured yet."
+                case .instagram: return viewModel.localizer.text(.authOAuthNotConfiguredInstagram)
+                case .tiktok: return viewModel.localizer.text(.authOAuthNotConfiguredTikTok)
+                case .apple: return viewModel.localizer.text(.authOAuthNotConfiguredApple)
                 }
             case .missingPresentationAnchor:
-                return "Unable to start Apple Sign In on this screen."
+                return viewModel.localizer.text(.authMissingApplePresentationAnchor)
             case .cancelled:
-                return "Authentication was cancelled."
+                return viewModel.localizer.text(.authCancelled)
             case .unknown:
                 switch provider {
-                case .instagram: return "Instagram authentication failed."
-                case .tiktok: return "TikTok authentication failed."
-                case .apple: return "Apple authentication failed."
+                case .instagram: return viewModel.localizer.text(.authFailedInstagram)
+                case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
+                case .apple: return viewModel.localizer.text(.authFailedApple)
                 }
             case .appleAuthorizationFailed(let details):
                 return details
@@ -539,9 +592,9 @@ struct AccountView: View {
         }
 
         switch provider {
-        case .instagram: return "Instagram authentication failed."
-        case .tiktok: return "TikTok authentication failed."
-        case .apple: return "Apple authentication failed."
+        case .instagram: return viewModel.localizer.text(.authFailedInstagram)
+        case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
+        case .apple: return viewModel.localizer.text(.authFailedApple)
         }
     }
 }

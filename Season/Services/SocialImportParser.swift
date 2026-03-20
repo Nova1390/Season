@@ -13,6 +13,7 @@ enum SocialImportParser {
         sourceURLRaw: String,
         captionRaw: String,
         produceItems: [ProduceItem],
+        basicIngredients: [BasicIngredient] = [],
         languageCode: String
     ) -> SocialImportSuggestion {
         let normalizedURL = normalizeURL(sourceURLRaw)
@@ -23,7 +24,12 @@ enum SocialImportParser {
             .filter { !$0.isEmpty }
 
         let title = suggestTitle(from: lines)
-        let ingredients = suggestIngredients(from: lines, produceItems: produceItems, languageCode: languageCode)
+        let ingredients = suggestIngredients(
+            from: lines,
+            produceItems: produceItems,
+            basicIngredients: basicIngredients,
+            languageCode: languageCode
+        )
 
         return SocialImportSuggestion(
             sourceURL: normalizedURL,
@@ -69,6 +75,7 @@ enum SocialImportParser {
     private static func suggestIngredients(
         from lines: [String],
         produceItems: [ProduceItem],
+        basicIngredients: [BasicIngredient],
         languageCode: String
     ) -> [RecipeIngredient] {
         let candidates = ingredientCandidates(from: lines)
@@ -76,23 +83,42 @@ enum SocialImportParser {
         var result: [RecipeIngredient] = []
 
         for line in candidates {
-            guard let produceID = detectProduceID(in: line, produceItems: produceItems, languageCode: languageCode) else {
+            guard let match = detectIngredientMatch(
+                in: line,
+                produceItems: produceItems,
+                basicIngredients: basicIngredients,
+                languageCode: languageCode
+            ) else {
                 continue
             }
-            guard seen.insert(produceID).inserted else { continue }
             let quantity = extractQuantity(from: line)
-            let name = produceItems.first(where: { $0.id == produceID })?.displayName(languageCode: languageCode)
-                ?? produceID.replacingOccurrences(of: "_", with: " ").capitalized
-            result.append(
-                RecipeIngredient(
-                    produceID: produceID,
-                    basicIngredientID: nil,
-                    quality: .coreSeasonal,
-                    name: name,
-                    quantityValue: quantity.value,
-                    quantityUnit: quantity.unit
+
+            switch match {
+            case .produce(let produce):
+                guard seen.insert("produce:\(produce.id)").inserted else { continue }
+                result.append(
+                    RecipeIngredient(
+                        produceID: produce.id,
+                        basicIngredientID: nil,
+                        quality: .coreSeasonal,
+                        name: produce.displayName(languageCode: languageCode),
+                        quantityValue: quantity.value,
+                        quantityUnit: quantity.unit
+                    )
                 )
-            )
+            case .basic(let basic):
+                guard seen.insert("basic:\(basic.id)").inserted else { continue }
+                result.append(
+                    RecipeIngredient(
+                        produceID: nil,
+                        basicIngredientID: basic.id,
+                        quality: .basic,
+                        name: basic.displayName(languageCode: languageCode),
+                        quantityValue: quantity.value,
+                        quantityUnit: quantity.unit
+                    )
+                )
+            }
         }
 
         return result
@@ -116,29 +142,198 @@ enum SocialImportParser {
         return line.range(of: pattern, options: .regularExpression) != nil
     }
 
-    private static func detectProduceID(
+    private static func detectIngredientMatch(
         in line: String,
         produceItems: [ProduceItem],
+        basicIngredients: [BasicIngredient],
         languageCode: String
-    ) -> String? {
-        let lowerLine = line.lowercased()
-        var bestMatch: (id: String, length: Int)?
+    ) -> IngredientCatalogMatch? {
+        let normalizedLine = normalizedIngredientText(line)
+        guard !normalizedLine.isEmpty else { return nil }
 
+        let produceMatch = bestProduceMatch(
+            in: normalizedLine,
+            produceItems: produceItems,
+            languageCode: languageCode
+        )
+        let basicMatch = bestBasicMatch(
+            in: normalizedLine,
+            basicIngredients: basicIngredients,
+            languageCode: languageCode
+        )
+
+        switch (produceMatch, basicMatch) {
+        case (.none, .none):
+            return nil
+        case let (.some(produce), .none):
+            return .produce(produce.item)
+        case let (.none, .some(basic)):
+            return .basic(basic.item)
+        case let (.some(produce), .some(basic)):
+            if produce.score != basic.score {
+                return produce.score > basic.score ? .produce(produce.item) : .basic(basic.item)
+            }
+            if produce.length != basic.length {
+                return produce.length > basic.length ? .produce(produce.item) : .basic(basic.item)
+            }
+            // Deterministic tie-break: preserve existing produce-first behavior when strength is identical.
+            return .produce(produce.item)
+        }
+    }
+
+    private static func bestProduceMatch(
+        in normalizedLine: String,
+        produceItems: [ProduceItem],
+        languageCode: String
+    ) -> ScoredItemMatch<ProduceItem>? {
+        var best: ScoredItemMatch<ProduceItem>?
         for item in produceItems {
-            let localizedName = item.displayName(languageCode: languageCode).lowercased()
-            let englishName = item.displayName(languageCode: "en").lowercased()
-            let idName = item.id.replacingOccurrences(of: "_", with: " ").lowercased()
-            let candidates = [localizedName, englishName, idName]
-
-            for name in candidates where !name.isEmpty {
-                guard lowerLine.contains(name) else { continue }
-                if bestMatch == nil || name.count > bestMatch!.length {
-                    bestMatch = (id: item.id, length: name.count)
+            for candidate in produceCandidateNames(for: item, languageCode: languageCode) {
+                guard let score = matchScore(in: normalizedLine, candidate: candidate) else { continue }
+                let match = ScoredItemMatch(item: item, score: score, length: candidate.count)
+                if best == nil || match > best! {
+                    best = match
                 }
             }
         }
+        return best
+    }
 
-        return bestMatch?.id
+    private static func bestBasicMatch(
+        in normalizedLine: String,
+        basicIngredients: [BasicIngredient],
+        languageCode: String
+    ) -> ScoredItemMatch<BasicIngredient>? {
+        var best: ScoredItemMatch<BasicIngredient>?
+        for item in basicIngredients {
+            for candidate in basicCandidateNames(for: item, languageCode: languageCode) {
+                guard let score = matchScore(in: normalizedLine, candidate: candidate) else { continue }
+                let match = ScoredItemMatch(item: item, score: score, length: candidate.count)
+                if best == nil || match > best! {
+                    best = match
+                }
+            }
+        }
+        return best
+    }
+
+    private static func produceCandidateNames(for item: ProduceItem, languageCode: String) -> [String] {
+        let names = [
+            item.displayName(languageCode: languageCode),
+            item.displayName(languageCode: "en"),
+            item.id.replacingOccurrences(of: "_", with: " ")
+        ]
+        return normalizedCandidates(from: names)
+    }
+
+    private static func basicCandidateNames(for item: BasicIngredient, languageCode: String) -> [String] {
+        let names = [
+            item.displayName(languageCode: languageCode),
+            item.displayName(languageCode: "en"),
+            item.id.replacingOccurrences(of: "_", with: " ")
+        ]
+        return normalizedCandidates(from: names)
+    }
+
+    private static func normalizedCandidates(from names: [String]) -> [String] {
+        var seen = Set<String>()
+        var normalized: [String] = []
+        for name in names {
+            let cleaned = normalizedIngredientText(name)
+            guard cleaned.count >= 2 else { continue }
+            for variant in candidateVariants(for: cleaned) {
+                if seen.insert(variant).inserted {
+                    normalized.append(variant)
+                }
+            }
+        }
+        return normalized
+    }
+
+    private static func candidateVariants(for candidate: String) -> [String] {
+        var variants = [candidate]
+        let tokens = candidate.split(separator: " ").map(String.init)
+        guard tokens.count == 1, let token = tokens.first, token.count >= 4 else {
+            return variants
+        }
+
+        if token.hasSuffix("s") {
+            let singular = String(token.dropLast())
+            if singular.count >= 3 {
+                variants.append(singular)
+            }
+        } else {
+            variants.append(token + "s")
+        }
+        return variants
+    }
+
+    private static func matchScore(in normalizedLine: String, candidate: String) -> Int? {
+        guard !candidate.isEmpty else { return nil }
+        if isRejectedAmbiguousCompoundMatch(line: normalizedLine, candidate: candidate) {
+            return nil
+        }
+
+        let escaped = NSRegularExpression.escapedPattern(for: candidate)
+        if normalizedLine.range(of: "\\b\(escaped)\\b", options: .regularExpression) != nil {
+            return 3
+        }
+        if normalizedLine.contains(candidate) {
+            return 2
+        }
+        return nil
+    }
+
+    private static func isRejectedAmbiguousCompoundMatch(line: String, candidate: String) -> Bool {
+        let tokens = line.split(separator: " ").map(String.init)
+        let candidateTokens = candidate.split(separator: " ").map(String.init)
+        guard candidateTokens.count == 1, let candidateToken = candidateTokens.first else {
+            return false
+        }
+
+        guard let blockedNeighbors = blockedCompoundNeighbors[candidateToken] else {
+            return false
+        }
+
+        for (index, token) in tokens.enumerated() where token == candidateToken {
+            let next = index + 1 < tokens.count ? tokens[index + 1] : nil
+            let previous = index > 0 ? tokens[index - 1] : nil
+            if let next, blockedNeighbors.contains(next) {
+                return true
+            }
+            if let previous, blockedNeighbors.contains(previous) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private static let blockedCompoundNeighbors: [String: Set<String>] = [
+        "milk": ["chocolate"],
+        "rice": ["vinegar", "wine"],
+        "butter": ["beans"],
+        "olive": ["tapenade"]
+    ]
+
+    private static func normalizedIngredientText(_ raw: String) -> String {
+        let lower = raw
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+
+        let scalars = lower.unicodeScalars.map { scalar -> Character in
+            if CharacterSet.alphanumerics.contains(scalar) || CharacterSet.whitespaces.contains(scalar) {
+                return Character(scalar)
+            }
+            return " "
+        }
+
+        let collapsed = String(scalars)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return collapsed
     }
 
     private static func extractQuantity(from line: String) -> (value: Double, unit: RecipeQuantityUnit) {
@@ -186,5 +381,41 @@ enum SocialImportParser {
         default:
             return .piece
         }
+    }
+}
+
+private enum IngredientCatalogMatch {
+    case produce(ProduceItem)
+    case basic(BasicIngredient)
+
+    var source: Source {
+        switch self {
+        case .produce:
+            return .produce
+        case .basic:
+            return .basic
+        }
+    }
+
+    enum Source {
+        case produce
+        case basic
+    }
+}
+
+private struct ScoredItemMatch<Item>: Comparable {
+    let item: Item
+    let score: Int
+    let length: Int
+
+    static func == (lhs: ScoredItemMatch<Item>, rhs: ScoredItemMatch<Item>) -> Bool {
+        lhs.score == rhs.score && lhs.length == rhs.length
+    }
+
+    static func < (lhs: ScoredItemMatch<Item>, rhs: ScoredItemMatch<Item>) -> Bool {
+        if lhs.score != rhs.score {
+            return lhs.score < rhs.score
+        }
+        return lhs.length < rhs.length
     }
 }

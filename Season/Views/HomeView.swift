@@ -31,6 +31,9 @@ struct HomeView: View {
                 .padding(.top, 10)
                 .padding(.bottom, SeasonSpacing.md)
             }
+            .refreshable {
+                await viewModel.refreshHomeFeed()
+            }
 
             topRightActions
                 .padding(.top, 6)
@@ -296,7 +299,7 @@ struct HomeView: View {
 
     private var cacheSignature: String {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
-        return "\(viewModel.languageCode)|\(viewModel.recipes.count)|\(fridgeIDs)|\(viewModel.currentMonth)"
+        return "\(viewModel.languageCode)|\(viewModel.recipes.count)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)"
     }
 
     private func refreshHomeFeedCache() {
@@ -539,10 +542,29 @@ struct HomeView: View {
         from rankedRecipes: [RankedRecipe],
         fridgeItemIDs: Set<String>
     ) -> RankedRecipe? {
-        rankedRecipes.max { lhs, rhs in
-            featuredSelectionScore(for: lhs, fridgeItemIDs: fridgeItemIDs)
-            < featuredSelectionScore(for: rhs, fridgeItemIDs: fridgeItemIDs)
+        let sorted = rankedRecipes
+            .sorted { lhs, rhs in
+                let left = featuredSelectionScore(for: lhs, fridgeItemIDs: fridgeItemIDs)
+                let right = featuredSelectionScore(for: rhs, fridgeItemIDs: fridgeItemIDs)
+                if left != right {
+                    return left > right
+                }
+                return lhs.recipe.title.localizedCaseInsensitiveCompare(rhs.recipe.title) == .orderedAscending
+            }
+
+        guard !sorted.isEmpty else { return nil }
+
+        let candidatePoolSize = min(12, sorted.count)
+        let candidatePool = Array(sorted.prefix(candidatePoolSize))
+        var selectedIndex = viewModel.featuredRecipeRotationIndex(poolCount: candidatePool.count)
+
+        if let previousFeaturedID = featuredRecipeCache?.recipe.id,
+           candidatePool.count > 1,
+           candidatePool[selectedIndex].recipe.id == previousFeaturedID {
+            selectedIndex = (selectedIndex + 1) % candidatePool.count
         }
+
+        return candidatePool[selectedIndex]
     }
 
     private func featuredSelectionScore(for ranked: RankedRecipe, fridgeItemIDs: Set<String>) -> Double {
@@ -1649,7 +1671,7 @@ private struct FridgeRecipeMatchesView: View {
             )
         }
         .alert(feedbackMessage, isPresented: $showingFeedbackAlert) {
-            Button("OK", role: .cancel) {}
+            Button(produceViewModel.localizer.text(.commonOK), role: .cancel) {}
         }
     }
 

@@ -219,7 +219,7 @@ struct RecipeDetailView: View {
                             if selectedServings != 1 {
                                 Divider()
                                 nutritionRow(
-                                    title: "Total (\(selectedServings) servings)",
+                                    title: String(format: viewModel.localizer.text(.nutritionTotalForServingsFormat), selectedServings),
                                     value: "\(Int((nutritionSummary.calories * Double(selectedServings)).rounded())) kcal"
                                 )
                             }
@@ -327,7 +327,7 @@ struct RecipeDetailView: View {
             )
         }
         .alert(addIngredientsMessage, isPresented: $showingAddIngredientsAlert) {
-            Button("OK", role: .cancel) {}
+            Button(viewModel.localizer.text(.commonOK), role: .cancel) {}
         }
         .fullScreenCover(isPresented: $showingRemixComposer) {
             CreateRecipeView(
@@ -412,7 +412,7 @@ struct RecipeDetailView: View {
                 )
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Timing")
+                    Text(viewModel.localizer.text(.recipeTimingHeading))
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
 
@@ -528,11 +528,11 @@ struct RecipeDetailView: View {
         guard !showsUserAuthorshipMetadata else { return nil }
         let attribution = rankedRecipe.recipe.attributionText?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let attribution, !attribution.isEmpty {
-            return "via \(attribution)"
+            return String(format: viewModel.localizer.text(.seedAttributionViaFormat), attribution)
         }
         let source = rankedRecipe.recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let source, !source.isEmpty {
-            return "via \(source)"
+            return String(format: viewModel.localizer.text(.seedAttributionViaFormat), source)
         }
         return nil
     }
@@ -598,13 +598,13 @@ struct RecipeDetailView: View {
     private var timingExplanationText: String {
         switch viewModel.recipeTimingLabel(for: rankedRecipe) {
         case .perfectNow:
-            return "This recipe is at its best seasonal moment right now."
+            return viewModel.localizer.text(.recipeTimingExplainPerfectNow)
         case .goodNow:
-            return "This recipe is a good choice now, even if some ingredients are not at peak season."
+            return viewModel.localizer.text(.recipeTimingExplainGoodNow)
         case .betterSoon:
-            return "This recipe will become more seasonal in the coming weeks."
+            return viewModel.localizer.text(.recipeTimingExplainBetterSoon)
         case .endingSoon:
-            return "This recipe is still good now, but some ingredients are moving out of season."
+            return viewModel.localizer.text(.recipeTimingExplainEndingSoon)
         }
     }
 

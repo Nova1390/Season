@@ -33,18 +33,20 @@ struct ProduceDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: SeasonSpacing.md) {
-                topSection
-                actionsSection
+            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+                heroSection
+                identityAndActionsBlock
+                Divider()
                 if let produceItem {
                     seasonalitySection(for: produceItem)
                 }
                 if let nutrition = ingredientNutrition {
+                    Divider()
                     nutritionSection(nutrition)
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.vertical, SeasonSpacing.xs)
         }
         .background(Color(.systemGroupedBackground))
         .safeAreaInset(edge: .bottom) {
@@ -53,6 +55,9 @@ struct ProduceDetailView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .toolbar {
             CartToolbarItems(
                 produceViewModel: viewModel,
@@ -62,117 +67,120 @@ struct ProduceDetailView: View {
     }
 
     @ViewBuilder
-    private var topSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            if let produceItem {
-                ProduceHeroImageView(item: produceItem, height: 214)
-            } else if let basicIngredient {
-                basicHeroImage(for: basicIngredient)
-            }
-
-            SeasonCard {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(ingredientDisplayName)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Spacer(minLength: 8)
-                        if let produceItem {
-                            SeasonalStatusBadge(
-                                score: produceItem.seasonalityScore(month: viewModel.currentMonth),
-                                delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
-                                localizer: viewModel.localizer
-                            )
-                        }
-                    }
-
-                    if let produceItem {
-                        Text(viewModel.localizer.categoryTitle(for: produceItem.category))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(viewModel.localizer.text(.basicIngredient))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+    private var heroSection: some View {
+        if let produceItem {
+            ProduceHeroImageView(item: produceItem, height: 214)
+        } else if let basicIngredient {
+            basicHeroImage(for: basicIngredient)
         }
     }
 
-    private var actionsSection: some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    statusChip(
-                        text: viewModel.localizer.text(.inShoppingList),
-                        systemImage: isInShoppingList ? "bag.fill" : "bag",
-                        isActive: isInShoppingList
+    private var identityAndActionsBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(ingredientDisplayName)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 8)
+
+                if let produceItem {
+                    SeasonalStatusBadge(
+                        score: produceItem.seasonalityScore(month: viewModel.currentMonth),
+                        delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
+                        localizer: viewModel.localizer
                     )
-
-                    if supportsFridgeState {
-                        statusChip(
-                            text: viewModel.localizer.text(.inFridge),
-                            systemImage: isInFridge ? "snowflake" : "snowflake.slash",
-                            isActive: isInFridge
-                        )
-                    }
                 }
+            }
 
-                HStack(spacing: 10) {
+            if let produceItem {
+                Text(viewModel.localizer.categoryTitle(for: produceItem.category))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(viewModel.localizer.text(.basicIngredient))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                statusChip(
+                    text: viewModel.localizer.text(.inShoppingList),
+                    systemImage: isInShoppingList ? "bag.fill" : "bag",
+                    isActive: isInShoppingList
+                )
+
+                if supportsFridgeState {
+                    statusChip(
+                        text: viewModel.localizer.text(.inFridge),
+                        systemImage: isInFridge ? "snowflake" : "snowflake.slash",
+                        isActive: isInFridge
+                    )
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    toggleShoppingListState()
+                    pulseShoppingButton()
+                } label: {
+                    Label(
+                        isInShoppingList
+                        ? viewModel.localizer.text(.removeFromList)
+                        : viewModel.localizer.text(.addToList),
+                        systemImage: isInShoppingList ? "minus.circle" : "plus.circle"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(isInShoppingList ? .red.opacity(0.85) : .accentColor)
+                .controlSize(.small)
+                .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
+                .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
+
+                if supportsFridgeState {
                     Button {
-                        toggleShoppingListState()
-                        pulseShoppingButton()
+                        toggleFridgeState()
+                        pulseFridgeButton()
                     } label: {
                         Label(
-                            isInShoppingList
-                            ? viewModel.localizer.text(.removeFromList)
-                            : viewModel.localizer.text(.addToList),
-                            systemImage: isInShoppingList ? "minus.circle" : "plus.circle"
+                            isInFridge
+                            ? viewModel.localizer.text(.removeFromFridge)
+                            : viewModel.localizer.text(.addToFridge),
+                            systemImage: isInFridge ? "snowflake.slash" : "snowflake"
                         )
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(isInShoppingList ? .red.opacity(0.85) : .accentColor)
+                    .buttonStyle(.bordered)
+                    .tint(isInFridge ? .red.opacity(0.85) : .accentColor)
                     .controlSize(.small)
-                    .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
-                    .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
-
-                    if supportsFridgeState {
-                        Button {
-                            toggleFridgeState()
-                            pulseFridgeButton()
-                        } label: {
-                            Label(
-                                isInFridge
-                                ? viewModel.localizer.text(.removeFromFridge)
-                                : viewModel.localizer.text(.addToFridge),
-                                systemImage: isInFridge ? "snowflake.slash" : "snowflake"
-                            )
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(isInFridge ? .red.opacity(0.85) : .accentColor)
-                        .controlSize(.small)
-                        .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
-                        .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
-                    }
+                    .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
+                    .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
                 }
             }
         }
+        .padding(SeasonSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color(.separator).opacity(0.18), lineWidth: 0.5)
+        )
     }
 
     private func seasonalitySection(for produceItem: ProduceItem) -> some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(viewModel.localizer.text(.seasonalityChart))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    CategoryIconView(category: produceItem.category, size: 18)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(viewModel.localizer.text(.seasonalityChart))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                CategoryIconView(category: produceItem.category, size: 18)
+            }
 
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewModel.localizer.text(.category))
@@ -200,58 +208,74 @@ struct ProduceDetailView: View {
                     languageCode: viewModel.languageCode
                 )
             }
+            .padding(SeasonSpacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
         }
     }
 
     private func nutritionSection(_ nutrition: ProduceNutrition) -> some View {
-        SeasonCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(viewModel.localizer.text(.nutrition))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(viewModel.localizer.text(.nutrition))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
 
+            VStack(alignment: .leading, spacing: 8) {
                 nutritionRow(
                     title: viewModel.localizer.text(.calories),
                     value: "\(nutrition.calories) kcal"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.protein),
                     value: "\(formatted(nutrition.protein)) g"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.carbs),
                     value: "\(formatted(nutrition.carbs)) g"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.fat),
                     value: "\(formatted(nutrition.fat)) g"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.fiber),
                     value: "\(formatted(nutrition.fiber)) g"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.vitaminC),
                     value: "\(formatted(nutrition.vitaminC)) mg"
                 )
+                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.potassium),
                     value: "\(formatted(nutrition.potassium)) mg"
                 )
+            }
+            .padding(SeasonSpacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.localizer.text(.nutritionSourceCaption))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.localizer.text(.nutritionSourceCaption))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if let nutritionReference = validNutritionReference {
+                    Text(nutritionReference)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-
-                    if let nutritionReference = validNutritionReference {
-                        Text(nutritionReference)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
                 }
-                .padding(.top, 2)
             }
+            .padding(.top, 2)
         }
     }
 

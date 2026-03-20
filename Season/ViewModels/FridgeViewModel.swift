@@ -105,6 +105,7 @@ final class FridgeViewModel: ObservableObject {
 
     func remove(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
+            guard produceIDs.indices.contains(index) else { continue }
             produceIDs.remove(at: index)
         }
         save()

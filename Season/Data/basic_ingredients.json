@@ -1,0 +1,6273 @@
+[
+  {
+    "id": "chicken",
+    "localizedNames": {
+      "en": "Chicken breast",
+      "it": "Petto di pollo"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 165,
+      "protein": 31.0,
+      "carbs": 0.0,
+      "fat": 3.6,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 256.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Chicken, broilers or fryers, breast, meat only, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 120.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "turkey",
+    "localizedNames": {
+      "en": "Turkey breast",
+      "it": "Petto di tacchino"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 114,
+      "protein": 24.0,
+      "carbs": 0.0,
+      "fat": 1.4,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 239.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Turkey, all classes, breast, meat only, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 120.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "beef",
+    "localizedNames": {
+      "en": "Beef",
+      "it": "Manzo"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 250,
+      "protein": 26.0,
+      "carbs": 0.0,
+      "fat": 15.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 318.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beef, ground, 85% lean meat / 15% fat, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "pork",
+    "localizedNames": {
+      "en": "Pork",
+      "it": "Maiale"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 242,
+      "protein": 27.0,
+      "carbs": 0.0,
+      "fat": 14.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 423.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, fresh, loin, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "salmon",
+    "localizedNames": {
+      "en": "Salmon",
+      "it": "Salmone"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 208,
+      "protein": 20.4,
+      "carbs": 0.0,
+      "fat": 13.4,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 363.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, salmon, Atlantic, farmed, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "tuna",
+    "localizedNames": {
+      "en": "Tuna",
+      "it": "Tonno"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 132,
+      "protein": 28.0,
+      "carbs": 0.0,
+      "fat": 1.3,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 252.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, tuna, light, canned in water, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 80.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "eggs",
+    "localizedNames": {
+      "en": "Eggs",
+      "it": "Uova"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 143,
+      "protein": 12.6,
+      "carbs": 0.7,
+      "fat": 9.5,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 138.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Egg, whole, raw, fresh",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 50.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "milk",
+    "localizedNames": {
+      "en": "Milk",
+      "it": "Latte"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 61,
+      "protein": 3.2,
+      "carbs": 4.8,
+      "fat": 3.3,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 150.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Milk, whole, 3.25% milkfat",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.03
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "yogurt",
+    "localizedNames": {
+      "en": "Yogurt",
+      "it": "Yogurt"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 59,
+      "protein": 3.5,
+      "carbs": 4.7,
+      "fat": 3.3,
+      "fiber": 0.0,
+      "vitaminC": 0.8,
+      "potassium": 141.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Yogurt, plain, whole milk",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "ml",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "greek_yogurt",
+    "localizedNames": {
+      "en": "Greek yogurt",
+      "it": "Yogurt greco"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 97,
+      "protein": 9.0,
+      "carbs": 3.9,
+      "fat": 5.0,
+      "fiber": 0.0,
+      "vitaminC": 0.5,
+      "potassium": 141.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Yogurt, Greek, plain, whole milk",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "ml",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0
+      },
+      "gramsPerMl": 1.05
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "parmesan",
+    "localizedNames": {
+      "en": "Parmesan",
+      "it": "Parmigiano"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 431,
+      "protein": 38.0,
+      "carbs": 4.1,
+      "fat": 29.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 92.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, parmesan, grated",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 5.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "mozzarella",
+    "localizedNames": {
+      "en": "Mozzarella",
+      "it": "Mozzarella"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 280,
+      "protein": 28.0,
+      "carbs": 3.1,
+      "fat": 17.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 95.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, mozzarella, whole milk",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 125.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "ricotta",
+    "localizedNames": {
+      "en": "Ricotta",
+      "it": "Ricotta"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 174,
+      "protein": 11.3,
+      "carbs": 3.0,
+      "fat": 13.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 151.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, ricotta, whole milk",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "cream_cheese",
+    "localizedNames": {
+      "en": "Cream cheese",
+      "it": "Formaggio spalmabile"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 342,
+      "protein": 6.2,
+      "carbs": 4.1,
+      "fat": 34.4,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 132.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, cream",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 14.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "butter",
+    "localizedNames": {
+      "en": "Butter",
+      "it": "Burro"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 717,
+      "protein": 0.9,
+      "carbs": 0.1,
+      "fat": 81.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 24.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Butter, salted",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 14.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "pasta",
+    "localizedNames": {
+      "en": "Pasta (dry)",
+      "it": "Pasta secca"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 371,
+      "protein": 13.0,
+      "carbs": 75.0,
+      "fat": 1.5,
+      "fiber": 3.0,
+      "vitaminC": 0.0,
+      "potassium": 223.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pasta, dry, unenriched",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "rice",
+    "localizedNames": {
+      "en": "Rice (dry)",
+      "it": "Riso secco"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 360,
+      "protein": 6.6,
+      "carbs": 79.0,
+      "fat": 0.6,
+      "fiber": 1.3,
+      "vitaminC": 0.0,
+      "potassium": 115.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Rice, white, long-grain, regular, raw, unenriched",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "bread",
+    "localizedNames": {
+      "en": "Bread",
+      "it": "Pane"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 265,
+      "protein": 9.0,
+      "carbs": 49.0,
+      "fat": 3.2,
+      "fiber": 2.7,
+      "vitaminC": 0.0,
+      "potassium": 115.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Bread, white, commercially prepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 30.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "flour",
+    "localizedNames": {
+      "en": "Wheat flour",
+      "it": "Farina di grano"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 364,
+      "protein": 10.3,
+      "carbs": 76.0,
+      "fat": 1.0,
+      "fiber": 2.7,
+      "vitaminC": 0.0,
+      "potassium": 107.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Wheat flour, white, all-purpose, enriched",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "oats",
+    "localizedNames": {
+      "en": "Oats",
+      "it": "Avena"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 389,
+      "protein": 16.9,
+      "carbs": 66.3,
+      "fat": 6.9,
+      "fiber": 10.6,
+      "vitaminC": 0.0,
+      "potassium": 429.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oats",
+    "nutritionMappingNote": "May vary by rolled/steel-cut processing.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "olive_oil",
+    "localizedNames": {
+      "en": "Olive oil",
+      "it": "Olio d'oliva"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 884,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 1.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oil, olive, salad or cooking",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 13.5,
+        "tsp": 4.5
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 0.91
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "salt",
+    "localizedNames": {
+      "en": "Salt",
+      "it": "Sale"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 0,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 8.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Salt, table",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tsp",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 6.0,
+        "tbsp": 18.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "black_pepper",
+    "localizedNames": {
+      "en": "Black pepper",
+      "it": "Pepe nero"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 251,
+      "protein": 10.4,
+      "carbs": 64.8,
+      "fat": 3.3,
+      "fiber": 25.0,
+      "vitaminC": 21.0,
+      "potassium": 1259.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, pepper, black",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "sugar",
+    "localizedNames": {
+      "en": "Sugar",
+      "it": "Zucchero"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 387,
+      "protein": 0.0,
+      "carbs": 100.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 2.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sugars, granulated",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tsp",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 4.0,
+        "tbsp": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "honey",
+    "localizedNames": {
+      "en": "Honey",
+      "it": "Miele"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 304,
+      "protein": 0.3,
+      "carbs": 82.4,
+      "fat": 0.0,
+      "fiber": 0.2,
+      "vitaminC": 0.5,
+      "potassium": 52.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Honey",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 21.0,
+        "tsp": 7.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "broth",
+    "localizedNames": {
+      "en": "Broth",
+      "it": "Brodo"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 5,
+      "protein": 0.4,
+      "carbs": 0.5,
+      "fat": 0.2,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 20.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Soup, stock, chicken, home-prepared",
+    "nutritionMappingNote": "Broth composition varies by preparation.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "water",
+    "localizedNames": {
+      "en": "Water",
+      "it": "Acqua"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 0,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Water, bottled",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "vinegar",
+    "localizedNames": {
+      "en": "Vinegar",
+      "it": "Aceto"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 21,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 2.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Vinegar, cider",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "balsamic_vinegar",
+    "localizedNames": {
+      "en": "Balsamic vinegar",
+      "it": "Aceto balsamico"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 88,
+      "protein": 0.5,
+      "carbs": 17.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 112.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Vinegar, balsamic",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tomato_sauce",
+    "localizedNames": {
+      "en": "Tomato sauce",
+      "it": "Salsa di pomodoro"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 29,
+      "protein": 1.4,
+      "carbs": 5.6,
+      "fat": 0.2,
+      "fiber": 1.5,
+      "vitaminC": 9.0,
+      "potassium": 237.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sauce, tomato, canned",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "ml",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0
+      },
+      "gramsPerMl": 1.02
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "passata",
+    "localizedNames": {
+      "en": "Passata",
+      "it": "Passata"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 33,
+      "protein": 1.6,
+      "carbs": 6.0,
+      "fat": 0.2,
+      "fiber": 1.8,
+      "vitaminC": 12.0,
+      "potassium": 250.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tomatoes, crushed, canned",
+    "nutritionMappingNote": "Passata mapped to plain crushed/canned tomato preparations.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "ml",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0
+      },
+      "gramsPerMl": 1.03
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "pesto",
+    "localizedNames": {
+      "en": "Pesto",
+      "it": "Pesto"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 480,
+      "protein": 4.0,
+      "carbs": 6.0,
+      "fat": 49.0,
+      "fiber": 2.0,
+      "vitaminC": 3.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pesto-style sauce, generic",
+    "nutritionMappingNote": "Pesto varies by recipe (oil/cheese/nuts ratios).",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 16.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "lamb",
+    "localizedNames": {
+      "en": "Lamb",
+      "it": "Agnello"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 294,
+      "protein": 25.6,
+      "carbs": 0.0,
+      "fat": 20.8,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 274.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Lamb, domestic, leg, separable lean and fat, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "veal",
+    "localizedNames": {
+      "en": "Veal",
+      "it": "Vitello"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 172,
+      "protein": 24.4,
+      "carbs": 0.0,
+      "fat": 7.6,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 331.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Veal, leg (top round), separable lean and fat, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 140.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "duck",
+    "localizedNames": {
+      "en": "Duck",
+      "it": "Anatra"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 337,
+      "protein": 19.0,
+      "carbs": 0.0,
+      "fat": 28.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 204.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Duck, domesticated, meat and skin, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 180.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "shrimp",
+    "localizedNames": {
+      "en": "Shrimp",
+      "it": "Gamberi"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 99,
+      "protein": 24.0,
+      "carbs": 0.2,
+      "fat": 0.3,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 264.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Crustaceans, shrimp, mixed species, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "cod",
+    "localizedNames": {
+      "en": "Cod",
+      "it": "Merluzzo"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 82,
+      "protein": 17.8,
+      "carbs": 0.0,
+      "fat": 0.7,
+      "fiber": 0.0,
+      "vitaminC": 0.9,
+      "potassium": 413.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, cod, Atlantic, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "sardines",
+    "localizedNames": {
+      "en": "Sardines",
+      "it": "Sardine"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 208,
+      "protein": 24.6,
+      "carbs": 0.0,
+      "fat": 11.5,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 397.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, sardine, Atlantic, canned in oil, drained solids with bone",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 35.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "anchovies",
+    "localizedNames": {
+      "en": "Anchovies",
+      "it": "Acciughe"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 210,
+      "protein": 29.1,
+      "carbs": 0.0,
+      "fat": 9.7,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 383.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, anchovy, european, canned in oil, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 4.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "mackerel",
+    "localizedNames": {
+      "en": "Mackerel",
+      "it": "Sgombro"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 205,
+      "protein": 18.6,
+      "carbs": 0.0,
+      "fat": 13.9,
+      "fiber": 0.0,
+      "vitaminC": 1.6,
+      "potassium": 314.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Fish, mackerel, Atlantic, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 140.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "prosciutto_crudo",
+    "localizedNames": {
+      "en": "Prosciutto crudo",
+      "it": "Prosciutto crudo"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 269,
+      "protein": 26.0,
+      "carbs": 0.3,
+      "fat": 18.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 395.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, ham, separable lean and fat",
+    "nutritionMappingNote": "Mapped to cured ham profile; values vary by aging and salt level.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "prosciutto_cotto",
+    "localizedNames": {
+      "en": "Prosciutto cotto",
+      "it": "Prosciutto cotto"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 145,
+      "protein": 20.9,
+      "carbs": 1.0,
+      "fat": 6.1,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 287.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, ham, extra lean and regular, roasted",
+    "nutritionMappingNote": "Mapped to cooked ham profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 20.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "bacon",
+    "localizedNames": {
+      "en": "Bacon",
+      "it": "Pancetta affumicata"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 417,
+      "protein": 12.4,
+      "carbs": 1.4,
+      "fat": 39.7,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 565.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, bacon, cooked, pan-fried",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "sausage",
+    "localizedNames": {
+      "en": "Sausage",
+      "it": "Salsiccia"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 301,
+      "protein": 13.7,
+      "carbs": 1.8,
+      "fat": 26.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 254.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sausage, pork, fresh, raw",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 85.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "kefir",
+    "localizedNames": {
+      "en": "Kefir",
+      "it": "Kefir"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 55,
+      "protein": 3.3,
+      "carbs": 4.5,
+      "fat": 2.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 146.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Kefir, lowfat, plain",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0
+      },
+      "gramsPerMl": 1.03
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "feta",
+    "localizedNames": {
+      "en": "Feta",
+      "it": "Feta"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 265,
+      "protein": 14.2,
+      "carbs": 3.9,
+      "fat": 21.3,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 62.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, feta",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 30.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "pecorino",
+    "localizedNames": {
+      "en": "Pecorino",
+      "it": "Pecorino"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 387,
+      "protein": 25.6,
+      "carbs": 3.6,
+      "fat": 31.9,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 86.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, romano",
+    "nutritionMappingNote": "Pecorino mapped to romano sheep cheese profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 5.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "provolone",
+    "localizedNames": {
+      "en": "Provolone",
+      "it": "Provolone"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 351,
+      "protein": 25.6,
+      "carbs": 2.1,
+      "fat": 26.6,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 138.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, provolone",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 25.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "gorgonzola",
+    "localizedNames": {
+      "en": "Gorgonzola",
+      "it": "Gorgonzola"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 353,
+      "protein": 21.4,
+      "carbs": 2.3,
+      "fat": 28.7,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 256.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, blue",
+    "nutritionMappingNote": "Gorgonzola mapped to generic blue cheese profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 20.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "mascarpone",
+    "localizedNames": {
+      "en": "Mascarpone",
+      "it": "Mascarpone"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 435,
+      "protein": 4.6,
+      "carbs": 4.0,
+      "fat": 44.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 80.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, mascarpone",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "quinoa",
+    "localizedNames": {
+      "en": "Quinoa (dry)",
+      "it": "Quinoa secca"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 368,
+      "protein": 14.1,
+      "carbs": 64.2,
+      "fat": 6.1,
+      "fiber": 7.0,
+      "vitaminC": 0.0,
+      "potassium": 563.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Quinoa, uncooked",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "barley",
+    "localizedNames": {
+      "en": "Barley (dry)",
+      "it": "Orzo perlato"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 354,
+      "protein": 12.5,
+      "carbs": 73.5,
+      "fat": 2.3,
+      "fiber": 17.3,
+      "vitaminC": 0.0,
+      "potassium": 452.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Barley, hulled",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 10.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "couscous",
+    "localizedNames": {
+      "en": "Couscous (dry)",
+      "it": "Couscous secco"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 376,
+      "protein": 12.8,
+      "carbs": 77.4,
+      "fat": 0.6,
+      "fiber": 5.0,
+      "vitaminC": 0.0,
+      "potassium": 166.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Couscous, dry",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 10.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "cornmeal",
+    "localizedNames": {
+      "en": "Cornmeal",
+      "it": "Farina di mais"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 370,
+      "protein": 8.1,
+      "carbs": 79.4,
+      "fat": 3.6,
+      "fiber": 7.3,
+      "vitaminC": 0.0,
+      "potassium": 142.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cornmeal, yellow, degermed, enriched",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "breadcrumbs",
+    "localizedNames": {
+      "en": "Breadcrumbs",
+      "it": "Pangrattato"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 395,
+      "protein": 13.4,
+      "carbs": 72.5,
+      "fat": 5.3,
+      "fiber": 4.5,
+      "vitaminC": 0.0,
+      "potassium": 227.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Bread crumbs, dry, grated, plain",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 7.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tortillas",
+    "localizedNames": {
+      "en": "Tortillas",
+      "it": "Tortillas"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 310,
+      "protein": 8.0,
+      "carbs": 52.0,
+      "fat": 8.0,
+      "fiber": 3.8,
+      "vitaminC": 0.0,
+      "potassium": 186.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tortillas, ready-to-bake or -fry, flour",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 45.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "crackers",
+    "localizedNames": {
+      "en": "Crackers",
+      "it": "Cracker"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 430,
+      "protein": 8.7,
+      "carbs": 72.0,
+      "fat": 11.0,
+      "fiber": 3.2,
+      "vitaminC": 0.0,
+      "potassium": 154.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Crackers, plain",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 7.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "sunflower_oil",
+    "localizedNames": {
+      "en": "Sunflower oil",
+      "it": "Olio di semi di girasole"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 884,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oil, sunflower, linoleic",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 13.6,
+        "tsp": 4.5
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 0.92
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "canola_oil",
+    "localizedNames": {
+      "en": "Canola oil",
+      "it": "Olio di colza"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 884,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oil, canola",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 13.6,
+        "tsp": 4.5
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 0.92
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "sesame_oil",
+    "localizedNames": {
+      "en": "Sesame oil",
+      "it": "Olio di sesamo"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 884,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oil, sesame, salad or cooking",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 13.6,
+        "tsp": 4.5
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 0.92
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "peanut_butter",
+    "localizedNames": {
+      "en": "Peanut butter",
+      "it": "Burro di arachidi"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 588,
+      "protein": 25.1,
+      "carbs": 19.6,
+      "fat": 50.4,
+      "fiber": 6.0,
+      "vitaminC": 0.0,
+      "potassium": 649.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peanut butter, smooth style, without salt",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 16.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "soy_sauce",
+    "localizedNames": {
+      "en": "Soy sauce",
+      "it": "Salsa di soia"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 53,
+      "protein": 8.1,
+      "carbs": 4.9,
+      "fat": 0.6,
+      "fiber": 0.8,
+      "vitaminC": 0.0,
+      "potassium": 435.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sauce, soy, made from soy and wheat",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.2
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "mustard",
+    "localizedNames": {
+      "en": "Mustard",
+      "it": "Senape"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 66,
+      "protein": 4.4,
+      "carbs": 5.8,
+      "fat": 3.3,
+      "fiber": 4.0,
+      "vitaminC": 0.5,
+      "potassium": 138.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Mustard, prepared, yellow",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "mayonnaise",
+    "localizedNames": {
+      "en": "Mayonnaise",
+      "it": "Maionese"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 680,
+      "protein": 1.0,
+      "carbs": 0.6,
+      "fat": 75.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 20.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Salad dressing, mayonnaise, regular",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 14.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "ketchup",
+    "localizedNames": {
+      "en": "Ketchup",
+      "it": "Ketchup"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 112,
+      "protein": 1.3,
+      "carbs": 25.8,
+      "fat": 0.2,
+      "fiber": 0.3,
+      "vitaminC": 4.1,
+      "potassium": 264.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Catsup",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 17.0,
+        "tsp": 6.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "worcestershire_sauce",
+    "localizedNames": {
+      "en": "Worcestershire sauce",
+      "it": "Salsa Worcestershire"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 78,
+      "protein": 0.9,
+      "carbs": 19.4,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 58.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Sauce, worcestershire",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "paprika",
+    "localizedNames": {
+      "en": "Paprika",
+      "it": "Paprika"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 282,
+      "protein": 14.1,
+      "carbs": 54.9,
+      "fat": 12.9,
+      "fiber": 34.9,
+      "vitaminC": 0.9,
+      "potassium": 2280.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, paprika",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 7.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "cumin",
+    "localizedNames": {
+      "en": "Cumin",
+      "it": "Cumino"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 375,
+      "protein": 17.8,
+      "carbs": 44.2,
+      "fat": 22.3,
+      "fiber": 10.5,
+      "vitaminC": 7.7,
+      "potassium": 1788.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, cumin seed",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 6.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "curry_powder",
+    "localizedNames": {
+      "en": "Curry powder",
+      "it": "Curry in polvere"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 325,
+      "protein": 14.3,
+      "carbs": 58.2,
+      "fat": 14.0,
+      "fiber": 53.2,
+      "vitaminC": 0.7,
+      "potassium": 1170.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, curry powder",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 6.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "cinnamon",
+    "localizedNames": {
+      "en": "Cinnamon",
+      "it": "Cannella"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 247,
+      "protein": 4.0,
+      "carbs": 80.6,
+      "fat": 1.2,
+      "fiber": 53.1,
+      "vitaminC": 3.8,
+      "potassium": 431.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, cinnamon, ground",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0,
+        "tsp": 3.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "chili_flakes",
+    "localizedNames": {
+      "en": "Chili flakes",
+      "it": "Peperoncino in fiocchi"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 318,
+      "protein": 12.0,
+      "carbs": 56.6,
+      "fat": 17.3,
+      "fiber": 27.2,
+      "vitaminC": 76.4,
+      "potassium": 1870.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peppers, red or cayenne, dried",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 5.0,
+        "tsp": 1.8
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "bresaola",
+    "localizedNames": {
+      "en": "Bresaola",
+      "it": "Bresaola"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 151,
+      "protein": 32.0,
+      "carbs": 1.0,
+      "fat": 2.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 620.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beef, cured, dried",
+    "nutritionMappingNote": "Bresaola mapped to cured dried beef profile; salt and fat vary by producer.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "speck",
+    "localizedNames": {
+      "en": "Speck",
+      "it": "Speck"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 301,
+      "protein": 29.0,
+      "carbs": 0.8,
+      "fat": 20.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 500.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, ham",
+    "nutritionMappingNote": "Speck mapped to smoked cured ham profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 10.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "mortadella",
+    "localizedNames": {
+      "en": "Mortadella",
+      "it": "Mortadella"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 311,
+      "protein": 16.0,
+      "carbs": 1.5,
+      "fat": 27.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 260.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Bologna, beef and pork",
+    "nutritionMappingNote": "Mortadella mapped to bologna-style cooked sausage profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 20.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "salame",
+    "localizedNames": {
+      "en": "Salami",
+      "it": "Salame"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 407,
+      "protein": 22.0,
+      "carbs": 1.6,
+      "fat": 34.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 480.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Salami, dry or hard, pork, beef",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "coppa",
+    "localizedNames": {
+      "en": "Coppa",
+      "it": "Coppa"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 351,
+      "protein": 25.0,
+      "carbs": 0.5,
+      "fat": 28.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 420.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, dried",
+    "nutritionMappingNote": "Coppa mapped to generic cured pork shoulder profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 10.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "guanciale",
+    "localizedNames": {
+      "en": "Guanciale",
+      "it": "Guanciale"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 655,
+      "protein": 10.0,
+      "carbs": 0.0,
+      "fat": 69.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 210.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, fatback",
+    "nutritionMappingNote": "Guanciale mapped to cured pork jowl/fatback profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "diced_pancetta",
+    "localizedNames": {
+      "en": "Diced pancetta",
+      "it": "Pancetta a cubetti"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 458,
+      "protein": 14.1,
+      "carbs": 1.4,
+      "fat": 45.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 320.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Pork, cured, bacon, uncooked",
+    "nutritionMappingNote": "Diced pancetta mapped to uncooked cured pork belly profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "sliced_roast_beef",
+    "localizedNames": {
+      "en": "Sliced roast beef",
+      "it": "Roast beef affettato"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 170,
+      "protein": 28.0,
+      "carbs": 1.0,
+      "fat": 6.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 370.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beef, roast beef, deli style",
+    "nutritionMappingNote": "Mapped to deli roast beef profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "sliced_turkey_breast",
+    "localizedNames": {
+      "en": "Sliced turkey breast",
+      "it": "Fesa di tacchino"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 104,
+      "protein": 17.0,
+      "carbs": 1.5,
+      "fat": 2.5,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 280.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Turkey breast, deli meat",
+    "nutritionMappingNote": "Mapped to deli turkey breast profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 18.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "turkey_ham",
+    "localizedNames": {
+      "en": "Turkey ham",
+      "it": "Prosciutto di tacchino"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 124,
+      "protein": 16.0,
+      "carbs": 1.8,
+      "fat": 5.2,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 260.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Turkey ham, deli meat",
+    "nutritionMappingNote": "Mapped to turkey-based ham deli profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 18.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "canned_chickpeas",
+    "localizedNames": {
+      "en": "Canned chickpeas",
+      "it": "Ceci in scatola"
+    },
+    "category": "legumes",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 139,
+      "protein": 7.0,
+      "carbs": 22.5,
+      "fat": 2.0,
+      "fiber": 6.0,
+      "vitaminC": 1.0,
+      "potassium": 240.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Chickpeas, mature seeds, canned, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "canned_lentils",
+    "localizedNames": {
+      "en": "Canned lentils",
+      "it": "Lenticchie in scatola"
+    },
+    "category": "legumes",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 111,
+      "protein": 8.8,
+      "carbs": 18.7,
+      "fat": 0.4,
+      "fiber": 7.3,
+      "vitaminC": 1.5,
+      "potassium": 350.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Lentils, mature seeds, canned, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "canned_cannellini",
+    "localizedNames": {
+      "en": "Canned cannellini beans",
+      "it": "Cannellini in scatola"
+    },
+    "category": "legumes",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 114,
+      "protein": 7.0,
+      "carbs": 18.8,
+      "fat": 0.4,
+      "fiber": 6.3,
+      "vitaminC": 0.8,
+      "potassium": 330.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beans, white, mature seeds, canned, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "canned_borlotti",
+    "localizedNames": {
+      "en": "Canned borlotti beans",
+      "it": "Borlotti in scatola"
+    },
+    "category": "legumes",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 116,
+      "protein": 7.1,
+      "carbs": 19.0,
+      "fat": 0.5,
+      "fiber": 6.5,
+      "vitaminC": 0.8,
+      "potassium": 320.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beans, cranberry (roman), canned, drained solids",
+    "nutritionMappingNote": "Mapped to canned cranberry/roman bean profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "canned_corn",
+    "localizedNames": {
+      "en": "Canned corn",
+      "it": "Mais in scatola"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 81,
+      "protein": 2.3,
+      "carbs": 18.7,
+      "fat": 1.2,
+      "fiber": 2.6,
+      "vitaminC": 2.7,
+      "potassium": 218.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Corn, sweet, yellow, canned, drained solids",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 14.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "green_olives",
+    "localizedNames": {
+      "en": "Green olives",
+      "it": "Olive verdi"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 145,
+      "protein": 1.0,
+      "carbs": 3.8,
+      "fat": 15.3,
+      "fiber": 3.3,
+      "vitaminC": 0.9,
+      "potassium": 42.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Olives, green, pickled",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 4.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "black_olives",
+    "localizedNames": {
+      "en": "Black olives",
+      "it": "Olive nere"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 116,
+      "protein": 0.8,
+      "carbs": 6.0,
+      "fat": 10.9,
+      "fiber": 1.6,
+      "vitaminC": 0.0,
+      "potassium": 8.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Olives, ripe, canned",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 3.8,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "capers",
+    "localizedNames": {
+      "en": "Capers",
+      "it": "Capperi"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 23,
+      "protein": 2.4,
+      "carbs": 4.9,
+      "fat": 0.9,
+      "fiber": 3.2,
+      "vitaminC": 4.3,
+      "potassium": 40.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Capers, canned",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tsp",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 3.0,
+        "tbsp": 9.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "pickled_gherkins",
+    "localizedNames": {
+      "en": "Pickled gherkins",
+      "it": "Cetriolini"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 11,
+      "protein": 0.3,
+      "carbs": 2.3,
+      "fat": 0.2,
+      "fiber": 1.2,
+      "vitaminC": 2.1,
+      "potassium": 23.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cucumber, pickled, with salt",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 15.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "artichokes_in_oil",
+    "localizedNames": {
+      "en": "Artichokes in oil",
+      "it": "Carciofini sott'olio"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 89,
+      "protein": 2.0,
+      "carbs": 5.0,
+      "fat": 7.0,
+      "fiber": 3.5,
+      "vitaminC": 2.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: preserved-artichoke products vary strongly by oil and brine.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 20.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "eggplant_in_oil",
+    "localizedNames": {
+      "en": "Eggplant in oil",
+      "it": "Melanzane sott'olio"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 95,
+      "protein": 1.3,
+      "carbs": 4.0,
+      "fat": 8.5,
+      "fiber": 2.0,
+      "vitaminC": 2.0,
+      "potassium": 120.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: preserved-eggplant products vary by preparation and oil ratio.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "grilled_peppers_jar",
+    "localizedNames": {
+      "en": "Jarred grilled peppers",
+      "it": "Peperoni grigliati in vasetto"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 48,
+      "protein": 1.1,
+      "carbs": 5.0,
+      "fat": 2.5,
+      "fiber": 2.2,
+      "vitaminC": 35.0,
+      "potassium": 140.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: jarred grilled peppers vary by oil and marinade.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 25.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_peas",
+    "localizedNames": {
+      "en": "Frozen peas",
+      "it": "Piselli surgelati"
+    },
+    "category": "legumes",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 84,
+      "protein": 5.4,
+      "carbs": 15.0,
+      "fat": 0.4,
+      "fiber": 5.5,
+      "vitaminC": 14.0,
+      "potassium": 271.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peas, green, frozen, unprepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 11.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_spinach",
+    "localizedNames": {
+      "en": "Frozen spinach",
+      "it": "Spinaci surgelati"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 23,
+      "protein": 3.8,
+      "carbs": 3.8,
+      "fat": 0.3,
+      "fiber": 2.5,
+      "vitaminC": 12.0,
+      "potassium": 390.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spinach, frozen, unprepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 100.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_broccoli",
+    "localizedNames": {
+      "en": "Frozen broccoli",
+      "it": "Broccoli surgelati"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 34,
+      "protein": 2.8,
+      "carbs": 7.0,
+      "fat": 0.4,
+      "fiber": 3.0,
+      "vitaminC": 65.0,
+      "potassium": 293.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Broccoli, frozen, unprepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 80.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_minestrone",
+    "localizedNames": {
+      "en": "Frozen minestrone mix",
+      "it": "Minestrone surgelato"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 45,
+      "protein": 2.1,
+      "carbs": 7.2,
+      "fat": 0.7,
+      "fiber": 2.8,
+      "vitaminC": 12.0,
+      "potassium": 210.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: minestrone mixes vary by vegetable and legume composition.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_green_beans",
+    "localizedNames": {
+      "en": "Frozen green beans",
+      "it": "Fagiolini surgelati"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 31,
+      "protein": 1.8,
+      "carbs": 7.0,
+      "fat": 0.1,
+      "fiber": 3.4,
+      "vitaminC": 12.0,
+      "potassium": 209.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Beans, snap, green, frozen, unprepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "frozen_shrimp",
+    "localizedNames": {
+      "en": "Frozen shrimp",
+      "it": "Gamberi surgelati"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 91,
+      "protein": 20.0,
+      "carbs": 0.2,
+      "fat": 1.2,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 259.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Crustaceans, shrimp, frozen, unprepared",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "frozen_fish_fillets",
+    "localizedNames": {
+      "en": "Frozen fish fillets",
+      "it": "Filetti di pesce surgelati"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 95,
+      "protein": 19.0,
+      "carbs": 0.0,
+      "fat": 1.8,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 360.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: frozen fish fillets vary by species and breading.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "frozen_chicken_breast",
+    "localizedNames": {
+      "en": "Frozen chicken breast",
+      "it": "Petto di pollo surgelato"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 120,
+      "protein": 23.0,
+      "carbs": 0.0,
+      "fat": 2.6,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 250.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Chicken breast, frozen, raw",
+    "nutritionMappingNote": "Mapped to frozen raw chicken breast profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 120.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "frozen_pizza",
+    "localizedNames": {
+      "en": "Frozen pizza",
+      "it": "Pizza surgelata"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 260,
+      "protein": 10.0,
+      "carbs": 31.0,
+      "fat": 10.0,
+      "fiber": 2.0,
+      "vitaminC": 1.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: frozen pizzas vary significantly by toppings and dough.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 350.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "frozen_potatoes",
+    "localizedNames": {
+      "en": "Frozen potatoes",
+      "it": "Patate surgelate"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 150,
+      "protein": 2.8,
+      "carbs": 26.0,
+      "fat": 4.5,
+      "fiber": 3.0,
+      "vitaminC": 4.0,
+      "potassium": 380.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: frozen potatoes vary by cut and pre-frying process.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "granola",
+    "localizedNames": {
+      "en": "Granola",
+      "it": "Granola"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 471,
+      "protein": 10.0,
+      "carbs": 64.0,
+      "fat": 20.0,
+      "fiber": 6.0,
+      "vitaminC": 0.0,
+      "potassium": 350.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cereal, granola, homemade",
+    "nutritionMappingNote": "Granola compositions vary by nuts, oils, and sweeteners.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "muesli",
+    "localizedNames": {
+      "en": "Muesli",
+      "it": "Muesli"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 370,
+      "protein": 11.0,
+      "carbs": 64.0,
+      "fat": 8.0,
+      "fiber": 8.0,
+      "vitaminC": 0.0,
+      "potassium": 360.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: muesli blends vary by grains and dried fruit content.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "corn_flakes",
+    "localizedNames": {
+      "en": "Corn flakes",
+      "it": "Corn flakes"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 357,
+      "protein": 7.5,
+      "carbs": 84.0,
+      "fat": 0.4,
+      "fiber": 3.0,
+      "vitaminC": 0.0,
+      "potassium": 120.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cereals ready-to-eat, corn flakes, plain",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 2.5
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "rusks",
+    "localizedNames": {
+      "en": "Rusks",
+      "it": "Fette biscottate"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 400,
+      "protein": 11.0,
+      "carbs": 74.0,
+      "fat": 6.0,
+      "fiber": 4.0,
+      "vitaminC": 0.0,
+      "potassium": 150.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: rusks vary by flour blend and added fats.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 11.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "jam",
+    "localizedNames": {
+      "en": "Jam",
+      "it": "Marmellata"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 250,
+      "protein": 0.3,
+      "carbs": 65.0,
+      "fat": 0.1,
+      "fiber": 0.7,
+      "vitaminC": 1.0,
+      "potassium": 45.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Jam, preserves, fruit, low sugar",
+    "nutritionMappingNote": "Mapped to generic fruit jam preserve profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 20.0,
+        "tsp": 7.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "chocolate_spread",
+    "localizedNames": {
+      "en": "Chocolate spread",
+      "it": "Crema spalmabile"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 539,
+      "protein": 6.0,
+      "carbs": 57.0,
+      "fat": 31.0,
+      "fiber": 4.0,
+      "vitaminC": 0.0,
+      "potassium": 300.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: cocoa-hazelnut spreads vary by sugar and fat content.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "pancake_mix",
+    "localizedNames": {
+      "en": "Pancake mix",
+      "it": "Preparato per pancake"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 360,
+      "protein": 8.0,
+      "carbs": 72.0,
+      "fat": 3.5,
+      "fiber": 2.2,
+      "vitaminC": 0.0,
+      "potassium": 160.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: pancake mixes differ by recipe and added sugars.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "breakfast_biscuits",
+    "localizedNames": {
+      "en": "Breakfast biscuits",
+      "it": "Biscotti da colazione"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 440,
+      "protein": 7.0,
+      "carbs": 70.0,
+      "fat": 14.0,
+      "fiber": 3.0,
+      "vitaminC": 0.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: breakfast biscuits vary by grain and fat content.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 12.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "sparkling_water",
+    "localizedNames": {
+      "en": "Sparkling water",
+      "it": "Acqua frizzante"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 0,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Water, carbonated, unsweetened",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "orange_juice",
+    "localizedNames": {
+      "en": "Orange juice",
+      "it": "Succo d'arancia"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 45,
+      "protein": 0.7,
+      "carbs": 10.4,
+      "fat": 0.2,
+      "fiber": 0.2,
+      "vitaminC": 50.0,
+      "potassium": 200.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Orange juice, chilled, includes from concentrate",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "apple_juice",
+    "localizedNames": {
+      "en": "Apple juice",
+      "it": "Succo di mela"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 46,
+      "protein": 0.1,
+      "carbs": 11.3,
+      "fat": 0.1,
+      "fiber": 0.2,
+      "vitaminC": 0.9,
+      "potassium": 101.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Apple juice, canned or bottled, unsweetened",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "cola",
+    "localizedNames": {
+      "en": "Cola",
+      "it": "Cola"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 42,
+      "protein": 0.0,
+      "carbs": 10.6,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 1.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Carbonated beverage, cola, regular",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.04
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "black_tea",
+    "localizedNames": {
+      "en": "Black tea",
+      "it": "Te nero"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 1,
+      "protein": 0.0,
+      "carbs": 0.3,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 37.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tea, black, brewed, prepared with tap water",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "green_tea",
+    "localizedNames": {
+      "en": "Green tea",
+      "it": "Te verde"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 1,
+      "protein": 0.2,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 8.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tea, green, brewed, prepared with tap water",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml"
+      ],
+      "gramsPerUnit": {},
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "ground_coffee",
+    "localizedNames": {
+      "en": "Ground coffee",
+      "it": "Caffe macinato"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 2,
+      "protein": 0.1,
+      "carbs": 0.0,
+      "fat": 0.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 49.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Coffee, brewed from grounds, prepared with tap water",
+    "nutritionMappingNote": "Ground coffee mapped to brewed beverage profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tsp",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 2.0,
+        "tbsp": 6.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "instant_coffee",
+    "localizedNames": {
+      "en": "Instant coffee",
+      "it": "Caffe solubile"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 353,
+      "protein": 12.2,
+      "carbs": 75.4,
+      "fat": 0.5,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 3535.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Coffee, instant, regular, powder",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tsp": 2.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "ready_soup",
+    "localizedNames": {
+      "en": "Ready-to-eat soup",
+      "it": "Zuppa pronta"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 48,
+      "protein": 1.8,
+      "carbs": 6.0,
+      "fat": 1.8,
+      "fiber": 1.2,
+      "vitaminC": 2.0,
+      "potassium": 120.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready soups vary by recipe and brand.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.02
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "ready_veloute",
+    "localizedNames": {
+      "en": "Ready-to-eat veloute",
+      "it": "Vellutata pronta"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 55,
+      "protein": 1.9,
+      "carbs": 7.1,
+      "fat": 2.2,
+      "fiber": 1.5,
+      "vitaminC": 2.0,
+      "potassium": 150.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready veloute soups vary by ingredients and added cream.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.03
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "ready_salad",
+    "localizedNames": {
+      "en": "Ready-to-eat salad",
+      "it": "Insalata pronta"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 20,
+      "protein": 1.2,
+      "carbs": 2.8,
+      "fat": 0.3,
+      "fiber": 1.6,
+      "vitaminC": 8.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready salad mixes vary by leaf blend.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "ready_rice",
+    "localizedNames": {
+      "en": "Ready rice",
+      "it": "Riso pronto"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 145,
+      "protein": 3.0,
+      "carbs": 30.0,
+      "fat": 1.0,
+      "fiber": 1.0,
+      "vitaminC": 0.0,
+      "potassium": 35.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready rice products vary by seasoning and oil.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 250.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "packaged_sushi",
+    "localizedNames": {
+      "en": "Ready-to-eat sushi",
+      "it": "Sushi confezionato"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 155,
+      "protein": 5.5,
+      "carbs": 27.0,
+      "fat": 2.7,
+      "fiber": 1.1,
+      "vitaminC": 1.0,
+      "potassium": 120.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready-to-eat sushi varies by fillings and sauces.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 28.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "triangle_sandwich",
+    "localizedNames": {
+      "en": "Ready-to-eat sandwich",
+      "it": "Tramezzino"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 250,
+      "protein": 9.0,
+      "carbs": 28.0,
+      "fat": 11.0,
+      "fiber": 2.0,
+      "vitaminC": 0.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: tramezzino profiles are brand and filling dependent.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 120.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "packaged_panino",
+    "localizedNames": {
+      "en": "Ready-to-eat panino",
+      "it": "Panino confezionato"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 275,
+      "protein": 11.0,
+      "carbs": 31.0,
+      "fat": 11.5,
+      "fiber": 2.2,
+      "vitaminC": 0.0,
+      "potassium": 200.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: ready-to-eat panini vary strongly by fillings.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 150.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "stuffed_piadina",
+    "localizedNames": {
+      "en": "Ready-to-eat stuffed piadina",
+      "it": "Piadina farcita"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 285,
+      "protein": 10.0,
+      "carbs": 30.0,
+      "fat": 13.0,
+      "fiber": 2.0,
+      "vitaminC": 0.0,
+      "potassium": 210.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: stuffed piadina values depend on fillings.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 180.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "noodles",
+    "localizedNames": {
+      "en": "Noodles",
+      "it": "Noodles"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 470,
+      "protein": 9.5,
+      "carbs": 60.0,
+      "fat": 22.0,
+      "fiber": 3.0,
+      "vitaminC": 0.0,
+      "potassium": 150.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Noodles, egg, dry, enriched",
+    "nutritionMappingNote": "Noodles can vary by flour and pre-frying process.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 70.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "instant_ramen",
+    "localizedNames": {
+      "en": "Instant ramen",
+      "it": "Ramen istantaneo"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 436,
+      "protein": 9.0,
+      "carbs": 62.0,
+      "fat": 17.0,
+      "fiber": 2.9,
+      "vitaminC": 0.0,
+      "potassium": 170.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Noodles, japanese, soba, dry",
+    "nutritionMappingNote": "Instant ramen mapped to dry noodle profile; seasoning packets vary.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 85.0,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "miso_paste",
+    "localizedNames": {
+      "en": "Miso paste",
+      "it": "Miso"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 199,
+      "protein": 12.0,
+      "carbs": 26.0,
+      "fat": 6.0,
+      "fiber": 5.0,
+      "vitaminC": 0.0,
+      "potassium": 210.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Soybean paste",
+    "nutritionMappingNote": "Miso mapped to fermented soybean paste profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 17.0,
+        "tsp": 6.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "panko",
+    "localizedNames": {
+      "en": "Panko",
+      "it": "Panko"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 365,
+      "protein": 13.0,
+      "carbs": 72.0,
+      "fat": 4.0,
+      "fiber": 4.0,
+      "vitaminC": 0.0,
+      "potassium": 180.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Bread crumbs, panko style",
+    "nutritionMappingNote": "Mapped to panko-style breadcrumb profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 4.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "curry_paste",
+    "localizedNames": {
+      "en": "Curry paste",
+      "it": "Pasta di curry"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 110,
+      "protein": 2.0,
+      "carbs": 12.0,
+      "fat": 6.0,
+      "fiber": 2.0,
+      "vitaminC": 5.0,
+      "potassium": 220.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: curry pastes vary widely by style and ingredients.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": null,
+      "isVegan": null
+    }
+  },
+  {
+    "id": "jalapenos_pickled",
+    "localizedNames": {
+      "en": "Pickled jalapenos",
+      "it": "Jalapenos"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 27,
+      "protein": 0.9,
+      "carbs": 5.7,
+      "fat": 0.4,
+      "fiber": 2.8,
+      "vitaminC": 12.0,
+      "potassium": 150.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Peppers, jalapeno, canned",
+    "nutritionMappingNote": "Mapped to canned jalapeno peppers profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 8.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "harissa",
+    "localizedNames": {
+      "en": "Harissa",
+      "it": "Harissa"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 170,
+      "protein": 4.0,
+      "carbs": 12.0,
+      "fat": 12.0,
+      "fiber": 4.0,
+      "vitaminC": 10.0,
+      "potassium": 260.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Unmapped: harissa products vary by pepper and oil ratio.",
+    "nutritionMappingConfidence": "unmapped",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": null,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tofu",
+    "localizedNames": {
+      "en": "Tofu",
+      "it": "Tofu"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 76,
+      "protein": 8.1,
+      "carbs": 1.9,
+      "fat": 4.8,
+      "fiber": 0.3,
+      "vitaminC": 0.1,
+      "potassium": 121.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tofu, raw, regular, prepared with calcium sulfate",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 100.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tempeh",
+    "localizedNames": {
+      "en": "Tempeh",
+      "it": "Tempeh"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 192,
+      "protein": 20.3,
+      "carbs": 7.6,
+      "fat": 10.8,
+      "fiber": 1.4,
+      "vitaminC": 0.0,
+      "potassium": 412.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tempeh",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 100.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "seitan",
+    "localizedNames": {
+      "en": "Seitan",
+      "it": "Seitan"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 143,
+      "protein": 24.0,
+      "carbs": 4.0,
+      "fat": 2.0,
+      "fiber": 0.6,
+      "vitaminC": 0.0,
+      "potassium": 58.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Meat substitute, wheat protein (seitan), prepared",
+    "nutritionMappingNote": "Seitan mapped to wheat gluten meat substitute profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 90.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "almonds",
+    "localizedNames": {
+      "en": "Almonds",
+      "it": "Mandorle"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 579,
+      "protein": 21.2,
+      "carbs": 21.6,
+      "fat": 49.9,
+      "fiber": 12.5,
+      "vitaminC": 0.0,
+      "potassium": 733.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Nuts, almonds",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 1.2,
+        "tbsp": 9.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "walnuts",
+    "localizedNames": {
+      "en": "Walnuts",
+      "it": "Noci"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 654,
+      "protein": 15.2,
+      "carbs": 13.7,
+      "fat": 65.2,
+      "fiber": 6.7,
+      "vitaminC": 1.3,
+      "potassium": 441.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Nuts, walnuts, english",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 2.0,
+        "tbsp": 7.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "hazelnuts",
+    "localizedNames": {
+      "en": "Hazelnuts",
+      "it": "Nocciole"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 628,
+      "protein": 15.0,
+      "carbs": 16.7,
+      "fat": 60.8,
+      "fiber": 9.7,
+      "vitaminC": 6.3,
+      "potassium": 680.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Nuts, hazelnuts or filberts",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 1.3,
+        "tbsp": 9.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "pumpkin_seeds",
+    "localizedNames": {
+      "en": "Pumpkin seeds",
+      "it": "Semi di zucca"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 559,
+      "protein": 30.2,
+      "carbs": 10.7,
+      "fat": 49.0,
+      "fiber": 6.0,
+      "vitaminC": 1.9,
+      "potassium": 809.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Seeds, pumpkin and squash seed kernels, dried",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 10.0,
+        "tsp": 3.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "chia_seeds",
+    "localizedNames": {
+      "en": "Chia seeds",
+      "it": "Semi di chia"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 486,
+      "protein": 16.5,
+      "carbs": 42.1,
+      "fat": 30.7,
+      "fiber": 34.4,
+      "vitaminC": 1.6,
+      "potassium": 407.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Seeds, chia seeds, dried",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 12.0,
+        "tsp": 4.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "cottage_cheese",
+    "localizedNames": {
+      "en": "Cottage cheese",
+      "it": "Fiocchi di latte"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 98,
+      "protein": 11.1,
+      "carbs": 3.4,
+      "fat": 4.3,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 104.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, cottage, lowfat, 2% milkfat",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 14.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "scamorza",
+    "localizedNames": {
+      "en": "Scamorza",
+      "it": "Scamorza"
+    },
+    "category": "dairy",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 334,
+      "protein": 25.0,
+      "carbs": 1.0,
+      "fat": 26.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 120.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Cheese, provolone",
+    "nutritionMappingNote": "Scamorza mapped to stretched-curd semi-hard cheese profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 120.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "bulgur",
+    "localizedNames": {
+      "en": "Bulgur",
+      "it": "Bulgur"
+    },
+    "category": "carbs",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 342,
+      "protein": 12.3,
+      "carbs": 75.9,
+      "fat": 1.3,
+      "fiber": 18.3,
+      "vitaminC": 0.0,
+      "potassium": 410.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Bulgur, dry",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 12.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": false,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "coconut_oil",
+    "localizedNames": {
+      "en": "Coconut oil",
+      "it": "Olio di cocco"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 892,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 100.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 0.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Oil, coconut",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "tbsp",
+        "tsp",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 13.6,
+        "tsp": 4.5
+      },
+      "mlPerUnit": {
+        "ml": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "gramsPerMl": 0.92
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tahini",
+    "localizedNames": {
+      "en": "Tahini",
+      "it": "Tahina"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 595,
+      "protein": 17.0,
+      "carbs": 21.2,
+      "fat": 53.8,
+      "fiber": 9.3,
+      "vitaminC": 0.0,
+      "potassium": 414.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tahini, sesame butter, from kernels",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tbsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 15.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "tomato_paste",
+    "localizedNames": {
+      "en": "Tomato paste",
+      "it": "Concentrato di pomodoro"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 82,
+      "protein": 4.3,
+      "carbs": 19.1,
+      "fat": 0.5,
+      "fiber": 4.1,
+      "vitaminC": 22.0,
+      "potassium": 1014.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Tomato products, canned, paste, without salt added",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 16.0,
+        "tsp": 5.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "bay_leaf",
+    "localizedNames": {
+      "en": "Bay leaf",
+      "it": "Alloro"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 313,
+      "protein": 7.6,
+      "carbs": 74.9,
+      "fat": 8.4,
+      "fiber": 26.3,
+      "vitaminC": 46.5,
+      "potassium": 529.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, bay leaf",
+    "nutritionMappingNote": "Fresh bay leaf mapped to dried bay leaf profile.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "piece",
+      "supportedUnits": [
+        "piece",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "piece": 0.5,
+        "g": 1.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  },
+  {
+    "id": "nutmeg",
+    "localizedNames": {
+      "en": "Nutmeg",
+      "it": "Noce moscata"
+    },
+    "category": "condiments",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 525,
+      "protein": 5.8,
+      "carbs": 49.3,
+      "fat": 36.3,
+      "fiber": 20.8,
+      "vitaminC": 3.0,
+      "potassium": 350.0
+    },
+    "nutritionSource": "USDA FoodData Central",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": "USDA FDC: Spices, nutmeg, ground",
+    "nutritionMappingNote": null,
+    "nutritionMappingConfidence": "high",
+    "unitProfile": {
+      "defaultUnit": "tsp",
+      "supportedUnits": [
+        "g",
+        "tbsp",
+        "tsp"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "tbsp": 7.0,
+        "tsp": 2.2
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
+    }
+  }
+]

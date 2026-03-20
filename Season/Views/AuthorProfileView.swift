@@ -44,7 +44,7 @@ struct AuthorProfileView: View {
                     InlineStatsRow(
                         stats: [
                             String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count),
-                            String(format: viewModel.localizer.text(.followersCountFormat), followerCount),
+                            estimatedFollowersStatText,
                             String(format: viewModel.localizer.text(.totalCrispyReceivedFormat), totalCrispy),
                             "\(Int(averageSeasonalMatch.rounded()))% \(viewModel.localizer.text(.seasonalMatch).lowercased())"
                         ]
@@ -164,6 +164,10 @@ struct AuthorProfileView: View {
 
     private var followerCount: Int {
         viewModel.followerCount(for: authorName, isFollowedByCurrentUser: isFollowing)
+    }
+
+    private var estimatedFollowersStatText: String {
+        "~" + String(format: viewModel.localizer.text(.followersCountFormat), followerCount)
     }
 
     private var totalCrispy: Int {

@@ -138,12 +138,12 @@ struct CreateRecipeView: View {
                 }
             }
             .alert(localizer.text(.createRecipeSubtitle), isPresented: $showPublishError) {
-                Button("OK", role: .cancel) {}
+                Button(localizer.text(.commonOK), role: .cancel) {}
             }
-            .alert("Camera Unavailable", isPresented: $showCameraUnavailableAlert) {
-                Button("OK", role: .cancel) {}
+            .alert(localizer.text(.cameraUnavailableTitle), isPresented: $showCameraUnavailableAlert) {
+                Button(localizer.text(.commonOK), role: .cancel) {}
             } message: {
-                Text("This device does not have an available camera. You can still add photos from your library.")
+                Text(localizer.text(.cameraUnavailableMessage))
             }
             .sheet(isPresented: $showingCameraPicker) {
                 CameraImagePicker { image in
@@ -248,11 +248,11 @@ struct CreateRecipeView: View {
             DisclosureGroup(isExpanded: $showImportTools) {
                 VStack(alignment: .leading, spacing: 10) {
                     if importableLinkedAccounts.isEmpty {
-                        Text("Connect TikTok or Instagram in Account to import your own content.")
+                        Text(localizer.text(.socialImportConnectAccountsHint))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        Picker("Provider", selection: $selectedImportProviderRaw) {
+                        Picker(localizer.text(.socialImportProviderLabel), selection: $selectedImportProviderRaw) {
                             ForEach(importableLinkedAccounts) { account in
                                 Text(providerDisplayName(account.provider))
                                     .tag(account.provider.rawValue)
@@ -261,7 +261,7 @@ struct CreateRecipeView: View {
                         .pickerStyle(.segmented)
 
                         if selectedImportableAccount?.eligiblePostURLs.isEmpty == true {
-                            Text("No eligible posts found for this account. Add your own post URLs in Account.")
+                            Text(localizer.text(.socialImportNoEligiblePostsHint))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -755,7 +755,7 @@ struct CreateRecipeView: View {
 
     private func applySocialImport() {
         guard canImportFromConnectedAccount else {
-            importFeedbackText = "Import only works from your connected account content."
+            importFeedbackText = localizer.text(.socialImportOwnAccountOnly)
             return
         }
 
@@ -763,6 +763,7 @@ struct CreateRecipeView: View {
             sourceURLRaw: selectedOwnedPostURL,
             captionRaw: importCaptionRaw,
             produceItems: viewModel.produceItems,
+            basicIngredients: BasicIngredientCatalog.all,
             languageCode: localizer.languageCode
         )
 

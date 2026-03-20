@@ -271,6 +271,36 @@ enum AppTextKey: String {
     case readyNow
     case crispyAction
     case addedMissingItemsFormat
+    case commonOK
+    case cameraUnavailableTitle
+    case cameraUnavailableMessage
+    case socialImportConnectAccountsHint
+    case socialImportNoEligiblePostsHint
+    case socialImportOwnAccountOnly
+    case socialImportProviderLabel
+    case connectedAccounts
+    case connectAction
+    case unlinkAction
+    case authErrorTitle
+    case authOAuthNotConfiguredInstagram
+    case authOAuthNotConfiguredTikTok
+    case authOAuthNotConfiguredApple
+    case authMissingApplePresentationAnchor
+    case authCancelled
+    case authFailedInstagram
+    case authFailedTikTok
+    case authFailedApple
+    case recipeTimingHeading
+    case recipeTimingExplainPerfectNow
+    case recipeTimingExplainGoodNow
+    case recipeTimingExplainBetterSoon
+    case recipeTimingExplainEndingSoon
+    case seedAttributionViaFormat
+    case nutritionTotalForServingsFormat
+    case userBadgeSeasonStarter
+    case userBadgeFreshCook
+    case userBadgeCrispyCreator
+    case userBadgeTopSeasonal
 }
 
 struct AppLocalizer {
@@ -389,13 +419,13 @@ struct AppLocalizer {
     func userBadgeTitle(_ kind: UserBadge.Kind) -> String {
         switch kind {
         case .seasonStarter:
-            return "Season Starter"
+            return text(.userBadgeSeasonStarter)
         case .freshCook:
-            return "Fresh Cook"
+            return text(.userBadgeFreshCook)
         case .crispyCreator:
-            return "Crispy Creator"
+            return text(.userBadgeCrispyCreator)
         case .topSeasonal:
-            return "Top Seasonal"
+            return text(.userBadgeTopSeasonal)
         case .glutenFreeMaster:
             return text(.creatorBadgeGlutenFreeMaster)
         case .vegetarianMaster:
@@ -687,7 +717,37 @@ struct AppLocalizer {
             .addMissingAction: "Add missing",
             .readyNow: "Ready now",
             .crispyAction: "Crispy",
-            .addedMissingItemsFormat: "Added %d missing ingredients"
+            .addedMissingItemsFormat: "Added %d missing ingredients",
+            .commonOK: "OK",
+            .cameraUnavailableTitle: "Camera Unavailable",
+            .cameraUnavailableMessage: "This device does not have an available camera. You can still add photos from your library.",
+            .socialImportConnectAccountsHint: "Connect TikTok or Instagram in Account to import your own content.",
+            .socialImportNoEligiblePostsHint: "No eligible posts found for this account. Add your own post URLs in Account.",
+            .socialImportOwnAccountOnly: "Import only works from your connected account content.",
+            .socialImportProviderLabel: "Provider",
+            .connectedAccounts: "Connected accounts",
+            .connectAction: "Connect",
+            .unlinkAction: "Unlink",
+            .authErrorTitle: "Authentication Error",
+            .authOAuthNotConfiguredInstagram: "Instagram OAuth is not configured yet.",
+            .authOAuthNotConfiguredTikTok: "TikTok OAuth is not configured yet.",
+            .authOAuthNotConfiguredApple: "Apple Sign In is not configured yet.",
+            .authMissingApplePresentationAnchor: "Unable to start Apple Sign In on this screen.",
+            .authCancelled: "Authentication was cancelled.",
+            .authFailedInstagram: "Instagram authentication failed.",
+            .authFailedTikTok: "TikTok authentication failed.",
+            .authFailedApple: "Apple authentication failed.",
+            .recipeTimingHeading: "Timing",
+            .recipeTimingExplainPerfectNow: "This recipe is at its best seasonal moment right now.",
+            .recipeTimingExplainGoodNow: "This recipe is a good choice now, even if some ingredients are not at peak season.",
+            .recipeTimingExplainBetterSoon: "This recipe will become more seasonal in the coming weeks.",
+            .recipeTimingExplainEndingSoon: "This recipe is still good now, but some ingredients are moving out of season.",
+            .seedAttributionViaFormat: "via %@",
+            .nutritionTotalForServingsFormat: "Total (%d servings)",
+            .userBadgeSeasonStarter: "Season Starter",
+            .userBadgeFreshCook: "Fresh Cook",
+            .userBadgeCrispyCreator: "Crispy Creator",
+            .userBadgeTopSeasonal: "Top Seasonal"
         ],
         "it": [
             .homeTab: "Home",
@@ -943,7 +1003,37 @@ struct AppLocalizer {
             .addMissingAction: "Aggiungi mancanti",
             .readyNow: "Pronta ora",
             .crispyAction: "Crispy",
-            .addedMissingItemsFormat: "Aggiunti %d ingredienti mancanti"
+            .addedMissingItemsFormat: "Aggiunti %d ingredienti mancanti",
+            .commonOK: "OK",
+            .cameraUnavailableTitle: "Fotocamera non disponibile",
+            .cameraUnavailableMessage: "Questo dispositivo non ha una fotocamera disponibile. Puoi comunque aggiungere foto dalla libreria.",
+            .socialImportConnectAccountsHint: "Collega TikTok o Instagram in Account per importare i tuoi contenuti.",
+            .socialImportNoEligiblePostsHint: "Nessun post idoneo trovato per questo account. Aggiungi i tuoi URL post in Account.",
+            .socialImportOwnAccountOnly: "L'importazione funziona solo dai contenuti del tuo account collegato.",
+            .socialImportProviderLabel: "Provider",
+            .connectedAccounts: "Account collegati",
+            .connectAction: "Collega",
+            .unlinkAction: "Scollega",
+            .authErrorTitle: "Errore di autenticazione",
+            .authOAuthNotConfiguredInstagram: "OAuth Instagram non è ancora configurato.",
+            .authOAuthNotConfiguredTikTok: "OAuth TikTok non è ancora configurato.",
+            .authOAuthNotConfiguredApple: "Sign in with Apple non è ancora configurato.",
+            .authMissingApplePresentationAnchor: "Impossibile avviare Sign in with Apple in questa schermata.",
+            .authCancelled: "Autenticazione annullata.",
+            .authFailedInstagram: "Autenticazione Instagram non riuscita.",
+            .authFailedTikTok: "Autenticazione TikTok non riuscita.",
+            .authFailedApple: "Autenticazione Apple non riuscita.",
+            .recipeTimingHeading: "Tempistica",
+            .recipeTimingExplainPerfectNow: "Questa ricetta è nel suo momento stagionale migliore proprio ora.",
+            .recipeTimingExplainGoodNow: "Questa ricetta è una buona scelta ora, anche se alcuni ingredienti non sono al picco stagionale.",
+            .recipeTimingExplainBetterSoon: "Questa ricetta diventerà più stagionale nelle prossime settimane.",
+            .recipeTimingExplainEndingSoon: "Questa ricetta è ancora valida ora, ma alcuni ingredienti stanno uscendo di stagione.",
+            .seedAttributionViaFormat: "via %@",
+            .nutritionTotalForServingsFormat: "Totale (%d porzioni)",
+            .userBadgeSeasonStarter: "Season Starter",
+            .userBadgeFreshCook: "Fresh Cook",
+            .userBadgeCrispyCreator: "Crispy Creator",
+            .userBadgeTopSeasonal: "Top Seasonal"
         ]
     ]
 

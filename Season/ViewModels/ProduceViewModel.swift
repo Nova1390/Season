@@ -48,12 +48,6 @@ struct RecipeTimingInsight: Hashable {
     let label: RecipeTimingLabel
 }
 
-private struct DietarySupport {
-    let glutenFree: Bool?
-    let vegetarian: Bool?
-    let vegan: Bool?
-}
-
 final class ProduceViewModel: ObservableObject {
     @Published private(set) var produceItems: [ProduceItem] = []
     @Published private(set) var recipes: [Recipe] = []
@@ -63,9 +57,10 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var archivedRecipeIDs: Set<String> = []
     @Published private(set) var deletedRecipeIDs: Set<String> = []
     @Published private(set) var recipeViewCounts: [String: Int] = [:]
+    @Published private(set) var homeFeedRefreshID: Int = 0
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
-    @Published private(set) var nutritionPriorities: [NutritionPriorityDimension: Double] = ProduceViewModel.defaultNutritionPriorities
+    @Published private(set) var nutritionPriorities: [NutritionPriorityDimension: Double] = NutritionService.defaultNutritionPriorities
     private let nutritionGoalsStorageKey = "nutritionGoalsRaw"
     private let savedRecipeIDsStorageKey = "savedRecipeIDsRaw"
     private let crispiedRecipeIDsStorageKey = "crispiedRecipeIDsRaw"
@@ -76,6 +71,7 @@ final class ProduceViewModel: ObservableObject {
     private let produceByID: [String: ProduceItem]
     private let basicByID: [String: BasicIngredient]
     private let basicByNormalizedName: [String: BasicIngredient]
+    private let nutritionService = NutritionService()
     private let fallbackUnitProfile = IngredientUnitProfile(
         defaultUnit: .g,
         supportedUnits: [.g, .piece],
@@ -87,11 +83,9 @@ final class ProduceViewModel: ObservableObject {
     private var cachedDiscoverableRankedRecipes: [RankedRecipe] = []
     private var cachedDiscoverableRankedByID: [String: RankedRecipe] = [:]
     private var cachedDiscoverableRankedMonth: Int?
-    private var cachedRecipeNutritionSummaries: [String: RecipeNutritionSummary?] = [:]
-    private var cachedMaxRecipeNutritionValues: [NutritionPriorityDimension: Double] = [:]
-    private var cachedMaxProduceNutritionValues: [NutritionPriorityDimension: Double] = [:]
     private var cachedMaxCrispy: Int?
     private var cachedMaxViews: Int?
+    private var featuredRecipeRotationOffset: Int = 0
 
     var localizer: AppLocalizer {
         AppLocalizer(languageCode: languageCode)
@@ -117,8 +111,8 @@ final class ProduceViewModel: ObservableObject {
         self.recipes = []
         self.userProfiles = []
         let rawNutritionGoals = UserDefaults.standard.string(forKey: nutritionGoalsStorageKey) ?? ""
-        self.nutritionPriorities = Self.parseNutritionPriorities(from: rawNutritionGoals)
-        self.nutritionGoals = Self.legacyGoals(from: self.nutritionPriorities)
+        self.nutritionPriorities = NutritionService.parseNutritionPriorities(from: rawNutritionGoals)
+        self.nutritionGoals = NutritionService.legacyGoals(from: self.nutritionPriorities)
         self.savedRecipeIDs = Self.parseStringSet(from: UserDefaults.standard.string(forKey: savedRecipeIDsStorageKey) ?? "")
         self.crispiedRecipeIDs = Self.parseStringSet(from: UserDefaults.standard.string(forKey: crispiedRecipeIDsStorageKey) ?? "")
         self.archivedRecipeIDs = Self.parseStringSet(from: UserDefaults.standard.string(forKey: archivedRecipeIDsStorageKey) ?? "")
@@ -164,8 +158,7 @@ final class ProduceViewModel: ObservableObject {
         cachedDiscoverableRankedRecipes = []
         cachedDiscoverableRankedByID = [:]
         cachedDiscoverableRankedMonth = nil
-        cachedRecipeNutritionSummaries.removeAll(keepingCapacity: true)
-        cachedMaxRecipeNutritionValues.removeAll(keepingCapacity: true)
+        nutritionService.invalidateCaches()
         cachedMaxCrispy = nil
         cachedMaxViews = nil
     }
@@ -174,7 +167,7 @@ final class ProduceViewModel: ObservableObject {
         cachedDiscoverableRankedRecipes = []
         cachedDiscoverableRankedByID = [:]
         cachedDiscoverableRankedMonth = nil
-        cachedMaxRecipeNutritionValues.removeAll(keepingCapacity: true)
+        nutritionService.invalidateCaches()
         cachedMaxCrispy = nil
         cachedMaxViews = nil
     }
@@ -682,55 +675,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func recipeNutritionSummary(for recipe: Recipe) -> RecipeNutritionSummary? {
-        if let cached = cachedRecipeNutritionSummaries[recipe.id] {
-            return cached
-        }
-
-        var totalCalories = 0.0
-        var totalProtein = 0.0
-        var totalCarbs = 0.0
-        var totalFat = 0.0
-        var totalFiber = 0.0
-        var totalVitaminC = 0.0
-        var totalPotassium = 0.0
-        var hasAnyNutritionData = false
-
-        for ingredient in recipe.ingredients {
-            let nutritionInfo = nutritionInfo(for: ingredient)
-            guard let nutrition = nutritionInfo.nutrition else { continue }
-            hasAnyNutritionData = true
-
-            let grams = quantityInGrams(
-                value: ingredient.quantityValue,
-                unit: ingredient.quantityUnit,
-                profile: nutritionInfo.unitProfile
-            )
-            let factor = grams / 100.0
-
-            totalCalories += Double(nutrition.calories) * factor
-            totalProtein += nutrition.protein * factor
-            totalCarbs += nutrition.carbs * factor
-            totalFat += nutrition.fat * factor
-            totalFiber += nutrition.fiber * factor
-            totalVitaminC += nutrition.vitaminC * factor
-            totalPotassium += nutrition.potassium * factor
-        }
-
-        guard hasAnyNutritionData else {
-            cachedRecipeNutritionSummaries[recipe.id] = nil
-            return nil
-        }
-        let summary = RecipeNutritionSummary(
-            calories: totalCalories,
-            protein: totalProtein,
-            carbs: totalCarbs,
-            fat: totalFat,
-            fiber: totalFiber,
-            vitaminC: totalVitaminC,
-            potassium: totalPotassium
-        )
-        cachedRecipeNutritionSummaries[recipe.id] = summary
-        return summary
+        nutritionService.recipeNutritionSummary(for: recipe, context: nutritionContext)
     }
 
     func ingredientsForRecipe(_ recipe: Recipe) -> [ProduceItem] {
@@ -1006,14 +951,14 @@ final class ProduceViewModel: ObservableObject {
     @discardableResult
     func setNutritionGoalsRaw(_ rawValue: String) -> String {
         let priorities = Self.parseNutritionPriorities(from: rawValue)
-        let normalized = Self.normalizedNutritionPrioritiesRaw(from: priorities)
+        let normalized = NutritionService.normalizedNutritionPrioritiesRaw(from: priorities)
 
         if nutritionPriorities != priorities {
             nutritionPriorities = priorities
             invalidateRankingCaches()
         }
 
-        let legacy = Self.legacyGoals(from: priorities)
+        let legacy = NutritionService.legacyGoals(from: priorities)
         if nutritionGoals != legacy {
             nutritionGoals = legacy
         }
@@ -1028,9 +973,21 @@ final class ProduceViewModel: ObservableObject {
     func updateNutritionPriority(_ value: Double, for dimension: NutritionPriorityDimension) -> String {
         var updated = nutritionPriorities
         updated[dimension] = min(1, max(0, value))
-        let normalized = Self.normalizedNutritionPrioritiesRaw(from: updated)
+        let normalized = NutritionService.normalizedNutritionPrioritiesRaw(from: updated)
         _ = setNutritionGoalsRaw(normalized)
         return normalized
+    }
+
+    @MainActor
+    func refreshHomeFeed() async {
+        // Rotate within top featured candidates to keep Home curated but fresh.
+        featuredRecipeRotationOffset = (featuredRecipeRotationOffset + 1) % 10_000
+        homeFeedRefreshID &+= 1
+    }
+
+    func featuredRecipeRotationIndex(poolCount: Int) -> Int {
+        guard poolCount > 0 else { return 0 }
+        return featuredRecipeRotationOffset % poolCount
     }
 
     private var nonDeletedRecipes: [Recipe] {
@@ -1039,6 +996,20 @@ final class ProduceViewModel: ObservableObject {
 
     private var discoverableRecipes: [Recipe] {
         nonDeletedRecipes.filter { !archivedRecipeIDs.contains($0.id) }
+    }
+
+    private var nutritionContext: NutritionService.Context {
+        NutritionService.Context(
+            produceItems: produceItems,
+            discoverableRecipes: discoverableRecipes,
+            produceByID: produceByID,
+            basicByID: basicByID,
+            basicByNormalizedName: basicByNormalizedName,
+            fallbackUnitProfile: fallbackUnitProfile,
+            quantityProfileForProduceID: { [unowned self] produceID in
+                self.quantityProfile(forProduceID: produceID)
+            }
+        )
     }
 
     private func compareItems(_ lhs: ProduceItem, _ rhs: ProduceItem) -> Bool {
@@ -1192,19 +1163,11 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func nutritionPreferenceScore(for recipe: Recipe) -> Double {
-        guard let summary = recipeNutritionSummary(for: recipe) else { return 0 }
-        let weightedDimensions = nutritionPriorities.filter { $0.value > 0.0001 }
-        guard !weightedDimensions.isEmpty else { return 0 }
-
-        var weightedScore = 0.0
-        var totalWeight = 0.0
-        for (dimension, weight) in weightedDimensions {
-            let normalized = normalizedRecipeNutritionValue(for: dimension, summary: summary)
-            weightedScore += normalized * weight
-            totalWeight += weight
-        }
-        guard totalWeight > 0 else { return 0 }
-        return min(1.0, max(0.0, weightedScore / totalWeight))
+        nutritionService.nutritionPreferenceScore(
+            for: recipe,
+            priorities: nutritionPriorities,
+            context: nutritionContext
+        )
     }
 
     func fridgeMatchScore(for recipe: Recipe, fridgeItemIDs: Set<String>) -> Double {
@@ -1361,245 +1324,75 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func nutritionScore(for item: ProduceItem) -> Double {
-        guard let nutrition = item.nutrition else { return 0 }
-        let weightedDimensions = nutritionPriorities.filter { $0.value > 0.0001 }
-        guard !weightedDimensions.isEmpty else { return 0 }
-
-        var weightedScore = 0.0
-        var totalWeight = 0.0
-
-        for (dimension, weight) in weightedDimensions {
-            let normalized = normalizedNutritionValue(for: dimension, nutrition: nutrition)
-            weightedScore += normalized * weight
-            totalWeight += weight
-        }
-
-        guard totalWeight > 0 else { return 0 }
-        return min(1.0, max(0.0, weightedScore / totalWeight))
+        nutritionService.nutritionScore(
+            for: item,
+            priorities: nutritionPriorities,
+            produceItems: produceItems
+        )
     }
 
     private func normalizedRecipeNutritionValue(
         for dimension: NutritionPriorityDimension,
         summary: RecipeNutritionSummary
     ) -> Double {
-        let value: Double
-        switch dimension {
-        case .protein:
-            value = summary.protein
-        case .carbs:
-            value = summary.carbs
-        case .fat:
-            value = summary.fat
-        case .fiber:
-            value = summary.fiber
-        case .vitaminC:
-            value = summary.vitaminC
-        case .potassium:
-            value = summary.potassium
-        }
-
-        let maxValue = maxRecipeNutritionValue(for: dimension)
-        guard maxValue > 0 else { return 0 }
-        return min(1.0, max(0.0, value / maxValue))
+        nutritionService.normalizedRecipeNutritionValue(
+            for: dimension,
+            summary: summary,
+            priorities: nutritionPriorities,
+            context: nutritionContext
+        )
     }
 
     private func maxRecipeNutritionValue(for dimension: NutritionPriorityDimension) -> Double {
-        if let cached = cachedMaxRecipeNutritionValues[dimension] {
-            return cached
-        }
-        let values: [Double] = discoverableRecipes.compactMap { recipe in
-            guard let summary = recipeNutritionSummary(for: recipe) else { return nil }
-            switch dimension {
-            case .protein:
-                return summary.protein
-            case .carbs:
-                return summary.carbs
-            case .fat:
-                return summary.fat
-            case .fiber:
-                return summary.fiber
-            case .vitaminC:
-                return summary.vitaminC
-            case .potassium:
-                return summary.potassium
-            }
-        }
-        let maxValue = max(0.0001, values.max() ?? 0.0001)
-        cachedMaxRecipeNutritionValues[dimension] = maxValue
-        return maxValue
+        nutritionService.maxRecipeNutritionValue(
+            for: dimension,
+            priorities: nutritionPriorities,
+            context: nutritionContext
+        )
     }
 
     private func rankingReasons(for item: ProduceItem) -> [String] {
-        guard let nutrition = item.nutrition else {
-            return [localizer.text(.reasonInSeasonNow)]
-        }
-
-        var reasons: [String] = []
-        let topPriorities = nutritionPriorities
-            .sorted { lhs, rhs in lhs.value > rhs.value }
-            .filter { $0.value > 0.05 }
-            .prefix(2)
-
-        for (dimension, _) in topPriorities {
-            let normalized = normalizedNutritionValue(for: dimension, nutrition: nutrition)
-            guard normalized >= 0.55 else { continue }
-            reasons.append(reasonText(for: dimension))
-        }
-
-        if reasons.isEmpty {
-            reasons.append(localizer.text(.reasonInSeasonNow))
-        }
-
-        return Array(reasons.prefix(2))
+        nutritionService.rankingReasons(
+            for: item,
+            priorities: nutritionPriorities,
+            localizer: localizer,
+            produceItems: produceItems
+        )
     }
 
     private func normalizedNutritionValue(
         for dimension: NutritionPriorityDimension,
         nutrition: ProduceNutrition
     ) -> Double {
-        let value: Double
-        switch dimension {
-        case .protein:
-            value = nutrition.protein
-        case .carbs:
-            value = nutrition.carbs
-        case .fat:
-            value = nutrition.fat
-        case .fiber:
-            value = nutrition.fiber
-        case .vitaminC:
-            value = nutrition.vitaminC
-        case .potassium:
-            value = nutrition.potassium
-        }
-
-        let maxValue = maxNutritionValue(for: dimension)
-        guard maxValue > 0 else { return 0 }
-        return min(1.0, max(0.0, value / maxValue))
+        nutritionService.normalizedNutritionValue(
+            for: dimension,
+            nutrition: nutrition,
+            produceItems: produceItems
+        )
     }
 
     private func maxNutritionValue(for dimension: NutritionPriorityDimension) -> Double {
-        if let cached = cachedMaxProduceNutritionValues[dimension] {
-            return cached
-        }
-        let values: [Double] = produceItems.compactMap { item in
-            guard let nutrition = item.nutrition else { return nil }
-            switch dimension {
-            case .protein:
-                return nutrition.protein
-            case .carbs:
-                return nutrition.carbs
-            case .fat:
-                return nutrition.fat
-            case .fiber:
-                return nutrition.fiber
-            case .vitaminC:
-                return nutrition.vitaminC
-            case .potassium:
-                return nutrition.potassium
-            }
-        }
-        let maxValue = max(0.0001, values.max() ?? 0.0001)
-        cachedMaxProduceNutritionValues[dimension] = maxValue
-        return maxValue
+        nutritionService.maxNutritionValue(for: dimension, produceItems: produceItems)
     }
 
     private func reasonText(for dimension: NutritionPriorityDimension) -> String {
-        switch dimension {
-        case .protein:
-            return localizer.text(.reasonHighProtein)
-        case .carbs:
-            return localizer.text(.reasonHighCarbs)
-        case .fat:
-            return localizer.text(.reasonHighFat)
-        case .fiber:
-            return localizer.text(.reasonHighFiber)
-        case .vitaminC:
-            return localizer.text(.reasonHighVitaminC)
-        case .potassium:
-            return localizer.text(.reasonHighPotassium)
-        }
+        nutritionService.reasonText(for: dimension, localizer: localizer)
     }
 
-    private static let defaultNutritionPriorities: [NutritionPriorityDimension: Double] = [
-        .protein: 0.5,
-        .carbs: 0.25,
-        .fat: 0.25,
-        .fiber: 0.6,
-        .vitaminC: 0.45,
-        .potassium: 0.35
-    ]
-
     private static func parseNutritionPriorities(from raw: String) -> [NutritionPriorityDimension: Double] {
-        var parsed = defaultNutritionPriorities
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return parsed }
-
-        // New format example: "protein:0.75,fiber:0.50,vitaminC:0.40"
-        if trimmed.contains(":") {
-            for part in trimmed.split(separator: ",") {
-                let pieces = part.split(separator: ":", maxSplits: 1).map(String.init)
-                guard pieces.count == 2,
-                      let dimension = NutritionPriorityDimension(rawValue: pieces[0]),
-                      let value = Double(pieces[1]) else { continue }
-                parsed[dimension] = min(1, max(0, value))
-            }
-            return parsed
-        }
-
-        // Legacy fallback: old comma-separated toggle goals.
-        let legacyGoals = Set(
-            trimmed.split(separator: ",")
-                .compactMap { NutritionGoal(rawValue: String($0)) }
-        )
-
-        if !legacyGoals.isEmpty {
-            parsed = Dictionary(uniqueKeysWithValues: NutritionPriorityDimension.allCases.map { ($0, 0.0) })
-            if legacyGoals.contains(.moreProtein) {
-                parsed[.protein] = 1.0
-            }
-            if legacyGoals.contains(.moreFiber) {
-                parsed[.fiber] = 1.0
-            }
-            if legacyGoals.contains(.moreVitaminC) {
-                parsed[.vitaminC] = 1.0
-            }
-            if legacyGoals.contains(.lowerSugar) {
-                parsed[.carbs] = 0.0
-            }
-        }
-
-        return parsed
+        NutritionService.parseNutritionPriorities(from: raw)
     }
 
     private static func normalizedNutritionPrioritiesRaw(
         from priorities: [NutritionPriorityDimension: Double]
     ) -> String {
-        NutritionPriorityDimension.allCases
-            .map { dimension in
-                let value = min(1, max(0, priorities[dimension] ?? 0))
-                return "\(dimension.rawValue):\(String(format: "%.2f", value))"
-            }
-            .joined(separator: ",")
+        NutritionService.normalizedNutritionPrioritiesRaw(from: priorities)
     }
 
     private static func legacyGoals(
         from priorities: [NutritionPriorityDimension: Double]
     ) -> Set<NutritionGoal> {
-        var goals: Set<NutritionGoal> = []
-        if (priorities[.protein] ?? 0) > 0.55 {
-            goals.insert(.moreProtein)
-        }
-        if (priorities[.fiber] ?? 0) > 0.55 {
-            goals.insert(.moreFiber)
-        }
-        if (priorities[.vitaminC] ?? 0) > 0.55 {
-            goals.insert(.moreVitaminC)
-        }
-        if (priorities[.carbs] ?? 0) < 0.20 {
-            goals.insert(.lowerSugar)
-        }
-        return goals
+        NutritionService.legacyGoals(from: priorities)
     }
 
     private static func parseStringSet(from raw: String) -> Set<String> {
@@ -1623,103 +1416,10 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func confirmedDietaryTags(forIngredients ingredients: [RecipeIngredient]) -> [RecipeDietaryTag] {
-        guard !ingredients.isEmpty else { return [] }
-
-        var result: [RecipeDietaryTag] = []
-        for tag in RecipeDietaryTag.allCases {
-            let isConfirmedForAllIngredients = ingredients.allSatisfy { ingredient in
-                let support = dietarySupport(for: ingredient)
-                switch tag {
-                case .glutenFree:
-                    return support.glutenFree == true
-                case .vegetarian:
-                    return support.vegetarian == true
-                case .vegan:
-                    return support.vegan == true
-                }
-            }
-
-            if isConfirmedForAllIngredients {
-                result.append(tag)
-            }
-        }
-
-        return result
-    }
-
-    private func dietarySupport(for ingredient: RecipeIngredient) -> DietarySupport {
-        if ingredient.produceID != nil {
-            // Fresh produce in this app catalog is treated as explicitly plant-based.
-            return DietarySupport(glutenFree: true, vegetarian: true, vegan: true)
-        }
-
-        guard let basicID = ingredient.basicIngredientID else {
-            // Unknown custom ingredient: do not classify.
-            return DietarySupport(glutenFree: nil, vegetarian: nil, vegan: nil)
-        }
-
-        if let basicIngredient = basicIngredient(forID: basicID) {
-            return DietarySupport(
-                glutenFree: basicIngredient.dietaryFlags.isGlutenFree,
-                vegetarian: basicIngredient.dietaryFlags.isVegetarian,
-                vegan: basicIngredient.dietaryFlags.isVegan
-            )
-        }
-
-        return DietarySupport(glutenFree: nil, vegetarian: nil, vegan: nil)
-    }
-
-    private func nutritionInfo(for ingredient: RecipeIngredient) -> (nutrition: ProduceNutrition?, unitProfile: IngredientUnitProfile) {
-        if let produceID = ingredient.produceID,
-           let item = produceItem(forID: produceID) {
-            return (item.nutrition, quantityProfile(forProduceID: produceID))
-        }
-
-        if let basicID = ingredient.basicIngredientID,
-           let basic = basicIngredient(forID: basicID) {
-            return (basic.nutrition, basic.unitProfile)
-        }
-
-        let normalizedName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if let fallbackBasic = basicByNormalizedName[normalizedName] {
-            return (fallbackBasic.nutrition, fallbackBasic.unitProfile)
-        }
-
-        return (nil, fallbackUnitProfile)
-    }
-
-    private func quantityInGrams(value: Double, unit: RecipeQuantityUnit, profile: IngredientUnitProfile) -> Double {
-        let safeValue = max(0, value)
-        guard safeValue > 0 else { return 0 }
-
-        if unit == .g {
-            return safeValue
-        }
-
-        if let grams = profile.gramsPerUnit[unit] {
-            return safeValue * grams
-        }
-
-        if unit == .ml {
-            let gramsPerMl = profile.gramsPerMl ?? 1
-            return safeValue * gramsPerMl
-        }
-
-        if let ml = profile.mlPerUnit[unit] {
-            let gramsPerMl = profile.gramsPerMl ?? 1
-            return safeValue * ml * gramsPerMl
-        }
-
-        if let fallbackGrams = profile.gramsPerUnit[profile.defaultUnit] {
-            return safeValue * fallbackGrams
-        }
-
-        if let fallbackMl = profile.mlPerUnit[profile.defaultUnit] {
-            let gramsPerMl = profile.gramsPerMl ?? 1
-            return safeValue * fallbackMl * gramsPerMl
-        }
-
-        return safeValue
+        nutritionService.confirmedDietaryTags(
+            forIngredients: ingredients,
+            context: nutritionContext
+        )
     }
 
     private func normalizedSearchText(_ text: String) -> String {

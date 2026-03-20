@@ -2,6 +2,7 @@ import Foundation
 
 enum RecipeStore {
     private static var cachedRecipes: [Recipe]?
+    private static let cacheLock = NSLock()
 
     static func loadProfiles() -> [UserProfile] {
         [
@@ -13,9 +14,12 @@ enum RecipeStore {
     }
 
     static func loadRecipes() -> [Recipe] {
+        cacheLock.lock()
         if let cachedRecipes {
+            cacheLock.unlock()
             return cachedRecipes
         }
+        cacheLock.unlock()
 
         let curated: [Recipe] = [
             Recipe(
@@ -245,7 +249,13 @@ enum RecipeStore {
         let merged = (curated + seedRecipes).filter { recipe in
             seen.insert(recipe.id).inserted
         }
+        cacheLock.lock()
+        if let cachedRecipes {
+            cacheLock.unlock()
+            return cachedRecipes
+        }
         cachedRecipes = merged
+        cacheLock.unlock()
         return merged
     }
 

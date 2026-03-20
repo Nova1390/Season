@@ -74,6 +74,19 @@ struct LinkedSocialAccount: Codable, Identifiable, Hashable {
         eligiblePostURLs = try container.decodeIfPresent([String].self, forKey: .eligiblePostURLs) ?? []
         linkedAt = try container.decodeIfPresent(Date.self, forKey: .linkedAt) ?? Date()
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(provider, forKey: .provider)
+        try container.encode(providerUserID, forKey: .providerUserID)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encodeIfPresent(handle, forKey: .handle)
+        try container.encodeIfPresent(profileImageURL, forKey: .profileImageURL)
+        // Security hardening: never persist access tokens in UserDefaults/AppStorage JSON.
+        try container.encode(isVerified, forKey: .isVerified)
+        try container.encode(eligiblePostURLs, forKey: .eligiblePostURLs)
+        try container.encode(linkedAt, forKey: .linkedAt)
+    }
 }
 
 enum SocialAccountLinkStore {
