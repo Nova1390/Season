@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1B2C3D42F70000100AA0001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D32F70000100AA0001 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		DF9307112F695FDB00BB719F /* Season.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Season.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D42F70000100AA0001 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Season;
 			packageProductDependencies = (
+				A1B2C3D32F70000100AA0001 /* Supabase */,
 			);
 			productName = Season;
 			productReference = DF9307112F695FDB00BB719F /* Season.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = DF9307082F695FDB00BB719F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A1B2C3D22F70000100AA0001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF9307122F695FDB00BB719F /* Products */;
 			projectDirPath = "";
@@ -255,11 +264,16 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Season-Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to add recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow saving and attaching recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow selecting photos for your recipes.";
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5dWVkeHljYm5xbGpyeWVuYXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTM2NTQsImV4cCI6MjA4OTU4OTY1NH0.6K9PSrie94ypXB8hoo1grGxl8vaf9S-sii3g3upljug";
+				INFOPLIST_KEY_SUPABASE_URL = "https://gyuedxycbnqljryenapx.supabase.co";
+				INFOPLIST_KEY_SupabaseAnonKey = "$(INFOPLIST_KEY_SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseURL = "$(INFOPLIST_KEY_SUPABASE_URL)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -294,11 +308,16 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Season-Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to add recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow saving and attaching recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow selecting photos for your recipes.";
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5dWVkeHljYm5xbGpyeWVuYXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTM2NTQsImV4cCI6MjA4OTU4OTY1NH0.6K9PSrie94ypXB8hoo1grGxl8vaf9S-sii3g3upljug";
+				INFOPLIST_KEY_SUPABASE_URL = "https://gyuedxycbnqljryenapx.supabase.co";
+				INFOPLIST_KEY_SupabaseAnonKey = "$(INFOPLIST_KEY_SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseURL = "$(INFOPLIST_KEY_SUPABASE_URL)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -344,6 +363,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1B2C3D22F70000100AA0001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1B2C3D32F70000100AA0001 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D22F70000100AA0001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DF9307092F695FDB00BB719F /* Project object */;
 }

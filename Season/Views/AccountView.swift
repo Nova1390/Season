@@ -14,7 +14,21 @@ struct AccountView: View {
     @State private var showNutritionPreferences = false
     @State private var linkingInProgressProvider: SocialAuthProvider?
     @State private var authErrorMessage = ""
+    @State private var showSupabaseAuthTest = false
+    @State private var supabaseTestEmail = ""
+    @State private var supabaseTestPassword = ""
+    @State private var supabaseTestStatus = ""
+    @State private var supabaseTestRunning = false
+    @State private var supabaseProfileFetchStatus = ""
+    @State private var supabaseProfileFetchRunning = false
+    @State private var supabaseRecipeStatesFetchStatus = ""
+    @State private var supabaseRecipeStatesFetchRunning = false
+    @State private var cloudProfile: Profile?
+    @State private var hasAttemptedCloudProfileLoad = false
+    @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
+    @State private var hasAttemptedCloudLinkedAccountsLoad = false
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
+    private let supabaseService = SupabaseService.shared
     private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
 
     var body: some View {
@@ -46,6 +60,8 @@ struct AccountView: View {
         }
         .onAppear {
             migrateLegacyAccessTokensIfNeeded()
+            loadCloudProfileForReadOnlyDisplayIfNeeded()
+            loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
         }
     }
 
@@ -59,11 +75,16 @@ struct AccountView: View {
                         .overlay(profileAvatarContent)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(accountUsername)
+                        Text(accountDisplayName)
                             .font(.title2.weight(.semibold))
-                        Text("@\(accountUsername.lowercased())")
+                        Text(accountHandleLine)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                        if let cloudLanguageLine {
+                            Text(cloudLanguageLine)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                 }
@@ -161,9 +182,102 @@ struct AccountView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                socialLinkRow(for: .instagram)
-                socialLinkRow(for: .tiktok)
-                socialLinkRow(for: .apple)
+                if cloudLinkedAccounts.isEmpty {
+                    socialLinkRow(for: .instagram)
+                    socialLinkRow(for: .tiktok)
+                    socialLinkRow(for: .apple)
+                } else {
+                    ForEach(Array(cloudLinkedAccounts.enumerated()), id: \.offset) { _, account in
+                        cloudLinkedAccountRow(account)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                DisclosureGroup(isExpanded: $showSupabaseAuthTest) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(viewModel.localizer.text(.supabaseTestDescription))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
+                        TextField(viewModel.localizer.text(.supabaseEmailField), text: $supabaseTestEmail)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+
+                        SecureField(viewModel.localizer.text(.supabasePasswordField), text: $supabaseTestPassword)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button {
+                            runSupabaseAuthTest()
+                        } label: {
+                            Text(viewModel.localizer.text(.supabaseRunTestAction))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(supabaseTestRunning || supabaseTestEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || supabaseTestPassword.isEmpty)
+
+                        Button {
+                            fetchSupabaseProfileForTesting()
+                        } label: {
+                            Text("Fetch profile")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(supabaseTestRunning || supabaseProfileFetchRunning || supabaseRecipeStatesFetchRunning)
+
+                        Button {
+                            fetchSupabaseRecipeStatesForTesting()
+                        } label: {
+                            Text("Fetch recipe states")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(supabaseTestRunning || supabaseProfileFetchRunning || supabaseRecipeStatesFetchRunning)
+
+                        if supabaseTestRunning {
+                            Text(viewModel.localizer.text(.supabaseTestingInProgress))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !supabaseTestStatus.isEmpty {
+                            Text(supabaseTestStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if supabaseProfileFetchRunning {
+                            Text("Fetching profile...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !supabaseProfileFetchStatus.isEmpty {
+                            Text(supabaseProfileFetchStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if supabaseRecipeStatesFetchRunning {
+                            Text("Fetching recipe states...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !supabaseRecipeStatesFetchStatus.isEmpty {
+                            Text(supabaseRecipeStatesFetchStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Label(viewModel.localizer.text(.supabaseTestSectionTitle), systemImage: "checkmark.shield")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 2)
             .listRowSeparator(.hidden)
@@ -332,6 +446,27 @@ struct AccountView: View {
         ).count
     }
 
+    private var accountDisplayName: String {
+        let cloudName = cloudProfile?.display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return cloudName.isEmpty ? accountUsername : cloudName
+    }
+
+    private var accountHandleLine: String {
+        let cloudHandle = cloudProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !cloudHandle.isEmpty {
+            return cloudHandle.hasPrefix("@") ? cloudHandle : "@\(cloudHandle)"
+        }
+        return "@\(accountUsername.lowercased())"
+    }
+
+    private var cloudLanguageLine: String? {
+        guard let language = cloudProfile?.preferred_language?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !language.isEmpty else {
+            return nil
+        }
+        return "Cloud language: \(language)"
+    }
+
     private func librarySubheader(title: String, count: Int) -> some View {
         SectionTitleCountRow(
             title: title,
@@ -422,6 +557,31 @@ struct AccountView: View {
         }
     }
 
+    private func cloudProviderTitle(_ provider: String) -> String {
+        switch provider.lowercased() {
+        case "instagram": return "Instagram"
+        case "tiktok": return "TikTok"
+        case "apple": return "Apple"
+        default: return provider.capitalized
+        }
+    }
+
+    private func cloudLinkedAccountDescriptor(_ account: CloudLinkedSocialAccount) -> String? {
+        let handle = account.handle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !handle.isEmpty {
+            return handle.hasPrefix("@") ? handle : "@\(handle)"
+        }
+        let display = account.display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !display.isEmpty {
+            return display
+        }
+        let providerUserID = account.provider_user_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !providerUserID.isEmpty {
+            return providerUserID
+        }
+        return nil
+    }
+
     private func socialLinkRow(for provider: SocialAuthProvider) -> some View {
         let linked = linkedAccount(for: provider)
         return HStack(spacing: 10) {
@@ -448,6 +608,23 @@ struct AccountView: View {
                 }
                 .buttonStyle(.borderless)
                 .font(.caption.weight(.semibold))
+            }
+        }
+    }
+
+    private func cloudLinkedAccountRow(_ account: CloudLinkedSocialAccount) -> some View {
+        HStack(spacing: 10) {
+            Text(cloudProviderTitle(account.provider))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            if let descriptor = cloudLinkedAccountDescriptor(account) {
+                Text(descriptor)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
     }
@@ -595,6 +772,132 @@ struct AccountView: View {
         case .instagram: return viewModel.localizer.text(.authFailedInstagram)
         case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
         case .apple: return viewModel.localizer.text(.authFailedApple)
+        }
+    }
+
+    private func runSupabaseAuthTest() {
+        let email = supabaseTestEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let password = supabaseTestPassword
+
+        guard supabaseService.configuration != nil else {
+            let issue = supabaseService.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY"
+            supabaseTestStatus = String(format: viewModel.localizer.text(.supabaseNotConfiguredFormat), issue)
+            return
+        }
+
+        guard !email.isEmpty, !password.isEmpty else { return }
+
+        supabaseTestRunning = true
+        supabaseTestStatus = ""
+
+        Task {
+            defer { supabaseTestRunning = false }
+            do {
+                let userID = try await supabaseService.authenticateWithEmailPasswordForTesting(
+                    email: email,
+                    password: password
+                )
+                let profileExists = try await supabaseService.validateProfilePipeline(for: userID)
+                if profileExists {
+                    supabaseTestStatus = String(
+                        format: viewModel.localizer.text(.supabaseValidationSuccessFormat),
+                        email,
+                        userID.uuidString
+                    )
+                } else {
+                    supabaseTestStatus = String(
+                        format: viewModel.localizer.text(.supabaseValidationMissingProfileFormat),
+                        email,
+                        userID.uuidString
+                    )
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                supabaseTestStatus = String(
+                    format: viewModel.localizer.text(.supabaseValidationFailedFormat),
+                    details
+                )
+            }
+        }
+    }
+
+    private func loadCloudProfileForReadOnlyDisplayIfNeeded() {
+        guard !hasAttemptedCloudProfileLoad else { return }
+        hasAttemptedCloudProfileLoad = true
+
+        Task {
+            do {
+                cloudProfile = try await supabaseService.fetchMyProfile()
+            } catch {
+                cloudProfile = nil
+            }
+        }
+    }
+
+    private func loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded() {
+        guard !hasAttemptedCloudLinkedAccountsLoad else { return }
+        hasAttemptedCloudLinkedAccountsLoad = true
+
+        Task {
+            do {
+                cloudLinkedAccounts = try await supabaseService.fetchMyLinkedSocialAccounts()
+            } catch {
+                cloudLinkedAccounts = []
+            }
+        }
+    }
+
+    private func fetchSupabaseProfileForTesting() {
+        guard supabaseService.configuration != nil else {
+            let issue = supabaseService.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY"
+            supabaseProfileFetchStatus = String(format: viewModel.localizer.text(.supabaseNotConfiguredFormat), issue)
+            return
+        }
+
+        supabaseProfileFetchRunning = true
+        supabaseProfileFetchStatus = ""
+
+        Task {
+            defer { supabaseProfileFetchRunning = false }
+            do {
+                guard let profile = try await supabaseService.fetchMyProfile() else {
+                    cloudProfile = nil
+                    supabaseProfileFetchStatus = "No authenticated user"
+                    return
+                }
+                cloudProfile = profile
+                supabaseProfileFetchStatus = "Profile loaded: \(profile.id.uuidString)"
+            } catch {
+                cloudProfile = nil
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                supabaseProfileFetchStatus = "Profile fetch failed: \(details)"
+            }
+        }
+    }
+
+    private func fetchSupabaseRecipeStatesForTesting() {
+        guard supabaseService.configuration != nil else {
+            let issue = supabaseService.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY"
+            supabaseRecipeStatesFetchStatus = String(format: viewModel.localizer.text(.supabaseNotConfiguredFormat), issue)
+            return
+        }
+
+        supabaseRecipeStatesFetchRunning = true
+        supabaseRecipeStatesFetchStatus = ""
+
+        Task {
+            defer { supabaseRecipeStatesFetchRunning = false }
+            do {
+                let states = try await supabaseService.fetchMyUserRecipeStates()
+                if let firstRecipeID = states.first?.recipe_id, !firstRecipeID.isEmpty {
+                    supabaseRecipeStatesFetchStatus = "Recipe states loaded: \(states.count). First recipe_id: \(firstRecipeID)"
+                } else {
+                    supabaseRecipeStatesFetchStatus = "Recipe states loaded: \(states.count)"
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                supabaseRecipeStatesFetchStatus = "Recipe states fetch failed: \(details)"
+            }
         }
     }
 }

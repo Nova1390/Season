@@ -301,6 +301,16 @@ enum AppTextKey: String {
     case userBadgeFreshCook
     case userBadgeCrispyCreator
     case userBadgeTopSeasonal
+    case supabaseTestSectionTitle
+    case supabaseTestDescription
+    case supabaseEmailField
+    case supabasePasswordField
+    case supabaseRunTestAction
+    case supabaseTestingInProgress
+    case supabaseValidationSuccessFormat
+    case supabaseValidationMissingProfileFormat
+    case supabaseValidationFailedFormat
+    case supabaseNotConfiguredFormat
 }
 
 struct AppLocalizer {
@@ -747,7 +757,17 @@ struct AppLocalizer {
             .userBadgeSeasonStarter: "Season Starter",
             .userBadgeFreshCook: "Fresh Cook",
             .userBadgeCrispyCreator: "Crispy Creator",
-            .userBadgeTopSeasonal: "Top Seasonal"
+            .userBadgeTopSeasonal: "Top Seasonal",
+            .supabaseTestSectionTitle: "Supabase auth test",
+            .supabaseTestDescription: "Runs a minimal auth test and validates auth.users -> profiles pipeline.",
+            .supabaseEmailField: "Email",
+            .supabasePasswordField: "Password",
+            .supabaseRunTestAction: "Run test",
+            .supabaseTestingInProgress: "Testing...",
+            .supabaseValidationSuccessFormat: "Auth OK for %1$@. Profile row found for user %2$@.",
+            .supabaseValidationMissingProfileFormat: "Auth OK for %1$@. No profile row found yet for user %2$@.",
+            .supabaseValidationFailedFormat: "Supabase test failed: %@",
+            .supabaseNotConfiguredFormat: "Supabase is not configured: %@"
         ],
         "it": [
             .homeTab: "Home",
@@ -1033,7 +1053,17 @@ struct AppLocalizer {
             .userBadgeSeasonStarter: "Season Starter",
             .userBadgeFreshCook: "Fresh Cook",
             .userBadgeCrispyCreator: "Crispy Creator",
-            .userBadgeTopSeasonal: "Top Seasonal"
+            .userBadgeTopSeasonal: "Top Seasonal",
+            .supabaseTestSectionTitle: "Test auth Supabase",
+            .supabaseTestDescription: "Esegue un test auth minimo e valida la pipeline auth.users -> profiles.",
+            .supabaseEmailField: "Email",
+            .supabasePasswordField: "Password",
+            .supabaseRunTestAction: "Esegui test",
+            .supabaseTestingInProgress: "Test in corso...",
+            .supabaseValidationSuccessFormat: "Auth OK per %1$@. Riga profilo trovata per l'utente %2$@.",
+            .supabaseValidationMissingProfileFormat: "Auth OK per %1$@. Nessuna riga profilo trovata per l'utente %2$@.",
+            .supabaseValidationFailedFormat: "Test Supabase fallito: %@",
+            .supabaseNotConfiguredFormat: "Supabase non configurato: %@"
         ]
     ]
 
