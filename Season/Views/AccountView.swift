@@ -23,6 +23,8 @@ struct AccountView: View {
     @State private var supabaseProfileFetchRunning = false
     @State private var supabaseRecipeStatesFetchStatus = ""
     @State private var supabaseRecipeStatesFetchRunning = false
+    @State private var supabaseShoppingListFetchStatus = ""
+    @State private var supabaseShoppingListFetchRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
@@ -237,7 +239,26 @@ struct AccountView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
-                        .disabled(supabaseTestRunning || supabaseProfileFetchRunning || supabaseRecipeStatesFetchRunning)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning
+                        )
+
+                        Button {
+                            fetchSupabaseShoppingListItemsForTesting()
+                        } label: {
+                            Text("Fetch shopping list items")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning
+                        )
 
                         if supabaseTestRunning {
                             Text(viewModel.localizer.text(.supabaseTestingInProgress))
@@ -267,6 +288,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !supabaseRecipeStatesFetchStatus.isEmpty {
                             Text(supabaseRecipeStatesFetchStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if supabaseShoppingListFetchRunning {
+                            Text("Fetching shopping list items...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !supabaseShoppingListFetchStatus.isEmpty {
+                            Text(supabaseShoppingListFetchStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -897,6 +929,32 @@ struct AccountView: View {
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 supabaseRecipeStatesFetchStatus = "Recipe states fetch failed: \(details)"
+            }
+        }
+    }
+
+    private func fetchSupabaseShoppingListItemsForTesting() {
+        guard supabaseService.configuration != nil else {
+            let issue = supabaseService.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY"
+            supabaseShoppingListFetchStatus = String(format: viewModel.localizer.text(.supabaseNotConfiguredFormat), issue)
+            return
+        }
+
+        supabaseShoppingListFetchRunning = true
+        supabaseShoppingListFetchStatus = ""
+
+        Task {
+            defer { supabaseShoppingListFetchRunning = false }
+            do {
+                let items = try await supabaseService.fetchMyShoppingListItems()
+                if let firstID = items.first?.id, !firstID.isEmpty {
+                    supabaseShoppingListFetchStatus = "Shopping list items loaded: \(items.count). First id: \(firstID)"
+                } else {
+                    supabaseShoppingListFetchStatus = "Shopping list items loaded: \(items.count)"
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                supabaseShoppingListFetchStatus = "Shopping list items fetch failed: \(details)"
             }
         }
     }
