@@ -106,6 +106,7 @@ enum AppTextKey: String {
     case fromPeopleYouFollow
     case addIngredients
     case saveRecipe
+    case saveDraft
     case saved
     case savedRecipes
     case savedRecipesEmptySubtitle
@@ -567,6 +568,7 @@ struct AppLocalizer {
             .fromPeopleYouFollow: "From people you follow",
             .addIngredients: "Add ingredients",
             .saveRecipe: "Save recipe",
+            .saveDraft: "Save draft",
             .saved: "Saved",
             .savedRecipes: "Saved recipes",
             .savedRecipesEmptySubtitle: "Save recipes to quickly find them later.",
@@ -867,6 +869,7 @@ struct AppLocalizer {
             .fromPeopleYouFollow: "Da persone che segui",
             .addIngredients: "Aggiungi ingredienti",
             .saveRecipe: "Salva ricetta",
+            .saveDraft: "Salva bozza",
             .saved: "Salvata",
             .savedRecipes: "Ricette salvate",
             .savedRecipesEmptySubtitle: "Salva ricette per ritrovarle velocemente.",

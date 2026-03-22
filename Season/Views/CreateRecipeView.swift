@@ -585,20 +585,51 @@ struct CreateRecipeView: View {
                 .frame(height: 1)
 
             VStack(spacing: 0) {
-                HStack {
-                    Button {
-                        primaryAction()
-                    } label: {
-                        Text(enableDraftMode ? localizer.text(.saveRecipe) : localizer.text(.publishRecipe))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 13)
-                            .font(.headline)
+                if enableDraftMode {
+                    HStack(spacing: 10) {
+                        Button {
+                            persistDraftIfNeeded(showFeedback: true)
+                        } label: {
+                            Text(localizer.text(.saveDraft))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .font(.headline)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!canSaveDraft)
+
+                        Button {
+                            publish()
+                        } label: {
+                            Text(localizer.text(.publishRecipe))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .font(.headline)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canPublish)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(enableDraftMode ? !canSaveDraft : !canPublish)
+                } else {
+                    HStack {
+                        Button {
+                            publish()
+                        } label: {
+                            Text(localizer.text(.publishRecipe))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                                .font(.headline)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canPublish)
+                    }
                 }
                 if enableDraftMode && showDraftSavedFeedback {
-                    Text(localizer.text(.saved))
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                        Text(localizer.text(.saved))
+                            .font(.caption.weight(.semibold))
+                    }
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
@@ -752,14 +783,6 @@ struct CreateRecipeView: View {
 
     private var canSaveDraft: Bool {
         currentDraftRecipeID != nil && !draftLoadFailed
-    }
-
-    private func primaryAction() {
-        if enableDraftMode {
-            persistDraftIfNeeded(showFeedback: true)
-        } else {
-            publish()
-        }
     }
 
     private func persistDraftIfNeeded(showFeedback: Bool = false) {
