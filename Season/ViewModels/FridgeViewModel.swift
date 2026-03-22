@@ -34,6 +34,7 @@ final class FridgeViewModel: ObservableObject {
     private let legacyStorageKey = "fridgeItemIDs"
     private let supabaseService = SupabaseService.shared
     private let outboxStore = OutboxStore()
+    private let syncFeedback = SyncFeedbackCenter.shared
 
     init(
         catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
@@ -176,6 +177,9 @@ final class FridgeViewModel: ObservableObject {
         let localItemID = "produce:\(produceID)"
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         appendOutboxRecord(
             traceID: traceID,
             action: "fridge_create",
@@ -204,8 +208,14 @@ final class FridgeViewModel: ObservableObject {
                     unit: nil,
                     traceID: traceID
                 )
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }
@@ -214,6 +224,9 @@ final class FridgeViewModel: ObservableObject {
         let localItemID = "basic:\(basicID)"
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         appendOutboxRecord(
             traceID: traceID,
             action: "fridge_create",
@@ -242,8 +255,14 @@ final class FridgeViewModel: ObservableObject {
                     unit: nil,
                     traceID: traceID
                 )
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }
@@ -252,6 +271,9 @@ final class FridgeViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let parsed = parseQuantityAndUnit(item.quantity)
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         appendOutboxRecord(
             traceID: traceID,
             action: "fridge_create",
@@ -280,8 +302,14 @@ final class FridgeViewModel: ObservableObject {
                     unit: parsed.unit,
                     traceID: traceID
                 )
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }
@@ -289,6 +317,9 @@ final class FridgeViewModel: ObservableObject {
     private func writeThroughDelete(localItemID: String) {
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         appendOutboxRecord(
             traceID: traceID,
             action: "fridge_delete",
@@ -302,8 +333,14 @@ final class FridgeViewModel: ObservableObject {
             print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_call")
             do {
                 try await supabaseService.deleteFridgeItem(localItemID: localItemID, traceID: traceID)
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }

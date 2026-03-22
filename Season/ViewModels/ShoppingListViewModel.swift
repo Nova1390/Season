@@ -131,6 +131,7 @@ final class ShoppingListViewModel: ObservableObject {
     private let storageKey = "shoppingListEntries"
     private let supabaseService = SupabaseService.shared
     private let outboxStore = OutboxStore()
+    private let syncFeedback = SyncFeedbackCenter.shared
 
     init(
         catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
@@ -450,6 +451,9 @@ final class ShoppingListViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         let createPayload = ShoppingListOutboxMutationPayload(
             localItemID: entry.id,
             ingredientType: mapped.ingredientType,
@@ -483,8 +487,14 @@ final class ShoppingListViewModel: ObservableObject {
                     isChecked: false,
                     traceID: traceID
                 )
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }
@@ -493,6 +503,9 @@ final class ShoppingListViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         let updatePayload = ShoppingListOutboxMutationPayload(
             localItemID: entry.id,
             ingredientType: mapped.ingredientType,
@@ -526,8 +539,14 @@ final class ShoppingListViewModel: ObservableObject {
                     isChecked: false,
                     traceID: traceID
                 )
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }
@@ -535,6 +554,9 @@ final class ShoppingListViewModel: ObservableObject {
     private func writeThroughDelete(_ entry: ShoppingListEntry) {
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
         appendOutboxRecord(
             traceID: traceID,
             action: "shopping_list_delete",
@@ -548,8 +570,14 @@ final class ShoppingListViewModel: ObservableObject {
             print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=service_call")
             do {
                 try await supabaseService.deleteShoppingListItem(localItemID: entry.id, traceID: traceID)
+                await MainActor.run {
+                    syncFeedback.show(.success)
+                }
             } catch {
                 print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=write_failed error=\(error)")
+                await MainActor.run {
+                    syncFeedback.show(.error)
+                }
             }
         }
     }

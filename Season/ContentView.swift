@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var showingCreateRecipe = false
     @State private var homeRootResetID = UUID()
     @State private var outboxDispatcher = OutboxDispatcher()
+    @StateObject private var syncFeedback = SyncFeedbackCenter.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -71,6 +72,18 @@ struct ContentView: View {
             .tag(MainTab.account)
             .tabItem {
                 Label(viewModel.localizer.text(.accountTab), systemImage: "person.crop.circle.fill")
+            }
+        }
+        .overlay(alignment: .top) {
+            if syncFeedback.isVisible, let message = syncFeedback.message {
+                Text(message)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .toolbar(.hidden, for: .tabBar)
@@ -158,6 +171,7 @@ struct ContentView: View {
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(newValue)
         }
         .environmentObject(fridgeViewModel)
+        .animation(.easeInOut(duration: 0.2), value: syncFeedback.isVisible)
     }
 
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {
