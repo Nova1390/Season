@@ -265,7 +265,7 @@
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Season-Info.plist;
+				INFOPLIST_FILE = "Season-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to add recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow saving and attaching recipe photos.";
@@ -309,7 +309,7 @@
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Season-Info.plist;
+				INFOPLIST_FILE = "Season-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to add recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow saving and attaching recipe photos.";
