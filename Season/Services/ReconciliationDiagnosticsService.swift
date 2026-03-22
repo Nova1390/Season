@@ -30,6 +30,26 @@ final class ReconciliationDiagnosticsService {
         return ReconciliationDiagnosticsResult(shopping: shopping, fridge: fridge)
     }
 
+    func runSoftSyncReadDiagnostics() async throws -> ReconciliationDiagnosticsResult {
+        print("[SEASON_SUPABASE] phase=soft_sync_started domain=shopping_list_items")
+        print("[SEASON_SUPABASE] phase=soft_sync_started domain=fridge_items")
+
+        let result = try await runDiagnostics()
+
+        print(
+            "[SEASON_SUPABASE] phase=soft_sync_completed domain=shopping_list_items " +
+            "local_only=\(result.shopping.localOnly) backend_only=\(result.shopping.backendOnly) " +
+            "shared_same=\(result.shopping.sharedSame) shared_different=\(result.shopping.sharedDifferent)"
+        )
+        print(
+            "[SEASON_SUPABASE] phase=soft_sync_completed domain=fridge_items " +
+            "local_only=\(result.fridge.localOnly) backend_only=\(result.fridge.backendOnly) " +
+            "shared_same=\(result.fridge.sharedSame) shared_different=\(result.fridge.sharedDifferent)"
+        )
+
+        return result
+    }
+
     private func diagnoseShopping(userID: UUID) async throws -> ReconciliationSummary {
         let domain = "shopping_list_items"
         print("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")

@@ -33,6 +33,8 @@ struct AccountView: View {
     @State private var backfillRunning = false
     @State private var reconciliationStatus = ""
     @State private var reconciliationRunning = false
+    @State private var softSyncReadStatus = ""
+    @State private var softSyncReadRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
@@ -257,7 +259,8 @@ struct AccountView: View {
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
                             backfillRunning ||
-                            reconciliationRunning
+                            reconciliationRunning ||
+                            softSyncReadRunning
                         )
 
                         Button {
@@ -275,7 +278,8 @@ struct AccountView: View {
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
                             backfillRunning ||
-                            reconciliationRunning
+                            reconciliationRunning ||
+                            softSyncReadRunning
                         )
 
                         Button {
@@ -293,7 +297,8 @@ struct AccountView: View {
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
                             backfillRunning ||
-                            reconciliationRunning
+                            reconciliationRunning ||
+                            softSyncReadRunning
                         )
 
                         Button {
@@ -311,7 +316,27 @@ struct AccountView: View {
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
                             backfillRunning ||
-                            reconciliationRunning
+                            reconciliationRunning ||
+                            softSyncReadRunning
+                        )
+
+                        Button {
+                            runSoftSyncReadForTesting()
+                        } label: {
+                            Text("Run soft sync read")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning ||
+                            backfillRunning ||
+                            reconciliationRunning ||
+                            softSyncReadRunning
                         )
 
                         Button {
@@ -432,6 +457,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !reconciliationStatus.isEmpty {
                             Text(reconciliationStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if softSyncReadRunning {
+                            Text("Running soft sync read...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !softSyncReadStatus.isEmpty {
+                            Text(softSyncReadStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1161,6 +1197,24 @@ struct AccountView: View {
                 reconciliationStatus = "Reconciliation diagnostics failed: \(details)"
             }
             reconciliationRunning = false
+        }
+    }
+
+    private func runSoftSyncReadForTesting() {
+        softSyncReadRunning = true
+        softSyncReadStatus = ""
+
+        Task {
+            do {
+                let result = try await reconciliationDiagnosticsService.runSoftSyncReadDiagnostics()
+                let shopping = "Soft sync — Shopping: local_only \(result.shopping.localOnly), backend_only \(result.shopping.backendOnly), shared_same \(result.shopping.sharedSame), shared_different \(result.shopping.sharedDifferent)"
+                let fridge = "Soft sync — Fridge: local_only \(result.fridge.localOnly), backend_only \(result.fridge.backendOnly), shared_same \(result.fridge.sharedSame), shared_different \(result.fridge.sharedDifferent)"
+                softSyncReadStatus = "\(shopping)\n\(fridge)"
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                softSyncReadStatus = "Soft sync read failed: \(details)"
+            }
+            softSyncReadRunning = false
         }
     }
 }
