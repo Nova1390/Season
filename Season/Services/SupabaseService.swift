@@ -551,9 +551,37 @@ final class SupabaseService {
                     .execute()
                 print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
             } catch {
-                let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
-                throw error
+                if self.isDuplicateKeyPostgresError(error) {
+                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_detected error=\(error)")
+                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_fallback_update")
+
+                    let fallbackPayload = FridgeItemUpdatePayload(
+                        ingredient_type: ingredientType,
+                        ingredient_id: ingredientID,
+                        custom_name: customName,
+                        quantity: quantity,
+                        unit: unit,
+                        updated_at: now
+                    )
+
+                    do {
+                        _ = try await supabaseClient
+                            .from("fridge_items")
+                            .update(fallbackPayload)
+                            .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
+                            .eq("user_id", value: user.id.uuidString)
+                            .execute()
+                        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
+                    } catch {
+                        let category = self.classifyNetworkError(error)
+                        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                        throw error
+                    }
+                } else {
+                    let category = self.classifyNetworkError(error)
+                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                    throw error
+                }
             }
         }
     }
@@ -787,6 +815,36 @@ final class SupabaseService {
 
         if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
             return extractHTTPStatusCode(from: underlying)
+        }
+
+        return nil
+    }
+
+    private func isDuplicateKeyPostgresError(_ error: Error) -> Bool {
+        if let code = extractPostgresErrorCode(from: error), code == "23505" {
+            return true
+        }
+
+        let message = String(describing: error).lowercased()
+        return message.contains("23505") &&
+            message.contains("duplicate key")
+    }
+
+    private func extractPostgresErrorCode(from error: Error) -> String? {
+        let nsError = error as NSError
+        let keys = ["code", "sqlState", "sqlstate", "postgresCode", "PostgresCode", "pgcode"]
+
+        for key in keys {
+            if let value = nsError.userInfo[key] as? String, !value.isEmpty {
+                return value
+            }
+            if let value = nsError.userInfo[key] as? NSNumber {
+                return value.stringValue
+            }
+        }
+
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return extractPostgresErrorCode(from: underlying)
         }
 
         return nil
