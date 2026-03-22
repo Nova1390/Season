@@ -432,48 +432,49 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func toggleRecipeCrispy(_ recipe: Recipe) {
+        let traceID = String(UUID().uuidString.prefix(8))
         var updated = crispiedRecipeIDs
         if updated.contains(recipe.id) {
             updated.remove(recipe.id)
         } else {
             updated.insert(recipe.id)
         }
+        let isCrispied = updated.contains(recipe.id)
         crispiedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: crispiedRecipeIDsStorageKey)
         invalidateRankingCaches()
-        print("[SEASON_SUPABASE] toggleCrispiedRecipe local update done for recipe: \(recipe.id)")
-
-        let isCrispied = updated.contains(recipe.id)
-        print("[SEASON_SUPABASE] starting crispied-state write task for recipe: \(recipe.id)")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
         Task { [supabaseService] in
-            print("[SEASON_SUPABASE] calling setRecipeCrispiedState for recipe: \(recipe.id) isCrispied: \(isCrispied)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=service_call")
             do {
-                try await supabaseService.setRecipeCrispiedState(recipeID: recipe.id, isCrispied: isCrispied)
+                try await supabaseService.setRecipeCrispiedState(recipeID: recipe.id, isCrispied: isCrispied, traceID: traceID)
             } catch {
-                print("[SEASON_SUPABASE] crispied-state write task error: \(error)")
+                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=write_failed error=\(error)")
             }
         }
     }
 
     func toggleSavedRecipe(_ recipe: Recipe) {
+        let traceID = String(UUID().uuidString.prefix(8))
         var updated = savedRecipeIDs
         if updated.contains(recipe.id) {
             updated.remove(recipe.id)
         } else {
             updated.insert(recipe.id)
         }
+        let isSaved = updated.contains(recipe.id)
         savedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: savedRecipeIDsStorageKey)
-        print("[SEASON_SUPABASE] toggleSavedRecipe local update done for recipe: \(recipe.id)")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
 
-        let isSaved = updated.contains(recipe.id)
-        print("[SEASON_SUPABASE] starting saved-state write task for recipe: \(recipe.id)")
         Task { [supabaseService] in
-            print("[SEASON_SUPABASE] calling setRecipeSavedState for recipe: \(recipe.id) isSaved: \(isSaved)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=service_call")
             do {
-                try await supabaseService.setRecipeSavedState(recipeID: recipe.id, isSaved: isSaved)
+                try await supabaseService.setRecipeSavedState(recipeID: recipe.id, isSaved: isSaved, traceID: traceID)
             } catch {
-                print("[SEASON_SUPABASE] saved-state write task error:", error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=write_failed error=\(error)")
             }
         }
     }

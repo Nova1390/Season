@@ -196,8 +196,8 @@ final class SupabaseService {
         return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
     }
 
-    func setRecipeSavedState(recipeID: String, isSaved: Bool) async throws {
-        print("[SEASON_SUPABASE] entered setRecipeSavedState for recipe: \(recipeID) isSaved: \(isSaved)")
+    func setRecipeSavedState(recipeID: String, isSaved: Bool, traceID: String) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=service_entered")
         guard let supabaseClient = self.client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
@@ -220,15 +220,15 @@ final class SupabaseService {
                     .upsert(payload, onConflict: "user_id,recipe_id")
                     .execute()
             }
-            print("[SEASON_SUPABASE] save state write OK for recipe: \(recipeID)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
         } catch {
-            print("[SEASON_SUPABASE] save state write FAILED: \(error)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed error=\(error)")
             throw error
         }
     }
 
-    func setRecipeCrispiedState(recipeID: String, isCrispied: Bool) async throws {
-        print("[SEASON_SUPABASE] entered setRecipeCrispiedState for recipe: \(recipeID) isCrispied: \(isCrispied)")
+    func setRecipeCrispiedState(recipeID: String, isCrispied: Bool, traceID: String) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=service_entered")
         guard let supabaseClient = self.client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
@@ -251,9 +251,9 @@ final class SupabaseService {
                     .upsert(payload, onConflict: "user_id,recipe_id")
                     .execute()
             }
-            print("[SEASON_SUPABASE] crispied state write OK for recipe: \(recipeID)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
         } catch {
-            print("[SEASON_SUPABASE] crispied state write FAILED: \(error)")
+            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed error=\(error)")
             throw error
         }
     }
