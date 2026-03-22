@@ -27,6 +27,8 @@ struct AccountView: View {
     @State private var supabaseShoppingListFetchRunning = false
     @State private var supabaseFridgeFetchStatus = ""
     @State private var supabaseFridgeFetchRunning = false
+    @State private var outboxProcessingStatus = ""
+    @State private var outboxProcessingRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
@@ -246,7 +248,8 @@ struct AccountView: View {
                             supabaseProfileFetchRunning ||
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
-                            supabaseFridgeFetchRunning
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning
                         )
 
                         Button {
@@ -261,7 +264,8 @@ struct AccountView: View {
                             supabaseProfileFetchRunning ||
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
-                            supabaseFridgeFetchRunning
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning
                         )
 
                         Button {
@@ -276,7 +280,24 @@ struct AccountView: View {
                             supabaseProfileFetchRunning ||
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
-                            supabaseFridgeFetchRunning
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning
+                        )
+
+                        Button {
+                            processOutboxForTesting()
+                        } label: {
+                            Text("Process outbox")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning
                         )
 
                         if supabaseTestRunning {
@@ -329,6 +350,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !supabaseFridgeFetchStatus.isEmpty {
                             Text(supabaseFridgeFetchStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if outboxProcessingRunning {
+                            Text("Processing outbox...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !outboxProcessingStatus.isEmpty {
+                            Text(outboxProcessingStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1012,6 +1044,18 @@ struct AccountView: View {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 supabaseFridgeFetchStatus = "Fridge items fetch failed: \(details)"
             }
+        }
+    }
+
+    private func processOutboxForTesting() {
+        outboxProcessingRunning = true
+        outboxProcessingStatus = ""
+
+        Task {
+            let dispatcher = OutboxDispatcher()
+            await dispatcher.processPendingMutations()
+            outboxProcessingStatus = "Outbox processing completed"
+            outboxProcessingRunning = false
         }
     }
 }
