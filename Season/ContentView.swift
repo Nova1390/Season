@@ -11,11 +11,13 @@ struct ContentView: View {
 
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
+    @AppStorage("accountUsername") private var accountUsername = "Anna"
     @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
     @StateObject private var fridgeViewModel = FridgeViewModel()
     @State private var selectedTab: MainTab = .home
     @State private var showingCreateRecipe = false
+    @State private var activeDraftRecipeID: String?
     @State private var homeRootResetID = UUID()
     @State private var outboxDispatcher = OutboxDispatcher()
     @StateObject private var syncFeedback = SyncFeedbackCenter.shared
@@ -107,6 +109,8 @@ struct ContentView: View {
                     )
 
                     Button {
+                        let draft = viewModel.createEmptyDraftRecipe(author: accountUsername)
+                        activeDraftRecipeID = draft.id
                         showingCreateRecipe = true
                     } label: {
                         VStack(spacing: 2) {
@@ -146,8 +150,14 @@ struct ContentView: View {
             }
             .background(Color(.secondarySystemBackground))
         }
-        .fullScreenCover(isPresented: $showingCreateRecipe) {
-            CreateRecipeView(viewModel: viewModel)
+        .fullScreenCover(isPresented: $showingCreateRecipe, onDismiss: {
+            activeDraftRecipeID = nil
+        }) {
+            CreateRecipeView(
+                viewModel: viewModel,
+                initialDraftRecipeID: activeDraftRecipeID,
+                enableDraftMode: true
+            )
         }
         .onAppear {
             selectedLanguage = viewModel.setLanguage(selectedLanguage)

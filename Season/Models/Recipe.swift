@@ -1,34 +1,34 @@
 import Foundation
 
-enum RecipeExternalPlatform: String, Hashable {
+enum RecipeExternalPlatform: String, Codable, Hashable {
     case instagram
     case tiktok
 }
 
-struct RecipeExternalMedia: Identifiable, Hashable {
+struct RecipeExternalMedia: Identifiable, Codable, Hashable {
     let id: String
     let platform: RecipeExternalPlatform
     let url: String
 }
 
-struct RecipeImage: Identifiable, Hashable {
+struct RecipeImage: Identifiable, Codable, Hashable {
     let id: String
     let localPath: String?
     let remoteURL: String?
 }
 
-struct UserProfile: Identifiable, Hashable {
+struct UserProfile: Identifiable, Codable, Hashable {
     let id: String
     let name: String
 }
 
-enum RecipeDifficulty: String, Hashable {
+enum RecipeDifficulty: String, Codable, Hashable {
     case easy
     case medium
     case hard
 }
 
-enum SocialSourcePlatform: String, Hashable {
+enum SocialSourcePlatform: String, Codable, Hashable {
     case tiktok
     case instagram
     case other
@@ -62,7 +62,7 @@ enum RecipeIngredientMappingConfidence: String, Codable, Hashable {
     case unmapped
 }
 
-struct RecipeIngredient: Identifiable, Hashable {
+struct RecipeIngredient: Identifiable, Codable, Hashable {
     var id: String {
         let base = produceID ?? basicIngredientID ?? name.lowercased()
         return "\(quality.rawValue)-\(base)-\(quantityValue)-\(quantityUnit.rawValue)"
@@ -88,12 +88,17 @@ struct RecipeIngredient: Identifiable, Hashable {
     }
 }
 
-enum RecipeSourceType: String, Hashable {
+enum RecipeSourceType: String, Codable, Hashable {
     case userGenerated = "user_generated"
     case seedWeb = "seed_web"
 }
 
-struct Recipe: Identifiable, Hashable {
+enum RecipePublicationStatus: String, Codable, Hashable {
+    case draft
+    case published
+}
+
+struct Recipe: Identifiable, Codable, Hashable {
     let id: String
     let title: String
     let author: String
@@ -104,7 +109,7 @@ struct Recipe: Identifiable, Hashable {
     let difficulty: RecipeDifficulty?
     var servings: Int = 2
     let crispy: Int
-    let viewCount: Int = 0
+    var viewCount: Int = 0
     let dietaryTags: [RecipeDietaryTag]
     // Fixed at recipe creation time (0...100), not recalculated by current month.
     let seasonalMatchPercent: Int
@@ -124,6 +129,7 @@ struct Recipe: Identifiable, Hashable {
     var imageURL: String? = nil
     var imageSource: String? = nil
     var attributionText: String? = nil
+    var publicationStatus: RecipePublicationStatus = .published
     let isRemix: Bool
     let originalRecipeID: String?
     let originalRecipeTitle: String?

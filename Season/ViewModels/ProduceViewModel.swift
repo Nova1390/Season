@@ -525,6 +525,7 @@ final class ProduceViewModel: ObservableObject {
         archivedUpdated.remove(recipe.id)
         archivedRecipeIDs = archivedUpdated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: archivedUpdated), forKey: archivedRecipeIDsStorageKey)
+        RecipeStore.removeUserRecipe(id: recipe.id)
         invalidateRecipeCaches()
     }
 
@@ -537,6 +538,12 @@ final class ProduceViewModel: ObservableObject {
     func archivedRecipes(for author: String) -> [Recipe] {
         nonDeletedRecipes
             .filter { $0.author == author && archivedRecipeIDs.contains($0.id) }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func draftRecipes(for author: String) -> [Recipe] {
+        nonDeletedRecipes
+            .filter { $0.author == author && $0.publicationStatus == .draft }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -620,6 +627,137 @@ final class ProduceViewModel: ObservableObject {
 
     func basicIngredient(forID id: String) -> BasicIngredient? {
         basicByID[id]
+    }
+
+    func recipe(forID id: String) -> Recipe? {
+        recipes.first(where: { $0.id == id })
+    }
+
+    @discardableResult
+    func createEmptyDraftRecipe(author: String) -> Recipe {
+        let draft = Recipe(
+            id: "recipe_\(UUID().uuidString.lowercased())",
+            title: "",
+            author: author,
+            ingredients: [],
+            preparationSteps: [],
+            prepTimeMinutes: nil,
+            cookTimeMinutes: nil,
+            difficulty: nil,
+            servings: 2,
+            crispy: 0,
+            dietaryTags: [],
+            seasonalMatchPercent: 0,
+            createdAt: Date(),
+            externalMedia: [],
+            images: [],
+            coverImageID: nil,
+            coverImageName: nil,
+            mediaLinkURL: nil,
+            sourceURL: nil,
+            sourcePlatform: nil,
+            sourceCaptionRaw: nil,
+            importedFromSocial: false,
+            publicationStatus: .draft,
+            isRemix: false,
+            originalRecipeID: nil,
+            originalRecipeTitle: nil,
+            originalAuthorName: nil
+        )
+        recipes.insert(draft, at: 0)
+        invalidateRecipeCaches()
+        RecipeStore.upsertUserRecipe(draft)
+        print("[SEASON_RECIPE] phase=draft_created id=\(draft.id)")
+        return draft
+    }
+
+    @discardableResult
+    func saveRecipeDraft(
+        recipeID: String,
+        title: String,
+        author: String,
+        ingredients: [RecipeIngredient],
+        steps: [String],
+        externalMedia: [RecipeExternalMedia] = [],
+        images: [RecipeImage],
+        coverImageID: String?,
+        coverImageName: String?,
+        mediaLinkURL: String?,
+        sourceURL: String?,
+        sourcePlatform: SocialSourcePlatform?,
+        sourceCaptionRaw: String?,
+        importedFromSocial: Bool,
+        servings: Int = 2,
+        prepTimeMinutes: Int? = nil,
+        cookTimeMinutes: Int? = nil,
+        difficulty: RecipeDifficulty? = nil,
+        isRemix: Bool = false,
+        originalRecipeID: String? = nil,
+        originalRecipeTitle: String? = nil,
+        originalAuthorName: String? = nil
+    ) -> Recipe? {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSteps = steps
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let trimmedIngredients = ingredients.filter { ingredient in
+            !ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && ingredient.quantityValue > 0
+        }
+
+        let seasonalPercent = seasonalMatchPercent(for: trimmedIngredients.compactMap(\.produceID))
+        let confirmedDietary = confirmedDietaryTags(forIngredients: trimmedIngredients)
+        let validExternalMedia = externalMedia.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let validImages = images.filter {
+            ($0.localPath?.isEmpty == false) || ($0.remoteURL?.isEmpty == false)
+        }
+        let normalizedServings = max(1, min(12, servings))
+        let validCoverID = validImages.contains(where: { $0.id == coverImageID }) ? coverImageID : nil
+        let trimmedImageName = coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedMediaLink = mediaLinkURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
+
+        let recipe = Recipe(
+            id: recipeID,
+            title: trimmedTitle,
+            author: author,
+            ingredients: trimmedIngredients,
+            preparationSteps: trimmedSteps,
+            prepTimeMinutes: prepTimeMinutes,
+            cookTimeMinutes: cookTimeMinutes,
+            difficulty: difficulty,
+            servings: normalizedServings,
+            crispy: 0,
+            dietaryTags: confirmedDietary,
+            seasonalMatchPercent: seasonalPercent,
+            createdAt: existingCreatedAt,
+            externalMedia: validExternalMedia,
+            images: validImages,
+            coverImageID: validCoverID,
+            coverImageName: (trimmedImageName?.isEmpty == false) ? trimmedImageName : nil,
+            mediaLinkURL: (trimmedMediaLink?.isEmpty == false) ? trimmedMediaLink : nil,
+            sourceURL: (trimmedSourceURL?.isEmpty == false) ? trimmedSourceURL : nil,
+            sourcePlatform: sourcePlatform,
+            sourceCaptionRaw: (trimmedSourceCaption?.isEmpty == false) ? trimmedSourceCaption : nil,
+            importedFromSocial: importedFromSocial,
+            publicationStatus: .draft,
+            isRemix: isRemix,
+            originalRecipeID: originalRecipeID,
+            originalRecipeTitle: originalRecipeTitle,
+            originalAuthorName: originalAuthorName
+        )
+
+        if let existingIndex = recipes.firstIndex(where: { $0.id == recipeID }) {
+            recipes[existingIndex] = recipe
+        } else {
+            recipes.insert(recipe, at: 0)
+        }
+        invalidateRecipeCaches()
+        RecipeStore.upsertUserRecipe(recipe)
+        print("[SEASON_RECIPE] phase=draft_saved id=\(recipe.id)")
+        return recipe
     }
 
     func quantityProfile(forProduceID produceID: String) -> IngredientUnitProfile {
@@ -743,6 +881,7 @@ final class ProduceViewModel: ObservableObject {
         prepTimeMinutes: Int? = nil,
         cookTimeMinutes: Int? = nil,
         difficulty: RecipeDifficulty? = nil,
+        existingRecipeID: String? = nil,
         isRemix: Bool = false,
         originalRecipeID: String? = nil,
         originalRecipeTitle: String? = nil,
@@ -774,8 +913,11 @@ final class ProduceViewModel: ObservableObject {
         let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let recipeID = existingRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
+        let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
+
         let recipe = Recipe(
-            id: "recipe_\(UUID().uuidString.lowercased())",
+            id: recipeID,
             title: trimmedTitle,
             author: author,
             ingredients: trimmedIngredients,
@@ -787,7 +929,7 @@ final class ProduceViewModel: ObservableObject {
             crispy: 0,
             dietaryTags: confirmedDietary,
             seasonalMatchPercent: seasonalPercent,
-            createdAt: Date(),
+            createdAt: existingCreatedAt,
             externalMedia: validExternalMedia,
             images: validImages,
             coverImageID: validCoverID,
@@ -797,14 +939,20 @@ final class ProduceViewModel: ObservableObject {
             sourcePlatform: sourcePlatform,
             sourceCaptionRaw: (trimmedSourceCaption?.isEmpty == false) ? trimmedSourceCaption : nil,
             importedFromSocial: importedFromSocial,
+            publicationStatus: .published,
             isRemix: isRemix,
             originalRecipeID: originalRecipeID,
             originalRecipeTitle: originalRecipeTitle,
             originalAuthorName: originalAuthorName
         )
 
-        recipes.insert(recipe, at: 0)
+        if let existingIndex = recipes.firstIndex(where: { $0.id == recipe.id }) {
+            recipes[existingIndex] = recipe
+        } else {
+            recipes.insert(recipe, at: 0)
+        }
         invalidateRecipeCaches()
+        RecipeStore.upsertUserRecipe(recipe)
         return recipe
     }
 
@@ -1021,7 +1169,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private var discoverableRecipes: [Recipe] {
-        nonDeletedRecipes.filter { !archivedRecipeIDs.contains($0.id) }
+        nonDeletedRecipes.filter { $0.publicationStatus == .published && !archivedRecipeIDs.contains($0.id) }
     }
 
     private var nutritionContext: NutritionService.Context {

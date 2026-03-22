@@ -3,6 +3,7 @@ import Foundation
 enum RecipeStore {
     private static var cachedRecipes: [Recipe]?
     private static let cacheLock = NSLock()
+    private static let userRecipesStorageKey = "userCreatedRecipesData"
 
     static func loadProfiles() -> [UserProfile] {
         [
@@ -246,7 +247,8 @@ enum RecipeStore {
 
         let seedRecipes = loadSeedRecipesFromBundle()
         var seen = Set<String>()
-        let merged = (curated + seedRecipes).filter { recipe in
+        let localUserRecipes = loadPersistedUserRecipes()
+        let merged = (localUserRecipes + curated + seedRecipes).filter { recipe in
             seen.insert(recipe.id).inserted
         }
         cacheLock.lock()
@@ -257,6 +259,52 @@ enum RecipeStore {
         cachedRecipes = merged
         cacheLock.unlock()
         return merged
+    }
+
+    static func upsertUserRecipe(_ recipe: Recipe) {
+        cacheLock.lock()
+        var localUserRecipes = loadPersistedUserRecipes()
+        if let existingIndex = localUserRecipes.firstIndex(where: { $0.id == recipe.id }) {
+            localUserRecipes[existingIndex] = recipe
+        } else {
+            localUserRecipes.insert(recipe, at: 0)
+        }
+        persistUserRecipes(localUserRecipes)
+
+        if var cached = cachedRecipes {
+            if let existingIndex = cached.firstIndex(where: { $0.id == recipe.id }) {
+                cached[existingIndex] = recipe
+            } else {
+                cached.insert(recipe, at: 0)
+            }
+            cachedRecipes = cached
+        }
+        cacheLock.unlock()
+    }
+
+    static func removeUserRecipe(id: String) {
+        cacheLock.lock()
+        var localUserRecipes = loadPersistedUserRecipes()
+        localUserRecipes.removeAll { $0.id == id }
+        persistUserRecipes(localUserRecipes)
+
+        if var cached = cachedRecipes {
+            cached.removeAll { $0.id == id }
+            cachedRecipes = cached
+        }
+        cacheLock.unlock()
+    }
+
+    private static func loadPersistedUserRecipes() -> [Recipe] {
+        guard let data = UserDefaults.standard.data(forKey: userRecipesStorageKey) else {
+            return []
+        }
+        return (try? JSONDecoder().decode([Recipe].self, from: data)) ?? []
+    }
+
+    private static func persistUserRecipes(_ recipes: [Recipe]) {
+        guard let data = try? JSONEncoder().encode(recipes) else { return }
+        UserDefaults.standard.set(data, forKey: userRecipesStorageKey)
     }
 
     private static func daysAgo(_ days: Int) -> Date {

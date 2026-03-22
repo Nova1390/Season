@@ -134,6 +134,10 @@ enum AppTextKey: String {
     case minutesShort
     case profile
     case myRecipes
+    case draftRecipes
+    case draftRecipesEmptySubtitle
+    case untitledDraft
+    case draftSavedAtFormat
     case createRecipe
     case archiveRecipe
     case restoreRecipe
@@ -591,6 +595,10 @@ struct AppLocalizer {
             .minutesShort: "min",
             .profile: "Profile",
             .myRecipes: "My Recipes",
+            .draftRecipes: "Drafts",
+            .draftRecipesEmptySubtitle: "No drafts yet.",
+            .untitledDraft: "Untitled draft",
+            .draftSavedAtFormat: "Saved: %@",
             .createRecipe: "Create recipe",
             .archiveRecipe: "Archive",
             .restoreRecipe: "Restore",
@@ -887,6 +895,10 @@ struct AppLocalizer {
             .minutesShort: "min",
             .profile: "Profilo",
             .myRecipes: "Le mie ricette",
+            .draftRecipes: "Bozze",
+            .draftRecipesEmptySubtitle: "Nessuna bozza disponibile.",
+            .untitledDraft: "Bozza senza titolo",
+            .draftSavedAtFormat: "Salvata: %@",
             .createRecipe: "Crea ricetta",
             .archiveRecipe: "Archivia",
             .restoreRecipe: "Ripristina",

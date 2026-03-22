@@ -14,6 +14,8 @@ struct AccountView: View {
     @State private var showNutritionPreferences = false
     @State private var linkingInProgressProvider: SocialAuthProvider?
     @State private var authErrorMessage = ""
+    @State private var showingDraftEditor = false
+    @State private var selectedDraftRecipeID: String?
     @State private var showSupabaseAuthTest = false
     @State private var supabaseTestEmail = ""
     @State private var supabaseTestPassword = ""
@@ -76,6 +78,17 @@ struct AccountView: View {
             migrateLegacyAccessTokensIfNeeded()
             loadCloudProfileForReadOnlyDisplayIfNeeded()
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
+        }
+        .fullScreenCover(isPresented: $showingDraftEditor, onDismiss: {
+            selectedDraftRecipeID = nil
+        }) {
+            if let selectedDraftRecipeID {
+                CreateRecipeView(
+                    viewModel: viewModel,
+                    initialDraftRecipeID: selectedDraftRecipeID,
+                    enableDraftMode: true
+                )
+            }
         }
     }
 
@@ -160,6 +173,18 @@ struct AccountView: View {
             } else {
                 ForEach(myActiveRankedRecipes) { ranked in
                     recipeRow(ranked: ranked, managementMode: .active)
+                }
+            }
+
+            librarySubheader(title: viewModel.localizer.text(.draftRecipes), count: myDraftRecipes.count)
+
+            if myDraftRecipes.isEmpty {
+                libraryEmptyRow(symbol: "doc.text", subtitle: viewModel.localizer.text(.draftRecipesEmptySubtitle))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(myDraftRecipes) { draftRecipe in
+                    draftRecipeRow(draftRecipe)
                 }
             }
 
@@ -618,6 +643,10 @@ struct AccountView: View {
         viewModel.archivedRecipes(for: accountUsername)
     }
 
+    private var myDraftRecipes: [Recipe] {
+        viewModel.draftRecipes(for: accountUsername)
+    }
+
     private var myActiveRankedRecipes: [RankedRecipe] {
         myActiveRecipes.compactMap { viewModel.rankedRecipe(forID: $0.id) }
     }
@@ -631,7 +660,7 @@ struct AccountView: View {
     }
 
     private var myRecipeTotalCount: Int {
-        myActiveRecipes.count + myArchivedRecipes.count
+        myActiveRecipes.count + myArchivedRecipes.count + myDraftRecipes.count
     }
 
     private var myBadges: [UserBadge] {
@@ -691,6 +720,43 @@ struct AccountView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private func draftRecipeRow(_ recipe: Recipe) -> some View {
+        Button {
+            print("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
+            selectedDraftRecipeID = recipe.id
+            showingDraftEditor = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        Circle()
+                            .fill(Color(.tertiarySystemGroupedBackground))
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    let trimmedTitle = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Text(trimmedTitle.isEmpty ? viewModel.localizer.text(.untitledDraft) : trimmedTitle)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(2)
+                        .foregroundStyle(.primary)
+
+                    Text(String(format: viewModel.localizer.text(.draftSavedAtFormat), recipe.createdAt.formatted(date: .abbreviated, time: .shortened)))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .listRowSeparator(.visible)
+        .listRowBackground(Color.clear)
     }
 
     private func preferenceRow(for dimension: NutritionPriorityDimension) -> some View {

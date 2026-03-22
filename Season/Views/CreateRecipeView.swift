@@ -39,6 +39,7 @@ struct CreateRecipeView: View {
 
     @ObservedObject var viewModel: ProduceViewModel
     private let prefillDraft: PrefillDraft?
+    private let enableDraftMode: Bool
     @AppStorage("accountUsername") private var accountUsername = "Anna"
     @AppStorage("linkedSocialAccountsRaw") private var linkedSocialAccountsRaw = ""
     @Environment(\.dismiss) private var dismiss
@@ -61,25 +62,37 @@ struct CreateRecipeView: View {
     @State private var selectedOwnedPostURL = ""
     @State private var selectedServings = 2
     @State private var showCameraUnavailableAlert = false
+    @State private var currentDraftRecipeID: String?
     @FocusState private var focusedIngredientID: UUID?
 
     private var localizer: AppLocalizer { viewModel.localizer }
 
-    init(viewModel: ProduceViewModel, prefillDraft: PrefillDraft? = nil) {
+    init(
+        viewModel: ProduceViewModel,
+        prefillDraft: PrefillDraft? = nil,
+        initialDraftRecipeID: String? = nil,
+        enableDraftMode: Bool = false
+    ) {
         self._viewModel = ObservedObject(wrappedValue: viewModel)
+        self.enableDraftMode = enableDraftMode
         self.prefillDraft = prefillDraft
+            ?? initialDraftRecipeID.flatMap { recipeID in
+                guard let draftRecipe = viewModel.recipe(forID: recipeID) else { return nil }
+                return Self.prefillDraft(from: draftRecipe)
+            }
+        _currentDraftRecipeID = State(initialValue: initialDraftRecipeID)
 
-        _title = State(initialValue: prefillDraft?.title ?? "")
-        let initialMediaLink = prefillDraft?.mediaLinkURL
-            ?? prefillDraft?.externalMedia.first?.url
+        _title = State(initialValue: self.prefillDraft?.title ?? "")
+        let initialMediaLink = self.prefillDraft?.mediaLinkURL
+            ?? self.prefillDraft?.externalMedia.first?.url
             ?? ""
         _mediaLink = State(initialValue: initialMediaLink)
-        _uploadedImages = State(initialValue: prefillDraft?.images ?? [])
-        _coverImageID = State(initialValue: prefillDraft?.coverImageID ?? prefillDraft?.images.first?.id)
-        _selectedServings = State(initialValue: max(1, prefillDraft?.servings ?? 2))
+        _uploadedImages = State(initialValue: self.prefillDraft?.images ?? [])
+        _coverImageID = State(initialValue: self.prefillDraft?.coverImageID ?? self.prefillDraft?.images.first?.id)
+        _selectedServings = State(initialValue: max(1, self.prefillDraft?.servings ?? 2))
 
-        if let prefillDraft {
-            _ingredientDrafts = State(initialValue: prefillDraft.ingredients.map {
+        if let prefillDraft = self.prefillDraft {
+            let mappedIngredientDrafts = prefillDraft.ingredients.map {
                 let mappedSearchText: String
                 if let produceID = $0.produceID,
                    let item = viewModel.produceItem(forID: produceID) {
@@ -99,8 +112,10 @@ struct CreateRecipeView: View {
                     quantityValue: quantityValueStringStatic($0.quantityValue),
                     quantityUnit: $0.quantityUnit
                 )
-            })
-            _stepDrafts = State(initialValue: prefillDraft.steps.map { CreateStepDraft(text: $0) })
+            }
+            _ingredientDrafts = State(initialValue: mappedIngredientDrafts.isEmpty ? [CreateIngredientDraft()] : mappedIngredientDrafts)
+            let mappedStepDrafts = prefillDraft.steps.map { CreateStepDraft(text: $0) }
+            _stepDrafts = State(initialValue: mappedStepDrafts.isEmpty ? [CreateStepDraft()] : mappedStepDrafts)
         } else {
             _ingredientDrafts = State(initialValue: [CreateIngredientDraft()])
             _stepDrafts = State(initialValue: [CreateStepDraft()])
@@ -158,11 +173,20 @@ struct CreateRecipeView: View {
                 }
             }
             .onAppear {
+                if enableDraftMode, currentDraftRecipeID == nil {
+                    let createdDraft = viewModel.createEmptyDraftRecipe(author: accountUsername)
+                    currentDraftRecipeID = createdDraft.id
+                }
                 if detectedSourcePlatform == nil {
                     detectedSourcePlatform = detectedPlatform(for: mediaLink)
                 }
                 if let firstProvider = importableLinkedAccounts.first?.provider.rawValue {
                     selectedImportProviderRaw = firstProvider
+                }
+            }
+            .onDisappear {
+                if enableDraftMode {
+                    persistDraftIfNeeded()
                 }
             }
         }
@@ -540,15 +564,15 @@ struct CreateRecipeView: View {
 
             HStack {
                 Button {
-                    publish()
+                    primaryAction()
                 } label: {
-                    Text(localizer.text(.publishRecipe))
+                    Text(enableDraftMode ? localizer.text(.saveRecipe) : localizer.text(.publishRecipe))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!canPublish)
+                .disabled(enableDraftMode ? !canSaveDraft : !canPublish)
             }
             .padding(.horizontal)
             .padding(.top, 10)
@@ -696,6 +720,51 @@ struct CreateRecipeView: View {
         && !stepTextsForPublish.isEmpty
     }
 
+    private var canSaveDraft: Bool {
+        currentDraftRecipeID != nil
+    }
+
+    private func primaryAction() {
+        if enableDraftMode {
+            saveDraftAndClose()
+        } else {
+            publish()
+        }
+    }
+
+    private func saveDraftAndClose() {
+        persistDraftIfNeeded()
+        dismiss()
+    }
+
+    private func persistDraftIfNeeded() {
+        guard enableDraftMode, let currentDraftRecipeID else { return }
+        _ = viewModel.saveRecipeDraft(
+            recipeID: currentDraftRecipeID,
+            title: title,
+            author: accountUsername,
+            ingredients: recipeIngredientsForPublish,
+            steps: stepTextsForPublish,
+            externalMedia: externalMediaForPublish,
+            images: uploadedImages,
+            coverImageID: selectedCoverImageID,
+            coverImageName: prefillDraft?.imageAssetName,
+            mediaLinkURL: mediaLink,
+            sourceURL: normalizedImportLink,
+            sourcePlatform: detectedSourcePlatform,
+            sourceCaptionRaw: normalizedImportCaption,
+            importedFromSocial: normalizedImportLink != nil,
+            servings: selectedServings,
+            prepTimeMinutes: prefillDraft?.prepTimeMinutes,
+            cookTimeMinutes: prefillDraft?.cookTimeMinutes,
+            difficulty: prefillDraft?.difficulty,
+            isRemix: prefillDraft?.isRemix ?? false,
+            originalRecipeID: prefillDraft?.originalRecipeID,
+            originalRecipeTitle: prefillDraft?.originalRecipeTitle,
+            originalAuthorName: prefillDraft?.originalAuthorName
+        )
+    }
+
     private func publish() {
         let published = viewModel.publishRecipe(
             title: title,
@@ -715,6 +784,7 @@ struct CreateRecipeView: View {
             prepTimeMinutes: prefillDraft?.prepTimeMinutes,
             cookTimeMinutes: prefillDraft?.cookTimeMinutes,
             difficulty: prefillDraft?.difficulty,
+            existingRecipeID: currentDraftRecipeID,
             isRemix: prefillDraft?.isRemix ?? false,
             originalRecipeID: prefillDraft?.originalRecipeID,
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
@@ -986,6 +1056,27 @@ struct CreateRecipeView: View {
         }
 
         return []
+    }
+
+    private static func prefillDraft(from recipe: Recipe) -> PrefillDraft {
+        PrefillDraft(
+            title: recipe.title,
+            imageAssetName: recipe.coverImageName,
+            externalMedia: recipe.externalMedia,
+            images: recipe.images,
+            coverImageID: recipe.coverImageID,
+            mediaLinkURL: recipe.mediaLinkURL,
+            ingredients: recipe.ingredients,
+            steps: recipe.preparationSteps,
+            prepTimeMinutes: recipe.prepTimeMinutes,
+            cookTimeMinutes: recipe.cookTimeMinutes,
+            difficulty: recipe.difficulty,
+            servings: recipe.servings,
+            isRemix: recipe.isRemix,
+            originalRecipeID: recipe.originalRecipeID,
+            originalRecipeTitle: recipe.originalRecipeTitle,
+            originalAuthorName: recipe.originalAuthorName
+        )
     }
 
     private func importPhotoItems(_ items: [PhotosPickerItem]) async {
