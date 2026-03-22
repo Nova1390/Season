@@ -31,6 +31,8 @@ struct AccountView: View {
     @State private var outboxProcessingRunning = false
     @State private var backfillStatus = ""
     @State private var backfillRunning = false
+    @State private var reconciliationStatus = ""
+    @State private var reconciliationRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
@@ -38,6 +40,7 @@ struct AccountView: View {
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
     private let backfillService = BackfillService()
+    private let reconciliationDiagnosticsService = ReconciliationDiagnosticsService()
     private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
 
     var body: some View {
@@ -253,7 +256,8 @@ struct AccountView: View {
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
-                            backfillRunning
+                            backfillRunning ||
+                            reconciliationRunning
                         )
 
                         Button {
@@ -270,7 +274,8 @@ struct AccountView: View {
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
-                            backfillRunning
+                            backfillRunning ||
+                            reconciliationRunning
                         )
 
                         Button {
@@ -287,7 +292,8 @@ struct AccountView: View {
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
-                            backfillRunning
+                            backfillRunning ||
+                            reconciliationRunning
                         )
 
                         Button {
@@ -304,7 +310,26 @@ struct AccountView: View {
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
                             outboxProcessingRunning ||
-                            backfillRunning
+                            backfillRunning ||
+                            reconciliationRunning
+                        )
+
+                        Button {
+                            runReconciliationDiagnosticsForTesting()
+                        } label: {
+                            Text("Run reconciliation diagnostics")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning ||
+                            backfillRunning ||
+                            reconciliationRunning
                         )
 
                         Button {
@@ -396,6 +421,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !backfillStatus.isEmpty {
                             Text(backfillStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if reconciliationRunning {
+                            Text("Running reconciliation diagnostics...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !reconciliationStatus.isEmpty {
+                            Text(reconciliationStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1107,6 +1143,24 @@ struct AccountView: View {
                 backfillStatus = "Backfill failed: \(details)"
             }
             backfillRunning = false
+        }
+    }
+
+    private func runReconciliationDiagnosticsForTesting() {
+        reconciliationRunning = true
+        reconciliationStatus = ""
+
+        Task {
+            do {
+                let result = try await reconciliationDiagnosticsService.runDiagnostics()
+                let shopping = "Shopping — local_only: \(result.shopping.localOnly), backend_only: \(result.shopping.backendOnly), shared_same: \(result.shopping.sharedSame), shared_different: \(result.shopping.sharedDifferent)"
+                let fridge = "Fridge — local_only: \(result.fridge.localOnly), backend_only: \(result.fridge.backendOnly), shared_same: \(result.fridge.sharedSame), shared_different: \(result.fridge.sharedDifferent)"
+                reconciliationStatus = "\(shopping)\n\(fridge)"
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                reconciliationStatus = "Reconciliation diagnostics failed: \(details)"
+            }
+            reconciliationRunning = false
         }
     }
 }
