@@ -108,31 +108,33 @@ final class SupabaseService {
     }
 
     func authenticateWithEmailPasswordForTesting(email: String, password: String) async throws -> UUID {
-        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await instrumentedRequest(name: "authenticateWithEmailPasswordForTesting") {
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !normalizedEmail.isEmpty else {
-            throw SupabaseServiceError.missingConfiguration("Email")
-        }
-        guard !normalizedPassword.isEmpty else {
-            throw SupabaseServiceError.missingConfiguration("Password")
-        }
+            guard !normalizedEmail.isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("Email")
+            }
+            guard !normalizedPassword.isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("Password")
+            }
 
-        guard let client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-        }
+            guard let client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
 
-        do {
-            _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
-        } catch {
-            _ = try await client.auth.signUp(email: normalizedEmail, password: normalizedPassword)
-            _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
-        }
+            do {
+                _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
+            } catch {
+                _ = try await client.auth.signUp(email: normalizedEmail, password: normalizedPassword)
+                _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
+            }
 
-        guard let userID = client.auth.currentUser?.id else {
-            throw SupabaseServiceError.unauthenticated
+            guard let userID = client.auth.currentUser?.id else {
+                throw SupabaseServiceError.unauthenticated
+            }
+            return userID
         }
-        return userID
     }
 
     func validateProfilePipeline(for userID: UUID) async throws -> Bool {
@@ -152,126 +154,168 @@ final class SupabaseService {
     }
 
     func fetchMyProfile() async throws -> Profile? {
-        guard let supabaseClient = self.client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+        try await instrumentedRequest(name: "fetchMyProfile") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return nil
+            }
+
+            let response = try await supabaseClient
+                .from("profiles")
+                .select()
+                .eq("id", value: user.id.uuidString)
+                .single()
+                .execute()
+
+            return try JSONDecoder().decode(Profile.self, from: response.data)
         }
-
-        guard let user = supabaseClient.auth.currentUser else {
-            return nil
-        }
-
-        let response = try await supabaseClient
-            .from("profiles")
-            .select()
-            .eq("id", value: user.id.uuidString)
-            .single()
-            .execute()
-
-        return try JSONDecoder().decode(Profile.self, from: response.data)
     }
 
     func fetchMyLinkedSocialAccounts() async throws -> [CloudLinkedSocialAccount] {
-        guard let supabaseClient = self.client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+        try await instrumentedRequest(name: "fetchMyLinkedSocialAccounts") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return []
+            }
+
+            let response = try await supabaseClient
+                .from("linked_social_accounts")
+                .select()
+                .eq("user_id", value: user.id.uuidString)
+                .execute()
+
+            return try JSONDecoder().decode([CloudLinkedSocialAccount].self, from: response.data)
         }
-
-        guard let user = supabaseClient.auth.currentUser else {
-            return []
-        }
-
-        let response = try await supabaseClient
-            .from("linked_social_accounts")
-            .select()
-            .eq("user_id", value: user.id.uuidString)
-            .execute()
-
-        return try JSONDecoder().decode([CloudLinkedSocialAccount].self, from: response.data)
     }
 
     func fetchMyUserRecipeStates() async throws -> [CloudUserRecipeState] {
-        guard let supabaseClient = self.client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+        try await instrumentedRequest(name: "fetchMyUserRecipeStates") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return []
+            }
+
+            let response = try await supabaseClient
+                .from("user_recipe_states")
+                .select()
+                .eq("user_id", value: user.id.uuidString)
+                .execute()
+
+            return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
         }
-
-        guard let user = supabaseClient.auth.currentUser else {
-            return []
-        }
-
-        let response = try await supabaseClient
-            .from("user_recipe_states")
-            .select()
-            .eq("user_id", value: user.id.uuidString)
-            .execute()
-
-        return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
     }
 
     func setRecipeSavedState(recipeID: String, isSaved: Bool, traceID: String) async throws {
         print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=service_entered")
-        guard let supabaseClient = self.client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-        }
-
-        guard let user = supabaseClient.auth.currentUser else {
-            return
-        }
-
-        let payload = UserRecipeSavedStateUpsert(
-            user_id: user.id.uuidString,
-            recipe_id: recipeID,
-            is_saved: isSaved,
-            updated_at: ISO8601DateFormatter().string(from: Date())
-        )
-
-        do {
-            try await performWithRetry {
-                _ = try await supabaseClient
-                    .from("user_recipe_states")
-                    .upsert(payload, onConflict: "user_id,recipe_id")
-                    .execute()
+        try await instrumentedRequest(
+            name: "setRecipeSavedState",
+            traceID: traceID,
+            metadata: "action=saved recipe=\(recipeID) target=\(isSaved)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
             }
-            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
-        } catch {
-            let category = classifyNetworkError(error)
-            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed category=\(category.rawValue) error=\(error)")
-            throw error
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            let payload = UserRecipeSavedStateUpsert(
+                user_id: user.id.uuidString,
+                recipe_id: recipeID,
+                is_saved: isSaved,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+
+            do {
+                try await performWithRetry {
+                    _ = try await supabaseClient
+                        .from("user_recipe_states")
+                        .upsert(payload, onConflict: "user_id,recipe_id")
+                        .execute()
+                }
+                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
+            } catch {
+                let category = classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
         }
     }
 
     func setRecipeCrispiedState(recipeID: String, isCrispied: Bool, traceID: String) async throws {
         print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=service_entered")
-        guard let supabaseClient = self.client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-        }
+        try await instrumentedRequest(
+            name: "setRecipeCrispiedState",
+            traceID: traceID,
+            metadata: "action=crispied recipe=\(recipeID) target=\(isCrispied)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
 
-        guard let user = supabaseClient.auth.currentUser else {
-            return
-        }
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
 
-        let payload = UserRecipeCrispiedStateUpsert(
-            user_id: user.id.uuidString,
-            recipe_id: recipeID,
-            is_crispied: isCrispied,
-            updated_at: ISO8601DateFormatter().string(from: Date())
-        )
+            let payload = UserRecipeCrispiedStateUpsert(
+                user_id: user.id.uuidString,
+                recipe_id: recipeID,
+                is_crispied: isCrispied,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+
+            do {
+                try await performWithRetry {
+                    _ = try await supabaseClient
+                        .from("user_recipe_states")
+                        .upsert(payload, onConflict: "user_id,recipe_id")
+                        .execute()
+                }
+                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
+            } catch {
+                let category = classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
+    private func instrumentedRequest<T>(
+        name: String,
+        traceID: String? = nil,
+        metadata: String? = nil,
+        operation: () async throws -> T
+    ) async throws -> T {
+        let startedAt = CFAbsoluteTimeGetCurrent()
+        let tracePart = traceID.map { " trace=\($0)" } ?? ""
+        let metadataPart = metadata.map { " \($0)" } ?? ""
+        print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_started")
 
         do {
-            try await performWithRetry {
-                _ = try await supabaseClient
-                    .from("user_recipe_states")
-                    .upsert(payload, onConflict: "user_id,recipe_id")
-                    .execute()
-            }
-            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
+            let result = try await operation()
+            let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000).rounded())
+            print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_ok duration_ms=\(elapsedMs)")
+            return result
         } catch {
+            let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000).rounded())
             let category = classifyNetworkError(error)
-            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed category=\(category.rawValue) error=\(error)")
+            print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_failed duration_ms=\(elapsedMs) category=\(category.rawValue) error=\(error)")
             throw error
         }
     }
 
     private func performWithRetry(
-        operation: @escaping () async throws -> Void
+        operation: () async throws -> Void
     ) async throws {
         do {
             try await operation()
