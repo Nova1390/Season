@@ -271,6 +271,25 @@ final class SupabaseService {
         }
     }
 
+    func deleteMyLinkedSocialAccount(provider: String) async throws {
+        try await instrumentedRequest(name: "deleteMyLinkedSocialAccount", metadata: "provider=\(provider)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            _ = try await supabaseClient
+                .from("linked_social_accounts")
+                .delete()
+                .eq("user_id", value: user.id.uuidString)
+                .eq("provider", value: provider)
+                .execute()
+        }
+    }
+
     func fetchMyUserRecipeStates() async throws -> [CloudUserRecipeState] {
         try await instrumentedRequest(name: "fetchMyUserRecipeStates") {
             guard let supabaseClient = self.client else {

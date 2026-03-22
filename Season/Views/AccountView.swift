@@ -17,6 +17,8 @@ struct AccountView: View {
     @State private var showNutritionPreferences = false
     @State private var linkingInProgressProvider: SocialAuthProvider?
     @State private var authErrorMessage = ""
+    @State private var socialLinkStatusMessage = ""
+    @State private var socialLinkStatusIsError = false
     @State private var selectedDraftEditorRoute: DraftEditorRoute?
     @State private var showSupabaseAuthTest = false
     @State private var supabaseTestEmail = ""
@@ -219,14 +221,20 @@ struct AccountView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                if cloudLinkedAccounts.isEmpty {
-                    socialLinkRow(for: .instagram)
-                    socialLinkRow(for: .tiktok)
-                    socialLinkRow(for: .apple)
-                } else {
-                    ForEach(Array(cloudLinkedAccounts.enumerated()), id: \.offset) { _, account in
-                        cloudLinkedAccountRow(account)
-                    }
+                if !hasAnyConnectedSocialAccount {
+                    Text(viewModel.localizer.text(.socialImportConnectAccountsHint))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                socialLinkRow(for: .instagram)
+                socialLinkRow(for: .tiktok)
+                socialLinkRow(for: .apple)
+
+                if !socialLinkStatusMessage.isEmpty {
+                    Text(socialLinkStatusMessage)
+                        .font(.caption)
+                        .foregroundStyle(socialLinkStatusIsError ? .red : .secondary)
                 }
             }
             .padding(.vertical, 2)
@@ -846,8 +854,37 @@ struct AccountView: View {
         return nil
     }
 
+    private func cloudLinkedAccount(for provider: SocialAuthProvider) -> CloudLinkedSocialAccount? {
+        cloudLinkedAccounts.first { $0.provider.caseInsensitiveCompare(provider.rawValue) == .orderedSame }
+    }
+
+    private var hasAnyConnectedSocialAccount: Bool {
+        SocialAuthProvider.allCases.contains { provider in
+            cloudLinkedAccount(for: provider) != nil || linkedAccount(for: provider) != nil
+        }
+    }
+
+    private func providerDescriptor(for provider: SocialAuthProvider) -> String? {
+        if let cloud = cloudLinkedAccount(for: provider),
+           let descriptor = cloudLinkedAccountDescriptor(cloud) {
+            return descriptor
+        }
+        if let local = linkedAccount(for: provider) {
+            let handle = local.handle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !handle.isEmpty {
+                return handle.hasPrefix("@") ? handle : "@\(handle)"
+            }
+            let displayName = local.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return displayName.isEmpty ? nil : displayName
+        }
+        return nil
+    }
+
     private func socialLinkRow(for provider: SocialAuthProvider) -> some View {
-        let linked = linkedAccount(for: provider)
+        let descriptor = providerDescriptor(for: provider)
+        let isConnected = descriptor != nil
+        let isLoading = linkingInProgressProvider == provider
+
         return HStack(spacing: 10) {
             Text(providerTitle(provider))
                 .font(.subheadline)
@@ -855,14 +892,19 @@ struct AccountView: View {
 
             Spacer()
 
-            if let linked {
-                Text(linked.handle ?? linked.displayName)
+            if let descriptor {
+                Text(descriptor)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+            }
 
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+            } else if isConnected {
                 Button(viewModel.localizer.text(.unlinkAction), role: .destructive) {
-                    removeLinkedAccount(provider: provider)
+                    unlink(provider: provider)
                 }
                 .buttonStyle(.borderless)
                 .font(.caption.weight(.semibold))
@@ -942,6 +984,35 @@ struct AccountView: View {
         linkedSocialAccountsRaw = SocialAccountLinkStore.encode(updated)
     }
 
+    private func unlink(provider: SocialAuthProvider) {
+        guard linkingInProgressProvider == nil else { return }
+        socialLinkStatusMessage = ""
+        socialLinkStatusIsError = false
+        linkingInProgressProvider = provider
+
+        Task {
+            defer { linkingInProgressProvider = nil }
+
+            removeLinkedAccount(provider: provider)
+            let hadCloudAccount = cloudLinkedAccount(for: provider) != nil
+
+            if hadCloudAccount {
+                do {
+                    try await supabaseService.deleteMyLinkedSocialAccount(provider: provider.rawValue)
+                    cloudLinkedAccounts.removeAll { $0.provider.caseInsensitiveCompare(provider.rawValue) == .orderedSame }
+                    socialLinkStatusMessage = "\(providerTitle(provider)) disconnected."
+                    socialLinkStatusIsError = false
+                } catch {
+                    socialLinkStatusMessage = "Failed to disconnect \(providerTitle(provider))."
+                    socialLinkStatusIsError = true
+                }
+            } else {
+                socialLinkStatusMessage = "\(providerTitle(provider)) disconnected."
+                socialLinkStatusIsError = false
+            }
+        }
+    }
+
     private func migrateLegacyAccessTokensIfNeeded() {
         let accounts = linkedAccounts
         guard !accounts.isEmpty else { return }
@@ -971,6 +1042,8 @@ struct AccountView: View {
     private func link(provider: SocialAuthProvider) {
         guard linkingInProgressProvider == nil else { return }
         authErrorMessage = ""
+        socialLinkStatusMessage = ""
+        socialLinkStatusIsError = false
         linkingInProgressProvider = provider
         let attemptID = UUID().uuidString
         authLogger.debug("[\(attemptID, privacy: .public)] UI tap provider=\(provider.rawValue, privacy: .public)")
@@ -995,11 +1068,15 @@ struct AccountView: View {
                     linkedAt: Date()
                 )
                 upsertLinkedAccount(account)
+                socialLinkStatusMessage = "\(providerTitle(provider)) connected."
+                socialLinkStatusIsError = false
             } catch {
                 let scopedMessage = providerScopedAuthErrorMessage(error, provider: provider)
                 authLogger.error("[\(attemptID, privacy: .public)] Auth failure provider=\(provider.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)")
                 authLogger.error("[\(attemptID, privacy: .public)] Assigning authErrorMessage='\(scopedMessage, privacy: .public)'")
                 authErrorMessage = scopedMessage
+                socialLinkStatusMessage = scopedMessage
+                socialLinkStatusIsError = true
             }
         }
     }
