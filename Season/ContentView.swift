@@ -17,6 +17,8 @@ struct ContentView: View {
     @State private var selectedTab: MainTab = .home
     @State private var showingCreateRecipe = false
     @State private var homeRootResetID = UUID()
+    @State private var outboxDispatcher = OutboxDispatcher()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         UITabBar.appearance().isHidden = true
@@ -137,6 +139,17 @@ struct ContentView: View {
         .onAppear {
             selectedLanguage = viewModel.setLanguage(selectedLanguage)
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(nutritionGoalsRaw)
+            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_launch")
+            Task {
+                await outboxDispatcher.processPendingMutations()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_foreground")
+            Task {
+                await outboxDispatcher.processPendingMutations()
+            }
         }
         .onChange(of: selectedLanguage) { _, newValue in
             selectedLanguage = viewModel.setLanguage(newValue)

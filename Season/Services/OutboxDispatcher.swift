@@ -1,6 +1,8 @@
 import Foundation
 
 final class OutboxDispatcher {
+    private static let processingQueue = DispatchQueue(label: "season.outbox.dispatcher.processing")
+    private static var isProcessing = false
     private let outboxStore: OutboxStore
     private let supabaseService: SupabaseService
     private let decoder = JSONDecoder()
@@ -14,6 +16,25 @@ final class OutboxDispatcher {
     }
 
     func processPendingMutations() async {
+        let canStart: Bool = Self.processingQueue.sync {
+            if Self.isProcessing {
+                return false
+            }
+            Self.isProcessing = true
+            return true
+        }
+
+        guard canStart else {
+            print("[SEASON_SUPABASE] phase=dispatcher_skipped reason=already_processing")
+            return
+        }
+
+        defer {
+            Self.processingQueue.sync {
+                Self.isProcessing = false
+            }
+        }
+
         let pending = outboxStore
             .pendingMutations()
             .sorted { lhs, rhs in
