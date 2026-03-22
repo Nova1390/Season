@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import CryptoKit
 
 enum NetworkErrorCategory: String {
     case auth_session
@@ -81,6 +82,31 @@ private struct UserRecipeCrispiedStateUpsert: Encodable {
     let user_id: String
     let recipe_id: String
     let is_crispied: Bool
+    let updated_at: String
+}
+
+private struct ShoppingListItemInsertPayload: Encodable {
+    let id: String
+    let user_id: String
+    let ingredient_type: String
+    let ingredient_id: String?
+    let custom_name: String?
+    let quantity: Double?
+    let unit: String?
+    let source_recipe_id: String?
+    let is_checked: Bool
+    let created_at: String
+    let updated_at: String
+}
+
+private struct ShoppingListItemUpdatePayload: Encodable {
+    let ingredient_type: String
+    let ingredient_id: String?
+    let custom_name: String?
+    let quantity: Double?
+    let unit: String?
+    let source_recipe_id: String?
+    let is_checked: Bool
     let updated_at: String
 }
 
@@ -290,6 +316,143 @@ final class SupabaseService {
         }
     }
 
+    func createShoppingListItem(
+        localItemID: String,
+        ingredientType: String,
+        ingredientID: String?,
+        customName: String?,
+        quantity: Double?,
+        unit: String?,
+        sourceRecipeID: String?,
+        isChecked: Bool,
+        traceID: String
+    ) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "createShoppingListItem",
+            traceID: traceID,
+            metadata: "action=shopping_list_create item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            let now = ISO8601DateFormatter().string(from: Date())
+            let payload = ShoppingListItemInsertPayload(
+                id: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString),
+                user_id: user.id.uuidString,
+                ingredient_type: ingredientType,
+                ingredient_id: ingredientID,
+                custom_name: customName,
+                quantity: quantity,
+                unit: unit,
+                source_recipe_id: sourceRecipeID,
+                is_checked: isChecked,
+                created_at: now,
+                updated_at: now
+            )
+
+            do {
+                _ = try await supabaseClient
+                    .from("shopping_list_items")
+                    .insert(payload)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
+    func updateShoppingListItem(
+        localItemID: String,
+        ingredientType: String,
+        ingredientID: String?,
+        customName: String?,
+        quantity: Double?,
+        unit: String?,
+        sourceRecipeID: String?,
+        isChecked: Bool,
+        traceID: String
+    ) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "updateShoppingListItem",
+            traceID: traceID,
+            metadata: "action=shopping_list_update item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            let payload = ShoppingListItemUpdatePayload(
+                ingredient_type: ingredientType,
+                ingredient_id: ingredientID,
+                custom_name: customName,
+                quantity: quantity,
+                unit: unit,
+                source_recipe_id: sourceRecipeID,
+                is_checked: isChecked,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+
+            do {
+                _ = try await supabaseClient
+                    .from("shopping_list_items")
+                    .update(payload)
+                    .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
+                    .eq("user_id", value: user.id.uuidString)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
+    func deleteShoppingListItem(localItemID: String, traceID: String) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "deleteShoppingListItem",
+            traceID: traceID,
+            metadata: "action=shopping_list_delete item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            do {
+                _ = try await supabaseClient
+                    .from("shopping_list_items")
+                    .delete()
+                    .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
+                    .eq("user_id", value: user.id.uuidString)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
     private func instrumentedRequest<T>(
         name: String,
         traceID: String? = nil,
@@ -443,6 +606,24 @@ final class SupabaseService {
         }
 
         return nil
+    }
+
+    private func shoppingListRowID(localItemID: String, userID: String) -> String {
+        deterministicUUIDString(from: "shopping_list_item|\(userID)|\(localItemID)")
+    }
+
+    private func deterministicUUIDString(from input: String) -> String {
+        let digest = SHA256.hash(data: Data(input.utf8))
+        var bytes = Array(digest.prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x40
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        let tuple: uuid_t = (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        )
+        return UUID(uuid: tuple).uuidString.lowercased()
     }
 
     private static func loadConfiguration(from bundle: Bundle) throws -> SupabaseConfiguration {
