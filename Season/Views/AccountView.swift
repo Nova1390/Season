@@ -1046,6 +1046,7 @@ struct AccountView: View {
         socialLinkStatusIsError = false
         linkingInProgressProvider = provider
         let attemptID = UUID().uuidString
+        print("[SEASON_AUTH] phase=oauth_started provider=\(provider.rawValue)")
         authLogger.debug("[\(attemptID, privacy: .public)] UI tap provider=\(provider.rawValue, privacy: .public)")
 
         Task {
@@ -1068,6 +1069,7 @@ struct AccountView: View {
                     linkedAt: Date()
                 )
                 upsertLinkedAccount(account)
+                print("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
                 socialLinkStatusMessage = "\(providerTitle(provider)) connected."
                 socialLinkStatusIsError = false
             } catch {
@@ -1075,6 +1077,7 @@ struct AccountView: View {
                 authLogger.error("[\(attemptID, privacy: .public)] Auth failure provider=\(provider.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)")
                 authLogger.error("[\(attemptID, privacy: .public)] Assigning authErrorMessage='\(scopedMessage, privacy: .public)'")
                 authErrorMessage = scopedMessage
+                print("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
                 socialLinkStatusMessage = scopedMessage
                 socialLinkStatusIsError = true
             }
@@ -1100,6 +1103,8 @@ struct AccountView: View {
                 case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
                 case .apple: return viewModel.localizer.text(.authFailedApple)
                 }
+            case .oauthFlowFailed(_, let details):
+                return details
             case .appleAuthorizationFailed(let details):
                 return details
             }

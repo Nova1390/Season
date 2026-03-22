@@ -184,6 +184,13 @@ final class SupabaseService {
         client?.auth.currentUser?.id
     }
 
+    func setSession(accessToken: String, refreshToken: String) async throws {
+        guard let client else {
+            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+        }
+        _ = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+    }
+
     func authenticateWithEmailPasswordForTesting(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "authenticateWithEmailPasswordForTesting") {
             let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
