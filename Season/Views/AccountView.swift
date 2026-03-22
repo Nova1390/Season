@@ -2,6 +2,9 @@ import SwiftUI
 import os
 
 struct AccountView: View {
+    private struct DraftEditorRoute: Identifiable {
+        let id: String
+    }
     @Binding var selectedLanguage: String
     @Binding var nutritionGoalsRaw: String
     @ObservedObject var viewModel: ProduceViewModel
@@ -14,8 +17,7 @@ struct AccountView: View {
     @State private var showNutritionPreferences = false
     @State private var linkingInProgressProvider: SocialAuthProvider?
     @State private var authErrorMessage = ""
-    @State private var showingDraftEditor = false
-    @State private var selectedDraftRecipeID: String?
+    @State private var selectedDraftEditorRoute: DraftEditorRoute?
     @State private var showSupabaseAuthTest = false
     @State private var supabaseTestEmail = ""
     @State private var supabaseTestPassword = ""
@@ -79,16 +81,12 @@ struct AccountView: View {
             loadCloudProfileForReadOnlyDisplayIfNeeded()
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
         }
-        .fullScreenCover(isPresented: $showingDraftEditor, onDismiss: {
-            selectedDraftRecipeID = nil
-        }) {
-            if let selectedDraftRecipeID {
-                CreateRecipeView(
-                    viewModel: viewModel,
-                    initialDraftRecipeID: selectedDraftRecipeID,
-                    enableDraftMode: true
-                )
-            }
+        .fullScreenCover(item: $selectedDraftEditorRoute) { route in
+            CreateRecipeView(
+                viewModel: viewModel,
+                initialDraftRecipeID: route.id,
+                enableDraftMode: true
+            )
         }
     }
 
@@ -725,8 +723,7 @@ struct AccountView: View {
     private func draftRecipeRow(_ recipe: Recipe) -> some View {
         Button {
             print("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
-            selectedDraftRecipeID = recipe.id
-            showingDraftEditor = true
+            selectedDraftEditorRoute = DraftEditorRoute(id: recipe.id)
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "doc.text")

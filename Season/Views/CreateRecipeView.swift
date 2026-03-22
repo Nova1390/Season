@@ -39,6 +39,7 @@ struct CreateRecipeView: View {
 
     @ObservedObject var viewModel: ProduceViewModel
     private let prefillDraft: PrefillDraft?
+    private let initialDraftRecipeID: String?
     private let enableDraftMode: Bool
     @AppStorage("accountUsername") private var accountUsername = "Anna"
     @AppStorage("linkedSocialAccountsRaw") private var linkedSocialAccountsRaw = ""
@@ -63,6 +64,10 @@ struct CreateRecipeView: View {
     @State private var selectedServings = 2
     @State private var showCameraUnavailableAlert = false
     @State private var currentDraftRecipeID: String?
+    @State private var lastSavedDraftFingerprint = ""
+    @State private var showDraftSavedFeedback = false
+    @State private var hasAttemptedInitialDraftLoad = false
+    @State private var draftLoadFailed = false
     @FocusState private var focusedIngredientID: UUID?
 
     private var localizer: AppLocalizer { viewModel.localizer }
@@ -74,6 +79,7 @@ struct CreateRecipeView: View {
         enableDraftMode: Bool = false
     ) {
         self._viewModel = ObservedObject(wrappedValue: viewModel)
+        self.initialDraftRecipeID = initialDraftRecipeID
         self.enableDraftMode = enableDraftMode
         self.prefillDraft = prefillDraft
             ?? initialDraftRecipeID.flatMap { recipeID in
@@ -124,18 +130,32 @@ struct CreateRecipeView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    heroComposerSection
-                    titleSection
-                    servingsSection
-                    importFromLinkSection
-                    ingredientsSection
-                    stepsSection
-                    previewSection
-                    Color.clear.frame(height: 12)
+            Group {
+                if draftLoadFailed {
+                    VStack(spacing: 10) {
+                        Text("Draft not found")
+                            .font(.headline)
+                        Text("The draft could not be loaded.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            heroComposerSection
+                            titleSection
+                            servingsSection
+                            importFromLinkSection
+                            ingredientsSection
+                            stepsSection
+                            previewSection
+                            Color.clear.frame(height: 12)
+                        }
+                        .padding()
+                    }
                 }
-                .padding()
             }
             .background(Color(.systemBackground))
             .navigationTitle(localizer.text(.createRecipe))
@@ -146,6 +166,9 @@ struct CreateRecipeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
+                        if enableDraftMode {
+                            persistDraftIfNeeded()
+                        }
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
@@ -173,7 +196,8 @@ struct CreateRecipeView: View {
                 }
             }
             .onAppear {
-                if enableDraftMode, currentDraftRecipeID == nil {
+                loadExistingDraftIfNeeded()
+                if enableDraftMode, currentDraftRecipeID == nil, !draftLoadFailed {
                     let createdDraft = viewModel.createEmptyDraftRecipe(author: accountUsername)
                     currentDraftRecipeID = createdDraft.id
                 }
@@ -183,10 +207,8 @@ struct CreateRecipeView: View {
                 if let firstProvider = importableLinkedAccounts.first?.provider.rawValue {
                     selectedImportProviderRaw = firstProvider
                 }
-            }
-            .onDisappear {
-                if enableDraftMode {
-                    persistDraftIfNeeded()
+                if enableDraftMode, !draftLoadFailed {
+                    lastSavedDraftFingerprint = persistedDraftFingerprint()
                 }
             }
         }
@@ -562,17 +584,25 @@ struct CreateRecipeView: View {
                 .fill(Color(.separator).opacity(0.25))
                 .frame(height: 1)
 
-            HStack {
-                Button {
-                    primaryAction()
-                } label: {
-                    Text(enableDraftMode ? localizer.text(.saveRecipe) : localizer.text(.publishRecipe))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .font(.headline)
+            VStack(spacing: 0) {
+                HStack {
+                    Button {
+                        primaryAction()
+                    } label: {
+                        Text(enableDraftMode ? localizer.text(.saveRecipe) : localizer.text(.publishRecipe))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .font(.headline)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(enableDraftMode ? !canSaveDraft : !canPublish)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(enableDraftMode ? !canSaveDraft : !canPublish)
+                if enableDraftMode && showDraftSavedFeedback {
+                    Text(localizer.text(.saved))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                }
             }
             .padding(.horizontal)
             .padding(.top, 10)
@@ -721,24 +751,26 @@ struct CreateRecipeView: View {
     }
 
     private var canSaveDraft: Bool {
-        currentDraftRecipeID != nil
+        currentDraftRecipeID != nil && !draftLoadFailed
     }
 
     private func primaryAction() {
         if enableDraftMode {
-            saveDraftAndClose()
+            persistDraftIfNeeded(showFeedback: true)
         } else {
             publish()
         }
     }
 
-    private func saveDraftAndClose() {
-        persistDraftIfNeeded()
-        dismiss()
-    }
-
-    private func persistDraftIfNeeded() {
+    private func persistDraftIfNeeded(showFeedback: Bool = false) {
         guard enableDraftMode, let currentDraftRecipeID else { return }
+        let fingerprint = persistedDraftFingerprint()
+        guard fingerprint != lastSavedDraftFingerprint else {
+            if showFeedback {
+                flashDraftSavedFeedback()
+            }
+            return
+        }
         _ = viewModel.saveRecipeDraft(
             recipeID: currentDraftRecipeID,
             title: title,
@@ -763,6 +795,95 @@ struct CreateRecipeView: View {
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
             originalAuthorName: prefillDraft?.originalAuthorName
         )
+        lastSavedDraftFingerprint = fingerprint
+        if showFeedback {
+            flashDraftSavedFeedback()
+        }
+    }
+
+    private func loadExistingDraftIfNeeded() {
+        guard enableDraftMode,
+              let initialDraftRecipeID,
+              !hasAttemptedInitialDraftLoad else { return }
+        hasAttemptedInitialDraftLoad = true
+        print("[SEASON_RECIPE] phase=draft_load_started id=\(initialDraftRecipeID)")
+        guard let recipe = viewModel.recipe(forID: initialDraftRecipeID) else {
+            draftLoadFailed = true
+            print("[SEASON_RECIPE] phase=draft_load_failed id=\(initialDraftRecipeID)")
+            return
+        }
+        applyDraftPrefill(Self.prefillDraft(from: recipe))
+        currentDraftRecipeID = initialDraftRecipeID
+        draftLoadFailed = false
+        print("[SEASON_RECIPE] phase=draft_load_succeeded id=\(initialDraftRecipeID)")
+    }
+
+    private func applyDraftPrefill(_ prefill: PrefillDraft) {
+        title = prefill.title
+        mediaLink = prefill.mediaLinkURL
+            ?? prefill.externalMedia.first?.url
+            ?? ""
+        uploadedImages = prefill.images
+        coverImageID = prefill.coverImageID ?? prefill.images.first?.id
+        selectedServings = max(1, prefill.servings)
+
+        let mappedIngredientDrafts = prefill.ingredients.map { ingredient -> CreateIngredientDraft in
+            let mappedSearchText: String
+            if let produceID = ingredient.produceID,
+               let item = viewModel.produceItem(forID: produceID) {
+                mappedSearchText = item.displayName(languageCode: viewModel.localizer.languageCode)
+            } else if let basicID = ingredient.basicIngredientID,
+                      let basic = viewModel.basicIngredient(forID: basicID) {
+                mappedSearchText = basic.displayName(languageCode: viewModel.localizer.languageCode)
+            } else {
+                mappedSearchText = ingredient.name
+            }
+
+            return CreateIngredientDraft(
+                produceID: ingredient.produceID ?? "",
+                basicIngredientID: ingredient.basicIngredientID ?? "",
+                customName: (ingredient.produceID == nil && ingredient.basicIngredientID == nil) ? ingredient.name : "",
+                searchText: mappedSearchText,
+                quantityValue: quantityValueStringStatic(ingredient.quantityValue),
+                quantityUnit: ingredient.quantityUnit
+            )
+        }
+        ingredientDrafts = mappedIngredientDrafts.isEmpty ? [CreateIngredientDraft()] : mappedIngredientDrafts
+
+        let mappedStepDrafts = prefill.steps.map { CreateStepDraft(text: $0) }
+        stepDrafts = mappedStepDrafts.isEmpty ? [CreateStepDraft()] : mappedStepDrafts
+    }
+
+    private func persistedDraftFingerprint() -> String {
+        let titleValue = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ingredientsValue = recipeIngredientsForPublish
+            .map {
+                "\($0.produceID ?? ""):\($0.basicIngredientID ?? ""):\($0.name.lowercased()):\($0.quantityValue):\($0.quantityUnit.rawValue)"
+            }
+            .joined(separator: "|")
+        let stepsValue = stepTextsForPublish.joined(separator: "|")
+        let imagesValue = uploadedImages
+            .map { "\($0.id):\($0.localPath ?? ""):\($0.remoteURL ?? "")" }
+            .joined(separator: "|")
+        let mediaValue = mediaLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        let coverValue = selectedCoverImageID ?? ""
+
+        return [
+            titleValue,
+            ingredientsValue,
+            stepsValue,
+            imagesValue,
+            mediaValue,
+            coverValue,
+            "\(selectedServings)"
+        ].joined(separator: "||")
+    }
+
+    private func flashDraftSavedFeedback() {
+        showDraftSavedFeedback = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            showDraftSavedFeedback = false
+        }
     }
 
     private func publish() {
@@ -800,17 +921,27 @@ struct CreateRecipeView: View {
     }
 
     private func removeIngredient(id: UUID) {
-        ingredientDrafts.removeAll { $0.id == id }
-        if ingredientDrafts.isEmpty {
-            ingredientDrafts = [CreateIngredientDraft()]
+        if ingredientDrafts.count == 1,
+           let index = ingredientDrafts.firstIndex(where: { $0.id == id }) {
+            ingredientDrafts[index].produceID = ""
+            ingredientDrafts[index].basicIngredientID = ""
+            ingredientDrafts[index].customName = ""
+            ingredientDrafts[index].searchText = ""
+            ingredientDrafts[index].quantityValue = "100"
+            ingredientDrafts[index].quantityUnit = .g
+            focusedIngredientID = ingredientDrafts[index].id
+            return
         }
+        ingredientDrafts.removeAll { $0.id == id }
     }
 
     private func removeStep(id: UUID) {
-        stepDrafts.removeAll { $0.id == id }
-        if stepDrafts.isEmpty {
-            stepDrafts = [CreateStepDraft()]
+        if stepDrafts.count == 1,
+           let index = stepDrafts.firstIndex(where: { $0.id == id }) {
+            stepDrafts[index].text = ""
+            return
         }
+        stepDrafts.removeAll { $0.id == id }
     }
 
     private func bindingForStep(_ id: UUID) -> Binding<String> {
