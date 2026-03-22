@@ -1,6 +1,16 @@
 import Foundation
 import Supabase
 
+enum NetworkErrorCategory: String {
+    case auth_session
+    case permission_rls
+    case network_offline
+    case rate_limit
+    case server_error
+    case client_validation
+    case unknown
+}
+
 struct SupabaseConfiguration {
     let url: URL
     let anonKey: String
@@ -222,7 +232,8 @@ final class SupabaseService {
             }
             print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
         } catch {
-            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed error=\(error)")
+            let category = classifyNetworkError(error)
+            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed category=\(category.rawValue) error=\(error)")
             throw error
         }
     }
@@ -253,7 +264,8 @@ final class SupabaseService {
             }
             print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
         } catch {
-            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed error=\(error)")
+            let category = classifyNetworkError(error)
+            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed category=\(category.rawValue) error=\(error)")
             throw error
         }
     }
@@ -280,6 +292,113 @@ final class SupabaseService {
             (nsError.code == -1005 ||
              nsError.code == -1001 ||
              nsError.code == -1009)
+    }
+
+    private func classifyNetworkError(_ error: Error) -> NetworkErrorCategory {
+        if let serviceError = error as? SupabaseServiceError {
+            switch serviceError {
+            case .unauthenticated:
+                return .auth_session
+            case .missingConfiguration, .invalidURL:
+                return .client_validation
+            }
+        }
+
+        if error is DecodingError || error is EncodingError {
+            return .client_validation
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case -1009, -1005, -1001:
+                return .network_offline
+            default:
+                break
+            }
+        }
+
+        if let statusCode = extractHTTPStatusCode(from: nsError) {
+            switch statusCode {
+            case 401:
+                return .auth_session
+            case 403:
+                return .permission_rls
+            case 429:
+                return .rate_limit
+            case 500...599:
+                return .server_error
+            case 400...499:
+                return .client_validation
+            default:
+                break
+            }
+        }
+
+        let message = [
+            nsError.localizedDescription,
+            String(describing: error)
+        ]
+        .joined(separator: " ")
+        .lowercased()
+
+        if message.contains("rls") ||
+            message.contains("permission denied") ||
+            message.contains("forbidden") {
+            return .permission_rls
+        }
+        if message.contains("unauthorized") ||
+            message.contains("jwt") ||
+            message.contains("session") ||
+            message.contains("not authenticated") {
+            return .auth_session
+        }
+        if message.contains("rate limit") ||
+            message.contains("too many requests") {
+            return .rate_limit
+        }
+        if message.contains("offline") ||
+            message.contains("timed out") ||
+            message.contains("timeout") ||
+            message.contains("connection lost") {
+            return .network_offline
+        }
+        if message.contains("decode") ||
+            message.contains("encoding") ||
+            message.contains("invalid") ||
+            message.contains("missing") {
+            return .client_validation
+        }
+
+        return .unknown
+    }
+
+    private func extractHTTPStatusCode(from error: NSError) -> Int? {
+        let keys = ["status", "statusCode", "StatusCode", "code"]
+        for key in keys {
+            if let value = error.userInfo[key] as? Int, (100...599).contains(value) {
+                return value
+            }
+            if let value = error.userInfo[key] as? NSNumber {
+                let intValue = value.intValue
+                if (100...599).contains(intValue) {
+                    return intValue
+                }
+            }
+            if let value = error.userInfo[key] as? String, let intValue = Int(value), (100...599).contains(intValue) {
+                return intValue
+            }
+        }
+
+        if let response = error.userInfo["response"] as? HTTPURLResponse {
+            return response.statusCode
+        }
+
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return extractHTTPStatusCode(from: underlying)
+        }
+
+        return nil
     }
 
     private static func loadConfiguration(from bundle: Bundle) throws -> SupabaseConfiguration {
