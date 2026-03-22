@@ -29,12 +29,15 @@ struct AccountView: View {
     @State private var supabaseFridgeFetchRunning = false
     @State private var outboxProcessingStatus = ""
     @State private var outboxProcessingRunning = false
+    @State private var backfillStatus = ""
+    @State private var backfillRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
     @State private var hasAttemptedCloudLinkedAccountsLoad = false
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
+    private let backfillService = BackfillService()
     private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
 
     var body: some View {
@@ -249,7 +252,8 @@ struct AccountView: View {
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
-                            outboxProcessingRunning
+                            outboxProcessingRunning ||
+                            backfillRunning
                         )
 
                         Button {
@@ -265,7 +269,8 @@ struct AccountView: View {
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
-                            outboxProcessingRunning
+                            outboxProcessingRunning ||
+                            backfillRunning
                         )
 
                         Button {
@@ -281,7 +286,8 @@ struct AccountView: View {
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
-                            outboxProcessingRunning
+                            outboxProcessingRunning ||
+                            backfillRunning
                         )
 
                         Button {
@@ -297,7 +303,25 @@ struct AccountView: View {
                             supabaseRecipeStatesFetchRunning ||
                             supabaseShoppingListFetchRunning ||
                             supabaseFridgeFetchRunning ||
-                            outboxProcessingRunning
+                            outboxProcessingRunning ||
+                            backfillRunning
+                        )
+
+                        Button {
+                            runBackfillForTesting()
+                        } label: {
+                            Text("Run backfill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning ||
+                            outboxProcessingRunning ||
+                            backfillRunning
                         )
 
                         if supabaseTestRunning {
@@ -361,6 +385,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !outboxProcessingStatus.isEmpty {
                             Text(outboxProcessingStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if backfillRunning {
+                            Text("Running backfill...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !backfillStatus.isEmpty {
+                            Text(backfillStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1056,6 +1091,22 @@ struct AccountView: View {
             await dispatcher.processPendingMutations()
             outboxProcessingStatus = "Outbox processing completed"
             outboxProcessingRunning = false
+        }
+    }
+
+    private func runBackfillForTesting() {
+        backfillRunning = true
+        backfillStatus = ""
+
+        Task {
+            do {
+                let result = try await backfillService.runManualBackfill()
+                backfillStatus = "Backfill completed. Shopping inserted: \(result.shoppingInserted). Fridge inserted: \(result.fridgeInserted)"
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                backfillStatus = "Backfill failed: \(details)"
+            }
+            backfillRunning = false
         }
     }
 }
