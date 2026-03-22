@@ -130,6 +130,7 @@ final class ShoppingListViewModel: ObservableObject {
     private let storage: UserDefaults
     private let storageKey = "shoppingListEntries"
     private let supabaseService = SupabaseService.shared
+    private let outboxStore = OutboxStore()
 
     init(
         catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
@@ -449,6 +450,24 @@ final class ShoppingListViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=local_update_done")
+        let createPayload = ShoppingListOutboxMutationPayload(
+            localItemID: entry.id,
+            ingredientType: mapped.ingredientType,
+            ingredientID: mapped.ingredientID,
+            customName: mapped.customName,
+            quantity: mapped.quantity,
+            unit: mapped.unit,
+            sourceRecipeID: mapped.sourceRecipeID,
+            isChecked: false
+        )
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "shopping_list_create",
+            itemID: entry.id,
+            entityType: "shopping_list_item",
+            operationType: "create",
+            payload: createPayload
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=service_call")
@@ -474,6 +493,24 @@ final class ShoppingListViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=local_update_done")
+        let updatePayload = ShoppingListOutboxMutationPayload(
+            localItemID: entry.id,
+            ingredientType: mapped.ingredientType,
+            ingredientID: mapped.ingredientID,
+            customName: mapped.customName,
+            quantity: mapped.quantity,
+            unit: mapped.unit,
+            sourceRecipeID: mapped.sourceRecipeID,
+            isChecked: false
+        )
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "shopping_list_update",
+            itemID: entry.id,
+            entityType: "shopping_list_item",
+            operationType: "update",
+            payload: updatePayload
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=service_call")
@@ -498,6 +535,14 @@ final class ShoppingListViewModel: ObservableObject {
     private func writeThroughDelete(_ entry: ShoppingListEntry) {
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=local_update_done")
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "shopping_list_delete",
+            itemID: entry.id,
+            entityType: "shopping_list_item",
+            operationType: "delete",
+            payload: ShoppingListDeleteOutboxMutationPayload(localItemID: entry.id)
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=service_call")
@@ -570,4 +615,50 @@ final class ShoppingListViewModel: ObservableObject {
 
         return (nil, trimmed)
     }
+
+    private func appendOutboxRecord<T: Encodable>(
+        traceID: String,
+        action: String,
+        itemID: String,
+        entityType: String,
+        operationType: String,
+        payload: T
+    ) {
+        guard let payloadData = try? JSONEncoder().encode(payload) else {
+            print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
+            return
+        }
+
+        let mutationID = UUID().uuidString
+        let now = Date()
+        let record = OutboxMutationRecord(
+            mutationID: mutationID,
+            userID: supabaseService.currentAuthenticatedUserID(),
+            entityType: entityType,
+            operationType: operationType,
+            payload: payloadData,
+            status: "pending",
+            attemptCount: 0,
+            lastError: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+        outboxStore.append(record)
+        print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
+    }
+}
+
+private struct ShoppingListOutboxMutationPayload: Codable {
+    let localItemID: String
+    let ingredientType: String
+    let ingredientID: String?
+    let customName: String?
+    let quantity: Double?
+    let unit: String?
+    let sourceRecipeID: String?
+    let isChecked: Bool
+}
+
+private struct ShoppingListDeleteOutboxMutationPayload: Codable {
+    let localItemID: String
 }

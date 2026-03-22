@@ -180,6 +180,10 @@ final class SupabaseService {
         }
     }
 
+    func currentAuthenticatedUserID() -> UUID? {
+        client?.auth.currentUser?.id
+    }
+
     func authenticateWithEmailPasswordForTesting(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "authenticateWithEmailPasswordForTesting") {
             let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)

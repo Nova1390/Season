@@ -33,6 +33,7 @@ final class FridgeViewModel: ObservableObject {
     private let storageKey = "fridgeIngredientSelection"
     private let legacyStorageKey = "fridgeItemIDs"
     private let supabaseService = SupabaseService.shared
+    private let outboxStore = OutboxStore()
 
     init(
         catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
@@ -175,6 +176,21 @@ final class FridgeViewModel: ObservableObject {
         let localItemID = "produce:\(produceID)"
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "fridge_create",
+            itemID: localItemID,
+            entityType: "fridge_item",
+            operationType: "create",
+            payload: FridgeOutboxCreatePayload(
+                localItemID: localItemID,
+                ingredientType: "produce",
+                ingredientID: produceID,
+                customName: nil,
+                quantity: nil,
+                unit: nil
+            )
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
@@ -198,6 +214,21 @@ final class FridgeViewModel: ObservableObject {
         let localItemID = "basic:\(basicID)"
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "fridge_create",
+            itemID: localItemID,
+            entityType: "fridge_item",
+            operationType: "create",
+            payload: FridgeOutboxCreatePayload(
+                localItemID: localItemID,
+                ingredientType: "basic",
+                ingredientID: basicID,
+                customName: nil,
+                quantity: nil,
+                unit: nil
+            )
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
@@ -221,6 +252,21 @@ final class FridgeViewModel: ObservableObject {
         let traceID = String(UUID().uuidString.prefix(8))
         let parsed = parseQuantityAndUnit(item.quantity)
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "fridge_create",
+            itemID: item.id,
+            entityType: "fridge_item",
+            operationType: "create",
+            payload: FridgeOutboxCreatePayload(
+                localItemID: item.id,
+                ingredientType: "custom",
+                ingredientID: nil,
+                customName: item.name,
+                quantity: parsed.quantity,
+                unit: parsed.unit
+            )
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=service_call")
@@ -243,6 +289,14 @@ final class FridgeViewModel: ObservableObject {
     private func writeThroughDelete(localItemID: String) {
         let traceID = String(UUID().uuidString.prefix(8))
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=local_update_done")
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "fridge_delete",
+            itemID: localItemID,
+            entityType: "fridge_item",
+            operationType: "delete",
+            payload: FridgeOutboxDeletePayload(localItemID: localItemID)
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=task_started")
         Task { [supabaseService] in
             print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_call")
@@ -276,6 +330,37 @@ final class FridgeViewModel: ObservableObject {
 
         return (nil, trimmed)
     }
+
+    private func appendOutboxRecord<T: Encodable>(
+        traceID: String,
+        action: String,
+        itemID: String,
+        entityType: String,
+        operationType: String,
+        payload: T
+    ) {
+        guard let payloadData = try? JSONEncoder().encode(payload) else {
+            print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
+            return
+        }
+
+        let mutationID = UUID().uuidString
+        let now = Date()
+        let record = OutboxMutationRecord(
+            mutationID: mutationID,
+            userID: supabaseService.currentAuthenticatedUserID(),
+            entityType: entityType,
+            operationType: operationType,
+            payload: payloadData,
+            status: "pending",
+            attemptCount: 0,
+            lastError: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+        outboxStore.append(record)
+        print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
+    }
 }
 
 private struct FridgeSelectionPayload: Codable {
@@ -288,4 +373,17 @@ struct FridgeCustomItem: Identifiable, Codable, Hashable {
     let id: String
     let name: String
     let quantity: String?
+}
+
+private struct FridgeOutboxCreatePayload: Codable {
+    let localItemID: String
+    let ingredientType: String
+    let ingredientID: String?
+    let customName: String?
+    let quantity: Double?
+    let unit: String?
+}
+
+private struct FridgeOutboxDeletePayload: Codable {
+    let localItemID: String
 }
