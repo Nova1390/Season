@@ -32,6 +32,7 @@ final class FridgeViewModel: ObservableObject {
     private let storage: UserDefaults
     private let storageKey = "fridgeIngredientSelection"
     private let legacyStorageKey = "fridgeItemIDs"
+    private let supabaseService = SupabaseService.shared
 
     init(
         catalog: [ProduceItem] = ProduceStore.loadFromBundle(),
@@ -49,11 +50,16 @@ final class FridgeViewModel: ObservableObject {
         guard !contains(item) else { return }
         produceIDs.append(item.id)
         save()
+        writeThroughCreateProduce(item.id)
     }
 
     func remove(_ item: ProduceItem) {
+        let removed = produceIDs.contains(item.id)
         produceIDs.removeAll { $0 == item.id }
         save()
+        if removed {
+            writeThroughDelete(localItemID: "produce:\(item.id)")
+        }
     }
 
     func add(_ item: BasicIngredient) {
@@ -61,11 +67,16 @@ final class FridgeViewModel: ObservableObject {
         guard !contains(item) else { return }
         basicIngredientIDs.append(item.id)
         save()
+        writeThroughCreateBasic(item.id)
     }
 
     func remove(_ item: BasicIngredient) {
+        let removed = basicIngredientIDs.contains(item.id)
         basicIngredientIDs.removeAll { $0 == item.id }
         save()
+        if removed {
+            writeThroughDelete(localItemID: "basic:\(item.id)")
+        }
     }
 
     func addCustom(name: String, quantity: String? = nil) {
@@ -80,15 +91,20 @@ final class FridgeViewModel: ObservableObject {
         guard !containsCustom(named: custom.name) else { return }
         customItems.append(custom)
         save()
+        writeThroughCreateCustom(custom)
     }
 
     func removeCustom(named name: String) {
         let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return }
+        let removed = customItems.filter {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
+        }
         customItems.removeAll {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
         }
         save()
+        removed.forEach { writeThroughDelete(localItemID: $0.id) }
     }
 
     func containsCustom(named name: String) -> Bool {
@@ -104,11 +120,15 @@ final class FridgeViewModel: ObservableObject {
     }
 
     func remove(at offsets: IndexSet) {
+        let removed = offsets
+            .sorted()
+            .compactMap { index in produceIDs.indices.contains(index) ? produceIDs[index] : nil }
         for index in offsets.sorted(by: >) {
             guard produceIDs.indices.contains(index) else { continue }
             produceIDs.remove(at: index)
         }
         save()
+        removed.forEach { writeThroughDelete(localItemID: "produce:\($0)") }
     }
 
     func contains(_ item: ProduceItem) -> Bool {
@@ -149,6 +169,112 @@ final class FridgeViewModel: ObservableObject {
         basicIngredientIDs = []
         customItems = []
         save()
+    }
+
+    private func writeThroughCreateProduce(_ produceID: String) {
+        let localItemID = "produce:\(produceID)"
+        let traceID = String(UUID().uuidString.prefix(8))
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
+        Task { [supabaseService] in
+            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
+            do {
+                try await supabaseService.createFridgeItem(
+                    localItemID: localItemID,
+                    ingredientType: "produce",
+                    ingredientID: produceID,
+                    customName: nil,
+                    quantity: nil,
+                    unit: nil,
+                    traceID: traceID
+                )
+            } catch {
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
+            }
+        }
+    }
+
+    private func writeThroughCreateBasic(_ basicID: String) {
+        let localItemID = "basic:\(basicID)"
+        let traceID = String(UUID().uuidString.prefix(8))
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
+        Task { [supabaseService] in
+            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
+            do {
+                try await supabaseService.createFridgeItem(
+                    localItemID: localItemID,
+                    ingredientType: "basic",
+                    ingredientID: basicID,
+                    customName: nil,
+                    quantity: nil,
+                    unit: nil,
+                    traceID: traceID
+                )
+            } catch {
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
+            }
+        }
+    }
+
+    private func writeThroughCreateCustom(_ item: FridgeCustomItem) {
+        let traceID = String(UUID().uuidString.prefix(8))
+        let parsed = parseQuantityAndUnit(item.quantity)
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=task_started")
+        Task { [supabaseService] in
+            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=service_call")
+            do {
+                try await supabaseService.createFridgeItem(
+                    localItemID: item.id,
+                    ingredientType: "custom",
+                    ingredientID: nil,
+                    customName: item.name,
+                    quantity: parsed.quantity,
+                    unit: parsed.unit,
+                    traceID: traceID
+                )
+            } catch {
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=write_failed error=\(error)")
+            }
+        }
+    }
+
+    private func writeThroughDelete(localItemID: String) {
+        let traceID = String(UUID().uuidString.prefix(8))
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=local_update_done")
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=task_started")
+        Task { [supabaseService] in
+            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_call")
+            do {
+                try await supabaseService.deleteFridgeItem(localItemID: localItemID, traceID: traceID)
+            } catch {
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed error=\(error)")
+            }
+        }
+    }
+
+    private func parseQuantityAndUnit(_ rawQuantity: String?) -> (quantity: Double?, unit: String?) {
+        let trimmed = rawQuantity?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return (nil, nil) }
+
+        let pattern = #"^\s*([0-9]+(?:[.,][0-9]+)?)\s*(.*)$"#
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
+           let numberRange = Range(match.range(at: 1), in: trimmed) {
+            let numberText = String(trimmed[numberRange]).replacingOccurrences(of: ",", with: ".")
+            let quantity = Double(numberText)
+            let unitText: String?
+            if let unitRange = Range(match.range(at: 2), in: trimmed) {
+                let parsedUnit = String(trimmed[unitRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                unitText = parsedUnit.isEmpty ? nil : parsedUnit
+            } else {
+                unitText = nil
+            }
+            return (quantity, unitText)
+        }
+
+        return (nil, trimmed)
     }
 }
 

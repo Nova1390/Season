@@ -110,6 +110,27 @@ private struct ShoppingListItemUpdatePayload: Encodable {
     let updated_at: String
 }
 
+private struct FridgeItemInsertPayload: Encodable {
+    let id: String
+    let user_id: String
+    let ingredient_type: String
+    let ingredient_id: String?
+    let custom_name: String?
+    let quantity: Double?
+    let unit: String?
+    let created_at: String
+    let updated_at: String
+}
+
+private struct FridgeItemUpdatePayload: Encodable {
+    let ingredient_type: String
+    let ingredient_id: String?
+    let custom_name: String?
+    let quantity: Double?
+    let unit: String?
+    let updated_at: String
+}
+
 final class SupabaseService {
     static let shared = SupabaseService()
 
@@ -453,6 +474,135 @@ final class SupabaseService {
         }
     }
 
+    func createFridgeItem(
+        localItemID: String,
+        ingredientType: String,
+        ingredientID: String?,
+        customName: String?,
+        quantity: Double?,
+        unit: String?,
+        traceID: String
+    ) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "createFridgeItem",
+            traceID: traceID,
+            metadata: "action=fridge_create item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            let now = ISO8601DateFormatter().string(from: Date())
+            let payload = FridgeItemInsertPayload(
+                id: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString),
+                user_id: user.id.uuidString,
+                ingredient_type: ingredientType,
+                ingredient_id: ingredientID,
+                custom_name: customName,
+                quantity: quantity,
+                unit: unit,
+                created_at: now,
+                updated_at: now
+            )
+
+            do {
+                _ = try await supabaseClient
+                    .from("fridge_items")
+                    .insert(payload)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
+    func updateFridgeItem(
+        localItemID: String,
+        ingredientType: String,
+        ingredientID: String?,
+        customName: String?,
+        quantity: Double?,
+        unit: String?,
+        traceID: String
+    ) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "updateFridgeItem",
+            traceID: traceID,
+            metadata: "action=fridge_update item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            let payload = FridgeItemUpdatePayload(
+                ingredient_type: ingredientType,
+                ingredient_id: ingredientID,
+                custom_name: customName,
+                quantity: quantity,
+                unit: unit,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+
+            do {
+                _ = try await supabaseClient
+                    .from("fridge_items")
+                    .update(payload)
+                    .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
+                    .eq("user_id", value: user.id.uuidString)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
+    func deleteFridgeItem(localItemID: String, traceID: String) async throws {
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_entered")
+        try await instrumentedRequest(
+            name: "deleteFridgeItem",
+            traceID: traceID,
+            metadata: "action=fridge_delete item=\(localItemID)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return
+            }
+
+            do {
+                _ = try await supabaseClient
+                    .from("fridge_items")
+                    .delete()
+                    .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
+                    .eq("user_id", value: user.id.uuidString)
+                    .execute()
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_ok")
+            } catch {
+                let category = self.classifyNetworkError(error)
+                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                throw error
+            }
+        }
+    }
+
     private func instrumentedRequest<T>(
         name: String,
         traceID: String? = nil,
@@ -610,6 +760,10 @@ final class SupabaseService {
 
     private func shoppingListRowID(localItemID: String, userID: String) -> String {
         deterministicUUIDString(from: "shopping_list_item|\(userID)|\(localItemID)")
+    }
+
+    private func fridgeRowID(localItemID: String, userID: String) -> String {
+        deterministicUUIDString(from: "fridge_item|\(userID)|\(localItemID)")
     }
 
     private func deterministicUUIDString(from input: String) -> String {
