@@ -25,6 +25,8 @@ struct AccountView: View {
     @State private var supabaseRecipeStatesFetchRunning = false
     @State private var supabaseShoppingListFetchStatus = ""
     @State private var supabaseShoppingListFetchRunning = false
+    @State private var supabaseFridgeFetchStatus = ""
+    @State private var supabaseFridgeFetchRunning = false
     @State private var cloudProfile: Profile?
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
@@ -243,7 +245,8 @@ struct AccountView: View {
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
                             supabaseRecipeStatesFetchRunning ||
-                            supabaseShoppingListFetchRunning
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning
                         )
 
                         Button {
@@ -257,7 +260,23 @@ struct AccountView: View {
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
                             supabaseRecipeStatesFetchRunning ||
-                            supabaseShoppingListFetchRunning
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning
+                        )
+
+                        Button {
+                            fetchSupabaseFridgeItemsForTesting()
+                        } label: {
+                            Text("Fetch fridge items")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(
+                            supabaseTestRunning ||
+                            supabaseProfileFetchRunning ||
+                            supabaseRecipeStatesFetchRunning ||
+                            supabaseShoppingListFetchRunning ||
+                            supabaseFridgeFetchRunning
                         )
 
                         if supabaseTestRunning {
@@ -299,6 +318,17 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                         } else if !supabaseShoppingListFetchStatus.isEmpty {
                             Text(supabaseShoppingListFetchStatus)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        if supabaseFridgeFetchRunning {
+                            Text("Fetching fridge items...")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if !supabaseFridgeFetchStatus.isEmpty {
+                            Text(supabaseFridgeFetchStatus)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -955,6 +985,32 @@ struct AccountView: View {
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 supabaseShoppingListFetchStatus = "Shopping list items fetch failed: \(details)"
+            }
+        }
+    }
+
+    private func fetchSupabaseFridgeItemsForTesting() {
+        guard supabaseService.configuration != nil else {
+            let issue = supabaseService.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY"
+            supabaseFridgeFetchStatus = String(format: viewModel.localizer.text(.supabaseNotConfiguredFormat), issue)
+            return
+        }
+
+        supabaseFridgeFetchRunning = true
+        supabaseFridgeFetchStatus = ""
+
+        Task {
+            defer { supabaseFridgeFetchRunning = false }
+            do {
+                let items = try await supabaseService.fetchMyFridgeItems()
+                if let firstID = items.first?.id, !firstID.isEmpty {
+                    supabaseFridgeFetchStatus = "Fridge items loaded: \(items.count). First id: \(firstID)"
+                } else {
+                    supabaseFridgeFetchStatus = "Fridge items loaded: \(items.count)"
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                supabaseFridgeFetchStatus = "Fridge items fetch failed: \(details)"
             }
         }
     }

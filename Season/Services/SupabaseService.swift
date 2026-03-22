@@ -85,6 +85,18 @@ struct CloudShoppingListItem: Codable {
     let updated_at: String?
 }
 
+struct CloudFridgeItem: Codable {
+    let id: String
+    let user_id: String
+    let ingredient_type: String
+    let ingredient_id: String?
+    let custom_name: String?
+    let quantity: Double?
+    let unit: String?
+    let created_at: String?
+    let updated_at: String?
+}
+
 private struct UserRecipeSavedStateUpsert: Encodable {
     let user_id: String
     let recipe_id: String
@@ -292,6 +304,26 @@ final class SupabaseService {
                 .execute()
 
             return try JSONDecoder().decode([CloudShoppingListItem].self, from: response.data)
+        }
+    }
+
+    func fetchMyFridgeItems() async throws -> [CloudFridgeItem] {
+        try await instrumentedRequest(name: "fetchMyFridgeItems") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                return []
+            }
+
+            let response = try await supabaseClient
+                .from("fridge_items")
+                .select()
+                .eq("user_id", value: user.id.uuidString)
+                .execute()
+
+            return try JSONDecoder().decode([CloudFridgeItem].self, from: response.data)
         }
     }
 
