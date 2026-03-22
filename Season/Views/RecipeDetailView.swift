@@ -117,9 +117,9 @@ struct RecipeDetailView: View {
                                     openURL(url)
                                 } label: {
                                     HStack(spacing: 10) {
-                                        Image(systemName: media.platform == .instagram ? "camera.circle.fill" : "play.tv.fill")
-                                            .font(.title3)
-                                            .foregroundStyle(.secondary)
+                                        brandIcon(for: media.platform)
+                                            .frame(width: 20, height: 20)
+                                            .frame(minWidth: 32, minHeight: 32)
 
                                         Text(mediaTitle(for: media))
                                             .font(.subheadline.weight(.semibold))
@@ -134,6 +134,34 @@ struct RecipeDetailView: View {
                                     .padding(.vertical, 2)
                                 }
                                 .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    if !recipeSocialLinks.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Social")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 12) {
+                                ForEach(recipeSocialLinks, id: \.platform) { link in
+                                    Button {
+                                        guard let url = URL(string: link.url) else { return }
+                                        openURL(url)
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            brandIcon(for: link.platform)
+                                                .frame(width: 20, height: 20)
+                                                .frame(minWidth: 32, minHeight: 32)
+                                            Text(link.label)
+                                                .font(.subheadline.weight(.semibold))
+                                        }
+                                        .foregroundStyle(.primary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                Spacer()
                             }
                         }
                     }
@@ -339,6 +367,8 @@ struct RecipeDetailView: View {
                     images: rankedRecipe.recipe.images,
                     coverImageID: rankedRecipe.recipe.coverImageID,
                     mediaLinkURL: rankedRecipe.recipe.mediaLinkURL,
+                    instagramURL: rankedRecipe.recipe.instagramURL,
+                    tiktokURL: rankedRecipe.recipe.tiktokURL,
                     ingredients: rankedRecipe.recipe.ingredients,
                     steps: rankedRecipe.recipe.preparationSteps,
                     prepTimeMinutes: rankedRecipe.recipe.prepTimeMinutes,
@@ -502,6 +532,33 @@ struct RecipeDetailView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color(.separator).opacity(0.18), lineWidth: 0.5)
         )
+    }
+
+    private var recipeSocialLinks: [(platform: RecipeExternalPlatform, label: String, url: String)] {
+        var links: [(RecipeExternalPlatform, String, String)] = []
+        if let instagramURL = rankedRecipe.recipe.instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !instagramURL.isEmpty {
+            links.append((.instagram, "Instagram", instagramURL))
+        }
+        if let tiktokURL = rankedRecipe.recipe.tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !tiktokURL.isEmpty {
+            links.append((.tiktok, "TikTok", tiktokURL))
+        }
+        return links
+    }
+
+    @ViewBuilder
+    private func brandIcon(for platform: RecipeExternalPlatform) -> some View {
+        switch platform {
+        case .instagram:
+            Image("instagram_icon")
+                .resizable()
+                .scaledToFit()
+        case .tiktok:
+            Image("tiktok_icon")
+                .resizable()
+                .scaledToFit()
+        }
     }
 
     private var socialSignalText: String {

@@ -25,6 +25,8 @@ struct CreateRecipeView: View {
         let images: [RecipeImage]
         let coverImageID: String?
         let mediaLinkURL: String?
+        let instagramURL: String?
+        let tiktokURL: String?
         let ingredients: [RecipeIngredient]
         let steps: [String]
         let prepTimeMinutes: Int?
@@ -47,6 +49,8 @@ struct CreateRecipeView: View {
 
     @State private var title = ""
     @State private var mediaLink = ""
+    @State private var instagramURL = ""
+    @State private var tiktokURL = ""
     @State private var uploadedImages: [RecipeImage] = []
     @State private var coverImageID: String?
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -93,6 +97,8 @@ struct CreateRecipeView: View {
             ?? self.prefillDraft?.externalMedia.first?.url
             ?? ""
         _mediaLink = State(initialValue: initialMediaLink)
+        _instagramURL = State(initialValue: self.prefillDraft?.instagramURL ?? "")
+        _tiktokURL = State(initialValue: self.prefillDraft?.tiktokURL ?? "")
         _uploadedImages = State(initialValue: self.prefillDraft?.images ?? [])
         _coverImageID = State(initialValue: self.prefillDraft?.coverImageID ?? self.prefillDraft?.images.first?.id)
         _selectedServings = State(initialValue: max(1, self.prefillDraft?.servings ?? 2))
@@ -146,6 +152,7 @@ struct CreateRecipeView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             heroComposerSection
                             titleSection
+                            socialLinksSection
                             servingsSection
                             importFromLinkSection
                             ingredientsSection
@@ -383,6 +390,24 @@ struct CreateRecipeView: View {
             .lineLimit(2...3)
             .textFieldStyle(.plain)
             .padding(.vertical, 6)
+    }
+
+    private var socialLinksSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Social links")
+
+            TextField("Instagram URL", text: $instagramURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textFieldStyle(.roundedBorder)
+
+            TextField("TikTok URL", text: $tiktokURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textFieldStyle(.roundedBorder)
+        }
     }
 
     private var servingsSection: some View {
@@ -805,6 +830,8 @@ struct CreateRecipeView: View {
             coverImageID: selectedCoverImageID,
             coverImageName: prefillDraft?.imageAssetName,
             mediaLinkURL: mediaLink,
+            instagramURL: normalizedInstagramURL,
+            tiktokURL: normalizedTikTokURL,
             sourceURL: normalizedImportLink,
             sourcePlatform: detectedSourcePlatform,
             sourceCaptionRaw: normalizedImportCaption,
@@ -846,6 +873,8 @@ struct CreateRecipeView: View {
         mediaLink = prefill.mediaLinkURL
             ?? prefill.externalMedia.first?.url
             ?? ""
+        instagramURL = prefill.instagramURL ?? ""
+        tiktokURL = prefill.tiktokURL ?? ""
         uploadedImages = prefill.images
         coverImageID = prefill.coverImageID ?? prefill.images.first?.id
         selectedServings = max(1, prefill.servings)
@@ -889,6 +918,8 @@ struct CreateRecipeView: View {
             .map { "\($0.id):\($0.localPath ?? ""):\($0.remoteURL ?? "")" }
             .joined(separator: "|")
         let mediaValue = mediaLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        let instagramValue = instagramURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tiktokValue = tiktokURL.trimmingCharacters(in: .whitespacesAndNewlines)
         let coverValue = selectedCoverImageID ?? ""
 
         return [
@@ -897,6 +928,8 @@ struct CreateRecipeView: View {
             stepsValue,
             imagesValue,
             mediaValue,
+            instagramValue,
+            tiktokValue,
             coverValue,
             "\(selectedServings)"
         ].joined(separator: "||")
@@ -920,6 +953,8 @@ struct CreateRecipeView: View {
             coverImageID: selectedCoverImageID,
             coverImageName: prefillDraft?.imageAssetName,
             mediaLinkURL: mediaLink,
+            instagramURL: normalizedInstagramURL,
+            tiktokURL: normalizedTikTokURL,
             sourceURL: normalizedImportLink,
             sourcePlatform: detectedSourcePlatform,
             sourceCaptionRaw: normalizedImportCaption,
@@ -1193,6 +1228,16 @@ struct CreateRecipeView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    private var normalizedInstagramURL: String? {
+        let trimmed = instagramURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var normalizedTikTokURL: String? {
+        let trimmed = tiktokURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     private var externalMediaForPublish: [RecipeExternalMedia] {
         if let normalizedMediaLink,
            let platform = recipeExternalPlatform(for: normalizedMediaLink) {
@@ -1220,6 +1265,8 @@ struct CreateRecipeView: View {
             images: recipe.images,
             coverImageID: recipe.coverImageID,
             mediaLinkURL: recipe.mediaLinkURL,
+            instagramURL: recipe.instagramURL,
+            tiktokURL: recipe.tiktokURL,
             ingredients: recipe.ingredients,
             steps: recipe.preparationSteps,
             prepTimeMinutes: recipe.prepTimeMinutes,

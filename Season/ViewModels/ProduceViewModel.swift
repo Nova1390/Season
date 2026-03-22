@@ -683,6 +683,8 @@ final class ProduceViewModel: ObservableObject {
         coverImageID: String?,
         coverImageName: String?,
         mediaLinkURL: String?,
+        instagramURL: String? = nil,
+        tiktokURL: String? = nil,
         sourceURL: String?,
         sourcePlatform: SocialSourcePlatform?,
         sourceCaptionRaw: String?,
@@ -715,6 +717,8 @@ final class ProduceViewModel: ObservableObject {
         let validCoverID = validImages.contains(where: { $0.id == coverImageID }) ? coverImageID : nil
         let trimmedImageName = coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedMediaLink = mediaLinkURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedInstagramURL = instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTikTokURL = tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
         let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
@@ -738,6 +742,8 @@ final class ProduceViewModel: ObservableObject {
             coverImageID: validCoverID,
             coverImageName: (trimmedImageName?.isEmpty == false) ? trimmedImageName : nil,
             mediaLinkURL: (trimmedMediaLink?.isEmpty == false) ? trimmedMediaLink : nil,
+            instagramURL: (trimmedInstagramURL?.isEmpty == false) ? trimmedInstagramURL : nil,
+            tiktokURL: (trimmedTikTokURL?.isEmpty == false) ? trimmedTikTokURL : nil,
             sourceURL: (trimmedSourceURL?.isEmpty == false) ? trimmedSourceURL : nil,
             sourcePlatform: sourcePlatform,
             sourceCaptionRaw: (trimmedSourceCaption?.isEmpty == false) ? trimmedSourceCaption : nil,
@@ -873,6 +879,8 @@ final class ProduceViewModel: ObservableObject {
         coverImageID: String?,
         coverImageName: String?,
         mediaLinkURL: String?,
+        instagramURL: String? = nil,
+        tiktokURL: String? = nil,
         sourceURL: String?,
         sourcePlatform: SocialSourcePlatform?,
         sourceCaptionRaw: String?,
@@ -910,6 +918,8 @@ final class ProduceViewModel: ObservableObject {
         let validCoverID = validImages.contains(where: { $0.id == coverImageID }) ? coverImageID : nil
         let trimmedImageName = coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedMediaLink = mediaLinkURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedInstagramURL = instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTikTokURL = tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -935,6 +945,8 @@ final class ProduceViewModel: ObservableObject {
             coverImageID: validCoverID,
             coverImageName: (trimmedImageName?.isEmpty == false) ? trimmedImageName : nil,
             mediaLinkURL: (trimmedMediaLink?.isEmpty == false) ? trimmedMediaLink : nil,
+            instagramURL: (trimmedInstagramURL?.isEmpty == false) ? trimmedInstagramURL : nil,
+            tiktokURL: (trimmedTikTokURL?.isEmpty == false) ? trimmedTikTokURL : nil,
             sourceURL: (trimmedSourceURL?.isEmpty == false) ? trimmedSourceURL : nil,
             sourcePlatform: sourcePlatform,
             sourceCaptionRaw: (trimmedSourceCaption?.isEmpty == false) ? trimmedSourceCaption : nil,

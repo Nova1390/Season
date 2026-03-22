@@ -119,6 +119,8 @@ struct Recipe: Identifiable, Codable, Hashable {
     let coverImageID: String?
     let coverImageName: String?
     let mediaLinkURL: String?
+    var instagramURL: String? = nil
+    var tiktokURL: String? = nil
     let sourceURL: String?
     var sourceName: String? = nil
     let sourcePlatform: SocialSourcePlatform?
