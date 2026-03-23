@@ -45,6 +45,12 @@ struct AccountView: View {
     @State private var hasAttemptedCloudProfileLoad = false
     @State private var cloudLinkedAccounts: [CloudLinkedSocialAccount] = []
     @State private var hasAttemptedCloudLinkedAccountsLoad = false
+    @State private var instagramProfileURLInput = ""
+    @State private var tiktokProfileURLInput = ""
+    @State private var socialProfilesSaveStatus = ""
+    @State private var socialProfilesSaveIsError = false
+    @State private var socialProfilesSaveRunning = false
+    @Environment(\.openURL) private var openURL
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
     private let backfillService = BackfillService()
@@ -82,6 +88,7 @@ struct AccountView: View {
             migrateLegacyAccessTokensIfNeeded()
             loadCloudProfileForReadOnlyDisplayIfNeeded()
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
+            applyCloudProfileSocialLinksToInputs(cloudProfile)
         }
         .fullScreenCover(item: $selectedDraftEditorRoute) { route in
             CreateRecipeView(
@@ -111,6 +118,22 @@ struct AccountView: View {
                             Text(cloudLanguageLine)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                        }
+
+                        if !creatorSocialProfileLinks.isEmpty {
+                            HStack(spacing: 10) {
+                                ForEach(creatorSocialProfileLinks, id: \.platform) { link in
+                                    Button {
+                                        guard let url = URL(string: link.url) else { return }
+                                        openURL(url)
+                                    } label: {
+                                        creatorSocialIcon(for: link.platform)
+                                            .frame(width: 20, height: 20)
+                                            .frame(minWidth: 32, minHeight: 32)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
                     }
                     Spacer()
@@ -235,6 +258,46 @@ struct AccountView: View {
                     Text(socialLinkStatusMessage)
                         .font(.caption)
                         .foregroundStyle(socialLinkStatusIsError ? .red : .secondary)
+                }
+            }
+            .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                Label("Social profiles", systemImage: "link")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                TextField("Instagram username", text: $instagramProfileURLInput)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+
+                TextField("TikTok username", text: $tiktokProfileURLInput)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+
+                Button {
+                    saveProfileSocialLinks()
+                } label: {
+                    Text("Save social profiles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(socialProfilesSaveRunning)
+
+                if socialProfilesSaveRunning {
+                    Text("Saving...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !socialProfilesSaveStatus.isEmpty {
+                    Text(socialProfilesSaveStatus)
+                        .font(.caption)
+                        .foregroundStyle(socialProfilesSaveIsError ? .red : .secondary)
                 }
             }
             .padding(.vertical, 2)
@@ -701,6 +764,33 @@ struct AccountView: View {
             return nil
         }
         return "Cloud language: \(language)"
+    }
+
+    private var creatorSocialProfileLinks: [(platform: RecipeExternalPlatform, url: String)] {
+        var links: [(RecipeExternalPlatform, String)] = []
+        if let instagram = cloudProfile?.instagram_url?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !instagram.isEmpty {
+            links.append((.instagram, instagram))
+        }
+        if let tiktok = cloudProfile?.tiktok_url?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !tiktok.isEmpty {
+            links.append((.tiktok, tiktok))
+        }
+        return links
+    }
+
+    @ViewBuilder
+    private func creatorSocialIcon(for platform: RecipeExternalPlatform) -> some View {
+        switch platform {
+        case .instagram:
+            Image("instagram_icon")
+                .resizable()
+                .scaledToFit()
+        case .tiktok:
+            Image("tiktok_icon")
+                .resizable()
+                .scaledToFit()
+        }
     }
 
     private func librarySubheader(title: String, count: Int) -> some View {
@@ -1173,7 +1263,9 @@ struct AccountView: View {
 
         Task {
             do {
-                cloudProfile = try await supabaseService.fetchMyProfile()
+                let profile = try await supabaseService.fetchMyProfile()
+                cloudProfile = profile
+                applyCloudProfileSocialLinksToInputs(profile)
             } catch {
                 cloudProfile = nil
             }
@@ -1208,16 +1300,123 @@ struct AccountView: View {
             do {
                 guard let profile = try await supabaseService.fetchMyProfile() else {
                     cloudProfile = nil
+                    applyCloudProfileSocialLinksToInputs(nil)
                     supabaseProfileFetchStatus = "No authenticated user"
                     return
                 }
                 cloudProfile = profile
+                applyCloudProfileSocialLinksToInputs(profile)
                 supabaseProfileFetchStatus = "Profile loaded: \(profile.id.uuidString)"
             } catch {
                 cloudProfile = nil
+                applyCloudProfileSocialLinksToInputs(nil)
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 supabaseProfileFetchStatus = "Profile fetch failed: \(details)"
             }
+        }
+    }
+
+    private func applyCloudProfileSocialLinksToInputs(_ profile: Profile?) {
+        instagramProfileURLInput = extractedUsername(
+            from: profile?.instagram_url,
+            platform: .instagram
+        ) ?? ""
+        tiktokProfileURLInput = extractedUsername(
+            from: profile?.tiktok_url,
+            platform: .tiktok
+        ) ?? ""
+    }
+
+    private func saveProfileSocialLinks() {
+        socialProfilesSaveRunning = true
+        socialProfilesSaveStatus = ""
+        socialProfilesSaveIsError = false
+
+        let instagram = normalizedSocialProfileURL(
+            from: instagramProfileURLInput,
+            platform: .instagram
+        )
+        let tiktok = normalizedSocialProfileURL(
+            from: tiktokProfileURLInput,
+            platform: .tiktok
+        )
+
+        Task {
+            defer { socialProfilesSaveRunning = false }
+            do {
+                try await supabaseService.updateMyProfileSocialLinks(
+                    instagramURL: instagram,
+                    tiktokURL: tiktok
+                )
+                if let refreshed = try await supabaseService.fetchMyProfile() {
+                    cloudProfile = refreshed
+                    applyCloudProfileSocialLinksToInputs(refreshed)
+                }
+                socialProfilesSaveStatus = "Social profiles saved"
+                socialProfilesSaveIsError = false
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                socialProfilesSaveStatus = "Failed to save social profiles: \(details)"
+                socialProfilesSaveIsError = true
+            }
+        }
+    }
+
+    private func extractedUsername(from rawValue: String?, platform: RecipeExternalPlatform) -> String? {
+        let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return nil }
+
+        if let usernameFromKnownURL = extractedUsernameFromKnownURL(trimmed, platform: platform) {
+            return usernameFromKnownURL
+        }
+
+        let fallback = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
+        return fallback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func extractedUsernameFromKnownURL(_ rawValue: String, platform: RecipeExternalPlatform) -> String? {
+        guard let url = URL(string: rawValue), let host = url.host?.lowercased() else {
+            return nil
+        }
+        let pathComponents = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
+        switch platform {
+        case .instagram:
+            guard host.contains("instagram.com"), let first = pathComponents.first else { return nil }
+            let cleaned = first.hasPrefix("@") ? String(first.dropFirst()) : first
+            return cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .tiktok:
+            guard host.contains("tiktok.com"), let first = pathComponents.first else { return nil }
+            let cleaned = first.hasPrefix("@") ? String(first.dropFirst()) : first
+            return cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    private func normalizedSocialProfileURL(from input: String, platform: RecipeExternalPlatform) -> String? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let username = extractedUsernameFromKnownURL(trimmed, platform: platform), !username.isEmpty {
+            switch platform {
+            case .instagram:
+                return "https://instagram.com/\(username)"
+            case .tiktok:
+                return "https://tiktok.com/@\(username)"
+            }
+        }
+
+        if let url = URL(string: trimmed), url.scheme != nil, url.host != nil {
+            return trimmed
+        }
+
+        let cleanedUsername = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
+        let normalized = cleanedUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+
+        switch platform {
+        case .instagram:
+            return "https://instagram.com/\(normalized)"
+        case .tiktok:
+            return "https://tiktok.com/@\(normalized)"
         }
     }
 

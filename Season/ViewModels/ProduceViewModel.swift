@@ -143,7 +143,31 @@ final class ProduceViewModel: ObservableObject {
                 self.invalidateRecipeCaches()
                 let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000.0).rounded())
                 self.debugLoadTimingIfNeeded(label: "bootstrap recipes", count: loadedRecipes.count, elapsedMs: elapsedMs)
+                self.fetchRemoteRecipesAndMerge()
             }
+        }
+    }
+
+    private func fetchRemoteRecipesAndMerge() {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let remoteRecipes = try await supabaseService.fetchRecipes()
+                await MainActor.run {
+                    let mergedRecipes = self.mergedRecipes(local: self.recipes, remote: remoteRecipes)
+                    self.recipes = mergedRecipes
+                    self.invalidateRecipeCaches()
+                }
+            } catch {
+                print("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
+            }
+        }
+    }
+
+    private func mergedRecipes(local: [Recipe], remote: [Recipe]) -> [Recipe] {
+        var seen = Set<String>()
+        return (local + remote).filter { recipe in
+            seen.insert(recipe.id).inserted
         }
     }
 

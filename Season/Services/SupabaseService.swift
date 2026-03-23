@@ -46,6 +46,8 @@ struct Profile: Codable {
     let avatar_url: String?
     let preferred_language: String?
     let is_public: Bool?
+    let instagram_url: String?
+    let tiktok_url: String?
 }
 
 struct CloudLinkedSocialAccount: Codable {
@@ -95,6 +97,26 @@ struct CloudFridgeItem: Codable {
     let unit: String?
     let created_at: String?
     let updated_at: String?
+}
+
+private struct CloudRecipeIngredient: Codable {
+    let produce_id: String?
+    let basic_ingredient_id: String?
+    let name: String?
+    let quantity_value: Double?
+    let quantity_unit: String?
+}
+
+private struct CloudRecipeRow: Codable {
+    let id: String
+    let user_id: String?
+    let title: String?
+    let ingredients: [CloudRecipeIngredient]?
+    let steps: [String]?
+    let servings: Int?
+    let instagram_url: String?
+    let tiktok_url: String?
+    let created_at: String?
 }
 
 private struct UserRecipeSavedStateUpsert: Encodable {
@@ -175,6 +197,11 @@ private struct RecipeInsertPayload: Encodable {
     let instagram_url: String?
     let tiktok_url: String?
     let created_at: String
+}
+
+private struct ProfileSocialLinksUpdatePayload: Encodable {
+    let instagram_url: String?
+    let tiktok_url: String?
 }
 
 final class SupabaseService {
@@ -275,6 +302,29 @@ final class SupabaseService {
                 .execute()
 
             return try JSONDecoder().decode(Profile.self, from: response.data)
+        }
+    }
+
+    func updateMyProfileSocialLinks(instagramURL: String?, tiktokURL: String?) async throws {
+        try await instrumentedRequest(name: "updateProfileSocialLinks") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let payload = ProfileSocialLinksUpdatePayload(
+                instagram_url: instagramURL,
+                tiktok_url: tiktokURL
+            )
+
+            _ = try await supabaseClient
+                .from("profiles")
+                .update(payload)
+                .eq("id", value: user.id.uuidString)
+                .execute()
         }
     }
 
@@ -411,6 +461,82 @@ final class SupabaseService {
                 .from("recipes")
                 .insert(payload)
                 .execute()
+        }
+    }
+
+    func fetchRecipes() async throws -> [Recipe] {
+        try await instrumentedRequest(name: "fetchRecipes") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            let response = try await supabaseClient
+                .from("recipes")
+                .select()
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudRecipeRow].self, from: response.data)
+            let iso8601 = ISO8601DateFormatter()
+
+            return rows.map { row in
+                let mappedIngredients: [RecipeIngredient] = (row.ingredients ?? []).map { ingredient in
+                    let unit = RecipeQuantityUnit(rawValue: ingredient.quantity_unit ?? "") ?? .g
+                    let produceID = ingredient.produce_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let basicID = ingredient.basic_ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let fallbackName = ingredient.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let resolvedName = (fallbackName?.isEmpty == false)
+                        ? fallbackName!
+                        : (produceID?.isEmpty == false ? produceID! : (basicID?.isEmpty == false ? basicID! : "Ingredient"))
+                    let quality: RecipeIngredientQuality = (produceID?.isEmpty == false) ? .coreSeasonal : .basic
+
+                    return RecipeIngredient(
+                        produceID: (produceID?.isEmpty == false) ? produceID : nil,
+                        basicIngredientID: (basicID?.isEmpty == false) ? basicID : nil,
+                        quality: quality,
+                        name: resolvedName,
+                        quantityValue: max(0.1, ingredient.quantity_value ?? 1),
+                        quantityUnit: unit
+                    )
+                }
+
+                let createdAt = row.created_at.flatMap { iso8601.date(from: $0) } ?? Date()
+                let trimmedTitle = row.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let safeTitle = (trimmedTitle?.isEmpty == false) ? trimmedTitle! : "Untitled recipe"
+
+                return Recipe(
+                    id: row.id,
+                    title: safeTitle,
+                    author: "Season",
+                    ingredients: mappedIngredients,
+                    preparationSteps: (row.steps ?? []).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty },
+                    prepTimeMinutes: nil,
+                    cookTimeMinutes: nil,
+                    difficulty: nil,
+                    servings: max(1, row.servings ?? 2),
+                    crispy: 0,
+                    dietaryTags: [],
+                    seasonalMatchPercent: 0,
+                    createdAt: createdAt,
+                    externalMedia: [],
+                    images: [],
+                    coverImageID: nil,
+                    coverImageName: nil,
+                    mediaLinkURL: nil,
+                    instagramURL: row.instagram_url?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    tiktokURL: row.tiktok_url?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    sourceURL: nil,
+                    sourcePlatform: nil,
+                    sourceCaptionRaw: nil,
+                    importedFromSocial: false,
+                    sourceType: .userGenerated,
+                    isUserGenerated: true,
+                    publicationStatus: .published,
+                    isRemix: false,
+                    originalRecipeID: nil,
+                    originalRecipeTitle: nil,
+                    originalAuthorName: nil
+                )
+            }
         }
     }
 
