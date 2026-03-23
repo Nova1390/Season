@@ -204,6 +204,10 @@ private struct ProfileSocialLinksUpdatePayload: Encodable {
     let tiktok_url: String?
 }
 
+private struct ProfileAvatarUpdatePayload: Encodable {
+    let avatar_url: String?
+}
+
 final class SupabaseService {
     static let shared = SupabaseService()
 
@@ -325,6 +329,44 @@ final class SupabaseService {
                 .update(payload)
                 .eq("id", value: user.id.uuidString)
                 .execute()
+        }
+    }
+
+    func uploadMyProfileAvatar(imageData: Data) async throws -> String {
+        try await instrumentedRequest(name: "uploadMyProfileAvatar") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let path = "avatars/\(user.id.uuidString.lowercased()).jpg"
+            _ = try await supabaseClient.storage
+                .from("avatars")
+                .upload(
+                    path,
+                    data: imageData,
+                    options: FileOptions(
+                        contentType: "image/jpeg",
+                        upsert: true
+                    )
+                )
+
+            let publicURL = try supabaseClient.storage
+                .from("avatars")
+                .getPublicURL(path: path)
+                .absoluteString
+
+            let payload = ProfileAvatarUpdatePayload(avatar_url: publicURL)
+            _ = try await supabaseClient
+                .from("profiles")
+                .update(payload)
+                .eq("id", value: user.id.uuidString)
+                .execute()
+
+            return publicURL
         }
     }
 

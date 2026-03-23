@@ -1,5 +1,7 @@
 import SwiftUI
 import os
+import PhotosUI
+import UIKit
 
 struct AccountView: View {
     private struct DraftEditorRoute: Identifiable {
@@ -52,6 +54,8 @@ struct AccountView: View {
     @State private var socialProfilesSaveRunning = false
     @State private var pendingDraftDeleteRecipe: Recipe?
     @State private var showingDraftDeleteConfirmation = false
+    @State private var selectedAvatarPhotoItem: PhotosPickerItem?
+    @State private var avatarUploadRunning = false
     @Environment(\.openURL) private var openURL
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
@@ -105,6 +109,12 @@ struct AccountView: View {
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
             applyCloudProfileSocialLinksToInputs(cloudProfile)
         }
+        .onChange(of: selectedAvatarPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                await uploadSelectedAvatar(from: newItem)
+            }
+        }
         .fullScreenCover(item: $selectedDraftEditorRoute) { route in
             CreateRecipeView(
                 viewModel: viewModel,
@@ -118,10 +128,23 @@ struct AccountView: View {
         Section(header: Text(viewModel.localizer.text(.profile)).textCase(nil)) {
             VStack(alignment: .leading, spacing: SeasonSpacing.md) {
                 HStack(alignment: .top, spacing: 12) {
-                    Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
-                        .frame(width: 68, height: 68)
-                        .overlay(profileAvatarContent)
+                    PhotosPicker(
+                        selection: $selectedAvatarPhotoItem,
+                        matching: .images
+                    ) {
+                        Circle()
+                            .fill(Color(.tertiarySystemGroupedBackground))
+                            .frame(width: 68, height: 68)
+                            .overlay(profileAvatarContent)
+                            .overlay {
+                                if avatarUploadRunning {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(.secondary)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(accountDisplayName)
@@ -166,7 +189,9 @@ struct AccountView: View {
                     AuthorProfileView(
                         authorName: publicProfileAuthorName,
                         viewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel
+                        shoppingListViewModel: shoppingListViewModel,
+                        profileSocialLinks: publicProfileSocialLinks,
+                        profileAvatarURL: cloudProfile?.avatar_url
                     )
                 } label: {
                     HStack(spacing: 8) {
@@ -793,6 +818,12 @@ struct AccountView: View {
         return accountUsername
     }
 
+    private var publicProfileSocialLinks: [AuthorProfileView.CreatorSocialLink] {
+        creatorSocialProfileLinks.map { link in
+            AuthorProfileView.CreatorSocialLink(platform: link.platform, url: link.url)
+        }
+    }
+
     private var followedAuthorsCount: Int {
         Set(
             followedAuthorsRaw
@@ -1338,6 +1369,8 @@ struct AccountView: View {
     }
 
     private func applyCloudProfileSocialLinksToInputs(_ profile: Profile?) {
+        let avatarURL = profile?.avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        accountProfileImageURL = avatarURL
         instagramProfileURLInput = extractedUsername(
             from: profile?.instagram_url,
             platform: .instagram
@@ -1383,6 +1416,32 @@ struct AccountView: View {
                 )
                 socialProfilesSaveIsError = true
             }
+        }
+    }
+
+    @MainActor
+    private func uploadSelectedAvatar(from item: PhotosPickerItem) async {
+        avatarUploadRunning = true
+        defer {
+            avatarUploadRunning = false
+            selectedAvatarPhotoItem = nil
+        }
+
+        do {
+            guard let imageData = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: imageData),
+                  let jpegData = image.jpegData(compressionQuality: 0.9) else {
+                return
+            }
+
+            let uploadedURL = try await supabaseService.uploadMyProfileAvatar(imageData: jpegData)
+            accountProfileImageURL = uploadedURL
+            if let refreshed = try await supabaseService.fetchMyProfile() {
+                cloudProfile = refreshed
+                applyCloudProfileSocialLinksToInputs(refreshed)
+            }
+        } catch {
+            // MVP: silently fall back to current avatar placeholder/image on failure.
         }
     }
 
