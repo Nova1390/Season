@@ -50,6 +50,8 @@ struct AccountView: View {
     @State private var socialProfilesSaveStatus = ""
     @State private var socialProfilesSaveIsError = false
     @State private var socialProfilesSaveRunning = false
+    @State private var pendingDraftDeleteRecipe: Recipe?
+    @State private var showingDraftDeleteConfirmation = false
     @Environment(\.openURL) private var openURL
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
@@ -83,6 +85,19 @@ struct AccountView: View {
             Button(viewModel.localizer.text(.commonOK), role: .cancel) {}
         } message: {
             Text(authErrorMessage)
+        }
+        .alert("Delete this draft?", isPresented: $showingDraftDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                pendingDraftDeleteRecipe = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let recipe = pendingDraftDeleteRecipe {
+                    viewModel.deleteRecipe(recipe)
+                }
+                pendingDraftDeleteRecipe = nil
+            }
+        } message: {
+            Text("This action cannot be undone.")
         }
         .onAppear {
             migrateLegacyAccessTokensIfNeeded()
@@ -147,6 +162,33 @@ struct AccountView: View {
                     ]
                 )
 
+                NavigationLink {
+                    AuthorProfileView(
+                        authorName: publicProfileAuthorName,
+                        viewModel: viewModel,
+                        shoppingListViewModel: shoppingListViewModel
+                    )
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.square")
+                            .font(.subheadline.weight(.semibold))
+                        Text(viewModel.localizer.text(.previewPublicProfile))
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                    )
+                }
+                .buttonStyle(.plain)
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.localizer.text(.badges))
                         .font(.subheadline.weight(.semibold))
@@ -207,7 +249,7 @@ struct AccountView: View {
                     .listRowBackground(Color.clear)
             } else {
                 ForEach(myDraftRecipes) { draftRecipe in
-                    draftRecipeRow(draftRecipe)
+                    recipeRow(recipe: draftRecipe, ranked: nil, managementMode: .draft)
                 }
             }
 
@@ -602,38 +644,37 @@ struct AccountView: View {
     private enum ManagementMode {
         case active
         case archived
+        case draft
     }
 
     @ViewBuilder
     private func recipeRow(ranked: RankedRecipe, managementMode: ManagementMode?) -> some View {
-        NavigationLink {
-            RecipeDetailView(
-                rankedRecipe: ranked,
-                viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        } label: {
-            HStack(spacing: 10) {
-                RecipeThumbnailView(recipe: ranked.recipe, size: 44)
+        recipeRow(recipe: ranked.recipe, ranked: ranked, managementMode: managementMode)
+    }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(ranked.recipe.title)
-                        .font(.body.weight(.semibold))
-                        .lineLimit(2)
-                        .foregroundStyle(.primary)
-
-                    Text(String(format: viewModel.localizer.text(.crispyCountFormat), ranked.recipe.crispy))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text(String(format: viewModel.localizer.text(.viewsCountFormat), viewModel.viewCount(for: ranked.recipe)))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+    @ViewBuilder
+    private func recipeRow(recipe: Recipe, ranked: RankedRecipe?, managementMode: ManagementMode?) -> some View {
+        Group {
+            if managementMode == .draft {
+                Button {
+                    print("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
+                    selectedDraftEditorRoute = DraftEditorRoute(id: recipe.id)
+                } label: {
+                    recipeRowContent(recipe: recipe)
                 }
-
-                Spacer()
+            } else if let ranked {
+                NavigationLink {
+                    RecipeDetailView(
+                        rankedRecipe: ranked,
+                        viewModel: viewModel,
+                        shoppingListViewModel: shoppingListViewModel
+                    )
+                } label: {
+                    recipeRowContent(recipe: recipe)
+                }
+            } else {
+                recipeRowContent(recipe: recipe)
             }
-            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
         .listRowSeparator(.visible)
@@ -642,41 +683,74 @@ struct AccountView: View {
             switch managementMode {
             case .active:
                 Button {
-                    viewModel.archiveRecipe(ranked.recipe)
+                    viewModel.archiveRecipe(recipe)
                 } label: {
                     Label(viewModel.localizer.text(.archiveRecipe), systemImage: "archivebox")
                 }
                 .tint(.gray)
 
                 Button(role: .destructive) {
-                    viewModel.deleteRecipe(ranked.recipe)
+                    viewModel.deleteRecipe(recipe)
                 } label: {
                     Label(viewModel.localizer.text(.deleteRecipe), systemImage: "trash")
                 }
 
             case .archived:
                 Button {
-                    viewModel.unarchiveRecipe(ranked.recipe)
+                    viewModel.unarchiveRecipe(recipe)
                 } label: {
                     Label(viewModel.localizer.text(.restoreRecipe), systemImage: "arrow.uturn.left")
                 }
                 .tint(.blue)
 
                 Button(role: .destructive) {
-                    viewModel.deleteRecipe(ranked.recipe)
+                    viewModel.deleteRecipe(recipe)
+                } label: {
+                    Label(viewModel.localizer.text(.deleteRecipe), systemImage: "trash")
+                }
+
+            case .draft:
+                Button(role: .destructive) {
+                    pendingDraftDeleteRecipe = recipe
+                    showingDraftDeleteConfirmation = true
                 } label: {
                     Label(viewModel.localizer.text(.deleteRecipe), systemImage: "trash")
                 }
 
             case nil:
                 Button {
-                    viewModel.toggleSavedRecipe(ranked.recipe)
+                    viewModel.toggleSavedRecipe(recipe)
                 } label: {
                     Label(viewModel.localizer.text(.removeSavedRecipe), systemImage: "bookmark.slash")
                 }
                 .tint(.gray)
             }
         }
+    }
+
+    private func recipeRowContent(recipe: Recipe) -> some View {
+        HStack(spacing: 10) {
+            RecipeThumbnailView(recipe: recipe, size: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
+                let trimmedTitle = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                Text(trimmedTitle.isEmpty ? viewModel.localizer.text(.untitledDraft) : trimmedTitle)
+                    .font(.body.weight(.semibold))
+                    .lineLimit(2)
+                    .foregroundStyle(.primary)
+
+                Text(String(format: viewModel.localizer.text(.crispyCountFormat), recipe.crispy))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(String(format: viewModel.localizer.text(.viewsCountFormat), viewModel.viewCount(for: recipe)))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
     }
 
     private var myActiveRecipes: [Recipe] {
@@ -709,6 +783,14 @@ struct AccountView: View {
 
     private var myBadges: [UserBadge] {
         viewModel.badges(for: accountUsername)
+    }
+
+    private var publicProfileAuthorName: String {
+        let cloudName = accountDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cloudName.isEmpty, !viewModel.rankedRecipesByAuthor(cloudName).isEmpty {
+            return cloudName
+        }
+        return accountUsername
     }
 
     private var followedAuthorsCount: Int {
@@ -791,42 +873,6 @@ struct AccountView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func draftRecipeRow(_ recipe: Recipe) -> some View {
-        Button {
-            print("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
-            selectedDraftEditorRoute = DraftEditorRoute(id: recipe.id)
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "doc.text")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        Circle()
-                            .fill(Color(.tertiarySystemGroupedBackground))
-                    )
-
-                VStack(alignment: .leading, spacing: 3) {
-                    let trimmedTitle = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                    Text(trimmedTitle.isEmpty ? viewModel.localizer.text(.untitledDraft) : trimmedTitle)
-                        .font(.body.weight(.semibold))
-                        .lineLimit(2)
-                        .foregroundStyle(.primary)
-
-                    Text(String(format: viewModel.localizer.text(.draftSavedAtFormat), recipe.createdAt.formatted(date: .abbreviated, time: .shortened)))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-            .padding(.vertical, 4)
-        }
-        .buttonStyle(.plain)
-        .listRowSeparator(.visible)
-        .listRowBackground(Color.clear)
     }
 
     private func preferenceRow(for dimension: NutritionPriorityDimension) -> some View {

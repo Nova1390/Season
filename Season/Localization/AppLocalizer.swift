@@ -200,6 +200,7 @@ enum AppTextKey: String {
     case followers
     case publishedRecipes
     case creatorProfileSubtitle
+    case previewPublicProfile
     case comingSoon
     case crispyCountFormat
     case totalCrispyReceivedFormat
@@ -699,6 +700,7 @@ struct AppLocalizer {
             .followers: "Followers",
             .publishedRecipes: "Published recipes",
             .creatorProfileSubtitle: "Season creator",
+            .previewPublicProfile: "Preview public profile",
             .comingSoon: "Coming soon",
             .crispyCountFormat: "%d crispy",
             .totalCrispyReceivedFormat: "%d crispy received",
@@ -1000,6 +1002,7 @@ struct AppLocalizer {
             .followers: "Follower",
             .publishedRecipes: "Ricette pubblicate",
             .creatorProfileSubtitle: "Creator Season",
+            .previewPublicProfile: "Anteprima profilo pubblico",
             .comingSoon: "In arrivo",
             .crispyCountFormat: "%d crispy",
             .totalCrispyReceivedFormat: "%d crispy ricevuti",
