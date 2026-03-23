@@ -240,31 +240,6 @@ struct AccountView: View {
     private var preferencesSection: some View {
         Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label(viewModel.localizer.text(.connectedAccounts), systemImage: "person.crop.circle.badge.checkmark")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                if !hasAnyConnectedSocialAccount {
-                    Text(viewModel.localizer.text(.socialImportConnectAccountsHint))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                socialLinkRow(for: .instagram)
-                socialLinkRow(for: .tiktok)
-                socialLinkRow(for: .apple)
-
-                if !socialLinkStatusMessage.isEmpty {
-                    Text(socialLinkStatusMessage)
-                        .font(.caption)
-                        .foregroundStyle(socialLinkStatusIsError ? .red : .secondary)
-                }
-            }
-            .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
-
-            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.accountSocialProfilesTitle, systemImage: "link")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
