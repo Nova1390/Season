@@ -13,41 +13,109 @@ struct HomeView: View {
     @State private var ingredientUsageCountByID: [String: Int] = [:]
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color(.systemGroupedBackground)
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    featuredSection
-                    fromFridgeSection
-                    quickHorizontalStrip
-                        .zIndex(2)
-                    mixedFeedSection
-                        .zIndex(1)
+                VStack(spacing: 0) {
+                    fixedHeaderRow(safeAreaTopInset: proxy.safeAreaInsets.top)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+                            fridgeCookingHeroCard
+                            featuredSection
+                            quickHorizontalStrip
+                                .zIndex(2)
+                            mixedFeedSection
+                                .zIndex(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, SeasonSpacing.sm)
+                        .padding(.top, 8)
+                        .padding(.bottom, SeasonSpacing.md)
+                    }
+                    .refreshable {
+                        await viewModel.refreshHomeFeed()
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.horizontal, SeasonSpacing.sm)
-                .padding(.top, 10)
-                .padding(.bottom, SeasonSpacing.md)
             }
-            .refreshable {
-                await viewModel.refreshHomeFeed()
-            }
-
-            topRightActions
-                .padding(.top, 6)
-                .padding(.trailing, SeasonSpacing.md)
         }
         .onAppear(perform: refreshHomeFeedCache)
         .onChange(of: cacheSignature) {
             refreshHomeFeedCache()
         }
-        .navigationTitle(viewModel.localizer.text(.homeTab))
+        .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
+    }
+
+    private func fixedHeaderRow(safeAreaTopInset: CGFloat) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(viewModel.localizer.text(.homeTab))
+                .font(.title2.weight(.bold))
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 8)
+
+            topRightActions
+        }
+        .padding(.top, safeAreaTopInset + 4)
+        .padding(.horizontal, SeasonSpacing.md)
+        .padding(.bottom, 8)
+    }
+
+    private var fridgeCookingHeroCard: some View {
+        NavigationLink {
+            FridgeRecipeMatchesView(
+                produceViewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel,
+                fridgeViewModel: fridgeViewModel
+            )
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(viewModel.localizer.homeCookWithWhatYouHaveTitle)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(viewModel.localizer.homeCookWithWhatYouHaveSubtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack {
+                    Text(viewModel.localizer.homeCookWithWhatYouHaveCTA)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(.tertiarySystemGroupedBackground))
+                )
+            }
+            .padding(SeasonSpacing.md)
+            .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color(.separator).opacity(0.16), lineWidth: 0.6)
+            )
+            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(PressableCardButtonStyle())
+        .padding(.top, SeasonSpacing.xs)
+        .padding(.bottom, SeasonSpacing.lg)
     }
 
     private var topRightActions: some View {
@@ -60,7 +128,7 @@ struct HomeView: View {
             } label: {
                 Image(systemName: "snowflake")
                     .font(.system(size: 20, weight: .semibold))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -73,12 +141,22 @@ struct HomeView: View {
             } label: {
                 Image(systemName: "bag")
                     .font(.system(size: 20, weight: .semibold))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground).opacity(0.96))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(.separator).opacity(0.15), lineWidth: 0.6)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 
     @ViewBuilder
@@ -126,49 +204,6 @@ struct HomeView: View {
                         }
                     }
                     .buttonStyle(PressableCardButtonStyle())
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var fromFridgeSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-            HStack {
-                Text(viewModel.localizer.text(.quickActionCookNowFromFridge))
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Spacer()
-                NavigationLink {
-                    FridgeRecipeMatchesView(
-                        produceViewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel,
-                        fridgeViewModel: fridgeViewModel
-                    )
-                } label: {
-                    Text(viewModel.localizer.text(.cookNowAction))
-                        .font(.caption.weight(.semibold))
-                }
-                .buttonStyle(.plain)
-            }
-
-            if fridgeViewModel.allItemCount == 0 {
-                EmptyStateCard(
-                    symbol: "snowflake",
-                    title: viewModel.localizer.text(.quickActionNoMatchesYet),
-                    subtitle: viewModel.localizer.text(.quickActionAddIngredientsHint)
-                )
-            } else if fridgeMatches.isEmpty {
-                EmptyStateCard(
-                    symbol: "fork.knife",
-                    title: viewModel.localizer.text(.noMatchingRecipesYetTitle),
-                    subtitle: viewModel.localizer.text(.noMatchingRecipesYetSubtitle)
-                )
-            } else {
-                VStack(spacing: SeasonSpacing.sm) {
-                    ForEach(Array(fridgeMatches.enumerated()), id: \.element.id) { index, match in
-                        fridgeSuggestionCard(match, emphasize: index == 0)
-                    }
                 }
             }
         }

@@ -16,3 +16,6 @@
 "common.instagram" = "Instagram";
 "common.tiktok" = "TikTok";
 "recipe.auto_translated" = "Automatically translated";
+"home.cookWithWhatYouHave.title" = "Cook with what you have";
+"home.cookWithWhatYouHave.subtitle" = "Find recipes using ingredients already in your fridge";
+"home.cookWithWhatYouHave.cta" = "Open fridge";

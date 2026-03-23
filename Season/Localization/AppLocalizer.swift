@@ -352,6 +352,9 @@ struct AppLocalizer {
     var commonSaving: String { localized("common.saving") }
     var commonInstagram: String { localized("common.instagram") }
     var commonTikTok: String { localized("common.tiktok") }
+    var homeCookWithWhatYouHaveTitle: String { localized("home.cookWithWhatYouHave.title") }
+    var homeCookWithWhatYouHaveSubtitle: String { localized("home.cookWithWhatYouHave.subtitle") }
+    var homeCookWithWhatYouHaveCTA: String { localized("home.cookWithWhatYouHave.cta") }
 
     private var localizationBundle: Bundle {
         guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
