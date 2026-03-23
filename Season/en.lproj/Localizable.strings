@@ -1,0 +1,18 @@
+"recipe.draft_not_found" = "Draft not found";
+"recipe.draft_not_found_message" = "The draft could not be loaded.";
+"recipe.social_links_section" = "Social links";
+"recipe.instagram_url" = "Instagram URL";
+"recipe.tiktok_url" = "TikTok URL";
+
+"account.social_profiles.title" = "Social profiles";
+"account.social_profiles.instagram_username" = "Instagram username";
+"account.social_profiles.tiktok_username" = "TikTok username";
+"account.social_profiles.save_action" = "Save social profiles";
+"account.social_profiles.saved" = "Social profiles saved";
+"account.social_profiles.save_failed_format" = "Failed to save social profiles: %@";
+"account.cloud_language_format" = "Cloud language: %@";
+
+"common.saving" = "Saving...";
+"common.instagram" = "Instagram";
+"common.tiktok" = "TikTok";
+"recipe.auto_translated" = "Automatically translated";

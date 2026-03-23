@@ -265,17 +265,17 @@ struct AccountView: View {
             .listRowBackground(Color.clear)
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label("Social profiles", systemImage: "link")
+                Label(viewModel.localizer.accountSocialProfilesTitle, systemImage: "link")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                TextField("Instagram username", text: $instagramProfileURLInput)
+                TextField(viewModel.localizer.accountSocialProfilesInstagramUsername, text: $instagramProfileURLInput)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
 
-                TextField("TikTok username", text: $tiktokProfileURLInput)
+                TextField(viewModel.localizer.accountSocialProfilesTikTokUsername, text: $tiktokProfileURLInput)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -284,14 +284,14 @@ struct AccountView: View {
                 Button {
                     saveProfileSocialLinks()
                 } label: {
-                    Text("Save social profiles")
+                    Text(viewModel.localizer.accountSocialProfilesSaveAction)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .disabled(socialProfilesSaveRunning)
 
                 if socialProfilesSaveRunning {
-                    Text("Saving...")
+                    Text(viewModel.localizer.commonSaving)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if !socialProfilesSaveStatus.isEmpty {
@@ -763,7 +763,7 @@ struct AccountView: View {
               !language.isEmpty else {
             return nil
         }
-        return "Cloud language: \(language)"
+        return String(format: viewModel.localizer.accountCloudLanguageFormat, language)
     }
 
     private var creatorSocialProfileLinks: [(platform: RecipeExternalPlatform, url: String)] {
@@ -1352,11 +1352,14 @@ struct AccountView: View {
                     cloudProfile = refreshed
                     applyCloudProfileSocialLinksToInputs(refreshed)
                 }
-                socialProfilesSaveStatus = "Social profiles saved"
+                socialProfilesSaveStatus = viewModel.localizer.accountSocialProfilesSaved
                 socialProfilesSaveIsError = false
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                socialProfilesSaveStatus = "Failed to save social profiles: \(details)"
+                socialProfilesSaveStatus = String(
+                    format: viewModel.localizer.accountSocialProfilesSaveFailedFormat,
+                    details
+                )
                 socialProfilesSaveIsError = true
             }
         }

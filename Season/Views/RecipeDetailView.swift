@@ -1,4 +1,5 @@
 import SwiftUI
+import Translation
 
 struct RecipeDetailView: View {
     let rankedRecipe: RankedRecipe
@@ -16,6 +17,10 @@ struct RecipeDetailView: View {
     @State private var hasTrackedView = false
     @State private var showingTimingExplanation = false
     @State private var selectedServings = 2
+    @State private var translationResult: RecipeTranslationResult?
+    @State private var translationConfiguration: TranslationSession.Configuration?
+    @State private var hasAttemptedTranslation = false
+    @State private var translationFailed = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -140,7 +145,7 @@ struct RecipeDetailView: View {
 
                     if !recipeSocialLinks.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Social")
+                            Text(viewModel.localizer.recipeSocialLinksSectionTitle)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
 
@@ -188,7 +193,7 @@ struct RecipeDetailView: View {
                                 }
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(ingredient.name)
+                                    Text(displayIngredientName(for: ingredient))
                                         .font(.body)
                                     Text(displayQuantityText(for: ingredient.recipeIngredient))
                                         .font(.caption)
@@ -271,7 +276,7 @@ struct RecipeDetailView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
 
-                        ForEach(Array(rankedRecipe.recipe.preparationSteps.enumerated()), id: \.offset) { index, step in
+                        ForEach(Array(displayedPreparationSteps.enumerated()), id: \.offset) { index, step in
                             HStack(alignment: .top, spacing: 10) {
                                 Text("\(index + 1).")
                                     .font(.caption.weight(.semibold))
@@ -388,15 +393,28 @@ struct RecipeDetailView: View {
                 hasTrackedView = true
             }
             selectedServings = max(1, rankedRecipe.recipe.servings)
+            hasAttemptedTranslation = false
+            translationFailed = false
+            translationResult = nil
+            refreshTranslationConfiguration()
+        }
+        .translationTask(translationConfiguration) { session in
+            await performRuntimeTranslation(using: session)
         }
     }
 
     private var identityAndMetaBlock: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(rankedRecipe.recipe.title)
+            Text(displayedRecipeTitle)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if translationResult?.isAutomaticallyTranslated == true {
+                Text(viewModel.localizer.recipeAutomaticallyTranslated)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             if showsUserAuthorshipMetadata {
                 HStack(alignment: .center, spacing: 10) {
@@ -538,11 +556,11 @@ struct RecipeDetailView: View {
         var links: [(RecipeExternalPlatform, String, String)] = []
         if let instagramURL = rankedRecipe.recipe.instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !instagramURL.isEmpty {
-            links.append((.instagram, "Instagram", instagramURL))
+            links.append((.instagram, viewModel.localizer.commonInstagram, instagramURL))
         }
         if let tiktokURL = rankedRecipe.recipe.tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !tiktokURL.isEmpty {
-            links.append((.tiktok, "TikTok", tiktokURL))
+            links.append((.tiktok, viewModel.localizer.commonTikTok, tiktokURL))
         }
         return links
     }
@@ -931,6 +949,69 @@ struct RecipeDetailView: View {
                     .font(.system(size: 68, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private var displayedRecipeTitle: String {
+        translationResult?.title ?? rankedRecipe.recipe.title
+    }
+
+    private var displayedPreparationSteps: [String] {
+        translationResult?.steps ?? rankedRecipe.recipe.preparationSteps
+    }
+
+    private func displayIngredientName(for ingredient: IngredientRow) -> String {
+        guard ingredient.recipeIngredient.produceID == nil,
+              ingredient.recipeIngredient.basicIngredientID == nil else {
+            return ingredient.name
+        }
+        let originalName = ingredient.recipeIngredient.name
+        return translationResult?.freeTextIngredientNames[originalName] ?? ingredient.name
+    }
+
+    private func refreshTranslationConfiguration() {
+        guard !hasAttemptedTranslation, !translationFailed, translationResult == nil else {
+            return
+        }
+
+        if #available(iOS 18.0, *) {
+            Task {
+                let config = await RecipeTranslationService.shared.configuration(
+                    for: rankedRecipe.recipe,
+                    targetLanguageCode: viewModel.languageCode
+                )
+                await MainActor.run {
+                    translationConfiguration = config
+                    if config == nil {
+                        translationResult = nil
+                    }
+                }
+            }
+        } else {
+            translationConfiguration = nil
+            translationResult = nil
+        }
+    }
+
+    @MainActor
+    @available(iOS 18.0, *)
+    private func performRuntimeTranslation(using session: TranslationSession) async {
+        guard !hasAttemptedTranslation, !translationFailed, translationResult == nil else {
+            return
+        }
+
+        hasAttemptedTranslation = true
+
+        do {
+            let translated = try await RecipeTranslationService.shared.translate(
+                recipe: rankedRecipe.recipe,
+                targetLanguageCode: viewModel.languageCode,
+                session: session
+            )
+            translationResult = translated
+        } catch {
+            translationFailed = true
+            print("[SEASON_TRANSLATION] phase=failed error=\(error)")
         }
     }
 

@@ -327,6 +327,40 @@ struct AppLocalizer {
         ?? key.rawValue
     }
 
+    func localized(_ key: String) -> String {
+        let bundle = localizationBundle
+        let localizedValue = NSLocalizedString(key, tableName: "Localizable", bundle: bundle, value: key, comment: "")
+        if localizedValue != key {
+            return localizedValue
+        }
+        return NSLocalizedString(key, tableName: "Localizable", bundle: Bundle.main, value: key, comment: "")
+    }
+
+    var recipeDraftNotFoundTitle: String { localized("recipe.draft_not_found") }
+    var recipeDraftNotFoundMessage: String { localized("recipe.draft_not_found_message") }
+    var recipeSocialLinksSectionTitle: String { localized("recipe.social_links_section") }
+    var recipeInstagramURLField: String { localized("recipe.instagram_url") }
+    var recipeTikTokURLField: String { localized("recipe.tiktok_url") }
+    var recipeAutomaticallyTranslated: String { localized("recipe.auto_translated") }
+    var accountSocialProfilesTitle: String { localized("account.social_profiles.title") }
+    var accountSocialProfilesInstagramUsername: String { localized("account.social_profiles.instagram_username") }
+    var accountSocialProfilesTikTokUsername: String { localized("account.social_profiles.tiktok_username") }
+    var accountSocialProfilesSaveAction: String { localized("account.social_profiles.save_action") }
+    var accountSocialProfilesSaved: String { localized("account.social_profiles.saved") }
+    var accountSocialProfilesSaveFailedFormat: String { localized("account.social_profiles.save_failed_format") }
+    var accountCloudLanguageFormat: String { localized("account.cloud_language_format") }
+    var commonSaving: String { localized("common.saving") }
+    var commonInstagram: String { localized("common.instagram") }
+    var commonTikTok: String { localized("common.tiktok") }
+
+    private var localizationBundle: Bundle {
+        guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
+              let bundle = Bundle(path: path) else {
+            return Bundle.main
+        }
+        return bundle
+    }
+
     func categoryTitle(for category: ProduceCategoryKey) -> String {
         switch category {
         case .fruit:

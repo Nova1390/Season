@@ -1,0 +1,18 @@
+"recipe.draft_not_found" = "Bozza non trovata";
+"recipe.draft_not_found_message" = "Impossibile caricare la bozza.";
+"recipe.social_links_section" = "Link social";
+"recipe.instagram_url" = "URL Instagram";
+"recipe.tiktok_url" = "URL TikTok";
+
+"account.social_profiles.title" = "Profili social";
+"account.social_profiles.instagram_username" = "Username Instagram";
+"account.social_profiles.tiktok_username" = "Username TikTok";
+"account.social_profiles.save_action" = "Salva profili social";
+"account.social_profiles.saved" = "Profili social salvati";
+"account.social_profiles.save_failed_format" = "Salvataggio profili social non riuscito: %@";
+"account.cloud_language_format" = "Lingua cloud: %@";
+
+"common.saving" = "Salvataggio...";
+"common.instagram" = "Instagram";
+"common.tiktok" = "TikTok";
+"recipe.auto_translated" = "Tradotto automaticamente";

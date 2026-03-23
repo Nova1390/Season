@@ -139,9 +139,9 @@ struct CreateRecipeView: View {
             Group {
                 if draftLoadFailed {
                     VStack(spacing: 10) {
-                        Text("Draft not found")
+                        Text(localizer.recipeDraftNotFoundTitle)
                             .font(.headline)
-                        Text("The draft could not be loaded.")
+                        Text(localizer.recipeDraftNotFoundMessage)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -394,15 +394,15 @@ struct CreateRecipeView: View {
 
     private var socialLinksSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Social links")
+            sectionTitle(localizer.recipeSocialLinksSectionTitle)
 
-            TextField("Instagram URL", text: $instagramURL)
+            TextField(localizer.recipeInstagramURLField, text: $instagramURL)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .textFieldStyle(.roundedBorder)
 
-            TextField("TikTok URL", text: $tiktokURL)
+            TextField(localizer.recipeTikTokURLField, text: $tiktokURL)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
