@@ -157,6 +157,26 @@ private struct FridgeItemUpdatePayload: Encodable {
     let updated_at: String
 }
 
+private struct RecipeIngredientInsertPayload: Encodable {
+    let produce_id: String?
+    let basic_ingredient_id: String?
+    let name: String
+    let quantity_value: Double
+    let quantity_unit: String
+}
+
+private struct RecipeInsertPayload: Encodable {
+    let id: String
+    let user_id: String
+    let title: String
+    let ingredients: [RecipeIngredientInsertPayload]
+    let steps: [String]
+    let servings: Int
+    let instagram_url: String?
+    let tiktok_url: String?
+    let created_at: String
+}
+
 final class SupabaseService {
     static let shared = SupabaseService()
 
@@ -354,6 +374,43 @@ final class SupabaseService {
                 .execute()
 
             return try JSONDecoder().decode([CloudFridgeItem].self, from: response.data)
+        }
+    }
+
+    func createRecipe(_ recipe: Recipe) async throws {
+        try await instrumentedRequest(name: "createRecipe", metadata: "recipe_id=\(recipe.id)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let payload = RecipeInsertPayload(
+                id: recipe.id,
+                user_id: user.id.uuidString,
+                title: recipe.title,
+                ingredients: recipe.ingredients.map {
+                    RecipeIngredientInsertPayload(
+                        produce_id: $0.produceID,
+                        basic_ingredient_id: $0.basicIngredientID,
+                        name: $0.name,
+                        quantity_value: $0.quantityValue,
+                        quantity_unit: $0.quantityUnit.rawValue
+                    )
+                },
+                steps: recipe.preparationSteps,
+                servings: recipe.servings,
+                instagram_url: recipe.instagramURL,
+                tiktok_url: recipe.tiktokURL,
+                created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
+            )
+
+            _ = try await supabaseClient
+                .from("recipes")
+                .insert(payload)
+                .execute()
         }
     }
 

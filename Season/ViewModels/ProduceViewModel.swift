@@ -965,6 +965,16 @@ final class ProduceViewModel: ObservableObject {
         }
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
+
+        Task {
+            do {
+                try await SupabaseService.shared.createRecipe(recipe)
+                print("[SEASON_SUPABASE] request=createRecipe phase=request_ok recipe_id=\(recipe.id)")
+            } catch {
+                print("[SEASON_SUPABASE] request=createRecipe phase=request_failed recipe_id=\(recipe.id) error=\(error)")
+            }
+        }
+
         return recipe
     }
 
