@@ -26,21 +26,23 @@ struct RecipeDetailView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(spacing: SeasonSpacing.sm) {
+                VStack(spacing: SeasonSpacing.xs) {
                     recipeHeroImage
                     identityAndMetaBlock
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
 
                     let confirmedDietaryTags = viewModel.confirmedDietaryTags(for: rankedRecipe.recipe)
                     if !confirmedDietaryTags.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 10) {
                             Text(viewModel.localizer.text(.recipeDietaryTags))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) {
+                                HStack(spacing: 10) {
                                     ForEach(confirmedDietaryTags) { tag in
-                                        RecipeDietaryTagPill(tag: tag, localizer: viewModel.localizer)
+                                        dietaryTagChip(tag)
                                     }
                                 }
                             }
@@ -101,15 +103,6 @@ struct RecipeDetailView: View {
                         }
                     }
 
-                    HStack {
-                        Text(String(format: viewModel.localizer.text(.servesFormat), selectedServings))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Stepper("", value: $selectedServings, in: 1...12)
-                            .labelsHidden()
-                    }
-
                     if !rankedRecipe.recipe.externalMedia.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(viewModel.localizer.text(.watchVideo))
@@ -145,30 +138,45 @@ struct RecipeDetailView: View {
 
                     if !recipeSocialLinks.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(viewModel.localizer.recipeSocialLinksSectionTitle)
+                            Text(viewModel.localizer.text(.watchVideo))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
 
-                            HStack(spacing: 12) {
-                                ForEach(recipeSocialLinks, id: \.platform) { link in
-                                    Button {
-                                        guard let url = URL(string: link.url) else { return }
-                                        openURL(url)
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            brandIcon(for: link.platform)
-                                                .frame(width: 20, height: 20)
-                                                .frame(minWidth: 32, minHeight: 32)
-                                            Text(link.label)
-                                                .font(.subheadline.weight(.semibold))
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 10) {
+                                    ForEach(recipeSocialLinks, id: \.platform) { link in
+                                        Button {
+                                            guard let url = URL(string: link.url) else { return }
+                                            openURL(url)
+                                        } label: {
+                                            HStack(spacing: 8) {
+                                                brandIcon(for: link.platform)
+                                                    .frame(width: 16, height: 16)
+                                                Text(link.label)
+                                                    .font(.subheadline.weight(.semibold))
+                                            }
+                                            .foregroundStyle(.primary)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                Capsule(style: .continuous)
+                                                    .fill(Color(.systemGray6))
+                                            )
                                         }
-                                        .foregroundStyle(.primary)
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
                                 }
-                                Spacer()
                             }
                         }
+                    }
+
+                    HStack {
+                        Text(String(format: viewModel.localizer.text(.servesFormat), selectedServings))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Stepper("", value: $selectedServings, in: 1...12)
+                            .labelsHidden()
                     }
                     Divider()
 
@@ -178,33 +186,15 @@ struct RecipeDetailView: View {
                             .foregroundStyle(.secondary)
 
                         ForEach(ingredientRows, id: \.id) { ingredient in
-                            HStack(spacing: 10) {
-                                if let item = ingredient.item {
-                                    ProduceThumbnailView(item: item, size: 30)
-                                } else {
-                                    Image(systemName: "leaf")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 30, height: 30)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                .fill(Color(.tertiarySystemGroupedBackground))
-                                        )
+                            if let destination = ingredientDestination(for: ingredient) {
+                                NavigationLink {
+                                    ingredientDestinationView(destination)
+                                } label: {
+                                    ingredientRowContent(ingredient, isInteractive: true)
                                 }
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(displayIngredientName(for: ingredient))
-                                        .font(.body)
-                                    Text(displayQuantityText(for: ingredient.recipeIngredient))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                Text(ingredientStatusText(for: ingredient))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(hasIngredientInFridge(ingredient) ? .green : .secondary)
+                                .buttonStyle(.plain)
+                            } else {
+                                ingredientRowContent(ingredient, isInteractive: false)
                             }
                         }
                     }
@@ -212,45 +202,58 @@ struct RecipeDetailView: View {
                     if let nutritionSummary = perServingNutritionSummary {
                         Divider()
 
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text(viewModel.localizer.text(.recipeNutritionSummaryTitle))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.top, 4)
                             Text(String(format: viewModel.localizer.text(.recipeNutritionPerServingBasisFormat), baseServingsCount))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
-                            nutritionRow(
-                                title: viewModel.localizer.text(.calories),
-                                value: "\(Int(nutritionSummary.calories.rounded()))"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.protein),
-                                value: "\(formattedNumber(nutritionSummary.protein)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.carbs),
-                                value: "\(formattedNumber(nutritionSummary.carbs)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.fat),
-                                value: "\(formattedNumber(nutritionSummary.fat)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.fiber),
-                                value: "\(formattedNumber(nutritionSummary.fiber)) g"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.vitaminC),
-                                value: "\(formattedNumber(nutritionSummary.vitaminC)) mg"
-                            )
-                            nutritionRow(
-                                title: viewModel.localizer.text(.potassium),
-                                value: "\(formattedNumber(nutritionSummary.potassium)) mg"
-                            )
+                            Divider()
+                                .opacity(0.22)
+
+                            VStack(alignment: .leading, spacing: 10) {
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.calories),
+                                    value: "\(Int(nutritionSummary.calories.rounded()))"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.protein),
+                                    value: "\(formattedNumber(nutritionSummary.protein)) g"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.carbs),
+                                    value: "\(formattedNumber(nutritionSummary.carbs)) g"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.fat),
+                                    value: "\(formattedNumber(nutritionSummary.fat)) g"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.fiber),
+                                    value: "\(formattedNumber(nutritionSummary.fiber)) g"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.vitaminC),
+                                    value: "\(formattedNumber(nutritionSummary.vitaminC)) mg"
+                                )
+                                Divider().opacity(0.22)
+                                nutritionRow(
+                                    title: viewModel.localizer.text(.potassium),
+                                    value: "\(formattedNumber(nutritionSummary.potassium)) mg"
+                                )
+                            }
 
                             if selectedServings != 1 {
                                 Divider()
+                                    .opacity(0.22)
                                 nutritionRow(
                                     title: String(format: viewModel.localizer.text(.nutritionTotalForServingsFormat), selectedServings),
                                     value: "\(Int((nutritionSummary.calories * Double(selectedServings)).rounded())) kcal"
@@ -262,59 +265,85 @@ struct RecipeDetailView: View {
                                 .foregroundStyle(.secondary)
                                 .padding(.top, 2)
                         }
-                        .padding(SeasonSpacing.sm)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(.secondarySystemGroupedBackground))
-                        )
                     }
 
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 14) {
                         Text(viewModel.localizer.text(.steps))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .padding(.top, 2)
 
-                        ForEach(Array(displayedPreparationSteps.enumerated()), id: \.offset) { index, step in
-                            HStack(alignment: .top, spacing: 10) {
-                                Text("\(index + 1).")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 20, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 18) {
+                            ForEach(Array(displayedPreparationSteps.enumerated()), id: \.offset) { index, step in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        Text("\(index + 1)")
+                                            .font(.footnote.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                            .frame(width: 28, height: 28)
+                                            .background(
+                                                Circle()
+                                                    .fill(Color(.tertiarySystemGroupedBackground))
+                                            )
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.primary.opacity(0.12), lineWidth: 0.6)
+                                            )
 
-                                Text(step)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                        Text(step)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                            .lineSpacing(4)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+
+                                    if index < displayedPreparationSteps.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 40)
+                                            .opacity(0.14)
+                                    }
+                                }
                             }
                         }
                     }
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 12) {
                         Button {
                             addIngredients()
                             pulse(.addIngredients)
                         } label: {
-                            Text(viewModel.localizer.text(.addIngredients))
+                            Label(viewModel.localizer.text(.addIngredients), systemImage: "plus")
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .font(.headline)
+                                .frame(height: 46)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color(.secondarySystemGroupedBackground))
+                                )
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.plain)
                         .scaleEffect(addIngredientsPulse ? 0.97 : 1.0)
                         .animation(.spring(response: 0.24, dampingFraction: 0.75), value: addIngredientsPulse)
 
                         Button {
                             showingRemixComposer = true
                         } label: {
-                            Text(viewModel.localizer.text(.remixRecipe))
+                            Label(viewModel.localizer.text(.remixRecipe), systemImage: "sparkles")
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .font(.headline)
+                                .frame(height: 46)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.88))
+                                )
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
                     }
+                    .padding(.top, 2)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, SeasonSpacing.xs)
@@ -404,66 +433,14 @@ struct RecipeDetailView: View {
     }
 
     private var identityAndMetaBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(displayedRecipeTitle)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if translationResult?.isAutomaticallyTranslated == true {
-                Text(viewModel.localizer.recipeAutomaticallyTranslated)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if showsUserAuthorshipMetadata {
-                HStack(alignment: .center, spacing: 10) {
-                    if let author = trimmedAuthorName {
-                        NavigationLink {
-                            AuthorProfileView(
-                                authorName: author,
-                                viewModel: viewModel,
-                                shoppingListViewModel: shoppingListViewModel
-                            )
-                        } label: {
-                            Text(author)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        toggleFollowAuthor()
-                        pulse(.follow)
-                    } label: {
-                        Text(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .scaleEffect(followButtonPulse ? 0.96 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.72), value: followButtonPulse)
-                }
-            } else if let seedAttributionLine {
-                Text(seedAttributionLine)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 SeasonalStatusBadge(
                     score: rankedRecipe.seasonalityScore,
                     localizer: viewModel.localizer
                 )
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(viewModel.localizer.text(.recipeTimingHeading))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
                     Button {
                         withAnimation(.easeOut(duration: 0.18)) {
                             showingTimingExplanation = true
@@ -472,7 +449,7 @@ struct RecipeDetailView: View {
                         HStack(spacing: 4) {
                             Text(viewModel.recipeTimingTitle(for: rankedRecipe))
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.primary)
                             Image(systemName: "info.circle")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
@@ -486,51 +463,67 @@ struct RecipeDetailView: View {
                     }
 
                     Text("\(viewModel.localizer.text(.seasonalMatch)): \(rankedRecipe.seasonalMatchPercent)%")
-                        .font(.caption)
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
             }
 
-            HStack(alignment: .center, spacing: 10) {
-                Text(socialSignalText)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                HStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 12) {
                     Button {
                         viewModel.toggleRecipeCrispy(rankedRecipe.recipe)
                         pulse(.crispy)
                     } label: {
-                        Image(systemName: "sparkles")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(viewModel.isRecipeCrispied(rankedRecipe.recipe) ? Color.orange : .secondary)
-                            .frame(width: 28, height: 28)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(
-                                        viewModel.isRecipeCrispied(rankedRecipe.recipe)
-                                        ? Color.orange.opacity(0.16)
-                                        : Color(.tertiarySystemGroupedBackground)
-                                    )
+                        HStack(spacing: 4) {
+                            Image(systemName: "flame.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(
+                                    viewModel.isRecipeCrispied(rankedRecipe.recipe)
+                                    ? Color.orange
+                                    : .secondary
+                                )
+                            Text(
+                                String(
+                                    format: viewModel.localizer.text(.crispyCountFormat),
+                                    viewModel.crispyCount(for: rankedRecipe.recipe)
+                                )
                             )
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(
+                                viewModel.isRecipeCrispied(rankedRecipe.recipe)
+                                ? Color.orange
+                                : .primary
+                            )
+                        }
                     }
                     .buttonStyle(.plain)
-                    .scaleEffect(crispyButtonPulse ? 0.94 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.68), value: crispyButtonPulse)
+                    .scaleEffect(crispyButtonPulse ? 0.96 : 1.0)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.7), value: crispyButtonPulse)
                     .accessibilityLabel(viewModel.localizer.text(.crispyAction))
 
+                    HStack(spacing: 4) {
+                        Image(systemName: "eye")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text("\(viewModel.compactCountText(viewModel.viewCount(for: rankedRecipe.recipe))) \(viewModel.localizer.text(.viewsLabel))")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                HStack(spacing: 10) {
                     Button {
                         viewModel.toggleSavedRecipe(rankedRecipe.recipe)
                         pulse(.save)
                     } label: {
                         Image(systemName: viewModel.isRecipeSaved(rankedRecipe.recipe) ? "bookmark.fill" : "bookmark")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
                     .scaleEffect(saveButtonPulse ? 0.94 : 1.0)
                     .animation(.spring(response: 0.24, dampingFraction: 0.7), value: saveButtonPulse)
                     .accessibilityLabel(
@@ -538,18 +531,35 @@ struct RecipeDetailView: View {
                         ? viewModel.localizer.text(.saved)
                         : viewModel.localizer.text(.saveRecipe)
                     )
+
+                    if showsUserAuthorshipMetadata {
+                        HStack(spacing: 6) {
+                            Text("\(viewModel.compactCountText(followerCountValue)) \(viewModel.localizer.text(.followers))")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+
+                            Button {
+                                toggleFollowAuthor()
+                                pulse(.follow)
+                            } label: {
+                                Image(systemName: isFollowingAuthor ? "person.fill.checkmark" : "person.badge.plus")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 30, height: 30)
+                            }
+                            .buttonStyle(.plain)
+                            .scaleEffect(followButtonPulse ? 0.96 : 1.0)
+                            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: followButtonPulse)
+                            .accessibilityLabel(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
                 }
             }
         }
-        .padding(SeasonSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(.separator).opacity(0.18), lineWidth: 0.5)
-        )
+        .padding(.horizontal, 2)
+        .padding(.vertical, 2)
     }
 
     private var recipeSocialLinks: [(platform: RecipeExternalPlatform, label: String, url: String)] {
@@ -579,16 +589,6 @@ struct RecipeDetailView: View {
         }
     }
 
-    private var socialSignalText: String {
-        let crispyText = String(
-            format: viewModel.localizer.text(.crispyCountFormat),
-            viewModel.crispyCount(for: rankedRecipe.recipe)
-        )
-        let viewsCompact = viewModel.compactCountText(viewModel.viewCount(for: rankedRecipe.recipe))
-        let viewsText = "\(viewsCompact) \(viewModel.localizer.text(.viewsLabel))"
-        return "\(crispyText) · \(viewsText)"
-    }
-
     private var showsUserAuthorshipMetadata: Bool {
         rankedRecipe.recipe.isUserGenerated || rankedRecipe.recipe.sourceType == .userGenerated
     }
@@ -599,17 +599,48 @@ struct RecipeDetailView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private var seedAttributionLine: String? {
-        guard !showsUserAuthorshipMetadata else { return nil }
-        let attribution = rankedRecipe.recipe.attributionText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let attribution, !attribution.isEmpty {
-            return String(format: viewModel.localizer.text(.seedAttributionViaFormat), attribution)
+    private var heroMetadataLine: String? {
+        trimmedAuthorName
+    }
+
+    private var heroTitleText: String {
+        displayedRecipeTitle
+    }
+
+    private var followerCountValue: Int {
+        viewModel.followerCount(
+            for: rankedRecipe.recipe.author,
+            isFollowedByCurrentUser: isFollowingAuthor
+        )
+    }
+
+    @ViewBuilder
+    private func dietaryTagChip(_ tag: RecipeDietaryTag) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: dietaryTagIconName(tag))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(viewModel.localizer.dietaryTagTitle(tag))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
-        let source = rankedRecipe.recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let source, !source.isEmpty {
-            return String(format: viewModel.localizer.text(.seedAttributionViaFormat), source)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(.tertiarySystemGroupedBackground))
+        )
+    }
+
+    private func dietaryTagIconName(_ tag: RecipeDietaryTag) -> String {
+        switch tag {
+        case .glutenFree:
+            return "checkmark.seal"
+        case .vegetarian:
+            return "leaf"
+        case .vegan:
+            return "leaf.fill"
         }
-        return nil
     }
 
     private var followedAuthorsSet: Set<String> {
@@ -809,18 +840,18 @@ struct RecipeDetailView: View {
     }
 
     private enum PulseTarget {
-        case save
         case crispy
+        case save
         case addIngredients
         case follow
     }
 
     private func pulse(_ target: PulseTarget) {
         switch target {
-        case .save:
-            saveButtonPulse = true
         case .crispy:
             crispyButtonPulse = true
+        case .save:
+            saveButtonPulse = true
         case .addIngredients:
             addIngredientsPulse = true
         case .follow:
@@ -829,10 +860,10 @@ struct RecipeDetailView: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
             switch target {
-            case .save:
-                saveButtonPulse = false
             case .crispy:
                 crispyButtonPulse = false
+            case .save:
+                saveButtonPulse = false
             case .addIngredients:
                 addIngredientsPulse = false
             case .follow:
@@ -848,24 +879,12 @@ struct RecipeDetailView: View {
     }
 
     private var recipeHeroImage: some View {
-        let galleryImages = orderedGalleryImages
-
-        return Group {
-            if galleryImages.count > 1 {
-                TabView {
-                    ForEach(galleryImages, id: \.id) { image in
-                        recipeHeroPage(image)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .automatic))
-            } else if let image = galleryImages.first {
-                recipeHeroPage(image)
-            } else {
-                recipeHeroLegacyOrFallback
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 208)
+        RecipeHeroView(
+            galleryImages: orderedGalleryImages,
+            legacyCoverImageName: rankedRecipe.recipe.coverImageName,
+            title: heroTitleText,
+            metadataLine: heroMetadataLine
+        )
     }
 
     private var orderedGalleryImages: [RecipeImage] {
@@ -882,78 +901,21 @@ struct RecipeDetailView: View {
         return rankedRecipe.recipe.images
     }
 
-    @ViewBuilder
-    private func recipeHeroPage(_ image: RecipeImage) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            if let localImage = recipeUIImage(from: image) {
-                Image(uiImage: localImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let remoteURLString = image.remoteURL,
-                      let remoteURL = URL(string: remoteURLString) {
-                AsyncImage(url: remoteURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    default:
-                        Image(systemName: "fork.knife.circle.fill")
-                            .font(.system(size: 68, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } else {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 68, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
+    private var baseRecipeTitle: String {
+        let originalTitle = rankedRecipe.recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !originalTitle.isEmpty {
+            return originalTitle
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private var recipeHeroLegacyOrFallback: some View {
-        let trimmedName = rankedRecipe.recipe.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let hasImage = !trimmedName.isEmpty && hasAsset(named: trimmedName)
-
-        return ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            if hasImage {
-                Image(trimmedName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(SeasonSpacing.md)
-            } else {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 68, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
+        assertionFailure("[SEASON_RECIPE] Base recipe title unexpectedly empty for recipe id=\(rankedRecipe.recipe.id)")
+        return "Recipe"
     }
 
     private var displayedRecipeTitle: String {
-        translationResult?.title ?? rankedRecipe.recipe.title
+        let translatedTitle = translationResult?.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let translatedTitle, !translatedTitle.isEmpty {
+            return translatedTitle
+        }
+        return baseRecipeTitle
     }
 
     private var displayedPreparationSteps: [String] {
@@ -1018,12 +980,86 @@ struct RecipeDetailView: View {
     private var ingredientRows: [IngredientRow] {
         rankedRecipe.recipe.ingredients.map { ingredient in
             let item = ingredient.produceID.flatMap { viewModel.produceItem(forID: $0) }
+            let basic = ingredient.basicIngredientID.flatMap { viewModel.basicIngredient(forID: $0) }
             let name = viewModel.recipeIngredientDisplayName(ingredient)
             return IngredientRow(
                 id: ingredient.id,
                 name: name,
                 item: item,
+                basic: basic,
                 recipeIngredient: ingredient
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func ingredientRowContent(_ ingredient: IngredientRow, isInteractive: Bool) -> some View {
+        HStack(spacing: 10) {
+            if let item = ingredient.item {
+                ProduceThumbnailView(item: item, size: 30)
+            } else {
+                Image(systemName: "leaf")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color(.tertiarySystemGroupedBackground))
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayIngredientName(for: ingredient))
+                    .font(.body)
+                Text(displayQuantityText(for: ingredient.recipeIngredient))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if isInteractive {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text(ingredientStatusText(for: ingredient))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(hasIngredientInFridge(ingredient) ? .green : .secondary)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private enum IngredientDestination {
+        case produce(ProduceItem)
+        case basic(BasicIngredient)
+    }
+
+    private func ingredientDestination(for ingredient: IngredientRow) -> IngredientDestination? {
+        if let produce = ingredient.item {
+            return .produce(produce)
+        }
+        if let basic = ingredient.basic {
+            return .basic(basic)
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private func ingredientDestinationView(_ destination: IngredientDestination) -> some View {
+        switch destination {
+        case .produce(let item):
+            ProduceDetailView(
+                item: item,
+                viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel
+            )
+        case .basic(let basic):
+            ProduceDetailView(
+                basicIngredient: basic,
+                viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel
             )
         }
     }
@@ -1091,5 +1127,128 @@ private struct IngredientRow {
     let id: String
     let name: String
     let item: ProduceItem?
+    let basic: BasicIngredient?
     let recipeIngredient: RecipeIngredient
+}
+
+private struct RecipeHeroView: View {
+    let galleryImages: [RecipeImage]
+    let legacyCoverImageName: String?
+    let title: String
+    let metadataLine: String?
+
+    var body: some View {
+        imageLayer
+            .frame(maxWidth: .infinity)
+            .frame(height: 208)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(alignment: .bottomLeading) {
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.black.opacity(0.9), location: 0.0),
+                        .init(color: Color.black.opacity(0.72), location: 0.26),
+                        .init(color: Color.black.opacity(0.42), location: 0.52),
+                        .init(color: Color.black.opacity(0.14), location: 0.78),
+                        .init(color: Color.black.opacity(0.0), location: 1.0)
+                    ],
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+                .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(safeTitle)
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .shadow(color: Color.black.opacity(0.4), radius: 2, x: 0, y: 1)
+
+                    if let line = trimmedMetadataLine {
+                        Text(line)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.white.opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.32), radius: 1, x: 0, y: 1)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 22)
+                .padding(.top, 12)
+                .allowsHitTesting(false)
+            }
+    }
+
+    @ViewBuilder
+    private var imageLayer: some View {
+        if galleryImages.count > 1 {
+            TabView {
+                ForEach(galleryImages, id: \.id) { image in
+                    resolvedImageView(for: image)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+        } else if let galleryImage = galleryImages.first {
+            resolvedImageView(for: galleryImage)
+        } else if let legacyName = trimmedLegacyCoverImageName {
+            Image(legacyName)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            fallbackImageView
+        }
+    }
+
+    @ViewBuilder
+    private func resolvedImageView(for image: RecipeImage) -> some View {
+        if let localImage = recipeUIImage(from: image) {
+            Image(uiImage: localImage)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else if let remoteURLString = image.remoteURL,
+                  let remoteURL = URL(string: remoteURLString) {
+            AsyncImage(url: remoteURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                default:
+                    fallbackImageView
+                }
+            }
+        } else {
+            fallbackImageView
+        }
+    }
+
+    private var fallbackImageView: some View {
+        Image(systemName: "fork.knife.circle.fill")
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .foregroundColor(.secondary)
+            .clipped()
+    }
+
+    private var trimmedLegacyCoverImageName: String? {
+        let trimmed = legacyCoverImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty, hasAsset(named: trimmed) else { return nil }
+        return trimmed
+    }
+
+    private var trimmedMetadataLine: String? {
+        let trimmed = metadataLine?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var safeTitle: String {
+        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Recipe" : cleaned
+    }
 }
