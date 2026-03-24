@@ -747,7 +747,7 @@ final class ProduceViewModel: ObservableObject {
         let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
         let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
 
-        let recipe = Recipe(
+        var recipe = Recipe(
             id: recipeID,
             title: trimmedTitle,
             author: author,
@@ -903,6 +903,7 @@ final class ProduceViewModel: ObservableObject {
         coverImageID: String?,
         coverImageName: String?,
         mediaLinkURL: String?,
+        imageURL: String? = nil,
         instagramURL: String? = nil,
         tiktokURL: String? = nil,
         sourceURL: String?,
@@ -942,6 +943,7 @@ final class ProduceViewModel: ObservableObject {
         let validCoverID = validImages.contains(where: { $0.id == coverImageID }) ? coverImageID : nil
         let trimmedImageName = coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedMediaLink = mediaLinkURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedImageURL = imageURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedInstagramURL = instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTikTokURL = tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -950,7 +952,7 @@ final class ProduceViewModel: ObservableObject {
         let recipeID = existingRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
         let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
 
-        let recipe = Recipe(
+        var recipe = Recipe(
             id: recipeID,
             title: trimmedTitle,
             author: author,
@@ -981,6 +983,7 @@ final class ProduceViewModel: ObservableObject {
             originalRecipeTitle: originalRecipeTitle,
             originalAuthorName: originalAuthorName
         )
+        recipe.imageURL = (trimmedImageURL?.isEmpty == false) ? trimmedImageURL : nil
 
         if let existingIndex = recipes.firstIndex(where: { $0.id == recipe.id }) {
             recipes[existingIndex] = recipe
@@ -989,13 +992,15 @@ final class ProduceViewModel: ObservableObject {
         }
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
+        print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
 
         Task {
             do {
                 try await SupabaseService.shared.createRecipe(recipe)
-                print("[SEASON_SUPABASE] request=createRecipe phase=request_ok recipe_id=\(recipe.id)")
+                print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(recipe.id)")
             } catch {
-                print("[SEASON_SUPABASE] request=createRecipe phase=request_failed recipe_id=\(recipe.id) error=\(error)")
+                print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(recipe.id) error=\(error)")
+                print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
             }
         }
 

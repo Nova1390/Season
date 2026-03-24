@@ -933,26 +933,14 @@ struct AccountView: View {
 
     @ViewBuilder
     private var profileAvatarContent: some View {
-        if let url = URL(string: accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines)),
-           !accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                default:
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .clipShape(Circle())
-        } else {
-            Image(systemName: "person.fill")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.secondary)
-        }
+        let trimmedURL = accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedURL = trimmedURL.isEmpty ? nil : URL(string: trimmedURL)
+
+        RemoteImageView(
+            url: resolvedURL,
+            fallbackAssetName: nil
+        )
+        .clipShape(Circle())
     }
 
     private var linkedAccounts: [LinkedSocialAccount] {

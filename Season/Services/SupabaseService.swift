@@ -21,6 +21,7 @@ enum SupabaseServiceError: LocalizedError {
     case missingConfiguration(String)
     case invalidURL
     case unauthenticated
+    case requestTimedOut(String, TimeInterval)
 
     var errorDescription: String? {
         switch self {
@@ -30,6 +31,8 @@ enum SupabaseServiceError: LocalizedError {
             return "Supabase URL is invalid."
         case .unauthenticated:
             return "No authenticated Supabase user found."
+        case .requestTimedOut(let requestName, let seconds):
+            return "\(requestName) timed out after \(Int(seconds))s."
         }
     }
 }
@@ -114,6 +117,7 @@ private struct CloudRecipeRow: Codable {
     let ingredients: [CloudRecipeIngredient]?
     let steps: [String]?
     let servings: Int?
+    let image_url: String?
     let instagram_url: String?
     let tiktok_url: String?
     let created_at: String?
@@ -188,6 +192,19 @@ private struct RecipeIngredientInsertPayload: Encodable {
 }
 
 private struct RecipeInsertPayload: Encodable {
+    let id: String
+    let user_id: String
+    let title: String
+    let ingredients: [RecipeIngredientInsertPayload]
+    let steps: [String]
+    let servings: Int
+    let image_url: String?
+    let instagram_url: String?
+    let tiktok_url: String?
+    let created_at: String
+}
+
+private struct RecipeInsertPayloadWithoutImageURL: Encodable {
     let id: String
     let user_id: String
     let title: String
@@ -370,6 +387,55 @@ final class SupabaseService {
         }
     }
 
+    func uploadRecipeImage(imageData: Data, recipeID: String) async throws -> String {
+        try await instrumentedRequest(name: "uploadRecipeImage", metadata: "recipe_id=\(recipeID)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let user = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalizedRecipeID = recipeID.trimmingCharacters(in: .whitespacesAndNewlines)
+            let path = "recipes/\(user.id.uuidString.lowercased())/\(normalizedRecipeID).jpg"
+            let timeoutSeconds: TimeInterval = 10
+
+            do {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        _ = try await supabaseClient.storage
+                            .from("recipes")
+                            .upload(
+                                path,
+                                data: imageData,
+                                options: FileOptions(
+                                    contentType: "image/jpeg",
+                                    upsert: true
+                                )
+                            )
+                    }
+
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
+                        throw SupabaseServiceError.requestTimedOut("uploadRecipeImage", timeoutSeconds)
+                    }
+
+                    _ = try await group.next()
+                    group.cancelAll()
+                }
+
+                return try supabaseClient.storage
+                    .from("recipes")
+                    .getPublicURL(path: path)
+                    .absoluteString
+            } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
+                print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
+                throw SupabaseServiceError.requestTimedOut(requestName, seconds)
+            }
+        }
+    }
+
     func fetchMyLinkedSocialAccounts() async throws -> [CloudLinkedSocialAccount] {
         try await instrumentedRequest(name: "fetchMyLinkedSocialAccounts") {
             guard let supabaseClient = self.client else {
@@ -494,15 +560,46 @@ final class SupabaseService {
                 },
                 steps: recipe.preparationSteps,
                 servings: recipe.servings,
+                image_url: recipe.imageURL,
                 instagram_url: recipe.instagramURL,
                 tiktok_url: recipe.tiktokURL,
                 created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
             )
 
-            _ = try await supabaseClient
-                .from("recipes")
-                .insert(payload)
-                .execute()
+            do {
+                _ = try await supabaseClient
+                    .from("recipes")
+                    .insert(payload)
+                    .execute()
+            } catch {
+                if self.isMissingColumnError(error, column: "image_url") {
+                    let fallbackPayload = RecipeInsertPayloadWithoutImageURL(
+                        id: recipe.id,
+                        user_id: user.id.uuidString,
+                        title: recipe.title,
+                        ingredients: recipe.ingredients.map {
+                            RecipeIngredientInsertPayload(
+                                produce_id: $0.produceID,
+                                basic_ingredient_id: $0.basicIngredientID,
+                                name: $0.name,
+                                quantity_value: $0.quantityValue,
+                                quantity_unit: $0.quantityUnit.rawValue
+                            )
+                        },
+                        steps: recipe.preparationSteps,
+                        servings: recipe.servings,
+                        instagram_url: recipe.instagramURL,
+                        tiktok_url: recipe.tiktokURL,
+                        created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
+                    )
+                    _ = try await supabaseClient
+                        .from("recipes")
+                        .insert(fallbackPayload)
+                        .execute()
+                } else {
+                    throw error
+                }
+            }
         }
     }
 
@@ -545,7 +642,7 @@ final class SupabaseService {
                 let trimmedTitle = row.title?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let safeTitle = (trimmedTitle?.isEmpty == false) ? trimmedTitle! : "Untitled recipe"
 
-                return Recipe(
+                var recipe = Recipe(
                     id: row.id,
                     title: safeTitle,
                     author: "Season",
@@ -578,6 +675,8 @@ final class SupabaseService {
                     originalRecipeTitle: nil,
                     originalAuthorName: nil
                 )
+                recipe.imageURL = row.image_url?.trimmingCharacters(in: .whitespacesAndNewlines)
+                return recipe
             }
         }
     }
@@ -1007,6 +1106,8 @@ final class SupabaseService {
                 return .auth_session
             case .missingConfiguration, .invalidURL:
                 return .client_validation
+            case .requestTimedOut:
+                return .network_offline
             }
         }
 
@@ -1135,6 +1236,11 @@ final class SupabaseService {
         }
 
         return nil
+    }
+
+    private func isMissingColumnError(_ error: Error, column: String) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("pgrst204") || (message.contains(column.lowercased()) && message.contains("column"))
     }
 
     private func shoppingListRowID(localItemID: String, userID: String) -> String {

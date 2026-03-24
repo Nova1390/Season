@@ -279,25 +279,13 @@ struct AuthorProfileView: View {
     @ViewBuilder
     private var avatarContent: some View {
         let trimmed = profileAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if let url = URL(string: trimmed), !trimmed.isEmpty {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                default:
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .clipShape(Circle())
-        } else {
-            Image(systemName: "person.fill")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.secondary)
-        }
+        let url = trimmed.isEmpty ? nil : URL(string: trimmed)
+
+        RemoteImageView(
+            url: url,
+            fallbackAssetName: nil
+        )
+        .clipShape(Circle())
     }
 
     private func socialDisplayValue(for link: CreatorSocialLink) -> String {

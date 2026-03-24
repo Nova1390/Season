@@ -482,6 +482,7 @@ struct RecipeDetailView: View {
                                     ? Color.orange
                                     : .secondary
                                 )
+                                .frame(width: 12, alignment: .center)
                             Text(
                                 String(
                                     format: viewModel.localizer.text(.crispyCountFormat),
@@ -494,7 +495,10 @@ struct RecipeDetailView: View {
                                 ? Color.orange
                                 : .primary
                             )
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         }
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                     .buttonStyle(.plain)
                     .scaleEffect(crispyButtonPulse ? 0.96 : 1.0)
@@ -882,6 +886,7 @@ struct RecipeDetailView: View {
         RecipeHeroView(
             galleryImages: orderedGalleryImages,
             legacyCoverImageName: rankedRecipe.recipe.coverImageName,
+            remoteImageURLString: rankedRecipe.recipe.imageURL,
             title: heroTitleText,
             metadataLine: heroMetadataLine
         )
@@ -1033,17 +1038,14 @@ struct RecipeDetailView: View {
 
     private enum IngredientDestination {
         case produce(ProduceItem)
-        case basic(BasicIngredient)
+        case ingredient(IngredientReference)
     }
 
     private func ingredientDestination(for ingredient: IngredientRow) -> IngredientDestination? {
-        if let produce = ingredient.item {
-            return .produce(produce)
+        if let item = ingredient.item {
+            return .produce(item)
         }
-        if let basic = ingredient.basic {
-            return .basic(basic)
-        }
-        return nil
+        return .ingredient(ingredient.recipeIngredient.ingredientReference)
     }
 
     @ViewBuilder
@@ -1055,12 +1057,8 @@ struct RecipeDetailView: View {
                 viewModel: viewModel,
                 shoppingListViewModel: shoppingListViewModel
             )
-        case .basic(let basic):
-            ProduceDetailView(
-                basicIngredient: basic,
-                viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
+        case .ingredient(let ingredient):
+            IngredientDetailView(ingredient: ingredient)
         }
     }
 
@@ -1134,6 +1132,7 @@ private struct IngredientRow {
 private struct RecipeHeroView: View {
     let galleryImages: [RecipeImage]
     let legacyCoverImageName: String?
+    let remoteImageURLString: String?
     let title: String
     let metadataLine: String?
 
@@ -1180,7 +1179,15 @@ private struct RecipeHeroView: View {
 
     @ViewBuilder
     private var imageLayer: some View {
-        if galleryImages.count > 1 {
+        if let remoteImageURL = trimmedRemoteImageURL,
+           let url = URL(string: remoteImageURL) {
+            RemoteImageView(
+                url: url,
+                fallbackAssetName: trimmedLegacyCoverImageName
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+        } else if galleryImages.count > 1 {
             TabView {
                 ForEach(galleryImages, id: \.id) { image in
                     resolvedImageView(for: image)
@@ -1240,6 +1247,11 @@ private struct RecipeHeroView: View {
         let trimmed = legacyCoverImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty, hasAsset(named: trimmed) else { return nil }
         return trimmed
+    }
+
+    private var trimmedRemoteImageURL: String? {
+        let trimmed = remoteImageURLString?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private var trimmedMetadataLine: String? {

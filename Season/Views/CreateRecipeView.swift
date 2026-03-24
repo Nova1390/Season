@@ -72,6 +72,7 @@ struct CreateRecipeView: View {
     @State private var showDraftSavedFeedback = false
     @State private var hasAttemptedInitialDraftLoad = false
     @State private var draftLoadFailed = false
+    @State private var isPublishing = false
     @FocusState private var focusedIngredientID: UUID?
 
     private var localizer: AppLocalizer { viewModel.localizer }
@@ -632,7 +633,7 @@ struct CreateRecipeView: View {
                                 .font(.headline)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(!canPublish)
+                        .disabled(!canPublish || isPublishing)
                     }
                 } else {
                     HStack {
@@ -645,7 +646,7 @@ struct CreateRecipeView: View {
                                 .font(.headline)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(!canPublish)
+                        .disabled(!canPublish || isPublishing)
                     }
                 }
                 if enableDraftMode && showDraftSavedFeedback {
@@ -943,6 +944,40 @@ struct CreateRecipeView: View {
     }
 
     private func publish() {
+        guard !isPublishing else { return }
+
+        Task {
+            await publishAsync()
+        }
+    }
+
+    @MainActor
+    private func publishAsync() async {
+        isPublishing = true
+        defer { isPublishing = false }
+
+        let recipeID = currentDraftRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
+        let existingRecipeImageURL = viewModel.recipe(forID: recipeID)?.imageURL
+        var uploadedRecipeImageURL: String? = nil
+
+        if let cover = uploadedImages.first,
+           let coverImage = recipeUIImage(from: cover),
+           let jpegData = coverImage.jpegData(compressionQuality: 0.9) {
+            do {
+                uploadedRecipeImageURL = try await SupabaseService.shared.uploadRecipeImage(
+                    imageData: jpegData,
+                    recipeID: recipeID
+                )
+                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_ok recipe_id=\(recipeID)")
+            } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
+                print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
+                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_timeout recipe_id=\(recipeID)")
+            } catch {
+                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_failed recipe_id=\(recipeID) error=\(error)")
+                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_failed recipe_id=\(recipeID)")
+            }
+        }
+
         let published = viewModel.publishRecipe(
             title: title,
             author: accountUsername,
@@ -953,6 +988,7 @@ struct CreateRecipeView: View {
             coverImageID: selectedCoverImageID,
             coverImageName: prefillDraft?.imageAssetName,
             mediaLinkURL: mediaLink,
+            imageURL: uploadedRecipeImageURL ?? existingRecipeImageURL,
             instagramURL: normalizedInstagramURL,
             tiktokURL: normalizedTikTokURL,
             sourceURL: normalizedImportLink,
@@ -963,7 +999,7 @@ struct CreateRecipeView: View {
             prepTimeMinutes: prefillDraft?.prepTimeMinutes,
             cookTimeMinutes: prefillDraft?.cookTimeMinutes,
             difficulty: prefillDraft?.difficulty,
-            existingRecipeID: currentDraftRecipeID,
+            existingRecipeID: recipeID,
             isRemix: prefillDraft?.isRemix ?? false,
             originalRecipeID: prefillDraft?.originalRecipeID,
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
@@ -975,6 +1011,7 @@ struct CreateRecipeView: View {
             return
         }
 
+        currentDraftRecipeID = recipeID
         dismiss()
     }
 
