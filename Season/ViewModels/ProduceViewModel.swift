@@ -598,6 +598,16 @@ final class ProduceViewModel: ObservableObject {
         return "\(value)"
     }
 
+    // Canonical identity rule:
+    // creatorDisplayName is primary; author is kept as legacy compatibility.
+    private func resolvedCreatorDisplayName(from legacyAuthor: String, creator: Creator) -> String {
+        let trimmedAuthor = legacyAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedAuthor.isEmpty {
+            return trimmedAuthor
+        }
+        return creator.displayName
+    }
+
     private func compactRoundedText(_ value: Double) -> String {
         let rounded = (value * 10).rounded() / 10
         if rounded.rounded() == rounded {
@@ -659,10 +669,14 @@ final class ProduceViewModel: ObservableObject {
 
     @discardableResult
     func createEmptyDraftRecipe(author: String) -> Recipe {
+        let creator = CurrentUser.shared.creator
+        let resolvedCreatorName = resolvedCreatorDisplayName(from: author, creator: creator)
         let draft = Recipe(
             id: "recipe_\(UUID().uuidString.lowercased())",
             title: "",
-            author: author,
+            author: resolvedCreatorName,
+            creatorId: creator.id,
+            creatorDisplayName: resolvedCreatorName,
             ingredients: [],
             preparationSteps: [],
             prepTimeMinutes: nil,
@@ -746,11 +760,15 @@ final class ProduceViewModel: ObservableObject {
         let trimmedSourceURL = sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSourceCaption = sourceCaptionRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
         let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
+        let creator = CurrentUser.shared.creator
+        let resolvedCreatorName = resolvedCreatorDisplayName(from: author, creator: creator)
 
         var recipe = Recipe(
             id: recipeID,
             title: trimmedTitle,
-            author: author,
+            author: resolvedCreatorName,
+            creatorId: creator.id,
+            creatorDisplayName: resolvedCreatorName,
             ingredients: trimmedIngredients,
             preparationSteps: trimmedSteps,
             prepTimeMinutes: prepTimeMinutes,
@@ -951,11 +969,15 @@ final class ProduceViewModel: ObservableObject {
 
         let recipeID = existingRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
         let existingCreatedAt = recipes.first(where: { $0.id == recipeID })?.createdAt ?? Date()
+        let creator = CurrentUser.shared.creator
+        let resolvedCreatorName = resolvedCreatorDisplayName(from: author, creator: creator)
 
         var recipe = Recipe(
             id: recipeID,
             title: trimmedTitle,
-            author: author,
+            author: resolvedCreatorName,
+            creatorId: creator.id,
+            creatorDisplayName: resolvedCreatorName,
             ingredients: trimmedIngredients,
             preparationSteps: trimmedSteps,
             prepTimeMinutes: prepTimeMinutes,
@@ -1263,6 +1285,9 @@ final class ProduceViewModel: ObservableObject {
     private func rankedHomeRecipes(from source: [Recipe]) -> [RankedRecipe] {
         source
             .map { recipe in
+                let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+                let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+                print("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
                 let seasonality = recipeSeasonalityScore(for: recipe)
                 let resolvedSeasonalPercent = Int((seasonality * 100.0).rounded())
                 let score = homeRankingScore(for: recipe) * 100.0

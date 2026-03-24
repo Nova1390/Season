@@ -113,6 +113,8 @@ private struct CloudRecipeIngredient: Codable {
 private struct CloudRecipeRow: Codable {
     let id: String
     let user_id: String?
+    let creator_id: String?
+    let creator_display_name: String?
     let title: String?
     let ingredients: [CloudRecipeIngredient]?
     let steps: [String]?
@@ -194,6 +196,8 @@ private struct RecipeIngredientInsertPayload: Encodable {
 private struct RecipeInsertPayload: Encodable {
     let id: String
     let user_id: String
+    let creator_id: String?
+    let creator_display_name: String?
     let title: String
     let ingredients: [RecipeIngredientInsertPayload]
     let steps: [String]
@@ -207,6 +211,8 @@ private struct RecipeInsertPayload: Encodable {
 private struct RecipeInsertPayloadWithoutImageURL: Encodable {
     let id: String
     let user_id: String
+    let creator_id: String?
+    let creator_display_name: String?
     let title: String
     let ingredients: [RecipeIngredientInsertPayload]
     let steps: [String]
@@ -563,6 +569,8 @@ final class SupabaseService {
             let payload = RecipeInsertPayload(
                 id: recipe.id,
                 user_id: user.id.uuidString,
+                creator_id: recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : recipe.creatorId,
+                creator_display_name: recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
                 title: recipe.title,
                 ingredients: recipe.ingredients.map {
                     RecipeIngredientInsertPayload(
@@ -587,10 +595,14 @@ final class SupabaseService {
                     .insert(payload)
                     .execute()
             } catch {
-                if self.isMissingColumnError(error, column: "image_url") {
+                if self.isMissingColumnError(error, column: "image_url")
+                    || self.isMissingColumnError(error, column: "creator_id")
+                    || self.isMissingColumnError(error, column: "creator_display_name") {
                     let fallbackPayload = RecipeInsertPayloadWithoutImageURL(
                         id: recipe.id,
                         user_id: user.id.uuidString,
+                        creator_id: recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : recipe.creatorId,
+                        creator_display_name: recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines),
                         title: recipe.title,
                         ingredients: recipe.ingredients.map {
                             RecipeIngredientInsertPayload(
@@ -656,11 +668,17 @@ final class SupabaseService {
                 let createdAt = row.created_at.flatMap { iso8601.date(from: $0) } ?? Date()
                 let trimmedTitle = row.title?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let safeTitle = (trimmedTitle?.isEmpty == false) ? trimmedTitle! : "Untitled recipe"
+                let trimmedCreatorDisplayName = row.creator_display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                // Canonical identity is creator_id + creator_display_name.
+                // Keep author populated only as a legacy compatibility fallback for older author-based screens.
+                let safeAuthorName = trimmedCreatorDisplayName.isEmpty ? "Unknown" : trimmedCreatorDisplayName
 
                 var recipe = Recipe(
                     id: row.id,
                     title: safeTitle,
-                    author: "Season",
+                    author: safeAuthorName,
+                    creatorId: row.creator_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "unknown",
+                    creatorDisplayName: trimmedCreatorDisplayName.isEmpty ? nil : trimmedCreatorDisplayName,
                     ingredients: mappedIngredients,
                     preparationSteps: (row.steps ?? []).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty },
                     prepTimeMinutes: nil,
@@ -691,6 +709,9 @@ final class SupabaseService {
                     originalAuthorName: nil
                 )
                 recipe.imageURL = row.image_url?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+                let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+                print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=supabase_fetch recipe_id=\(recipe.id) title=\(recipe.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
                 return recipe
             }
         }

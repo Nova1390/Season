@@ -245,20 +245,22 @@ enum RecipeStore {
             )
         ]
 
+        let profiles = loadProfiles()
         let seedRecipes = loadSeedRecipesFromBundle()
         var seen = Set<String>()
         let localUserRecipes = loadPersistedUserRecipes()
         let merged = (localUserRecipes + curated + seedRecipes).filter { recipe in
             seen.insert(recipe.id).inserted
         }
+        let normalized = normalizeCreatorIdentity(in: merged, profiles: profiles)
         cacheLock.lock()
         if let cachedRecipes {
             cacheLock.unlock()
             return cachedRecipes
         }
-        cachedRecipes = merged
+        cachedRecipes = normalized
         cacheLock.unlock()
-        return merged
+        return normalized
     }
 
     static func upsertUserRecipe(_ recipe: Recipe) {
@@ -377,6 +379,39 @@ enum RecipeStore {
                 originalRecipeTitle: payload.originalRecipeTitle,
                 originalAuthorName: payload.originalAuthorName
             )
+        }
+    }
+
+    private static func normalizeCreatorIdentity(in recipes: [Recipe], profiles: [UserProfile]) -> [Recipe] {
+        let profileByName: [String: UserProfile] = Dictionary(
+            uniqueKeysWithValues: profiles.map {
+                ($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), $0)
+            }
+        )
+
+        return recipes.map { recipe in
+            var updated = recipe
+
+            if updated.canonicalCreatorID == nil {
+                let normalizedAuthor = updated.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if let profile = profileByName[normalizedAuthor] {
+                    updated.creatorId = profile.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if (updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
+                        updated.creatorDisplayName = profile.name
+                    }
+                }
+            }
+
+            let creatorIDForLog = updated.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+            let creatorDisplayForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+            print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=recipe_store recipe_id=\(updated.id) title=\(updated.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(updated.author)")
+
+            if (updated.isUserGenerated || updated.sourceType == .userGenerated),
+               updated.canonicalCreatorID == nil {
+                print("[SEASON_CREATOR_CHAIN] phase=missing_canonical_creator_id recipe_id=\(updated.id) title=\(updated.title) creator_display_name=\(creatorDisplayForLog) author=\(updated.author)")
+            }
+
+            return updated
         }
     }
 }

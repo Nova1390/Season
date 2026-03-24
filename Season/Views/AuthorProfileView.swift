@@ -8,21 +8,24 @@ struct AuthorProfileView: View {
     }
 
     let authorName: String
+    let creatorID: String?
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
+    @ObservedObject private var followStore = FollowStore.shared
     let profileSocialLinks: [CreatorSocialLink]
     let profileAvatarURL: String?
-    @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
     @Environment(\.openURL) private var openURL
 
     init(
         authorName: String,
+        creatorID: String? = nil,
         viewModel: ProduceViewModel,
         shoppingListViewModel: ShoppingListViewModel,
         profileSocialLinks: [CreatorSocialLink] = [],
         profileAvatarURL: String? = nil
     ) {
         self.authorName = authorName
+        self.creatorID = creatorID
         self.viewModel = viewModel
         self.shoppingListViewModel = shoppingListViewModel
         self.profileSocialLinks = profileSocialLinks
@@ -57,16 +60,18 @@ struct AuthorProfileView: View {
 
                             Spacer(minLength: 8)
 
-                            Button {
-                                toggleFollow()
-                            } label: {
-                                Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                                    .font(.subheadline.weight(.semibold))
-                                    .padding(.horizontal, 12)
+                            if canShowFollowButton {
+                                Button {
+                                    toggleFollow()
+                                } label: {
+                                    Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                                        .font(.subheadline.weight(.semibold))
+                                        .padding(.horizontal, 12)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .fixedSize(horizontal: true, vertical: false)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                            .fixedSize(horizontal: true, vertical: false)
                         }
                         .padding(.top, 8)
 
@@ -223,23 +228,35 @@ struct AuthorProfileView: View {
                 shoppingListViewModel: shoppingListViewModel
             )
         }
+        .onAppear {
+            print("[SEASON_FOLLOW_IDENTITY] phase=profile_appear creator_id=\(canonicalCreatorID ?? "nil") creator_name=\(authorName) was_following=\(isFollowing)")
+        }
     }
 
     private var rankedRecipes: [RankedRecipe] {
         viewModel.rankedRecipesByAuthor(authorName)
     }
 
-    private var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        )
+    private var canonicalCreatorID: String? {
+        let cleaned = (creatorID ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard !cleaned.isEmpty, cleaned != "unknown" else { return nil }
+        return cleaned
+    }
+
+    private var currentCreatorID: String {
+        CurrentUser.shared.creator.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var canShowFollowButton: Bool {
+        guard let canonicalCreatorID else { return false }
+        return canonicalCreatorID != currentCreatorID
     }
 
     private var isFollowing: Bool {
-        followedAuthorsSet.contains(authorName)
+        guard let canonicalCreatorID else { return false }
+        return followStore.isFollowing(canonicalCreatorID)
     }
 
     private var followerCount: Int {
@@ -312,12 +329,9 @@ struct AuthorProfileView: View {
     }
 
     private func toggleFollow() {
-        var updated = followedAuthorsSet
-        if updated.contains(authorName) {
-            updated.remove(authorName)
-        } else {
-            updated.insert(authorName)
-        }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
+        guard let canonicalCreatorID else { return }
+        let wasFollowing = followStore.isFollowing(canonicalCreatorID)
+        print("[SEASON_FOLLOW_IDENTITY] phase=profile_toggle creator_id=\(canonicalCreatorID) creator_name=\(authorName) was_following=\(wasFollowing)")
+        followStore.toggleFollow(canonicalCreatorID)
     }
 }

@@ -101,7 +101,13 @@ enum RecipePublicationStatus: String, Codable, Hashable {
 struct Recipe: Identifiable, Codable, Hashable {
     let id: String
     let title: String
+    // Legacy compatibility name for older local data and author-based screens.
+    // Canonical identity is creatorId + creatorDisplayName.
     let author: String
+    // Canonical creator identity used by follow/profile/navigation logic.
+    var creatorId: String = "unknown"
+    // Canonical visible creator name when available from current domain model.
+    var creatorDisplayName: String? = nil
     let ingredients: [RecipeIngredient]
     let preparationSteps: [String]
     let prepTimeMinutes: Int?
@@ -143,6 +149,36 @@ struct Recipe: Identifiable, Codable, Hashable {
             return selected
         }
         return images.first
+    }
+
+    // Canonical creator id accessor for identity flows.
+    // Returns nil for missing/legacy placeholder values.
+    var canonicalCreatorID: String? {
+        let cleaned = creatorId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        // Invalid creator ids are treated as unavailable identity.
+        // This keeps follow/profile identity logic safe and explicit.
+        guard !cleaned.isEmpty else { return nil }
+        guard cleaned != "unknown" else { return nil }
+        return cleaned
+    }
+
+    // Canonical display fallback for recipe UI:
+    // creatorDisplayName -> author (legacy) -> "Unknown"
+    var displayCreatorName: String {
+        let trimmedCreatorDisplay = creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedCreatorDisplay.isEmpty {
+            return trimmedCreatorDisplay
+        }
+
+        let trimmedAuthor = author.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedAuthor.isEmpty {
+            return trimmedAuthor
+        }
+
+        return "Unknown"
     }
 }
 

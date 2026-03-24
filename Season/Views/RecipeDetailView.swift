@@ -6,14 +6,13 @@ struct RecipeDetailView: View {
     let viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
-    @AppStorage("followedAuthorsRaw") private var followedAuthorsRaw = ""
+    @ObservedObject private var followStore = FollowStore.shared
     @State private var addIngredientsMessage = ""
     @State private var showingAddIngredientsAlert = false
     @State private var showingRemixComposer = false
     @State private var saveButtonPulse = false
     @State private var crispyButtonPulse = false
     @State private var addIngredientsPulse = false
-    @State private var followButtonPulse = false
     @State private var hasTrackedView = false
     @State private var showingTimingExplanation = false
     @State private var selectedServings = 2
@@ -21,6 +20,8 @@ struct RecipeDetailView: View {
     @State private var translationConfiguration: TranslationSession.Configuration?
     @State private var hasAttemptedTranslation = false
     @State private var translationFailed = false
+    @State private var hasLoggedCreatorEvaluation = false
+    @State private var showingCreatorProfile = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -31,6 +32,7 @@ struct RecipeDetailView: View {
                     identityAndMetaBlock
                         .padding(.top, 8)
                         .padding(.bottom, 4)
+                    authorIdentityBlock
 
                     let confirmedDietaryTags = viewModel.confirmedDietaryTags(for: rankedRecipe.recipe)
                     if !confirmedDietaryTags.isEmpty {
@@ -426,9 +428,23 @@ struct RecipeDetailView: View {
             translationFailed = false
             translationResult = nil
             refreshTranslationConfiguration()
+            if !hasLoggedCreatorEvaluation {
+                logCreatorEvaluation()
+                logDetailIdentity()
+                hasLoggedCreatorEvaluation = true
+            }
         }
         .translationTask(translationConfiguration) { session in
             await performRuntimeTranslation(using: session)
+        }
+        .navigationDestination(isPresented: $showingCreatorProfile) {
+            AuthorProfileView(
+                authorName: displayedCreatorName,
+                creatorID: validRecipeCreatorID,
+                viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel,
+                profileSocialLinks: creatorProfileLinks
+            )
         }
     }
 
@@ -543,19 +559,21 @@ struct RecipeDetailView: View {
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
 
-                            Button {
-                                toggleFollowAuthor()
-                                pulse(.follow)
-                            } label: {
-                                Image(systemName: isFollowingAuthor ? "person.fill.checkmark" : "person.badge.plus")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 30, height: 30)
+                            if canShowFollowButton, let creatorID = validRecipeCreatorID {
+                                Button {
+                                    let stateBefore = followStore.isFollowing(creatorID)
+                                    toggleFollowAuthor()
+                                    let stateAfter = followStore.isFollowing(creatorID)
+                                    print("[SEASON_FOLLOW_RECIPE] phase=top_icon_tap recipe_id=\(rankedRecipe.recipe.id) creator_id=\(creatorID) state_before=\(stateBefore) state_after=\(stateAfter)")
+                                } label: {
+                                    Image(systemName: isFollowingAuthor ? "person.fill.checkmark" : "person.badge.plus")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(isFollowingAuthor ? .primary : .secondary)
+                                        .frame(width: 24, height: 24)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
                             }
-                            .buttonStyle(.plain)
-                            .scaleEffect(followButtonPulse ? 0.96 : 1.0)
-                            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: followButtonPulse)
-                            .accessibilityLabel(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
                         }
                         .fixedSize(horizontal: true, vertical: false)
                     }
@@ -599,12 +617,44 @@ struct RecipeDetailView: View {
 
     private var trimmedAuthorName: String? {
         guard showsUserAuthorshipMetadata else { return nil }
-        let trimmed = rankedRecipe.recipe.author.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = rankedRecipe.recipe.displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 
     private var heroMetadataLine: String? {
         trimmedAuthorName
+    }
+
+    private var displayedCreatorName: String {
+        rankedRecipe.recipe.displayCreatorName
+    }
+
+    private var authorIdentityBlock: some View {
+        HStack(spacing: 10) {
+            Button {
+                print("[SEASON_FOLLOW_IDENTITY] phase=push_profile recipe_id=\(rankedRecipe.recipe.id) creator_id=\(validRecipeCreatorID ?? "nil") creator_name=\(displayedCreatorName)")
+                showingCreatorProfile = true
+            } label: {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(Color(.tertiarySystemGroupedBackground))
+                        .frame(width: 28, height: 28)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        )
+
+                    Text(displayedCreatorName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
     }
 
     private var heroTitleText: String {
@@ -613,7 +663,7 @@ struct RecipeDetailView: View {
 
     private var followerCountValue: Int {
         viewModel.followerCount(
-            for: rankedRecipe.recipe.author,
+            for: displayedCreatorName,
             isFollowedByCurrentUser: isFollowingAuthor
         )
     }
@@ -647,28 +697,77 @@ struct RecipeDetailView: View {
         }
     }
 
-    private var followedAuthorsSet: Set<String> {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        )
+    private var validRecipeCreatorID: String? {
+        // Follow/profile identity must use canonical creator id, never the legacy author string.
+        rankedRecipe.recipe.canonicalCreatorID
+    }
+
+    private var currentCreatorID: String {
+        CurrentUser.shared.creator.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var canShowFollowButton: Bool {
+        guard let recipeCreatorID = validRecipeCreatorID else { return false }
+        return recipeCreatorID != currentCreatorID
     }
 
     private var isFollowingAuthor: Bool {
-        followedAuthorsSet.contains(rankedRecipe.recipe.author)
+        guard let recipeCreatorID = validRecipeCreatorID else { return false }
+        return followStore.isFollowing(recipeCreatorID)
     }
 
     private func toggleFollowAuthor() {
-        var updated = followedAuthorsSet
-        let author = rankedRecipe.recipe.author
-        if updated.contains(author) {
-            updated.remove(author)
-        } else {
-            updated.insert(author)
+        guard let recipeCreatorID = validRecipeCreatorID, canShowFollowButton else {
+            let rawCreatorID = rankedRecipe.recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+            let rawCreatorForLog = rawCreatorID.isEmpty ? "nil" : rawCreatorID
+            print("[SEASON_FOLLOW_IDENTITY] phase=button_tap_blocked_invalid_creator recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=\(rawCreatorForLog) canonical_creator_id=\(validRecipeCreatorID ?? "nil")")
+            return
         }
-        followedAuthorsRaw = updated.sorted().joined(separator: "|")
+        let wasFollowing = followStore.isFollowing(recipeCreatorID)
+        print("[SEASON_FOLLOW_IDENTITY] phase=recipe_toggle recipe_id=\(rankedRecipe.recipe.id) creator_id=\(recipeCreatorID) creator_name=\(displayedCreatorName) was_following=\(wasFollowing)")
+        followStore.toggleFollow(recipeCreatorID)
+    }
+
+    private var creatorProfileLinks: [AuthorProfileView.CreatorSocialLink] {
+        var links: [AuthorProfileView.CreatorSocialLink] = []
+
+        let trimmedInstagram = rankedRecipe.recipe.instagramURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedInstagram.isEmpty {
+            links.append(.init(platform: .instagram, url: trimmedInstagram))
+        }
+
+        let trimmedTikTok = rankedRecipe.recipe.tiktokURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedTikTok.isEmpty {
+            links.append(.init(platform: .tiktok, url: trimmedTikTok))
+        }
+
+        return links
+    }
+
+    private func logCreatorEvaluation() {
+        let rawCreatorID = rankedRecipe.recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawCreatorForLog = rawCreatorID.isEmpty ? "nil" : rawCreatorID
+        let canonicalCreatorForLog = validRecipeCreatorID ?? "nil"
+        let creatorDisplay = displayedCreatorName
+        let currentID = CurrentUser.shared.creator.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let canShow = canShowFollowButton
+
+        print("[SEASON_FOLLOW_IDENTITY] phase=identity_eval recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=\(rawCreatorForLog) canonical_creator_id=\(canonicalCreatorForLog) displayed_creator_name=\(creatorDisplay) current_creator_id=\(currentID) can_show_follow=\(canShow)")
+    }
+
+    private func logDetailIdentity() {
+        let rawCreatorID = rankedRecipe.recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawCreatorForLog = rawCreatorID.isEmpty ? "nil" : rawCreatorID
+        let canonicalCreatorIDForLog = rankedRecipe.recipe.canonicalCreatorID ?? "nil"
+        let creatorDisplayForLog = rankedRecipe.recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+        let currentID = CurrentUser.shared.creator.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let canShow = canShowFollowButton
+
+        print("[SEASON_CREATOR_CHAIN] phase=detail_identity recipe_id=\(rankedRecipe.recipe.id) creator_id=\(rawCreatorForLog) canonical_creator_id=\(canonicalCreatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(rankedRecipe.recipe.author) current_creator_id=\(currentID) can_show_follow=\(canShow)")
+
+        if showsUserAuthorshipMetadata && rankedRecipe.recipe.canonicalCreatorID == nil {
+            print("[SEASON_CREATOR_CHAIN] phase=missing_canonical_creator_id_in_detail recipe_id=\(rankedRecipe.recipe.id) title=\(rankedRecipe.recipe.title) creator_display_name=\(creatorDisplayForLog) author=\(rankedRecipe.recipe.author)")
+        }
     }
 
     private var preparationSummaryLine: String {
@@ -847,7 +946,6 @@ struct RecipeDetailView: View {
         case crispy
         case save
         case addIngredients
-        case follow
     }
 
     private func pulse(_ target: PulseTarget) {
@@ -858,8 +956,6 @@ struct RecipeDetailView: View {
             saveButtonPulse = true
         case .addIngredients:
             addIngredientsPulse = true
-        case .follow:
-            followButtonPulse = true
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
@@ -870,8 +966,6 @@ struct RecipeDetailView: View {
                 saveButtonPulse = false
             case .addIngredients:
                 addIngredientsPulse = false
-            case .follow:
-                followButtonPulse = false
             }
         }
     }
