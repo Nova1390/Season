@@ -4,6 +4,7 @@ struct HomeView: View {
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
+    @ObservedObject private var followStore = FollowStore.shared
     @State private var selectedQuickFilter: HomeQuickFilter?
     @State private var cachedMiniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
     @State private var mainContinuousFeedItems: [HomeFeedItem] = []
@@ -11,6 +12,7 @@ struct HomeView: View {
     @State private var featuredRecipeCache: RankedRecipe?
     @State private var fridgeMatchesCache: [FridgeMatchedRecipe] = []
     @State private var ingredientUsageCountByID: [String: Int] = [:]
+    private let homeQuickFilters: [HomeQuickFilter] = [.following, .readyNow, .under15, .highProtein, .peakSeason, .trending]
 
     var body: some View {
         GeometryReader { proxy in
@@ -218,7 +220,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(HomeQuickFilter.allCases) { filter in
+                    ForEach(homeQuickFilters) { filter in
                         Button {
                             selectQuickFilter(filter)
                         } label: {
@@ -254,6 +256,13 @@ struct HomeView: View {
     @ViewBuilder
     private var mixedFeedSection: some View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            if selectedQuickFilter == .following && activeMiniFeedItems.isEmpty {
+                Text(viewModel.localizer.text(.followAuthorsHint))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 6)
+            }
+
             VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
                 ForEach(activeMiniFeedItems) { item in
                     switch item {
@@ -306,6 +315,23 @@ struct HomeView: View {
     private var activeMiniFeedItems: [HomeFeedItem] {
         if let selectedQuickFilter {
             let mini = cachedMiniFeeds[selectedQuickFilter] ?? []
+            if selectedQuickFilter == .following {
+                if cachedMiniFeeds[selectedQuickFilter] != nil {
+                    print("[SEASON_HOME_FOLLOWING] phase=cache_hit filter=following")
+                } else {
+                    print("[SEASON_HOME_FOLLOWING] phase=cache_miss filter=following")
+                }
+                let followingRecipeItems = mini.compactMap { item -> HookedRecipeCard? in
+                    if case .recipe(let card, _) = item { return card }
+                    return nil
+                }
+                print("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
+                for card in followingRecipeItems.prefix(5) {
+                    let creatorID = card.ranked.recipe.canonicalCreatorID ?? "nil"
+                    print("[SEASON_HOME_FOLLOWING] phase=feed_item recipe_id=\(card.ranked.recipe.id) creator_id=\(creatorID)")
+                }
+                return mini
+            }
             return guaranteedMiniBlock(from: mini)
         }
         let recipeOnlySeed = mainContinuousFeedItems.filter {
@@ -334,7 +360,8 @@ struct HomeView: View {
 
     private var cacheSignature: String {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
-        return "\(viewModel.languageCode)|\(viewModel.recipes.count)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)"
+        let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
+        return "\(viewModel.languageCode)|\(viewModel.recipes.count)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(followingIDs)"
     }
 
     private func refreshHomeFeedCache() {
@@ -379,7 +406,7 @@ struct HomeView: View {
         debugHomeFeed("default feed count=\(continuousBuild.defaultFeedItems.count)")
 
         var miniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
-        for filter in HomeQuickFilter.allCases {
+        for filter in homeQuickFilters {
             miniFeeds[filter] = buildMiniFeedBlock(
                 for: filter,
                 baseRecipes: continuousRecipes,
@@ -408,6 +435,22 @@ struct HomeView: View {
         trendingIDs: Set<String>,
         fridgeItemIDs: Set<String>
     ) -> [HomeFeedItem] {
+        if filter == .following {
+            let followingRanked = viewModel.rankedFollowingRecipes(
+                followedCreatorIDs: Array(followStore.followingIds),
+                limit: 24
+            )
+            print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
+            guard !followingRanked.isEmpty else { return [] }
+            let cards = buildHookedCards(
+                from: followingRanked,
+                preferTrending: false,
+                trendingIDs: trendingIDs,
+                previousHook: nil
+            )
+            return cards.prefix(3).map { HomeFeedItem.recipe($0, style: .compact) }
+        }
+
         let mergedCandidates = mergedCandidateRecipes(
             baseRecipes: baseRecipes,
             trendingRecipes: trendingRecipes,
@@ -560,6 +603,8 @@ struct HomeView: View {
         }()
 
         switch filter {
+        case .following:
+            return 0
         case .readyNow:
             return (0.20 * quickness) + (0.14 * fridgeMatch) + (0.06 * seasonal)
         case .under15:
@@ -975,6 +1020,9 @@ struct HomeView: View {
     private func selectQuickFilter(_ filter: HomeQuickFilter) {
         withAnimation(.easeInOut(duration: 0.12)) {
             selectedQuickFilter = selectedQuickFilter == filter ? nil : filter
+            if selectedQuickFilter == .following {
+                print("[SEASON_HOME_FOLLOWING] phase=filter_selected filter=following")
+            }
         }
     }
 
@@ -1375,6 +1423,7 @@ struct HomeView: View {
 }
 
 private enum HomeQuickFilter: String, CaseIterable, Identifiable {
+    case following
     case readyNow
     case under15
     case highProtein
@@ -1385,6 +1434,8 @@ private enum HomeQuickFilter: String, CaseIterable, Identifiable {
 
     var iconName: String {
         switch self {
+        case .following:
+            return "person.2"
         case .readyNow:
             return "checkmark.circle"
         case .under15:
@@ -1400,6 +1451,8 @@ private enum HomeQuickFilter: String, CaseIterable, Identifiable {
 
     func title(using localizer: AppLocalizer) -> String {
         switch self {
+        case .following:
+            return localizer.text(.fromPeopleYouFollow)
         case .readyNow:
             return localizer.text(.quickActionReadyToCook)
         case .under15:

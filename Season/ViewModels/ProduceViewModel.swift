@@ -427,6 +427,22 @@ final class ProduceViewModel: ObservableObject {
         return Array(followed.prefix(max(1, limit)))
     }
 
+    func rankedFollowingRecipes(followedCreatorIDs: [String], limit: Int = 6) -> [RankedRecipe] {
+        guard !followedCreatorIDs.isEmpty else { return [] }
+
+        let normalizedFollowedIDs = Set(
+            followedCreatorIDs.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty && $0 != "unknown" }
+        )
+        guard !normalizedFollowedIDs.isEmpty else { return [] }
+
+        let followed = rankedDiscoverableRecipes().filter { ranked in
+            guard let creatorID = ranked.recipe.canonicalCreatorID else { return false }
+            return normalizedFollowedIDs.contains(creatorID)
+        }
+        return Array(followed.prefix(max(1, limit)))
+    }
+
     func rankedRecipesByAuthor(_ author: String) -> [RankedRecipe] {
         rankedDiscoverableRecipes().filter { $0.recipe.author == author }
     }
