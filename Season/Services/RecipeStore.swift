@@ -4,14 +4,23 @@ enum RecipeStore {
     private static var cachedRecipes: [Recipe]?
     private static let cacheLock = NSLock()
     private static let userRecipesStorageKey = "userCreatedRecipesData"
+    private static let seededCreatorRegistry: [String: UserProfile] = [
+        "anna": UserProfile(id: "9f4f9247-7efc-4d2d-b183-2b50fdbec564", name: "Anna"),
+        "marco": UserProfile(id: "2c6d6876-2f6c-4290-8d13-5cb7e1f3a24e", name: "Marco"),
+        "sofia": UserProfile(id: "5be98b2e-0ba9-4ce3-8f55-f6f021db5f35", name: "Sofia"),
+        "luca": UserProfile(id: "6d04d393-35f8-4ec2-8bd2-e4d198ecdd0f", name: "Luca")
+    ]
 
     static func loadProfiles() -> [UserProfile] {
-        [
-            UserProfile(id: "anna", name: "Anna"),
-            UserProfile(id: "marco", name: "Marco"),
-            UserProfile(id: "sofia", name: "Sofia"),
-            UserProfile(id: "luca", name: "Luca")
-        ]
+        Array(seededCreatorRegistry.values).sorted { $0.name < $1.name }
+    }
+
+    static func localOnlyCreatorIDs() -> Set<String> {
+        Set(
+            seededCreatorRegistry.values.map {
+                $0.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            }
+        )
     }
 
     static func loadRecipes() -> [Recipe] {
@@ -349,6 +358,8 @@ enum RecipeStore {
                 id: payload.id,
                 title: payload.title,
                 author: payload.author,
+                creatorId: payload.creatorID ?? "unknown",
+                creatorDisplayName: payload.creatorDisplayName,
                 ingredients: ingredients,
                 preparationSteps: payload.preparationSteps,
                 prepTimeMinutes: payload.prepTimeMinutes,
@@ -391,14 +402,31 @@ enum RecipeStore {
 
         return recipes.map { recipe in
             var updated = recipe
+            let rawCreatorID = updated.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+            let rawCreatorIDLowercased = rawCreatorID.lowercased()
 
             if updated.canonicalCreatorID == nil {
+                if !rawCreatorID.isEmpty && rawCreatorIDLowercased != "unknown" {
+                    print("[SEASON_CREATOR_MIGRATION] phase=legacy_creator_found recipe_id=\(updated.id) raw_creator_id=\(rawCreatorID)")
+                }
+
                 let normalizedAuthor = updated.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 if let profile = profileByName[normalizedAuthor] {
-                    updated.creatorId = profile.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    let canonicalCreatorID = profile.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    updated.creatorId = canonicalCreatorID
                     if (updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
                         updated.creatorDisplayName = profile.name
                     }
+                    let displayNameForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? profile.name
+                    print("[SEASON_CREATOR_MIGRATION] phase=seed_creator_registry_used recipe_id=\(updated.id) creator_id=\(canonicalCreatorID)")
+                    print("[SEASON_CREATOR_MIGRATION] phase=creator_uuid_mapped recipe_id=\(updated.id) creator_id=\(canonicalCreatorID) display_name=\(displayNameForLog)")
+                }
+            }
+
+            if updated.canonicalCreatorID == nil {
+                let displayNameForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? updated.author.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !displayNameForLog.isEmpty && displayNameForLog.lowercased() != "unknown" {
+                    print("[SEASON_CREATOR_MIGRATION] phase=creator_uuid_missing recipe_id=\(updated.id) display_name=\(displayNameForLog)")
                 }
             }
 
@@ -420,6 +448,8 @@ private struct SeedRecipePayload: Codable {
     let id: String
     let title: String
     let author: String
+    let creatorID: String?
+    let creatorDisplayName: String?
     let ingredients: [SeedIngredientPayload]
     let preparationSteps: [String]
     let prepTimeMinutes: Int?

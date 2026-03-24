@@ -166,6 +166,10 @@ struct ContentView: View {
             Task {
                 await outboxDispatcher.processPendingMutations()
             }
+            Task {
+                print("[SEASON_SUPABASE] phase=follow_sync_triggered source=app_launch")
+                await FollowSyncManager.shared.syncFromBackend()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }

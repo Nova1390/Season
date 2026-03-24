@@ -102,6 +102,19 @@ struct CloudFridgeItem: Codable {
     let updated_at: String?
 }
 
+private struct CloudFollowRow: Codable {
+    let id: String?
+    let follower_id: String?
+    let following_id: String?
+    let created_at: String?
+}
+
+private struct FollowInsertPayload: Encodable {
+    let follower_id: String
+    let following_id: String
+    let created_at: String
+}
+
 private struct CloudRecipeIngredient: Codable {
     let produce_id: String?
     let basic_ingredient_id: String?
@@ -115,6 +128,8 @@ private struct CloudRecipeRow: Codable {
     let user_id: String?
     let creator_id: String?
     let creator_display_name: String?
+    let creator_avatar_url: String?
+    let avatar_url: String?
     let title: String?
     let ingredients: [CloudRecipeIngredient]?
     let steps: [String]?
@@ -256,6 +271,108 @@ final class SupabaseService {
 
     func currentAuthenticatedUserID() -> UUID? {
         client?.auth.currentUser?.id
+    }
+
+    func fetchFollows(for followerId: String) async -> [FollowRelation] {
+        let normalizedFollowerID = normalizeFollowID(followerId)
+        guard !normalizedFollowerID.isEmpty else { return [] }
+
+        print("[SEASON_SUPABASE] request=fetchFollows phase=request_started follower_id=\(normalizedFollowerID)")
+
+        guard let client else {
+            print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await client
+                .from("follows")
+                .select()
+                .eq("follower_id", value: normalizedFollowerID)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudFollowRow].self, from: response.data)
+            let iso8601 = ISO8601DateFormatter()
+            let relations = rows.compactMap { row -> FollowRelation? in
+                let follower = normalizeFollowID(row.follower_id ?? "")
+                let following = normalizeFollowID(row.following_id ?? "")
+                guard !follower.isEmpty, !following.isEmpty, following != "unknown" else { return nil }
+                let createdAt = row.created_at.flatMap { iso8601.date(from: $0) } ?? Date()
+                return FollowRelation(followerId: follower, followingId: following, createdAt: createdAt)
+            }
+
+            print("[SEASON_SUPABASE] request=fetchFollows phase=request_ok follower_id=\(normalizedFollowerID) count=\(relations.count)")
+            return relations
+        } catch {
+            if isMissingFollowsTableError(error) {
+                print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) error=\(error)")
+                return []
+            }
+            print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed follower_id=\(normalizedFollowerID) error=\(error)")
+            return []
+        }
+    }
+
+    func createFollow(_ relation: FollowRelation) async {
+        let followerID = normalizeFollowID(relation.followerId)
+        let followingID = normalizeFollowID(relation.followingId)
+        guard !followerID.isEmpty, !followingID.isEmpty, followingID != "unknown" else { return }
+
+        print("[SEASON_SUPABASE] request=createFollow phase=request_started follower_id=\(followerID) following_id=\(followingID)")
+
+        guard let client else {
+            print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=missing_configuration")
+            return
+        }
+
+        let payload = FollowInsertPayload(
+            follower_id: followerID,
+            following_id: followingID,
+            created_at: ISO8601DateFormatter().string(from: relation.createdAt)
+        )
+
+        do {
+            _ = try await client
+                .from("follows")
+                .upsert(payload, onConflict: "follower_id,following_id")
+                .execute()
+            print("[SEASON_SUPABASE] request=createFollow phase=request_ok follower_id=\(followerID) following_id=\(followingID)")
+        } catch {
+            if isMissingFollowsTableError(error) {
+                print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=table_missing follower_id=\(followerID) following_id=\(followingID) error=\(error)")
+                return
+            }
+            print("[SEASON_SUPABASE] request=createFollow phase=request_failed follower_id=\(followerID) following_id=\(followingID) error=\(error)")
+        }
+    }
+
+    func deleteFollow(followerId: String, followingId: String) async {
+        let normalizedFollowerID = normalizeFollowID(followerId)
+        let normalizedFollowingID = normalizeFollowID(followingId)
+        guard !normalizedFollowerID.isEmpty, !normalizedFollowingID.isEmpty else { return }
+
+        print("[SEASON_SUPABASE] request=deleteFollow phase=request_started follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
+
+        guard let client else {
+            print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=missing_configuration")
+            return
+        }
+
+        do {
+            _ = try await client
+                .from("follows")
+                .delete()
+                .eq("follower_id", value: normalizedFollowerID)
+                .eq("following_id", value: normalizedFollowingID)
+                .execute()
+            print("[SEASON_SUPABASE] request=deleteFollow phase=request_ok follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
+        } catch {
+            if isMissingFollowsTableError(error) {
+                print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
+                return
+            }
+            print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
+        }
     }
 
     func setSession(accessToken: String, refreshToken: String) async throws {
@@ -669,6 +786,8 @@ final class SupabaseService {
                 let trimmedTitle = row.title?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let safeTitle = (trimmedTitle?.isEmpty == false) ? trimmedTitle! : "Untitled recipe"
                 let trimmedCreatorDisplayName = row.creator_display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let trimmedCreatorAvatarURL = row.creator_avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let legacyAvatarURL = row.avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 // Canonical identity is creator_id + creator_display_name.
                 // Keep author populated only as a legacy compatibility fallback for older author-based screens.
                 let safeAuthorName = trimmedCreatorDisplayName.isEmpty ? "Unknown" : trimmedCreatorDisplayName
@@ -679,6 +798,11 @@ final class SupabaseService {
                     author: safeAuthorName,
                     creatorId: row.creator_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "unknown",
                     creatorDisplayName: trimmedCreatorDisplayName.isEmpty ? nil : trimmedCreatorDisplayName,
+                    creatorAvatarURL: {
+                        if !trimmedCreatorAvatarURL.isEmpty { return trimmedCreatorAvatarURL }
+                        if !legacyAvatarURL.isEmpty { return legacyAvatarURL }
+                        return nil
+                    }(),
                     ingredients: mappedIngredients,
                     preparationSteps: (row.steps ?? []).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty },
                     prepTimeMinutes: nil,
@@ -1277,6 +1401,17 @@ final class SupabaseService {
     private func isMissingColumnError(_ error: Error, column: String) -> Bool {
         let message = String(describing: error).lowercased()
         return message.contains("pgrst204") || (message.contains(column.lowercased()) && message.contains("column"))
+    }
+
+    private func isMissingFollowsTableError(_ error: Error) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("relation") &&
+            message.contains("follows") &&
+            message.contains("does not exist")
+    }
+
+    private func normalizeFollowID(_ id: String) -> String {
+        id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private func shoppingListRowID(localItemID: String, userID: String) -> String {

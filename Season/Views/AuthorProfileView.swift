@@ -242,6 +242,14 @@ struct AuthorProfileView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         guard !cleaned.isEmpty, cleaned != "unknown" else { return nil }
+        guard UUID(uuidString: cleaned) != nil else {
+            print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(cleaned)")
+            if cleaned.range(of: "^[a-z0-9_\\-.]+$", options: .regularExpression) != nil &&
+                !cleaned.contains("-") {
+                print("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(cleaned)")
+            }
+            return nil
+        }
         return cleaned
     }
 
@@ -295,14 +303,11 @@ struct AuthorProfileView: View {
 
     @ViewBuilder
     private var avatarContent: some View {
-        let trimmed = profileAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let url = trimmed.isEmpty ? nil : URL(string: trimmed)
-
-        RemoteImageView(
-            url: url,
-            fallbackAssetName: nil
+        AvatarView(
+            avatarURL: profileAvatarURL,
+            size: 72,
+            creatorID: canonicalCreatorID
         )
-        .clipShape(Circle())
     }
 
     private func socialDisplayValue(for link: CreatorSocialLink) -> String {

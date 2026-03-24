@@ -21,6 +21,7 @@ struct RecipeDetailView: View {
     @State private var hasAttemptedTranslation = false
     @State private var translationFailed = false
     @State private var hasLoggedCreatorEvaluation = false
+    @State private var hasLoggedCreatorRowRender = false
     @State private var showingCreatorProfile = false
     @Environment(\.openURL) private var openURL
 
@@ -443,7 +444,8 @@ struct RecipeDetailView: View {
                 creatorID: validRecipeCreatorID,
                 viewModel: viewModel,
                 shoppingListViewModel: shoppingListViewModel,
-                profileSocialLinks: creatorProfileLinks
+                profileSocialLinks: creatorProfileLinks,
+                profileAvatarURL: rankedRecipe.recipe.creatorAvatarURL
             )
         }
     }
@@ -636,14 +638,11 @@ struct RecipeDetailView: View {
                 showingCreatorProfile = true
             } label: {
                 HStack(spacing: 10) {
-                    Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        )
+                    AvatarView(
+                        avatarURL: rankedRecipe.recipe.creatorAvatarURL,
+                        size: 28,
+                        creatorID: validRecipeCreatorID
+                    )
 
                     Text(displayedCreatorName)
                         .font(.subheadline.weight(.semibold))
@@ -652,6 +651,14 @@ struct RecipeDetailView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .onAppear {
+                guard !hasLoggedCreatorRowRender else { return }
+                hasLoggedCreatorRowRender = true
+                let rawCreatorID = rankedRecipe.recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawCreatorForLog = rawCreatorID.isEmpty ? "nil" : rawCreatorID
+                let canonicalCreatorForLog = validRecipeCreatorID ?? "nil"
+                print("[SEASON_RECIPE_CREATOR] phase=creator_row_rendered recipe_id=\(rankedRecipe.recipe.id) display_name=\(displayedCreatorName) raw_creator_id=\(rawCreatorForLog) canonical_creator_id=\(canonicalCreatorForLog)")
+            }
 
             Spacer()
         }
@@ -751,8 +758,34 @@ struct RecipeDetailView: View {
         let creatorDisplay = displayedCreatorName
         let currentID = CurrentUser.shared.creator.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let canShow = canShowFollowButton
+        let backendSyncEligible = validRecipeCreatorID.map { FollowSyncManager.isBackendSyncableCreatorID($0) } ?? false
 
         print("[SEASON_FOLLOW_IDENTITY] phase=identity_eval recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=\(rawCreatorForLog) canonical_creator_id=\(canonicalCreatorForLog) displayed_creator_name=\(creatorDisplay) current_creator_id=\(currentID) can_show_follow=\(canShow)")
+        print("[SEASON_FOLLOW_SYNC] phase=creator_sync_eligibility recipe_id=\(rankedRecipe.recipe.id) creator_id=\(canonicalCreatorForLog) eligible=\(backendSyncEligible)")
+        if let validRecipeCreatorID {
+            print("[SEASON_FOLLOW_IDENTITY] phase=canonical_id_resolved recipe_id=\(rankedRecipe.recipe.id) creator_id=\(validRecipeCreatorID)")
+            if canShow {
+                print("[SEASON_RECIPE_CREATOR] phase=follow_visible recipe_id=\(rankedRecipe.recipe.id) creator_id=\(validRecipeCreatorID)")
+            }
+        } else if !rawCreatorID.isEmpty {
+            print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(rawCreatorID)")
+            if rawCreatorID.range(of: "^[A-Za-z0-9_\\-.]+$", options: .regularExpression) != nil &&
+                !rawCreatorID.contains("-") {
+                print("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(rawCreatorID)")
+            }
+            print("[SEASON_RECIPE_CREATOR] phase=follow_hidden_invalid_creator recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=\(rawCreatorForLog)")
+        }
+
+        switch rankedRecipe.recipe.creatorIdentityState {
+        case .canonicalUUID:
+            break
+        case .legacyUnmigrated(let rawLegacyID):
+            print("[SEASON_RECIPE_CREATOR] phase=legacy_recipe_identity_detected recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=\(rawLegacyID) display_name=\(displayedCreatorName)")
+        case .unknown:
+            if !rankedRecipe.recipe.hasDisplayableCreatorIdentity {
+                print("[SEASON_RECIPE_CREATOR] phase=follow_hidden_invalid_creator recipe_id=\(rankedRecipe.recipe.id) raw_creator_id=nil")
+            }
+        }
     }
 
     private func logDetailIdentity() {

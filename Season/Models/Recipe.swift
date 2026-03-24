@@ -98,6 +98,12 @@ enum RecipePublicationStatus: String, Codable, Hashable {
     case published
 }
 
+enum RecipeCreatorIdentityState: Hashable {
+    case canonicalUUID(String)
+    case legacyUnmigrated(String)
+    case unknown
+}
+
 struct Recipe: Identifiable, Codable, Hashable {
     let id: String
     let title: String
@@ -108,6 +114,9 @@ struct Recipe: Identifiable, Codable, Hashable {
     var creatorId: String = "unknown"
     // Canonical visible creator name when available from current domain model.
     var creatorDisplayName: String? = nil
+    // Optional creator avatar URL for remote profile image rendering.
+    // Keep nil-safe for backward compatibility with older local/remote data.
+    var creatorAvatarURL: String? = nil
     let ingredients: [RecipeIngredient]
     let preparationSteps: [String]
     let prepTimeMinutes: Int?
@@ -162,7 +171,26 @@ struct Recipe: Identifiable, Codable, Hashable {
         // This keeps follow/profile identity logic safe and explicit.
         guard !cleaned.isEmpty else { return nil }
         guard cleaned != "unknown" else { return nil }
+        guard UUID(uuidString: cleaned) != nil else { return nil }
         return cleaned
+    }
+
+    // Helper to make creator identity handling explicit across UI/sync.
+    var creatorIdentityState: RecipeCreatorIdentityState {
+        if let canonicalCreatorID {
+            return .canonicalUUID(canonicalCreatorID)
+        }
+
+        let raw = creatorId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if raw.isEmpty || raw == "unknown" {
+            return .unknown
+        }
+        return .legacyUnmigrated(raw)
+    }
+
+    var hasDisplayableCreatorIdentity: Bool {
+        let display = displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !display.isEmpty && display.lowercased() != "unknown"
     }
 
     // Canonical display fallback for recipe UI:
