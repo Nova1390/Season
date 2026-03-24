@@ -393,19 +393,31 @@ final class SupabaseService {
                 throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
             }
 
-            guard let user = supabaseClient.auth.currentUser else {
+            let userAtUploadTime = supabaseClient.auth.currentUser
+            let hasAuthenticatedUser = userAtUploadTime != nil
+            let currentUserID = userAtUploadTime?.id.uuidString.lowercased() ?? "nil"
+
+            guard let user = userAtUploadTime else {
                 throw SupabaseServiceError.unauthenticated
             }
 
+            let bucketName = "recipes"
             let normalizedRecipeID = recipeID.trimmingCharacters(in: .whitespacesAndNewlines)
-            let path = "recipes/\(user.id.uuidString.lowercased())/\(normalizedRecipeID).jpg"
+            let path = "\(user.id.uuidString.lowercased())/\(normalizedRecipeID).jpg"
+            let pathSegments = path.split(separator: "/").map(String.init)
+            let firstFolderSegment = pathSegments.indices.contains(0) ? pathSegments[0] : "nil"
+            let uidPathSegment = pathSegments.indices.contains(1) ? pathSegments[1] : "nil"
+            let fileSegment = pathSegments.indices.contains(2) ? pathSegments[2] : "nil"
             let timeoutSeconds: TimeInterval = 10
+
+            print("[SEASON_SUPABASE] phase=upload_context bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) has_authenticated_user=\(hasAuthenticatedUser) current_user_id=\(currentUserID) path_first_segment=\(firstFolderSegment) path_uid_segment=\(uidPathSegment) path_file_segment=\(fileSegment)")
+            print("[SEASON_SUPABASE] phase=upload_started bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased())")
 
             do {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     group.addTask {
                         _ = try await supabaseClient.storage
-                            .from("recipes")
+                            .from(bucketName)
                             .upload(
                                 path,
                                 data: imageData,
@@ -426,12 +438,15 @@ final class SupabaseService {
                 }
 
                 return try supabaseClient.storage
-                    .from("recipes")
+                    .from(bucketName)
                     .getPublicURL(path: path)
                     .absoluteString
             } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
                 print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
                 throw SupabaseServiceError.requestTimedOut(requestName, seconds)
+            } catch {
+                print("[SEASON_SUPABASE] phase=upload_failed bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased()) error=\(error)")
+                throw error
             }
         }
     }
