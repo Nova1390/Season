@@ -156,14 +156,13 @@ struct RecipeDetailView: View {
                                                 brandIcon(for: link.platform)
                                                     .frame(width: 16, height: 16)
                                                 Text(link.label)
-                                                    .font(.subheadline.weight(.semibold))
+                                                    .font(SeasonTypography.subtitle)
                                             }
                                             .foregroundStyle(.primary)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                Capsule(style: .continuous)
-                                                    .fill(Color(.systemGray6))
+                                            .seasonCapsuleChipStyle(
+                                                horizontalPadding: 12,
+                                                verticalPadding: 8,
+                                                background: SeasonColors.mutedChipSurface
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -323,8 +322,8 @@ struct RecipeDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color(.secondarySystemGroupedBackground))
+                                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                                        .fill(SeasonColors.secondarySurface)
                                 )
                         }
                         .buttonStyle(.plain)
@@ -340,8 +339,8 @@ struct RecipeDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.88))
+                                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                                        .fill(SeasonColors.secondarySurface.opacity(0.88))
                                 )
                         }
                         .buttonStyle(.plain)
@@ -677,19 +676,14 @@ struct RecipeDetailView: View {
 
     @ViewBuilder
     private func dietaryTagChip(_ tag: RecipeDietaryTag) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: dietaryTagIconName(tag))
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(viewModel.localizer.dietaryTagTitle(tag))
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(.tertiarySystemGroupedBackground))
+        SeasonBadge(
+            text: viewModel.localizer.dietaryTagTitle(tag),
+            icon: dietaryTagIconName(tag),
+            horizontalPadding: 8,
+            verticalPadding: 5,
+            cornerRadius: SeasonRadius.small,
+            foreground: .secondary,
+            background: SeasonColors.subtleSurface
         )
     }
 
@@ -1267,7 +1261,7 @@ private struct RecipeHeroView: View {
         imageLayer
             .frame(maxWidth: .infinity)
             .frame(height: 208)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 LinearGradient(
                     stops: [

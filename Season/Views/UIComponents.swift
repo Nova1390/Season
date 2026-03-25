@@ -7,6 +7,77 @@ enum SeasonSpacing {
     static let sm: CGFloat = 12
     static let md: CGFloat = 16
     static let lg: CGFloat = 24
+    static let xl: CGFloat = 32
+}
+
+enum SeasonRadius {
+    static let small: CGFloat = 8
+    static let medium: CGFloat = 10
+    static let large: CGFloat = 12
+    static let xl: CGFloat = 16
+}
+
+enum SeasonTypography {
+    // Hierarchy rule: title > subtitle > body > metadata > caption.
+    static let title: Font = .title2.weight(.bold)
+    static let subtitle: Font = .subheadline.weight(.semibold)
+    static let body: Font = .body
+    static let metadata: Font = .caption.weight(.medium)
+    static let caption: Font = .caption2
+    static let captionStrong: Font = .caption2.weight(.semibold)
+}
+
+enum SeasonColors {
+    static let primarySurface = Color(.systemGroupedBackground)
+    static let secondarySurface = Color(.secondarySystemGroupedBackground)
+    static let subtleSurface = Color(.tertiarySystemGroupedBackground)
+    static let mutedChipSurface = Color(.systemGray6)
+}
+
+extension View {
+    func seasonCardStyle(
+        cornerRadius: CGFloat = SeasonRadius.medium,
+        background: Color = SeasonColors.secondarySurface
+    ) -> some View {
+        self.background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(background)
+        )
+    }
+
+    func seasonChipStyle(
+        horizontalPadding: CGFloat = 8,
+        verticalPadding: CGFloat = 4,
+        cornerRadius: CGFloat = SeasonRadius.small,
+        background: Color = SeasonColors.subtleSurface
+    ) -> some View {
+        self
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(background)
+            )
+    }
+
+    func seasonCapsuleChipStyle(
+        horizontalPadding: CGFloat = 12,
+        verticalPadding: CGFloat = 8,
+        background: Color = SeasonColors.mutedChipSurface
+    ) -> some View {
+        self
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(background)
+            )
+    }
+
+    // Use for section rhythm to keep vertical cadence consistent across screens.
+    func seasonSectionSpacing(_ vertical: CGFloat = SeasonSpacing.sm) -> some View {
+        self.padding(.vertical, vertical)
+    }
 }
 
 enum SeasonLayout {
@@ -20,10 +91,7 @@ struct SeasonCard<Content: View>: View {
     var body: some View {
         content
             .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
+            .seasonCardStyle(cornerRadius: SeasonRadius.medium, background: SeasonColors.secondarySurface)
     }
 }
 
@@ -119,20 +187,398 @@ struct EmptyStateCard: View {
     }
 }
 
+struct SeasonSectionHeader: View {
+    let title: String
+    let trailingText: String?
+    let trailingActionTitle: String?
+    let trailingAction: (() -> Void)?
+
+    init(
+        title: String,
+        trailingText: String? = nil,
+        trailingActionTitle: String? = nil,
+        trailingAction: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.trailingText = trailingText
+        self.trailingActionTitle = trailingActionTitle
+        self.trailingAction = trailingAction
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: SeasonSpacing.sm) {
+            Text(title)
+                .font(SeasonTypography.subtitle)
+                .foregroundStyle(.primary)
+            Spacer(minLength: SeasonSpacing.xs)
+            if let trailingText {
+                Text(trailingText)
+                    .font(SeasonTypography.metadata)
+                    .foregroundStyle(.secondary)
+            } else if let trailingActionTitle, let trailingAction {
+                Button(trailingActionTitle, action: trailingAction)
+                    .font(SeasonTypography.metadata)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+            }
+        }
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+}
+
+struct SeasonStatChip: View {
+    let icon: String
+    let text: String
+    var background: Color = SeasonColors.subtleSurface
+    var foreground: Color = Color.primary.opacity(0.76)
+    var borderOpacity: Double = 0.08
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(SeasonTypography.captionStrong)
+                .foregroundStyle(foreground)
+            Text(text)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(foreground)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(background)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.primary.opacity(borderOpacity), lineWidth: 0.6)
+        )
+    }
+}
+
+struct SeasonBadge: View {
+    let text: String
+    var icon: String?
+    var horizontalPadding: CGFloat = 8
+    var verticalPadding: CGFloat = 4
+    var cornerRadius: CGFloat = SeasonRadius.small
+    var foreground: Color = .secondary
+    var background: Color = SeasonColors.subtleSurface
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(SeasonTypography.captionStrong)
+            }
+            Text(text)
+                .font(SeasonTypography.captionStrong)
+                .lineLimit(1)
+        }
+        .foregroundStyle(foreground)
+        .seasonChipStyle(
+            horizontalPadding: horizontalPadding,
+            verticalPadding: verticalPadding,
+            cornerRadius: cornerRadius,
+            background: background
+        )
+    }
+}
+
+struct SeasonCardContainer<Content: View>: View {
+    @ViewBuilder var content: Content
+    var cornerRadius: CGFloat = SeasonRadius.large
+    var background: Color = Color(.systemBackground)
+    var backgroundOpacity: Double = 1.0
+    var borderOpacity: Double = 0.09
+    var shadowOpacity: Double = 0.028
+    var shadowRadius: CGFloat = 8
+    var shadowY: CGFloat = 3
+
+    var body: some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(background.opacity(backgroundOpacity))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.primary.opacity(borderOpacity), lineWidth: 0.6)
+            )
+            .shadow(color: Color.black.opacity(shadowOpacity), radius: shadowRadius, x: 0, y: shadowY)
+    }
+}
+
+enum RecipeCardVariant {
+    case compact
+    case regular
+    case profile
+    case feedCompact
+    case feedLarge
+
+    var thumbnailSize: CGFloat {
+        switch self {
+        case .compact: return 52
+        case .regular: return 62
+        case .profile: return 50
+        case .feedCompact: return 72
+        case .feedLarge: return 0
+        }
+    }
+}
+
+struct RecipeCardView: View {
+    let recipe: Recipe
+    let title: String
+    let subtitle: String?
+    let metadataText: String?
+    let seasonalityScore: Double?
+    let localizer: AppLocalizer?
+    var variant: RecipeCardVariant = .regular
+    var badges: [String] = []
+    var cardBackground: Color = SeasonColors.secondarySurface
+    var cardBackgroundOpacity: Double = 1.0
+    var cardBorderOpacity: Double = 0.05
+    var cardShadowOpacity: Double = 0
+    var cardShadowRadius: CGFloat = 0
+    var cardShadowY: CGFloat = 0
+
+    var body: some View {
+        if variant == .feedLarge {
+            feedLargeCard
+        } else {
+            inlineCard(for: variant)
+        }
+    }
+
+    private func inlineCard(for variant: RecipeCardVariant) -> some View {
+        let isFeedCompact = variant == .feedCompact
+
+        return SeasonCardContainer(
+            content: {
+                HStack(alignment: .top, spacing: 12) {
+                    RecipeThumbnailView(recipe: recipe, size: variant.thumbnailSize)
+                        .frame(width: isFeedCompact ? 74 : variant.thumbnailSize, height: isFeedCompact ? 74 : variant.thumbnailSize)
+
+                    VStack(alignment: .leading, spacing: isFeedCompact ? 5 : 6) {
+                        HStack(alignment: .top, spacing: 6) {
+                            Text(title)
+                                .font(isFeedCompact ? .subheadline.weight(.semibold) : .body.weight(.semibold))
+                                .lineLimit(2)
+                                .foregroundStyle(.primary)
+
+                            Spacer(minLength: 0)
+
+                            if isFeedCompact, let seasonalityScore, let localizer {
+                                SeasonalStatusBadge(score: seasonalityScore, localizer: localizer)
+                            }
+                        }
+
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(isFeedCompact ? .caption.weight(.medium) : SeasonTypography.metadata)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        HStack(spacing: 6) {
+                            if let metadataText {
+                                SeasonBadge(
+                                    text: metadataText,
+                                    horizontalPadding: isFeedCompact ? 7 : 7,
+                                    verticalPadding: isFeedCompact ? 4 : 3,
+                                    cornerRadius: 7,
+                                    foreground: .secondary,
+                                    background: SeasonColors.subtleSurface
+                                )
+                            }
+
+                            ForEach(badges, id: \.self) { badge in
+                                SeasonBadge(
+                                    text: badge,
+                                    horizontalPadding: 6,
+                                    verticalPadding: 3,
+                                    cornerRadius: 7
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: isFeedCompact ? 2 : 8)
+
+                    if !isFeedCompact, let seasonalityScore, let localizer {
+                        SeasonalStatusBadge(score: seasonalityScore, localizer: localizer)
+                    }
+                }
+                .padding(.horizontal, isFeedCompact ? 11 : 12)
+                .padding(.vertical, isFeedCompact ? 9 : 11)
+                .frame(minHeight: isFeedCompact ? 92 : nil, alignment: .topLeading)
+            },
+            cornerRadius: SeasonRadius.large,
+            background: cardBackground,
+            backgroundOpacity: cardBackgroundOpacity,
+            borderOpacity: cardBorderOpacity,
+            shadowOpacity: cardShadowOpacity,
+            shadowRadius: cardShadowRadius,
+            shadowY: cardShadowY
+        )
+    }
+
+    private var feedLargeCard: some View {
+        SeasonCardContainer(
+            content: {
+                VStack(alignment: .leading, spacing: 8) {
+                    feedHeroImage(height: 150)
+
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(2)
+                            .foregroundStyle(.primary)
+
+                        Spacer(minLength: 6)
+
+                        if let seasonalityScore, let localizer {
+                            SeasonalStatusBadge(score: seasonalityScore, localizer: localizer)
+                        }
+                    }
+
+                    HStack(spacing: 6) {
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        if let metadataText {
+                            SeasonBadge(
+                                text: metadataText,
+                                horizontalPadding: 7,
+                                verticalPadding: 3,
+                                cornerRadius: 7,
+                                foreground: .secondary,
+                                background: SeasonColors.subtleSurface
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
+            },
+            cornerRadius: SeasonRadius.large,
+            background: cardBackground,
+            backgroundOpacity: cardBackgroundOpacity,
+            borderOpacity: cardBorderOpacity,
+            shadowOpacity: cardShadowOpacity,
+            shadowRadius: cardShadowRadius,
+            shadowY: cardShadowY
+        )
+    }
+
+    @ViewBuilder
+    private func feedHeroImage(height: CGFloat) -> some View {
+        Group {
+            if let cover = resolvedRecipeCoverImage(for: recipe),
+               let localImage = recipeUIImage(from: cover) {
+                Image(uiImage: localImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let cover = resolvedRecipeCoverImage(for: recipe),
+                      let remoteURLString = cover.remoteURL,
+                      let remoteURL = URL(string: remoteURLString) {
+                AsyncImage(url: remoteURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        fallbackMedia
+                    }
+                }
+            } else if let imageName = recipe.coverImageName,
+                      UIImage(named: imageName) != nil {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                fallbackMedia
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var fallbackMedia: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(SeasonColors.subtleSurface)
+            Image(systemName: "fork.knife.circle.fill")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SeasonAuthorHeaderView<Avatar: View, TrailingAction: View, Stats: View, Badges: View>: View {
+    let name: String
+    let subtitle: String
+    let metadataText: String
+    @ViewBuilder var avatar: Avatar
+    @ViewBuilder var trailingAction: TrailingAction
+    @ViewBuilder var stats: Stats
+    @ViewBuilder var badges: Badges
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: SeasonSpacing.md) {
+                avatar
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(name)
+                        .font(.title2.weight(.heavy))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                        .padding(.bottom, 1)
+
+                    Text(subtitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    Text(metadataText)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+                trailingAction
+            }
+
+            stats
+            badges
+        }
+    }
+}
+
 struct UserBadgePill: View {
     let badge: UserBadge
     let localizer: AppLocalizer
 
     var body: some View {
-        Label(localizer.userBadgeTitle(badge.kind), systemImage: badge.symbol)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(.tertiarySystemGroupedBackground))
-            )
+        SeasonBadge(
+            text: localizer.userBadgeTitle(badge.kind),
+            icon: badge.symbol,
+            horizontalPadding: 8,
+            verticalPadding: 4,
+            cornerRadius: SeasonRadius.small,
+            foreground: .secondary,
+            background: SeasonColors.subtleSurface
+        )
     }
 }
 
@@ -164,19 +610,7 @@ struct SectionTitleCountRow: View {
     let countText: String?
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-            Spacer()
-            if let countText {
-                Text(countText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+        SeasonSectionHeader(title: title, trailingText: countText)
     }
 }
 
@@ -185,15 +619,14 @@ struct RecipeDietaryTagPill: View {
     let localizer: AppLocalizer
 
     var body: some View {
-        Text(localizer.dietaryTagTitle(tag))
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color(.tertiarySystemGroupedBackground))
-            )
+        SeasonBadge(
+            text: localizer.dietaryTagTitle(tag),
+            horizontalPadding: 7,
+            verticalPadding: 4,
+            cornerRadius: 7,
+            foreground: .secondary,
+            background: SeasonColors.subtleSurface
+        )
     }
 }
 
