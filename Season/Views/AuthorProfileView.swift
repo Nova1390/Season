@@ -301,12 +301,12 @@ struct AuthorProfileView: View {
         return followStore.isFollowing(canonicalCreatorID)
     }
 
-    private var followerCount: Int {
-        viewModel.followerCount(for: authorName, isFollowedByCurrentUser: isFollowing)
+    private var followerCountValue: Int {
+        followerCount(for: canonicalCreatorID, fallbackName: authorName)
     }
 
     private var estimatedFollowersStatText: String {
-        "~" + String(format: viewModel.localizer.text(.followersCountFormat), followerCount)
+        "\(formattedFollowerCount(followerCountValue)) \(viewModel.localizer.text(.followers).lowercased())"
     }
 
     private var totalCrispy: Int {
@@ -340,7 +340,8 @@ struct AuthorProfileView: View {
         AvatarView(
             avatarURL: profileAvatarURL,
             size: 72,
-            creatorID: canonicalCreatorID
+            creatorID: canonicalCreatorID,
+            displayName: authorName
         )
     }
 

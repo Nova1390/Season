@@ -485,8 +485,8 @@ struct RecipeDetailView: View {
                 }
             }
 
-            HStack(alignment: .center, spacing: 12) {
-                HStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                HStack(spacing: 10) {
                     Button {
                         viewModel.toggleRecipeCrispy(rankedRecipe.recipe)
                         pulse(.crispy)
@@ -529,12 +529,17 @@ struct RecipeDetailView: View {
                         Text("\(viewModel.compactCountText(viewModel.viewCount(for: rankedRecipe.recipe))) \(viewModel.localizer.text(.viewsLabel))")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .allowsTightening(true)
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
+                .layoutPriority(1)
 
                 Spacer()
 
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     Button {
                         viewModel.toggleSavedRecipe(rankedRecipe.recipe)
                         pulse(.save)
@@ -555,10 +560,20 @@ struct RecipeDetailView: View {
 
                     if showsUserAuthorshipMetadata {
                         HStack(spacing: 6) {
-                            Text("\(viewModel.compactCountText(followerCountValue)) \(viewModel.localizer.text(.followers))")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
+                            ViewThatFits(in: .horizontal) {
+                                Text("· \(formattedFollowerCount(followerCountValue)) \(viewModel.localizer.text(.followers).lowercased())")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                                Text("· \(formattedFollowerCount(followerCountValue))")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                            }
 
                             if canShowFollowButton, let creatorID = validRecipeCreatorID {
                                 Button {
@@ -640,7 +655,8 @@ struct RecipeDetailView: View {
                     AvatarView(
                         avatarURL: rankedRecipe.recipe.creatorAvatarURL,
                         size: 28,
-                        creatorID: validRecipeCreatorID
+                        creatorID: validRecipeCreatorID,
+                        displayName: displayedCreatorName
                     )
 
                     Text(displayedCreatorName)
@@ -668,10 +684,7 @@ struct RecipeDetailView: View {
     }
 
     private var followerCountValue: Int {
-        viewModel.followerCount(
-            for: displayedCreatorName,
-            isFollowedByCurrentUser: isFollowingAuthor
-        )
+        followerCount(for: validRecipeCreatorID, fallbackName: displayedCreatorName)
     }
 
     @ViewBuilder

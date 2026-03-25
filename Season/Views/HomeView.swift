@@ -248,13 +248,13 @@ struct HomeView: View {
 
     @ViewBuilder
     private var quickHorizontalStrip: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
             SeasonSectionHeader(title: viewModel.localizer.text(.smartSuggestionsTitle))
 
             SeasonCardContainer(
                 content: {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: SeasonSpacing.xs) {
                             ForEach(homeQuickFilters) { filter in
                                 Button {
                                     selectQuickFilter(filter)
@@ -262,9 +262,9 @@ struct HomeView: View {
                                     SeasonBadge(
                                         text: filter.title(using: viewModel.localizer),
                                         icon: filter.iconName,
-                                        horizontalPadding: 10,
-                                        verticalPadding: 8,
-                                        cornerRadius: 8,
+                                        horizontalPadding: SeasonSpacing.xs + 2,
+                                        verticalPadding: SeasonSpacing.xs,
+                                        cornerRadius: SeasonRadius.small,
                                         foreground: selectedQuickFilter == filter ? .white : .primary,
                                         background: selectedQuickFilter == filter
                                         ? Color.accentColor.opacity(0.9)
@@ -277,8 +277,8 @@ struct HomeView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, SeasonSpacing.xs + 2)
+                        .padding(.vertical, SeasonSpacing.xs + 2)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 },
@@ -299,20 +299,22 @@ struct HomeView: View {
 
     @ViewBuilder
     private var mixedFeedSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             if let selectedQuickFilter {
                 if selectedQuickFilter == .following && activeFilteredFeedItems.isEmpty {
                     Text(viewModel.localizer.text(.followAuthorsHint))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, SeasonSpacing.xs)
                 }
 
                 VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(activeFilteredFeedItems) { item in
+                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { index, item in
                         switch item {
                         case .recipe(let card, let style):
                             homeRecipeItem(card: card, style: style)
+                                .padding(.top, style == .large ? SeasonSpacing.xs : 0)
+                                .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
                         case .fridge:
                             EmptyView()
                         case .spotlight:
@@ -325,14 +327,19 @@ struct HomeView: View {
                 .animation(.easeInOut(duration: 0.18), value: selectedQuickFilter)
             } else {
                 VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(activeMiniFeedItems) { item in
+                    ForEach(Array(activeMiniFeedItems.enumerated()), id: \.element.id) { _, item in
                         switch item {
                         case .recipe(let card, let style):
                             homeRecipeItem(card: card, style: style)
+                                .padding(.bottom, style == .large ? SeasonSpacing.xs : 0)
                         case .fridge(let match):
                             fridgeSuggestionCard(match)
+                                .padding(.top, SeasonSpacing.xs)
+                                .padding(.bottom, SeasonSpacing.xs)
                         case .spotlight(let ingredient):
                             spotlightCard(for: ingredient)
+                                .padding(.top, SeasonSpacing.xs)
+                                .padding(.bottom, SeasonSpacing.xs)
                         }
                     }
                 }
@@ -344,13 +351,15 @@ struct HomeView: View {
                     switch item {
                     case .recipe(let card, let style):
                         homeRecipeItem(card: card, style: style)
+                            .padding(.top, style == .large ? SeasonSpacing.sm : 0)
+                            .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
                     case .fridge(let match):
                         fridgeSuggestionCard(match)
-                            .padding(.top, SeasonSpacing.sm)
+                            .padding(.top, SeasonSpacing.xs)
                             .padding(.bottom, SeasonSpacing.xs)
                     case .spotlight(let ingredient):
                         spotlightCard(for: ingredient)
-                            .padding(.top, SeasonSpacing.sm)
+                            .padding(.top, SeasonSpacing.xs)
                             .padding(.bottom, SeasonSpacing.xs)
                     }
                 }
@@ -1119,7 +1128,7 @@ struct HomeView: View {
                 shoppingListViewModel: shoppingListViewModel
             )
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs + 2) {
                 recipeImage(for: ranked.recipe, height: 172)
 
                 Text(ranked.recipe.title)
@@ -1135,9 +1144,9 @@ struct HomeView: View {
 
                     SeasonBadge(
                         text: hook,
-                        horizontalPadding: 7,
-                        verticalPadding: 3,
-                        cornerRadius: 7,
+                        horizontalPadding: SeasonSpacing.xs,
+                        verticalPadding: 4,
+                        cornerRadius: SeasonRadius.small,
                         foreground: .secondary,
                         background: SeasonColors.subtleSurface
                     )
@@ -1261,8 +1270,8 @@ struct HomeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal, 11)
-                .padding(.vertical, 10)
+                .padding(.horizontal, SeasonSpacing.sm)
+                .padding(.vertical, SeasonSpacing.xs + 2)
             }
             .buttonStyle(PressableCardButtonStyle())
             },
@@ -1467,9 +1476,9 @@ private struct HomeEditorialRecipeRow: View {
                 HStack(spacing: 6) {
                     SeasonBadge(
                         text: hook,
-                        horizontalPadding: 7,
+                        horizontalPadding: SeasonSpacing.xs,
                         verticalPadding: 4,
-                        cornerRadius: 7,
+                        cornerRadius: SeasonRadius.small,
                         foreground: .secondary,
                         background: SeasonColors.subtleSurface
                     )

@@ -933,14 +933,12 @@ struct AccountView: View {
 
     @ViewBuilder
     private var profileAvatarContent: some View {
-        let trimmedURL = accountProfileImageURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedURL = trimmedURL.isEmpty ? nil : URL(string: trimmedURL)
-
-        RemoteImageView(
-            url: resolvedURL,
-            fallbackAssetName: nil
+        AvatarView(
+            avatarURL: accountProfileImageURL,
+            size: 68,
+            creatorID: cloudProfile?.id.uuidString,
+            displayName: accountDisplayName
         )
-        .clipShape(Circle())
     }
 
     private var linkedAccounts: [LinkedSocialAccount] {

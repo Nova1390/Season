@@ -35,20 +35,19 @@ struct ProduceDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
                 heroSection
-                identityAndActionsBlock
-                Divider()
+                identityBlock
                 if let produceItem {
                     seasonalitySection(for: produceItem)
                 }
+                actionsBlock
                 if let nutrition = ingredientNutrition {
-                    Divider()
                     nutritionSection(nutrition)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, SeasonSpacing.xs)
+            .padding(.horizontal, SeasonSpacing.md)
+            .padding(.vertical, SeasonSpacing.sm)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(SeasonColors.primarySurface)
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
@@ -69,15 +68,58 @@ struct ProduceDetailView: View {
     @ViewBuilder
     private var heroSection: some View {
         if let produceItem {
-            ProduceHeroImageView(item: produceItem, height: 214)
+            ProduceHeroImageView(item: produceItem, height: 228)
+                .overlay(alignment: .bottomLeading) {
+                    ZStack(alignment: .bottomLeading) {
+                        LinearGradient(
+                            stops: [
+                                .init(color: Color.black.opacity(0.42), location: 0),
+                                .init(color: Color.black.opacity(0.18), location: 0.55),
+                                .init(color: Color.clear, location: 1)
+                            ],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                        .allowsHitTesting(false)
+
+                        Text(ingredientDisplayName)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.96))
+                            .lineLimit(2)
+                            .padding(.horizontal, SeasonSpacing.sm)
+                            .padding(.bottom, SeasonSpacing.sm)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous))
         } else if let basicIngredient {
             basicHeroImage(for: basicIngredient)
+                .overlay(alignment: .bottomLeading) {
+                    ZStack(alignment: .bottomLeading) {
+                        LinearGradient(
+                            stops: [
+                                .init(color: Color.black.opacity(0.36), location: 0),
+                                .init(color: Color.black.opacity(0.12), location: 0.58),
+                                .init(color: Color.clear, location: 1)
+                            ],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                        .allowsHitTesting(false)
+
+                        Text(ingredientDisplayName)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.96))
+                            .lineLimit(2)
+                            .padding(.horizontal, SeasonSpacing.sm)
+                            .padding(.bottom, SeasonSpacing.sm)
+                    }
+                }
         }
     }
 
-    private var identityAndActionsBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+    private var identityBlock: some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: SeasonSpacing.xs) {
                 Text(ingredientDisplayName)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -102,167 +144,141 @@ struct ProduceDetailView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+        }
+        .padding(.top, 2)
+    }
 
-            HStack(spacing: 8) {
-                statusChip(
-                    text: viewModel.localizer.text(.inShoppingList),
-                    systemImage: isInShoppingList ? "bag.fill" : "bag",
-                    isActive: isInShoppingList
+    private var actionsBlock: some View {
+        HStack(spacing: SeasonSpacing.xs) {
+            Button {
+                toggleShoppingListState()
+                pulseShoppingButton()
+            } label: {
+                actionToggleLabel(
+                    text: isInShoppingList ? "In List" : "Add to List",
+                    systemImage: isInShoppingList ? "checkmark" : "plus",
+                    foreground: isInShoppingList ? Color.green.opacity(0.98) : .primary,
+                    background: isInShoppingList ? Color.green.opacity(0.16) : SeasonColors.subtleSurface
                 )
-
-                if supportsFridgeState {
-                    statusChip(
-                        text: viewModel.localizer.text(.inFridge),
-                        systemImage: isInFridge ? "snowflake" : "snowflake.slash",
-                        isActive: isInFridge
-                    )
-                }
             }
+            .buttonStyle(.plain)
+            .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
+            .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
 
-            HStack(spacing: 10) {
+            if supportsFridgeState {
                 Button {
-                    toggleShoppingListState()
-                    pulseShoppingButton()
+                    toggleFridgeState()
+                    pulseFridgeButton()
                 } label: {
-                    Label(
-                        isInShoppingList
-                        ? viewModel.localizer.text(.removeFromList)
-                        : viewModel.localizer.text(.addToList),
-                        systemImage: isInShoppingList ? "minus.circle" : "plus.circle"
+                    actionToggleLabel(
+                        text: isInFridge ? "In Fridge" : "Add to Fridge",
+                        systemImage: isInFridge ? "snowflake" : "plus",
+                        foreground: isInFridge ? Color(red: 0.15, green: 0.55, blue: 0.72) : .primary,
+                        background: isInFridge
+                            ? Color(red: 0.15, green: 0.55, blue: 0.72).opacity(0.16)
+                            : SeasonColors.subtleSurface
                     )
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(isInShoppingList ? .red.opacity(0.85) : .accentColor)
-                .controlSize(.small)
-                .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
-                .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
-
-                if supportsFridgeState {
-                    Button {
-                        toggleFridgeState()
-                        pulseFridgeButton()
-                    } label: {
-                        Label(
-                            isInFridge
-                            ? viewModel.localizer.text(.removeFromFridge)
-                            : viewModel.localizer.text(.addToFridge),
-                            systemImage: isInFridge ? "snowflake.slash" : "snowflake"
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(isInFridge ? .red.opacity(0.85) : .accentColor)
-                    .controlSize(.small)
-                    .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
-                    .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
-                }
+                .buttonStyle(.plain)
+                .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
+                .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
             }
         }
-        .padding(SeasonSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(.separator).opacity(0.18), lineWidth: 0.5)
-        )
+    }
+
+    private func actionToggleLabel(
+        text: String,
+        systemImage: String,
+        foreground: Color,
+        background: Color
+    ) -> some View {
+        Label(text, systemImage: systemImage)
+            .lineLimit(1)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foreground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(background)
+            )
     }
 
     private func seasonalitySection(for produceItem: ProduceItem) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            HStack(alignment: .center, spacing: SeasonSpacing.xs) {
                 Text(viewModel.localizer.text(.seasonalityChart))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
                 Spacer()
                 CategoryIconView(category: produceItem.category, size: 18)
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(viewModel.localizer.text(.category))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(viewModel.localizer.categoryTitle(for: produceItem.category))
-                            .font(.subheadline.weight(.medium))
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(viewModel.localizer.text(.seasonMonths))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(viewModel.monthNames(for: produceItem.seasonMonths))
-                            .font(.subheadline.weight(.medium))
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-
-                Divider()
-
-                StylizedSeasonalityChart(
-                    inSeasonMonths: produceItem.seasonMonths,
-                    currentMonth: viewModel.currentMonth,
-                    languageCode: viewModel.languageCode
+            HStack(spacing: SeasonSpacing.xs) {
+                SeasonBadge(
+                    text: viewModel.localizer.categoryTitle(for: produceItem.category),
+                    icon: symbolName(for: produceItem.category),
+                    horizontalPadding: SeasonSpacing.xs,
+                    verticalPadding: 5,
+                    cornerRadius: SeasonRadius.small,
+                    foreground: .secondary,
+                    background: SeasonColors.subtleSurface
+                )
+                SeasonBadge(
+                    text: viewModel.monthNames(for: produceItem.seasonMonths),
+                    icon: "calendar",
+                    horizontalPadding: SeasonSpacing.xs,
+                    verticalPadding: 5,
+                    cornerRadius: SeasonRadius.small,
+                    foreground: .secondary,
+                    background: SeasonColors.subtleSurface
                 )
             }
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+
+            StylizedSeasonalityChart(
+                inSeasonMonths: produceItem.seasonMonths,
+                currentMonth: viewModel.currentMonth,
+                languageCode: viewModel.languageCode
             )
         }
     }
 
     private func nutritionSection(_ nutrition: ProduceNutrition) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             Text(viewModel.localizer.text(.nutrition))
-                .font(.subheadline.weight(.semibold))
+                .font(.subheadline.weight(.bold))
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
                 nutritionRow(
                     title: viewModel.localizer.text(.calories),
                     value: "\(nutrition.calories) kcal"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.protein),
                     value: "\(formatted(nutrition.protein)) g"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.carbs),
                     value: "\(formatted(nutrition.carbs)) g"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.fat),
                     value: "\(formatted(nutrition.fat)) g"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.fiber),
                     value: "\(formatted(nutrition.fiber)) g"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.vitaminC),
                     value: "\(formatted(nutrition.vitaminC)) mg"
                 )
-                Divider()
                 nutritionRow(
                     title: viewModel.localizer.text(.potassium),
                     value: "\(formatted(nutrition.potassium)) mg"
                 )
             }
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.localizer.text(.nutritionSourceCaption))
@@ -281,14 +297,16 @@ struct ProduceDetailView: View {
 
     @ViewBuilder
     private func nutritionRow(title: String, value: String) -> some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: SeasonSpacing.sm) {
             Text(title)
                 .foregroundStyle(.secondary)
             Spacer()
             Text(value)
-                .fontWeight(.medium)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
         }
         .font(.subheadline)
+        .padding(.vertical, 2)
     }
 
     private func formatted(_ value: Double) -> String {
@@ -401,24 +419,27 @@ struct ProduceDetailView: View {
 
     @ViewBuilder
     private func statusChip(text: String, systemImage: String, isActive: Bool) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(isActive ? Color.green : .secondary.opacity(0.95))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(isActive ? Color.green.opacity(0.14) : Color(.secondarySystemGroupedBackground))
-            )
+        SeasonBadge(
+            text: text,
+            icon: systemImage,
+            horizontalPadding: SeasonSpacing.xs,
+            verticalPadding: 5,
+            cornerRadius: SeasonRadius.small,
+            foreground: isActive ? Color.green.opacity(0.95) : .secondary,
+            background: isActive ? Color.green.opacity(0.13) : SeasonColors.subtleSurface
+        )
     }
 
     @ViewBuilder
     private func basicHeroImage(for ingredient: BasicIngredient) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
+                        colors: [
+                            Color(.secondarySystemGroupedBackground),
+                            Color(.tertiarySystemGroupedBackground)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -434,7 +455,19 @@ struct ProduceDetailView: View {
                 .offset(y: 1)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 214)
+        .frame(height: 228)
+        .overlay(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.2),
+                    Color.clear
+                ],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .allowsHitTesting(false)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous))
     }
 
     private var validNutritionReference: String? {
@@ -482,22 +515,23 @@ private struct StylizedSeasonalityChart: View {
                 let currentMonthPosition = CGFloat(max(0, min(11, currentMonth - 1)))
                 let currentPoint = pointForMonthPosition(currentMonthPosition, size: geometry.size)
                 let midY = geometry.size.height / 2
+                let chartCornerRadius = SeasonRadius.large
 
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.tertiarySystemGroupedBackground))
+                    RoundedRectangle(cornerRadius: chartCornerRadius, style: .continuous)
+                        .fill(SeasonColors.subtleSurface.opacity(0.86))
 
                     Rectangle()
-                        .fill(Color(red: 0.82, green: 0.95, blue: 0.86).opacity(0.22))
+                        .fill(Color(red: 0.82, green: 0.95, blue: 0.86).opacity(0.18))
                         .frame(height: midY)
                         .frame(maxHeight: .infinity, alignment: .top)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: chartCornerRadius, style: .continuous))
 
                     Rectangle()
-                        .fill(Color(red: 0.98, green: 0.86, blue: 0.84).opacity(0.16))
+                        .fill(Color(red: 0.98, green: 0.86, blue: 0.84).opacity(0.13))
                         .frame(height: midY)
                         .frame(maxHeight: .infinity, alignment: .bottom)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: chartCornerRadius, style: .continuous))
 
                     Path { path in
                         path.move(to: CGPoint(x: 0, y: midY))
@@ -536,6 +570,10 @@ private struct StylizedSeasonalityChart: View {
                         .shadow(color: Color(red: 0.18, green: 0.62, blue: 0.32).opacity(0.24), radius: 4, x: 0, y: 1)
                         .position(currentPoint)
                 }
+                .overlay(
+                    RoundedRectangle(cornerRadius: chartCornerRadius, style: .continuous)
+                        .stroke(Color.primary.opacity(0.06), lineWidth: 0.6)
+                )
             }
             .frame(height: 150)
 

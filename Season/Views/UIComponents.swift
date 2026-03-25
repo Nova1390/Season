@@ -386,9 +386,9 @@ struct RecipeCardView: View {
                             if let metadataText {
                                 SeasonBadge(
                                     text: metadataText,
-                                    horizontalPadding: isFeedCompact ? 7 : 7,
+                                    horizontalPadding: SeasonSpacing.xs,
                                     verticalPadding: isFeedCompact ? 4 : 3,
-                                    cornerRadius: 7,
+                                    cornerRadius: SeasonRadius.small,
                                     foreground: .secondary,
                                     background: SeasonColors.subtleSurface
                                 )
@@ -397,9 +397,9 @@ struct RecipeCardView: View {
                             ForEach(badges, id: \.self) { badge in
                                 SeasonBadge(
                                     text: badge,
-                                    horizontalPadding: 6,
+                                    horizontalPadding: SeasonSpacing.xs - 1,
                                     verticalPadding: 3,
-                                    cornerRadius: 7
+                                    cornerRadius: SeasonRadius.small
                                 )
                             }
                         }
@@ -455,9 +455,9 @@ struct RecipeCardView: View {
                         if let metadataText {
                             SeasonBadge(
                                 text: metadataText,
-                                horizontalPadding: 7,
+                                horizontalPadding: SeasonSpacing.xs,
                                 verticalPadding: 3,
-                                cornerRadius: 7,
+                                cornerRadius: SeasonRadius.small,
                                 foreground: .secondary,
                                 background: SeasonColors.subtleSurface
                             )
@@ -621,9 +621,9 @@ struct RecipeDietaryTagPill: View {
     var body: some View {
         SeasonBadge(
             text: localizer.dietaryTagTitle(tag),
-            horizontalPadding: 7,
+            horizontalPadding: SeasonSpacing.xs,
             verticalPadding: 4,
-            cornerRadius: 7,
+            cornerRadius: SeasonRadius.small,
             foreground: .secondary,
             background: SeasonColors.subtleSurface
         )

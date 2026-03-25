@@ -12,11 +12,24 @@ struct SearchView: View {
             let primaryType = viewModel.searchPrimaryType(for: query)
 
             if ingredientResults.isEmpty && recipeResults.isEmpty {
-                EmptyStateCard(
-                    symbol: "magnifyingglass.circle",
-                    title: viewModel.localizer.text(.searchEmptyTitle),
-                    subtitle: viewModel.localizer.text(.searchEmptySubtitle)
+                SeasonCardContainer(
+                    content: {
+                        EmptyStateCard(
+                            symbol: "magnifyingglass.circle",
+                            title: viewModel.localizer.text(.searchEmptyTitle),
+                            subtitle: viewModel.localizer.text(.searchEmptySubtitle)
+                        )
+                        .padding(.horizontal, SeasonSpacing.sm)
+                    },
+                    cornerRadius: SeasonRadius.large,
+                    background: SeasonColors.secondarySurface,
+                    backgroundOpacity: 0.72,
+                    borderOpacity: 0.05,
+                    shadowOpacity: 0.008,
+                    shadowRadius: 3,
+                    shadowY: 1
                 )
+                .padding(.top, SeasonSpacing.sm)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
@@ -29,9 +42,9 @@ struct SearchView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
+        .background(SeasonColors.primarySurface)
         .navigationTitle(viewModel.localizer.text(.searchTab))
         .toolbar {
             CartToolbarItems(
@@ -84,7 +97,7 @@ struct SearchView: View {
 
                         quickAddIngredientButton(for: result)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                     .listRowSeparator(.visible)
                     .listRowBackground(Color.clear)
                 }
@@ -108,8 +121,9 @@ struct SearchView: View {
                                 shoppingListViewModel: shoppingListViewModel
                             )
                         } label: {
-                            HStack(spacing: 10) {
+                            HStack(alignment: .top, spacing: 11) {
                                 RecipeThumbnailView(recipe: ranked.recipe, size: 44)
+                                    .frame(width: 44, height: 44)
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(ranked.recipe.title)
@@ -125,9 +139,14 @@ struct SearchView: View {
 
                                 Spacer()
 
-                                Text("\(ranked.seasonalMatchPercent)%")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
+                                SeasonBadge(
+                                    text: "\(ranked.seasonalMatchPercent)%",
+                                    horizontalPadding: 7,
+                                    verticalPadding: 4,
+                                    cornerRadius: 7,
+                                    foreground: .secondary,
+                                    background: SeasonColors.subtleSurface
+                                )
                             }
                         }
                         .buttonStyle(.plain)
@@ -143,7 +162,7 @@ struct SearchView: View {
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                     .listRowSeparator(.visible)
                     .listRowBackground(Color.clear)
                 }
@@ -163,9 +182,18 @@ struct SearchView: View {
                 shoppingListViewModel.add(basic)
             }
         } label: {
-            Image(systemName: isInList ? "checkmark.circle.fill" : "plus.circle")
-                .font(.title3)
-                .foregroundStyle(isInList ? .green : .secondary)
+            Image(systemName: isInList ? "checkmark" : "plus")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(isInList ? Color.green : .secondary)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(SeasonColors.subtleSurface)
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 0.6)
+                )
         }
         .buttonStyle(.plain)
         .disabled(isInList)
