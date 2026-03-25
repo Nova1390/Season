@@ -9,7 +9,6 @@ struct HomeView: View {
     @State private var cachedMiniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
     @State private var cachedFilteredFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
     @State private var mainContinuousFeedItems: [HomeFeedItem] = []
-    @State private var continuousEditorialBlocks: [HomeContinuousBlock] = []
     @State private var featuredRecipeCache: RankedRecipe?
     @State private var fridgeMatchesCache: [FridgeMatchedRecipe] = []
     @State private var ingredientUsageCountByID: [String: Int] = [:]
@@ -313,13 +312,7 @@ struct HomeView: View {
                     ForEach(activeFilteredFeedItems) { item in
                         switch item {
                         case .recipe(let card, let style):
-                            if style == .large {
-                                largeRecipeCard(ranked: card.ranked, hook: card.hook)
-                            } else {
-                                compactRecipeCard(ranked: card.ranked, hook: card.hook)
-                            }
-                        case .recipePair(let first, let second):
-                            pairAsCompactCards(first: first, second: second)
+                            homeRecipeItem(card: card, style: style)
                         case .fridge:
                             EmptyView()
                         case .spotlight:
@@ -335,13 +328,7 @@ struct HomeView: View {
                     ForEach(activeMiniFeedItems) { item in
                         switch item {
                         case .recipe(let card, let style):
-                            if style == .large {
-                                largeRecipeCard(ranked: card.ranked, hook: card.hook)
-                            } else {
-                                compactRecipeCard(ranked: card.ranked, hook: card.hook)
-                            }
-                        case .recipePair(let first, let second):
-                            pairAsCompactCards(first: first, second: second)
+                            homeRecipeItem(card: card, style: style)
                         case .fridge(let match):
                             fridgeSuggestionCard(match)
                         case .spotlight(let ingredient):
@@ -353,27 +340,21 @@ struct HomeView: View {
                 .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
                 .animation(.easeInOut(duration: 0.18), value: selectedQuickFilter)
 
-                ForEach(indexedContinuousEditorialBlocks) { indexedBlock in
-                    switch indexedBlock.block {
-                    case .largeRecipe(let card):
-                        largeRecipeCard(ranked: card.ranked, hook: card.hook)
-                    case .compactPair(let first, let second):
-                        pairAsCompactCards(first: first, second: second)
-                    case .compactSingle(let card):
-                        compactRecipeCard(ranked: card.ranked, hook: card.hook)
+                ForEach(remainingFeedItems) { item in
+                    switch item {
+                    case .recipe(let card, let style):
+                        homeRecipeItem(card: card, style: style)
+                    case .fridge(let match):
+                        fridgeSuggestionCard(match)
+                            .padding(.top, SeasonSpacing.sm)
+                            .padding(.bottom, SeasonSpacing.xs)
                     case .spotlight(let ingredient):
                         spotlightCard(for: ingredient)
-                    case .fridgeRecipe(let match):
-                        fridgeSuggestionCard(match)
+                            .padding(.top, SeasonSpacing.sm)
+                            .padding(.bottom, SeasonSpacing.xs)
                     }
                 }
             }
-        }
-    }
-
-    private var indexedContinuousEditorialBlocks: [IndexedContinuousBlock] {
-        continuousEditorialBlocks.enumerated().map { index, block in
-            IndexedContinuousBlock(id: "\(index)-\(block.identityKey)", block: block)
         }
     }
 
@@ -402,8 +383,6 @@ struct HomeView: View {
                 switch item {
                 case .recipe(let card, _):
                     return [card]
-                case .recipePair(let first, let second):
-                    return [first, second]
                 case .fridge(let match):
                     let card = HookedRecipeCard(
                         ranked: match.rankedRecipe,
@@ -453,7 +432,6 @@ struct HomeView: View {
         fridgeMatchesCache = feed.fridgeMatches
         ingredientUsageCountByID = feed.ingredientUsageCountByID
         mainContinuousFeedItems = feed.defaultFeedItems
-        continuousEditorialBlocks = feed.continuousBlocks
         cachedMiniFeeds = feed.filteredMiniFeeds
         cachedFilteredFeeds = feed.filteredFeeds
     }
@@ -479,15 +457,41 @@ struct HomeView: View {
         let usedWithTrending = usedTopIDs.union(trendingRecipes.map(\.recipe.id))
         let continuousRecipes = baseRecipes.filter { !usedWithTrending.contains($0.recipe.id) }
 
-        let continuousBuild = buildContinuousFeed(
-            recipes: continuousRecipes,
-            trendingRecipes: trendingRecipes,
-            spotlight: spotlight,
-            fridgeMatches: fridgeMatches,
-            trendingIDs: trendingIDs,
-            backupRecipes: homeRecipes
+        let maxRecipeCards = max(40, min(180, continuousRecipes.count * 3))
+        let primaryCards = enforceFeedDiversity(
+            cards: buildHookedCards(
+                from: continuousRecipes,
+                preferTrending: false,
+                trendingIDs: trendingIDs,
+                previousHook: nil
+            ),
+            trendingCards: buildHookedCards(
+                from: trendingRecipes,
+                preferTrending: true,
+                trendingIDs: trendingIDs,
+                previousHook: nil
+            ),
+            targetCount: maxRecipeCards
         )
-        debugHomeFeed("default feed count=\(continuousBuild.defaultFeedItems.count)")
+        let backupCards = enforceFeedDiversity(
+            cards: buildHookedCards(
+                from: homeRecipes,
+                preferTrending: false,
+                trendingIDs: trendingIDs,
+                previousHook: primaryCards.last?.hookKind
+            ),
+            trendingCards: [],
+            targetCount: max(30, min(120, homeRecipes.count))
+        )
+        let mergedCards = mergeCards(primary: primaryCards, backup: backupCards)
+        let defaultFeedTargetCount = max(14, min(70, (mergedCards.count / 2) + 8))
+        let defaultFeedItems = buildSimpleFeed(
+            cards: mergedCards,
+            spotlightItems: spotlight,
+            fridgeMatches: fridgeMatches,
+            targetCount: defaultFeedTargetCount
+        )
+        debugHomeFeed("default feed count=\(defaultFeedItems.count)")
 
         var miniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
         var filteredFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
@@ -513,8 +517,7 @@ struct HomeView: View {
         return HomeFeedBuild(
             featured: featured,
             fridgeMatches: fridgeMatches,
-            defaultFeedItems: continuousBuild.defaultFeedItems,
-            continuousBlocks: continuousBuild.continuousBlocks,
+            defaultFeedItems: defaultFeedItems,
             filteredMiniFeeds: miniFeeds,
             filteredFeeds: filteredFeeds,
             ingredientUsageCountByID: ingredientUsageCount
@@ -691,8 +694,6 @@ struct HomeView: View {
         switch item {
         case .recipe(let card, _):
             return "recipe-\(card.ranked.recipe.id)"
-        case .recipePair(let first, let second):
-            return "pair-\(first.ranked.recipe.id)-\(second.ranked.recipe.id)"
         case .fridge(let match):
             return "fridge-\(match.rankedRecipe.recipe.id)"
         case .spotlight(let ingredient):
@@ -704,8 +705,6 @@ struct HomeView: View {
         switch item {
         case .recipe(let card, _):
             return [card.ranked.recipe.id]
-        case .recipePair(let first, let second):
-            return [first.ranked.recipe.id, second.ranked.recipe.id]
         case .fridge(let match):
             return [match.rankedRecipe.recipe.id]
         case .spotlight:
@@ -862,213 +861,94 @@ struct HomeView: View {
             }
     }
 
-    private func buildContinuousFeed(
-        recipes: [RankedRecipe],
-        trendingRecipes: [RankedRecipe],
-        spotlight: [RankedInSeasonItem],
-        fridgeMatches: [FridgeMatchedRecipe],
-        trendingIDs: Set<String>,
-        backupRecipes: [RankedRecipe],
-        preferTrending: Bool = false
-    ) -> ContinuousFeedBuild {
-        let minimumFeedItems = 12
-        let maxRecipeCards = max(40, min(180, recipes.count * 3))
-        let diversifiedRecipeCards = enforceFeedDiversity(
-            cards: buildHookedCards(
-                from: recipes,
-                preferTrending: preferTrending,
-                trendingIDs: trendingIDs,
-                previousHook: nil
-            ),
-            trendingCards: buildHookedCards(
-                from: trendingRecipes,
-                preferTrending: true,
-                trendingIDs: trendingIDs,
-                previousHook: nil
-            ),
-            targetCount: maxRecipeCards
-        )
-        debugHomeFeed("continuous before=\(recipes.count) after_diversity=\(diversifiedRecipeCards.count)")
-        let backupCards = enforceFeedDiversity(
-            cards: buildHookedCards(
-                from: backupRecipes,
-                preferTrending: false,
-                trendingIDs: trendingIDs,
-                previousHook: diversifiedRecipeCards.last?.hookKind
-            ),
-            trendingCards: [],
-            targetCount: max(30, min(120, backupRecipes.count))
-        )
-
-        let editorialBlocks = buildEditorialContinuousBlocks(
-            primaryRecipes: diversifiedRecipeCards,
-            backupRecipes: backupCards,
-            spotlightItems: spotlight,
-            fridgeMatches: fridgeMatches
-        )
-
-        var flatItems = flattenEditorialBlocks(editorialBlocks)
-
-        if flatItems.count < minimumFeedItems {
-            let existingRecipeIDs = Set(flatItems.flatMap(recipeIDs(in:)))
-            for card in backupCards where flatItems.count < minimumFeedItems {
-                guard !existingRecipeIDs.contains(card.ranked.recipe.id) else { continue }
-                flatItems.append(.recipe(card, style: .compact))
-            }
+    private func mergeCards(
+        primary: [HookedRecipeCard],
+        backup: [HookedRecipeCard]
+    ) -> [HookedRecipeCard] {
+        var merged: [HookedRecipeCard] = []
+        var seen: Set<String> = []
+        for card in (primary + backup) where !seen.contains(card.ranked.recipe.id) {
+            seen.insert(card.ranked.recipe.id)
+            merged.append(card)
         }
-
-        debugHomeFeed("continuous final=\(flatItems.count)")
-        return ContinuousFeedBuild(defaultFeedItems: flatItems, continuousBlocks: editorialBlocks)
+        return merged
     }
 
-    private func buildEditorialContinuousBlocks(
-        primaryRecipes: [HookedRecipeCard],
-        backupRecipes: [HookedRecipeCard],
+    private func buildSimpleFeed(
+        cards: [HookedRecipeCard],
         spotlightItems: [RankedInSeasonItem],
-        fridgeMatches: [FridgeMatchedRecipe]
-    ) -> [HomeContinuousBlock] {
-        enum Slot {
-            case largeRecipe
-            case compactPair
-            case spotlight
-            case fridgeRecipe
-        }
+        fridgeMatches: [FridgeMatchedRecipe],
+        targetCount: Int
+    ) -> [HomeFeedItem] {
+        guard !cards.isEmpty else { return [] }
 
-        let template: [Slot] = [
-            .largeRecipe,
-            .compactPair,
-            .spotlight,
-            .fridgeRecipe,
-            .largeRecipe,
-            .compactPair
-        ]
-
-        var primaryPool = primaryRecipes
-        var backupPool = backupRecipes
+        var result: [HomeFeedItem] = []
+        var cardIndex = 0
         var spotlightIndex = 0
         var fridgeIndex = 0
-        var templateIndex = 0
-        var recentRecipeIDs: [String] = []
-        var blocks: [HomeContinuousBlock] = []
-        let targetBlockCount = max(14, min(70, (primaryRecipes.count / 2) + 8))
+        var breakCycle = 0
 
-        func markRecent(_ id: String) {
-            recentRecipeIDs.append(id)
-            if recentRecipeIDs.count > 10 {
-                recentRecipeIDs.removeFirst(recentRecipeIDs.count - 10)
-            }
-        }
+        while result.count < targetCount && cardIndex < cards.count {
+            let rowsBeforeBreak = (breakCycle % 2 == 0) ? 3 : 4
+            var rowsAdded = 0
 
-        func pullRecipe(preferPrimary: Bool = true) -> HookedRecipeCard? {
-            func removeFromPool(_ pool: inout [HookedRecipeCard]) -> HookedRecipeCard? {
-                guard !pool.isEmpty else { return nil }
-                let lookahead = min(12, pool.count)
-                if let idx = pool.prefix(lookahead).firstIndex(where: { !recentRecipeIDs.contains($0.ranked.recipe.id) }) {
-                    return pool.remove(at: idx)
-                }
-                return pool.removeFirst()
+            while rowsAdded < rowsBeforeBreak, cardIndex < cards.count, result.count < targetCount {
+                result.append(.recipe(cards[cardIndex], style: .compact))
+                cardIndex += 1
+                rowsAdded += 1
             }
 
-            if preferPrimary, let card = removeFromPool(&primaryPool) { return card }
-            if let card = removeFromPool(&backupPool) { return card }
-            if !preferPrimary, let card = removeFromPool(&primaryPool) { return card }
-            return nil
-        }
+            guard result.count < targetCount else { break }
 
-        func largeFallbackBlock() -> HomeContinuousBlock? {
-            guard let card = pullRecipe() else { return nil }
-            markRecent(card.ranked.recipe.id)
-            return .largeRecipe(card)
-        }
+            // Editorial cadence:
+            // first break is a large highlight, then spotlight/fridge,
+            // then large appears again occasionally (every 3 cycles).
+            let prefersLargeBreak = (breakCycle == 0 || breakCycle.isMultiple(of: 3))
+            var insertedBreak = false
 
-        func compactPairFallbackBlock() -> HomeContinuousBlock? {
-            if let pair = buildCompactPair() { return pair }
-            return largeFallbackBlock()
-        }
-
-        func buildCompactPair() -> HomeContinuousBlock? {
-            guard let first = pullRecipe() else { return nil }
-            markRecent(first.ranked.recipe.id)
-
-            if let second = pullRecipe() {
-                markRecent(second.ranked.recipe.id)
-                return .compactPair(first: first, second: second)
+            if prefersLargeBreak, cardIndex < cards.count {
+                result.append(.recipe(cards[cardIndex], style: .large))
+                cardIndex += 1
+                insertedBreak = true
+            } else if spotlightIndex < spotlightItems.count {
+                result.append(.spotlight(spotlightItems[spotlightIndex]))
+                spotlightIndex += 1
+                insertedBreak = true
+            } else if fridgeIndex < fridgeMatches.count {
+                result.append(.fridge(fridgeMatches[fridgeIndex]))
+                fridgeIndex += 1
+                insertedBreak = true
+            } else if spotlightIndex < spotlightItems.count {
+                result.append(.spotlight(spotlightItems[spotlightIndex]))
+                spotlightIndex += 1
+                insertedBreak = true
+            } else if fridgeIndex < fridgeMatches.count {
+                result.append(.fridge(fridgeMatches[fridgeIndex]))
+                fridgeIndex += 1
+                insertedBreak = true
+            } else if cardIndex < cards.count, prefersLargeBreak {
+                result.append(.recipe(cards[cardIndex], style: .large))
+                cardIndex += 1
+                insertedBreak = true
             }
 
-            // Last resort for incomplete pair after trying backup pools.
-            return .compactSingle(first)
-        }
-
-        func buildFridgeBlock() -> HomeContinuousBlock? {
-            guard !fridgeMatches.isEmpty else { return compactPairFallbackBlock() }
-
-            let count = fridgeMatches.count
-            for offset in 0..<count {
-                let candidate = fridgeMatches[(fridgeIndex + offset) % count]
-                if !recentRecipeIDs.contains(candidate.rankedRecipe.recipe.id) {
-                    fridgeIndex = (fridgeIndex + offset + 1) % count
-                    markRecent(candidate.rankedRecipe.recipe.id)
-                    return .fridgeRecipe(candidate)
-                }
-            }
-
-            return compactPairFallbackBlock()
-        }
-
-        while blocks.count < targetBlockCount {
-            let slot = template[templateIndex % template.count]
-            templateIndex += 1
-            let countBefore = blocks.count
-
-            switch slot {
-            case .largeRecipe:
-                if let block = largeFallbackBlock() { blocks.append(block) }
-            case .compactPair:
-                if let block = buildCompactPair() { blocks.append(block) }
-            case .spotlight:
-                if spotlightIndex < spotlightItems.count {
-                    blocks.append(.spotlight(spotlightItems[spotlightIndex]))
-                    spotlightIndex += 1
-                } else if let fallback = largeFallbackBlock() ?? compactPairFallbackBlock() {
-                    blocks.append(fallback)
-                }
-            case .fridgeRecipe:
-                if let fridgeBlock = buildFridgeBlock() {
-                    blocks.append(fridgeBlock)
-                } else if let fallback = compactPairFallbackBlock() ?? largeFallbackBlock() {
-                    blocks.append(fallback)
-                }
-            }
-
-            if blocks.count == countBefore {
+            if !insertedBreak {
                 break
             }
-
-            if primaryPool.isEmpty,
-               backupPool.isEmpty,
-               spotlightIndex >= spotlightItems.count,
-               fridgeMatches.isEmpty {
-                break
-            }
+            breakCycle += 1
         }
 
-        return blocks
+        return result
     }
 
-    private func flattenEditorialBlocks(_ blocks: [HomeContinuousBlock]) -> [HomeFeedItem] {
-        blocks.flatMap { block -> [HomeFeedItem] in
-            switch block {
-            case .largeRecipe(let card):
-                return [.recipe(card, style: .large)]
-            case .compactPair(let first, let second):
-                return [.recipePair(first: first, second: second)]
-            case .compactSingle(let card):
-                return [.recipe(card, style: .compact)]
-            case .spotlight(let item):
-                return [.spotlight(item)]
-            case .fridgeRecipe(let match):
-                return [.fridge(match)]
-            }
+    @ViewBuilder
+    private func homeRecipeItem(card: HookedRecipeCard, style: HomeRecipeCardStyle) -> some View {
+        if style == .large {
+            largeRecipeCard(ranked: card.ranked, hook: card.hook)
+                .padding(.top, SeasonSpacing.sm)
+                .padding(.bottom, SeasonSpacing.sm)
+        } else {
+            compactRecipeCard(ranked: card.ranked, hook: card.hook)
         }
     }
 
@@ -1239,23 +1119,37 @@ struct HomeView: View {
                 shoppingListViewModel: shoppingListViewModel
             )
         } label: {
-            RecipeCardView(
-                recipe: ranked.recipe,
-                title: ranked.recipe.title,
-                subtitle: ranked.recipe.author,
-                metadataText: hook,
-                seasonalityScore: ranked.seasonalityScore,
-                localizer: viewModel.localizer,
-                variant: .feedLarge,
-                cardBackground: SeasonColors.secondarySurface,
-                cardBackgroundOpacity: 0.86,
-                cardBorderOpacity: 0.055,
-                cardShadowOpacity: 0.016,
-                cardShadowRadius: 6,
-                cardShadowY: 2
-            )
+            VStack(alignment: .leading, spacing: 10) {
+                recipeImage(for: ranked.recipe, height: 172)
+
+                Text(ranked.recipe.title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                HStack(spacing: 8) {
+                    Text(ranked.recipe.author)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    SeasonBadge(
+                        text: hook,
+                        horizontalPadding: 7,
+                        verticalPadding: 3,
+                        cornerRadius: 7,
+                        foreground: .secondary,
+                        background: SeasonColors.subtleSurface
+                    )
+
+                    Spacer(minLength: 0)
+
+                    SeasonalStatusBadge(score: ranked.seasonalityScore, localizer: viewModel.localizer)
+                }
+            }
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PressableCardButtonStyle())
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -1267,31 +1161,14 @@ struct HomeView: View {
                 shoppingListViewModel: shoppingListViewModel
             )
         } label: {
-            RecipeCardView(
+            HomeEditorialRecipeRow(
                 recipe: ranked.recipe,
-                title: ranked.recipe.title,
-                subtitle: ranked.recipe.author,
-                metadataText: hook,
+                hook: hook,
                 seasonalityScore: ranked.seasonalityScore,
-                localizer: viewModel.localizer,
-                variant: .feedCompact,
-                cardBackground: SeasonColors.secondarySurface,
-                cardBackgroundOpacity: 0.84,
-                cardBorderOpacity: 0.052,
-                cardShadowOpacity: 0.014,
-                cardShadowRadius: 5,
-                cardShadowY: 2
+                localizer: viewModel.localizer
             )
         }
-        .buttonStyle(PressableCardButtonStyle())
-    }
-
-    @ViewBuilder
-    private func pairAsCompactCards(first: HookedRecipeCard, second: HookedRecipeCard) -> some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-            compactRecipeCard(ranked: first.ranked, hook: first.hook)
-            compactRecipeCard(ranked: second.ranked, hook: second.hook)
-        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -1361,10 +1238,14 @@ struct HomeView: View {
                             .foregroundStyle(.primary)
                             .lineLimit(1)
 
-                        Text(seasonalSpotlightStateText(for: ranked.item))
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Image(systemName: "leaf.fill")
+                                .font(.caption2.weight(.semibold))
+                            Text(seasonalSpotlightStateText(for: ranked.item))
+                                .font(.caption2.weight(.semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(.secondary)
 
                         Text(viewModel.shortBenefitText(for: ranked))
                             .font(.caption)
@@ -1386,11 +1267,11 @@ struct HomeView: View {
             .buttonStyle(PressableCardButtonStyle())
             },
             cornerRadius: SeasonRadius.large,
-            background: SeasonColors.subtleSurface,
-            backgroundOpacity: 0.76,
-            borderOpacity: 0.05,
-            shadowOpacity: 0.01,
-            shadowRadius: 4,
+            background: Color(red: 0.95, green: 0.94, blue: 0.90),
+            backgroundOpacity: 0.72,
+            borderOpacity: 0.04,
+            shadowOpacity: 0.008,
+            shadowRadius: 3,
             shadowY: 1
         )
     }
@@ -1561,6 +1442,48 @@ struct HomeView: View {
     }
 }
 
+private struct HomeEditorialRecipeRow: View {
+    let recipe: Recipe
+    let hook: String
+    let seasonalityScore: Double
+    let localizer: AppLocalizer
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RecipeThumbnailView(recipe: recipe, size: 72)
+                .frame(width: 72, height: 72)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(recipe.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Text(recipe.author)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    SeasonBadge(
+                        text: hook,
+                        horizontalPadding: 7,
+                        verticalPadding: 4,
+                        cornerRadius: 7,
+                        foreground: .secondary,
+                        background: SeasonColors.subtleSurface
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            SeasonalStatusBadge(score: seasonalityScore, localizer: localizer)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+}
+
 private enum HomeQuickFilter: String, CaseIterable, Identifiable {
     case following
     case readyNow
@@ -1611,15 +1534,9 @@ private struct HomeFeedBuild {
     let featured: RankedRecipe?
     let fridgeMatches: [FridgeMatchedRecipe]
     let defaultFeedItems: [HomeFeedItem]
-    let continuousBlocks: [HomeContinuousBlock]
     let filteredMiniFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let filteredFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let ingredientUsageCountByID: [String: Int]
-}
-
-private struct ContinuousFeedBuild {
-    let defaultFeedItems: [HomeFeedItem]
-    let continuousBlocks: [HomeContinuousBlock]
 }
 
 private enum HomeRecipeCardStyle {
@@ -1629,7 +1546,6 @@ private enum HomeRecipeCardStyle {
 
 private enum HomeFeedItem: Identifiable {
     case recipe(HookedRecipeCard, style: HomeRecipeCardStyle)
-    case recipePair(first: HookedRecipeCard, second: HookedRecipeCard)
     case fridge(FridgeMatchedRecipe)
     case spotlight(RankedInSeasonItem)
 
@@ -1637,42 +1553,12 @@ private enum HomeFeedItem: Identifiable {
         switch self {
         case .recipe(let card, let style):
             return "recipe-\(style)-\(card.ranked.recipe.id)"
-        case .recipePair(let first, let second):
-            return "recipe-pair-\(first.ranked.recipe.id)-\(second.ranked.recipe.id)"
         case .fridge(let match):
             return "fridge-\(match.rankedRecipe.recipe.id)"
         case .spotlight(let item):
             return "spotlight-\(item.item.id)"
         }
     }
-}
-
-private enum HomeContinuousBlock {
-    case largeRecipe(HookedRecipeCard)
-    case compactPair(first: HookedRecipeCard, second: HookedRecipeCard)
-    case compactSingle(HookedRecipeCard)
-    case spotlight(RankedInSeasonItem)
-    case fridgeRecipe(FridgeMatchedRecipe)
-
-    var identityKey: String {
-        switch self {
-        case .largeRecipe(let card):
-            return "large-\(card.ranked.recipe.id)"
-        case .compactPair(let first, let second):
-            return "pair-\(first.ranked.recipe.id)-\(second.ranked.recipe.id)"
-        case .compactSingle(let card):
-            return "compact-\(card.ranked.recipe.id)"
-        case .spotlight(let item):
-            return "spotlight-\(item.item.id)"
-        case .fridgeRecipe(let match):
-            return "fridge-\(match.rankedRecipe.recipe.id)"
-        }
-    }
-}
-
-private struct IndexedContinuousBlock: Identifiable {
-    let id: String
-    let block: HomeContinuousBlock
 }
 
 private struct HookedRecipeCard: Identifiable {
@@ -1701,9 +1587,6 @@ private extension Array where Element == HomeFeedItem {
         for item in reversed() {
             if case .recipe(let card, _) = item {
                 return card.hookKind
-            }
-            if case .recipePair(let first, _) = item {
-                return first.hookKind
             }
         }
         return nil
