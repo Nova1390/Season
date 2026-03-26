@@ -52,6 +52,7 @@ final class FridgeViewModel: ObservableObject {
         guard !contains(item) else { return }
         produceIDs.append(item.id)
         save()
+        UserInteractionTracker.shared.track(.produceAddedToFridge, produceID: item.id)
         writeThroughCreateProduce(item.id)
     }
 
@@ -60,6 +61,7 @@ final class FridgeViewModel: ObservableObject {
         produceIDs.removeAll { $0 == item.id }
         save()
         if removed {
+            UserInteractionTracker.shared.track(.produceRemovedFromFridge, produceID: item.id)
             writeThroughDelete(localItemID: "produce:\(item.id)")
         }
     }

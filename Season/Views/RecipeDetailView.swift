@@ -421,6 +421,11 @@ struct RecipeDetailView: View {
         .onAppear {
             if !hasTrackedView {
                 viewModel.registerRecipeView(rankedRecipe.recipe)
+                UserInteractionTracker.shared.track(
+                    .recipeOpened,
+                    recipeID: rankedRecipe.recipe.id,
+                    creatorID: rankedRecipe.recipe.canonicalCreatorID
+                )
                 hasTrackedView = true
             }
             selectedServings = max(1, rankedRecipe.recipe.servings)
@@ -467,6 +472,9 @@ struct RecipeDetailView: View {
                             Text(viewModel.recipeTimingTitle(for: rankedRecipe))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .allowsTightening(true)
                             Image(systemName: "info.circle")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
@@ -482,64 +490,29 @@ struct RecipeDetailView: View {
                     Text("\(viewModel.localizer.text(.seasonalMatch)): \(rankedRecipe.seasonalMatchPercent)%")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
                 }
             }
 
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: 16) {
                 HStack(spacing: 10) {
-                    Button {
-                        viewModel.toggleRecipeCrispy(rankedRecipe.recipe)
-                        pulse(.crispy)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "flame.fill")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(
-                                    viewModel.isRecipeCrispied(rankedRecipe.recipe)
-                                    ? Color.orange
-                                    : .secondary
-                                )
-                                .frame(width: 12, alignment: .center)
-                            Text(
-                                String(
-                                    format: viewModel.localizer.text(.crispyCountFormat),
-                                    viewModel.crispyCount(for: rankedRecipe.recipe)
-                                )
-                            )
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(
-                                viewModel.isRecipeCrispied(rankedRecipe.recipe)
-                                ? Color.orange
-                                : .primary
-                            )
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            crispyButton
+                            viewsStatLabel
                         }
-                        .fixedSize(horizontal: true, vertical: false)
+                        HStack(spacing: 10) {
+                            crispyButton
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .scaleEffect(crispyButtonPulse ? 0.96 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.7), value: crispyButtonPulse)
-                    .accessibilityLabel(viewModel.localizer.text(.crispyAction))
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "eye")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text("\(viewModel.compactCountText(viewModel.viewCount(for: rankedRecipe.recipe))) \(viewModel.localizer.text(.viewsLabel))")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .allowsTightening(true)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .layoutPriority(1)
 
-                Spacer()
+                Spacer(minLength: 8)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Button {
                         viewModel.toggleSavedRecipe(rankedRecipe.recipe)
                         pulse(.save)
@@ -559,39 +532,31 @@ struct RecipeDetailView: View {
                     )
 
                     if showsUserAuthorshipMetadata {
-                        HStack(spacing: 6) {
-                            ViewThatFits(in: .horizontal) {
-                                Text("· \(formattedFollowerCount(followerCountValue)) \(viewModel.localizer.text(.followers).lowercased())")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.85)
-                                Text("· \(formattedFollowerCount(followerCountValue))")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.85)
-                            }
+                        followerStatLabel
+                    }
 
-                            if canShowFollowButton, let creatorID = validRecipeCreatorID {
-                                Button {
-                                    let stateBefore = followStore.isFollowing(creatorID)
-                                    toggleFollowAuthor()
-                                    let stateAfter = followStore.isFollowing(creatorID)
-                                    print("[SEASON_FOLLOW_RECIPE] phase=top_icon_tap recipe_id=\(rankedRecipe.recipe.id) creator_id=\(creatorID) state_before=\(stateBefore) state_after=\(stateAfter)")
-                                } label: {
-                                    Image(systemName: isFollowingAuthor ? "person.fill.checkmark" : "person.badge.plus")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(isFollowingAuthor ? .primary : .secondary)
-                                        .frame(width: 24, height: 24)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                    if showsUserAuthorshipMetadata,
+                       canShowFollowButton,
+                       let creatorID = validRecipeCreatorID {
+                        Button {
+                            let stateBefore = followStore.isFollowing(creatorID)
+                            toggleFollowAuthor()
+                            let stateAfter = followStore.isFollowing(creatorID)
+                            print("[SEASON_FOLLOW_RECIPE] phase=top_icon_tap recipe_id=\(rankedRecipe.recipe.id) creator_id=\(creatorID) state_before=\(stateBefore) state_after=\(stateAfter)")
+                        } label: {
+                            ZStack {
+                                Color.clear
+                                Image(systemName: isFollowingAuthor ? "person.fill.checkmark" : "person.badge.plus")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(isFollowingAuthor ? .primary : .secondary)
                             }
+                            .frame(width: 40, height: 40)
+                            .contentShape(Rectangle())
                         }
-                        .fixedSize(horizontal: true, vertical: false)
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                        .zIndex(2)
+                        .accessibilityLabel(isFollowingAuthor ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
                     }
                 }
             }
@@ -685,6 +650,68 @@ struct RecipeDetailView: View {
 
     private var followerCountValue: Int {
         followerCount(for: validRecipeCreatorID, fallbackName: displayedCreatorName)
+    }
+
+    private var crispyButton: some View {
+        Button {
+            viewModel.toggleRecipeCrispy(rankedRecipe.recipe)
+            pulse(.crispy)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(
+                        viewModel.isRecipeCrispied(rankedRecipe.recipe)
+                        ? Color.orange
+                        : .secondary
+                    )
+                    .frame(width: 12, alignment: .center)
+                Text(
+                    "\(viewModel.crispyCount(for: rankedRecipe.recipe).compactFormatted()) \(viewModel.localizer.text(.crispyAction).lowercased())"
+                )
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(
+                    viewModel.isRecipeCrispied(rankedRecipe.recipe)
+                    ? Color.orange
+                    : .primary
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .allowsTightening(true)
+            }
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(crispyButtonPulse ? 0.96 : 1.0)
+        .animation(.spring(response: 0.22, dampingFraction: 0.7), value: crispyButtonPulse)
+        .accessibilityLabel(viewModel.localizer.text(.crispyAction))
+    }
+
+    private var viewsStatLabel: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "eye")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("\(viewModel.compactCountText(viewModel.viewCount(for: rankedRecipe.recipe))) \(viewModel.localizer.text(.viewsLabel))")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .allowsTightening(true)
+        }
+    }
+
+    private var followerStatLabel: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "person.2")
+                .font(.caption2.weight(.semibold))
+            Text(formattedFollowerCount(followerCountValue))
+                .font(.caption.weight(.medium))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .allowsTightening(true)
+        }
+        .foregroundStyle(.tertiary)
     }
 
     @ViewBuilder
@@ -1241,6 +1268,15 @@ struct RecipeDetailView: View {
         addIngredientsMessage = viewModel.ingredientsAddFeedbackText(
             added: result.added,
             alreadyInList: result.alreadyInList
+        )
+        UserInteractionTracker.shared.track(
+            .recipeAddedToList,
+            recipeID: rankedRecipe.recipe.id,
+            creatorID: rankedRecipe.recipe.canonicalCreatorID,
+            metadata: [
+                "addedCount": "\(result.added)",
+                "alreadyInListCount": "\(result.alreadyInList)"
+            ]
         )
         showingAddIngredientsAlert = true
     }

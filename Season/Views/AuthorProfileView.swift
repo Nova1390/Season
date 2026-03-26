@@ -67,7 +67,7 @@ struct AuthorProfileView: View {
         SeasonAuthorHeaderView(
             name: authorName,
             subtitle: viewModel.localizer.text(.creatorProfileSubtitle),
-            metadataText: String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count),
+            metadataText: compactRecipeCountText,
             avatar: {
                 Circle()
                     .fill(Color(.tertiarySystemGroupedBackground))
@@ -120,7 +120,7 @@ struct AuthorProfileView: View {
                         )
                         SeasonStatChip(
                             icon: "flame.fill",
-                            text: String(format: viewModel.localizer.text(.totalCrispyReceivedFormat), totalCrispy),
+                            text: "\(totalCrispy.compactFormatted()) \(viewModel.localizer.text(.crispyAction).lowercased())",
                             background: Color(red: 0.90, green: 0.78, blue: 0.63).opacity(0.46)
                         )
                         SeasonStatChip(
@@ -227,7 +227,7 @@ struct AuthorProfileView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             SeasonSectionHeader(
                 title: viewModel.localizer.text(.publishedRecipes),
-                trailingText: String(format: viewModel.localizer.text(.recipeCountFormat), rankedRecipes.count)
+                trailingText: compactRecipeCountText
             )
 
             if rankedRecipes.isEmpty {
@@ -307,6 +307,10 @@ struct AuthorProfileView: View {
 
     private var estimatedFollowersStatText: String {
         "\(formattedFollowerCount(followerCountValue)) \(viewModel.localizer.text(.followers).lowercased())"
+    }
+
+    private var compactRecipeCountText: String {
+        "\(rankedRecipes.count.compactFormatted()) \(viewModel.localizer.text(.recipes).lowercased())"
     }
 
     private var totalCrispy: Int {

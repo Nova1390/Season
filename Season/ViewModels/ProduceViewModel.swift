@@ -483,6 +483,12 @@ final class ProduceViewModel: ObservableObject {
         crispiedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: crispiedRecipeIDsStorageKey)
         invalidateRankingCaches()
+        UserInteractionTracker.shared.track(
+            .recipeCrispied,
+            recipeID: recipe.id,
+            creatorID: recipe.canonicalCreatorID,
+            metadata: ["isCrispied": isCrispied ? "true" : "false"]
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
         print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
         Task { [supabaseService] in
@@ -506,6 +512,12 @@ final class ProduceViewModel: ObservableObject {
         let isSaved = updated.contains(recipe.id)
         savedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: savedRecipeIDsStorageKey)
+        UserInteractionTracker.shared.track(
+            .recipeSaved,
+            recipeID: recipe.id,
+            creatorID: recipe.canonicalCreatorID,
+            metadata: ["isSaved": isSaved ? "true" : "false"]
+        )
         print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
         print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
 
@@ -599,19 +611,16 @@ final class ProduceViewModel: ObservableObject {
         if let encoded = try? JSONEncoder().encode(updated) {
             UserDefaults.standard.set(encoded, forKey: recipeViewCountsStorageKey)
         }
+        UserInteractionTracker.shared.track(
+            .recipeViewed,
+            recipeID: recipe.id,
+            creatorID: recipe.canonicalCreatorID
+        )
         invalidateRankingCaches()
     }
 
     func compactCountText(_ value: Int) -> String {
-        if value >= 1_000_000 {
-            let compact = Double(value) / 1_000_000.0
-            return "\(compactRoundedText(compact))M"
-        }
-        if value >= 1_000 {
-            let compact = Double(value) / 1_000.0
-            return "\(compactRoundedText(compact))K"
-        }
-        return "\(value)"
+        value.compactFormatted()
     }
 
     // Canonical identity rule:
@@ -622,14 +631,6 @@ final class ProduceViewModel: ObservableObject {
             return trimmedAuthor
         }
         return creator.displayName
-    }
-
-    private func compactRoundedText(_ value: Double) -> String {
-        let rounded = (value * 10).rounded() / 10
-        if rounded.rounded() == rounded {
-            return "\(Int(rounded))"
-        }
-        return String(format: "%.1f", rounded)
     }
 
     func confirmedDietaryTags(for recipe: Recipe) -> [RecipeDietaryTag] {

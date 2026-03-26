@@ -13,15 +13,7 @@ func followerCount(for creatorID: String) -> Int {
 }
 
 func formattedFollowerCount(_ count: Int) -> String {
-    let clamped = max(0, count)
-    if clamped < 1_000 {
-        return "~\(clamped)"
-    }
-
-    let value = Double(clamped) / 1_000.0
-    var formatted = String(format: "~%.1fK", value)
-    formatted = formatted.replacingOccurrences(of: ".0K", with: "K")
-    return formatted
+    max(0, count).compactFormatted()
 }
 
 func followerCount(for creatorID: String?, fallbackName: String) -> Int {

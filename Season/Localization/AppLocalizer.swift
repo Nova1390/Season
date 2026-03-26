@@ -114,6 +114,11 @@ enum AppTextKey: String {
     case follow
     case following
     case followAuthorsHint
+    case followingFeedContextFormat
+    case followingFeedEmptyTitle
+    case followingFeedEmptySubtitle
+    case followingFeedEmptyCTA
+    case followingFeedFallbackLabel
     case ingredients
     case seasonalMatch
     case recipeReasonSeasonalMatchFormat
@@ -217,6 +222,27 @@ enum AppTextKey: String {
     case done
     case homeHeroSubtitle
     case homeHeroQuestion
+    case homeHeroReadyMorningTitle
+    case homeHeroReadyLunchTitle
+    case homeHeroReadyAfternoonTitle
+    case homeHeroReadyEveningTitle
+    case homeHeroReadyLateNightTitle
+    case homeHeroReadyMorningCTA
+    case homeHeroReadyLunchCTA
+    case homeHeroReadyAfternoonCTA
+    case homeHeroReadyEveningCTA
+    case homeHeroReadyLateNightCTA
+    case homeHeroReadySubtitleSingularFormat
+    case homeHeroReadySubtitlePluralFormat
+    case homeHeroAlmostReadyTitle
+    case homeHeroAlmostReadySubtitleSingularFormat
+    case homeHeroAlmostReadySubtitlePluralFormat
+    case homeHeroSeasonalTitle
+    case homeHeroSeasonalSubtitle
+    case homeHeroAlmostReadyCTA
+    case homeHeroSeasonalCTA
+    case homeHeroSupportBestMatchFormat
+    case homeHeroSupportOneMissingFormat
     case featuredRecipe
     case cookWithWhatYouHaveSummaryFormat
     case cookWithWhatYouHaveHint
@@ -614,6 +640,11 @@ struct AppLocalizer {
             .follow: "Follow",
             .following: "Following",
             .followAuthorsHint: "Follow recipe authors to see personalized picks.",
+            .followingFeedContextFormat: "%d recipes from %d creators you follow",
+            .followingFeedEmptyTitle: "Follow creators to build your feed",
+            .followingFeedEmptySubtitle: "Recipes from creators you follow will appear here first.",
+            .followingFeedEmptyCTA: "Discover creators and recipes",
+            .followingFeedFallbackLabel: "More recipes to discover",
             .ingredients: "Ingredients",
             .seasonalMatch: "Seasonal match",
             .recipeReasonSeasonalMatchFormat: "%d%% seasonal match",
@@ -717,6 +748,27 @@ struct AppLocalizer {
             .done: "Done",
             .homeHeroSubtitle: "Seasonal recipes and ingredients picked for you",
             .homeHeroQuestion: "Cook something fresh today",
+            .homeHeroReadyMorningTitle: "Fresh start ideas",
+            .homeHeroReadyLunchTitle: "Ready for lunch",
+            .homeHeroReadyAfternoonTitle: "Quick bites",
+            .homeHeroReadyEveningTitle: "Dinner is ready",
+            .homeHeroReadyLateNightTitle: "Late night bites",
+            .homeHeroReadyMorningCTA: "See fresh ideas",
+            .homeHeroReadyLunchCTA: "See lunch ideas",
+            .homeHeroReadyAfternoonCTA: "See quick bites",
+            .homeHeroReadyEveningCTA: "See dinner ideas",
+            .homeHeroReadyLateNightCTA: "See late bites",
+            .homeHeroReadySubtitleSingularFormat: "%d recipe is ready with your fridge",
+            .homeHeroReadySubtitlePluralFormat: "%d recipes are ready with your fridge",
+            .homeHeroAlmostReadyTitle: "Almost ready meals",
+            .homeHeroAlmostReadySubtitleSingularFormat: "%d recipe needs just 1 ingredient",
+            .homeHeroAlmostReadySubtitlePluralFormat: "%d recipes need just 1 ingredient",
+            .homeHeroSeasonalTitle: "Perfect ingredients today",
+            .homeHeroSeasonalSubtitle: "Best recipes in season right now",
+            .homeHeroAlmostReadyCTA: "See quick wins",
+            .homeHeroSeasonalCTA: "Explore seasonal picks",
+            .homeHeroSupportBestMatchFormat: "Best match: %@",
+            .homeHeroSupportOneMissingFormat: "1 ingredient missing for %@",
             .featuredRecipe: "Featured recipe",
             .cookWithWhatYouHaveSummaryFormat: "%d recipe matches",
             .cookWithWhatYouHaveHint: "Use what you already have before shopping.",
@@ -916,6 +968,11 @@ struct AppLocalizer {
             .follow: "Segui",
             .following: "Segui gia",
             .followAuthorsHint: "Segui gli autori per vedere suggerimenti personalizzati.",
+            .followingFeedContextFormat: "%d ricette da %d creator che segui",
+            .followingFeedEmptyTitle: "Segui creator per costruire il tuo feed",
+            .followingFeedEmptySubtitle: "Le ricette dei creator che segui appariranno prima qui.",
+            .followingFeedEmptyCTA: "Scopri creator e ricette",
+            .followingFeedFallbackLabel: "Altre ricette da scoprire",
             .ingredients: "Ingredienti",
             .seasonalMatch: "Compatibilita stagionale",
             .recipeReasonSeasonalMatchFormat: "Compatibilita stagionale al %d%%",
@@ -948,7 +1005,7 @@ struct AppLocalizer {
             .archivedRecipes: "Ricette archiviate",
             .archivedRecipesEmptySubtitle: "Nessuna ricetta archiviata.",
             .viewsCountFormat: "%d visualizzazioni",
-            .viewsLabel: "visualizzazioni",
+            .viewsLabel: "visite",
             .publishRecipe: "Pubblica",
             .remixRecipe: "Remix",
             .remixOfFormat: "Remix di %@",
@@ -1019,6 +1076,27 @@ struct AppLocalizer {
             .done: "Fine",
             .homeHeroSubtitle: "Ricette e ingredienti stagionali scelti per te",
             .homeHeroQuestion: "Cucina qualcosa di fresco oggi",
+            .homeHeroReadyMorningTitle: "Idee fresche per iniziare",
+            .homeHeroReadyLunchTitle: "Pronto per pranzo",
+            .homeHeroReadyAfternoonTitle: "Bocconi veloci",
+            .homeHeroReadyEveningTitle: "La cena e servita",
+            .homeHeroReadyLateNightTitle: "Spuntini notturni",
+            .homeHeroReadyMorningCTA: "Vedi idee fresche",
+            .homeHeroReadyLunchCTA: "Vedi idee pranzo",
+            .homeHeroReadyAfternoonCTA: "Vedi bocconi veloci",
+            .homeHeroReadyEveningCTA: "Vedi idee cena",
+            .homeHeroReadyLateNightCTA: "Vedi spuntini notturni",
+            .homeHeroReadySubtitleSingularFormat: "%d ricetta e pronta con il tuo frigo",
+            .homeHeroReadySubtitlePluralFormat: "%d ricette sono pronte con il tuo frigo",
+            .homeHeroAlmostReadyTitle: "Pasti quasi pronti",
+            .homeHeroAlmostReadySubtitleSingularFormat: "%d ricetta richiede solo 1 ingrediente",
+            .homeHeroAlmostReadySubtitlePluralFormat: "%d ricette richiedono solo 1 ingrediente",
+            .homeHeroSeasonalTitle: "Ingredienti perfetti oggi",
+            .homeHeroSeasonalSubtitle: "Le migliori ricette di stagione in questo momento",
+            .homeHeroAlmostReadyCTA: "Vedi vittorie rapide",
+            .homeHeroSeasonalCTA: "Esplora scelte stagionali",
+            .homeHeroSupportBestMatchFormat: "Miglior abbinamento: %@",
+            .homeHeroSupportOneMissingFormat: "Manca 1 ingrediente per %@",
             .featuredRecipe: "Ricetta in evidenza",
             .cookWithWhatYouHaveSummaryFormat: "%d ricette compatibili",
             .cookWithWhatYouHaveHint: "Usa quello che hai gia prima di fare la spesa.",
@@ -1060,7 +1138,7 @@ struct AppLocalizer {
             .recipeTimingPerfectNow: "Perfetta ora",
             .recipeTimingBetterSoon: "Meglio presto",
             .recipeTimingEndingSoon: "Sta finendo",
-            .recipeTimingGoodNow: "Buona ora",
+            .recipeTimingGoodNow: "Ideale ora",
             .fromFridgeSubtitleEmpty: "Aggiungi ingredienti per iniziare",
             .fromFridgeSubtitleCountFormat: "Puoi cucinare %d ricette",
             .fridgePreviewTitle: "Nel tuo frigo",

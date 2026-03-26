@@ -88,20 +88,20 @@ struct HomeView: View {
                                 .fill(Color.white.opacity(0.52))
                         )
 
-                    Text(viewModel.localizer.homeCookWithWhatYouHaveTitle)
+                    Text(homeHeroTitle)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.primary)
                 }
 
                 .fixedSize(horizontal: false, vertical: true)
 
-                Text(viewModel.localizer.homeCookWithWhatYouHaveSubtitle)
+                Text(homeHeroSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack {
-                    Text(viewModel.localizer.homeCookWithWhatYouHaveCTA)
+                    Text(homeHeroCTA)
                     .font(.subheadline.weight(.semibold))
                     Spacer()
                     Image(systemName: "arrow.right")
@@ -114,6 +114,13 @@ struct HomeView: View {
                     Capsule(style: .continuous)
                         .fill(Color.white.opacity(0.65))
                 )
+
+                if let supportLine = homeHeroSupportingSignal {
+                    Text(supportLine)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .padding(SeasonSpacing.md)
             .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
@@ -141,6 +148,141 @@ struct HomeView: View {
         .buttonStyle(PressableCardButtonStyle())
         .padding(.top, SeasonSpacing.sm)
         .padding(.bottom, SeasonSpacing.sm)
+    }
+
+    private var homeHeroState: HomeHeroState {
+        let readyNowCount = fridgeMatches.filter { $0.missingCount == 0 }.count
+        if readyNowCount > 0 {
+            return .readyNow(count: readyNowCount)
+        }
+
+        let almostReadyCount = fridgeMatches.filter { $0.missingCount == 1 }.count
+        if almostReadyCount > 0 {
+            return .almostReady(count: almostReadyCount)
+        }
+
+        let seasonalCount: Int
+        if let featuredRecipe, featuredRecipe.seasonalMatchPercent > 80 {
+            seasonalCount = 1
+        } else {
+            seasonalCount = 0
+        }
+        return .seasonal(count: seasonalCount)
+    }
+
+    private var homeHeroTitle: String {
+        switch homeHeroState {
+        case .readyNow:
+            return localizedReadyNowHeroTitle(for: homeHeroDaypart)
+        case .almostReady:
+            return viewModel.localizer.text(.homeHeroAlmostReadyTitle)
+        case .seasonal:
+            return viewModel.localizer.text(.homeHeroSeasonalTitle)
+        }
+    }
+
+    private var homeHeroSubtitle: String {
+        switch homeHeroState {
+        case .readyNow(let count):
+            let format = count == 1
+                ? viewModel.localizer.text(.homeHeroReadySubtitleSingularFormat)
+                : viewModel.localizer.text(.homeHeroReadySubtitlePluralFormat)
+            return String(format: format, count)
+        case .almostReady(let count):
+            let format = count == 1
+                ? viewModel.localizer.text(.homeHeroAlmostReadySubtitleSingularFormat)
+                : viewModel.localizer.text(.homeHeroAlmostReadySubtitlePluralFormat)
+            return String(format: format, count)
+        case .seasonal:
+            return viewModel.localizer.text(.homeHeroSeasonalSubtitle)
+        }
+    }
+
+    private var homeHeroCTA: String {
+        switch homeHeroState {
+        case .readyNow:
+            return localizedReadyNowHeroCTA(for: homeHeroDaypart)
+        case .almostReady:
+            return viewModel.localizer.text(.homeHeroAlmostReadyCTA)
+        case .seasonal:
+            return viewModel.localizer.text(.homeHeroSeasonalCTA)
+        }
+    }
+
+    private var homeHeroDaypart: HomeHeroDaypart {
+        HomeHeroDaypart(currentHour: Calendar.current.component(.hour, from: Date()))
+    }
+
+    private func localizedReadyNowHeroTitle(for daypart: HomeHeroDaypart) -> String {
+        switch daypart {
+        case .morning:
+            return viewModel.localizer.text(.homeHeroReadyMorningTitle)
+        case .lunch:
+            return viewModel.localizer.text(.homeHeroReadyLunchTitle)
+        case .afternoon:
+            return viewModel.localizer.text(.homeHeroReadyAfternoonTitle)
+        case .evening:
+            return viewModel.localizer.text(.homeHeroReadyEveningTitle)
+        case .lateNight:
+            return viewModel.localizer.text(.homeHeroReadyLateNightTitle)
+        }
+    }
+
+    private func localizedReadyNowHeroCTA(for daypart: HomeHeroDaypart) -> String {
+        switch daypart {
+        case .morning:
+            return viewModel.localizer.text(.homeHeroReadyMorningCTA)
+        case .lunch:
+            return viewModel.localizer.text(.homeHeroReadyLunchCTA)
+        case .afternoon:
+            return viewModel.localizer.text(.homeHeroReadyAfternoonCTA)
+        case .evening:
+            return viewModel.localizer.text(.homeHeroReadyEveningCTA)
+        case .lateNight:
+            return viewModel.localizer.text(.homeHeroReadyLateNightCTA)
+        }
+    }
+
+    private var homeHeroSupportingSignal: String? {
+        switch homeHeroState {
+        case .readyNow:
+            guard
+                let topReady = fridgeMatches.first(where: { $0.missingCount == 0 }),
+                let title = cleanedHeroSupportingTitle(from: topReady.rankedRecipe.recipe.title)
+            else { return nil }
+            return String(format: viewModel.localizer.text(.homeHeroSupportBestMatchFormat), title)
+        case .almostReady:
+            guard
+                let topAlmost = fridgeMatches.first(where: { $0.missingCount == 1 }),
+                let title = cleanedHeroSupportingTitle(from: topAlmost.rankedRecipe.recipe.title)
+            else { return nil }
+            return String(format: viewModel.localizer.text(.homeHeroSupportOneMissingFormat), title)
+        case .seasonal:
+            guard
+                let featuredRecipe,
+                featuredRecipe.seasonalMatchPercent > 80,
+                let title = cleanedHeroSupportingTitle(from: featuredRecipe.recipe.title)
+            else { return nil }
+            return String(format: viewModel.localizer.text(.homeHeroSupportBestMatchFormat), title)
+        }
+    }
+
+    private func cleanedHeroSupportingTitle(from rawTitle: String) -> String? {
+        let trimmed = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let normalized = trimmed.lowercased()
+        let blockedTitles: Set<String> = [
+            "test",
+            "test jpg",
+            "test recipe",
+            "debug",
+            "placeholder"
+        ]
+        guard !blockedTitles.contains(normalized) else { return nil }
+        guard !normalized.hasPrefix("test ") else { return nil }
+
+        return trimmed
     }
 
     private var topRightActions: some View {
@@ -302,19 +444,23 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             if let selectedQuickFilter {
                 if selectedQuickFilter == .following && activeFilteredFeedItems.isEmpty {
-                    Text(viewModel.localizer.text(.followAuthorsHint))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, SeasonSpacing.xs)
+                    followingFeedEmptyState
                 }
 
                 VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { index, item in
+                    if selectedQuickFilter == .following && !activeFilteredFeedItems.isEmpty {
+                        followingFeedContextHeader
+                    }
+
+                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { _, item in
                         switch item {
                         case .recipe(let card, let style):
                             homeRecipeItem(card: card, style: style)
                                 .padding(.top, style == .large ? SeasonSpacing.xs : 0)
                                 .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
+                        case .followingFallbackSeparator:
+                            followingFallbackSeparatorLabel
+                                .padding(.top, SeasonSpacing.xs)
                         case .fridge:
                             EmptyView()
                         case .spotlight:
@@ -332,6 +478,8 @@ struct HomeView: View {
                         case .recipe(let card, let style):
                             homeRecipeItem(card: card, style: style)
                                 .padding(.bottom, style == .large ? SeasonSpacing.xs : 0)
+                        case .followingFallbackSeparator:
+                            EmptyView()
                         case .fridge(let match):
                             fridgeSuggestionCard(match)
                                 .padding(.top, SeasonSpacing.xs)
@@ -353,6 +501,8 @@ struct HomeView: View {
                         homeRecipeItem(card: card, style: style)
                             .padding(.top, style == .large ? SeasonSpacing.sm : 0)
                             .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
+                    case .followingFallbackSeparator:
+                        EmptyView()
                     case .fridge(let match):
                         fridgeSuggestionCard(match)
                             .padding(.top, SeasonSpacing.xs)
@@ -365,6 +515,76 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    private var followingFeedEmptyState: some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            EmptyStateCard(
+                symbol: "person.2.circle",
+                title: viewModel.localizer.text(.followingFeedEmptyTitle),
+                subtitle: viewModel.localizer.text(.followingFeedEmptySubtitle)
+            )
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.12)) {
+                    selectedQuickFilter = nil
+                }
+            } label: {
+                Text(viewModel.localizer.text(.followingFeedEmptyCTA))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(SeasonColors.subtleSurface)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, SeasonSpacing.xs)
+    }
+
+    private var followingFeedContextHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "person.2")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(viewModel.localizer.text(.fromPeopleYouFollow))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+
+            Text(
+                String(
+                    format: viewModel.localizer.text(.followingFeedContextFormat),
+                    followingPrimaryVisibleCount,
+                    followStore.followingIds.count
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var followingFallbackSeparatorLabel: some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 0.8)
+            Text(viewModel.localizer.text(.followingFeedFallbackLabel))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 0.8)
+        }
+        .padding(.vertical, 2)
     }
 
     private var featuredRecipe: RankedRecipe? {
@@ -401,6 +621,8 @@ struct HomeView: View {
                     return [card]
                 case .spotlight:
                     return []
+                case .followingFallbackSeparator:
+                    return []
                 }
             }
             print("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
@@ -410,6 +632,18 @@ struct HomeView: View {
             }
         }
         return filtered
+    }
+
+    private var followingPrimaryVisibleCount: Int {
+        guard selectedQuickFilter == .following else { return 0 }
+        let followedIDs = followStore.followingIds
+        return activeFilteredFeedItems.reduce(into: 0) { partial, item in
+            guard case .recipe(let card, _) = item else { return }
+            if let creatorID = card.ranked.recipe.canonicalCreatorID,
+               followedIDs.contains(creatorID) {
+                partial += 1
+            }
+        }
     }
 
     private var remainingFeedItems: [HomeFeedItem] {
@@ -448,6 +682,7 @@ struct HomeView: View {
     private func buildHomeFeed() -> HomeFeedBuild {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet
         let homeRecipes = viewModel.homeRankedRecipes(limit: 120)
+        let personalizationProfile = FeedPersonalizationService.shared.buildProfile(from: homeRecipes)
         let trendingIDs = Set(viewModel.rankedTrendingNowRecipes(limit: 60).map(\.recipe.id))
 
         let ingredientUsageCount = computeIngredientUsageCount(from: homeRecipes)
@@ -465,11 +700,16 @@ struct HomeView: View {
         let trendingRecipes = buildTrendingSection(from: baseRecipes, trendingIDs: trendingIDs)
         let usedWithTrending = usedTopIDs.union(trendingRecipes.map(\.recipe.id))
         let continuousRecipes = baseRecipes.filter { !usedWithTrending.contains($0.recipe.id) }
+        let personalizedContinuousRecipes = personalizedRanking(
+            candidates: continuousRecipes,
+            personalization: personalizationProfile,
+            fridgeItemIDs: fridgeIDs
+        )
 
-        let maxRecipeCards = max(40, min(180, continuousRecipes.count * 3))
+        let maxRecipeCards = max(40, min(180, personalizedContinuousRecipes.count * 3))
         let primaryCards = enforceFeedDiversity(
             cards: buildHookedCards(
-                from: continuousRecipes,
+                from: personalizedContinuousRecipes,
                 preferTrending: false,
                 trendingIDs: trendingIDs,
                 previousHook: nil
@@ -482,9 +722,14 @@ struct HomeView: View {
             ),
             targetCount: maxRecipeCards
         )
+        let personalizedBackupRecipes = personalizedRanking(
+            candidates: homeRecipes,
+            personalization: personalizationProfile,
+            fridgeItemIDs: fridgeIDs
+        )
         let backupCards = enforceFeedDiversity(
             cards: buildHookedCards(
-                from: homeRecipes,
+                from: personalizedBackupRecipes,
                 preferTrending: false,
                 trendingIDs: trendingIDs,
                 previousHook: primaryCards.last?.hookKind
@@ -507,19 +752,21 @@ struct HomeView: View {
         for filter in homeQuickFilters {
             miniFeeds[filter] = buildMiniFeedBlock(
                 for: filter,
-                baseRecipes: continuousRecipes,
+                baseRecipes: personalizedContinuousRecipes,
                 trendingRecipes: trendingRecipes,
-                backupRecipes: homeRecipes,
+                backupRecipes: personalizedBackupRecipes,
                 trendingIDs: trendingIDs,
-                fridgeItemIDs: fridgeIDs
+                fridgeItemIDs: fridgeIDs,
+                personalization: personalizationProfile
             )
             filteredFeeds[filter] = buildFilteredFeed(
                 for: filter,
-                baseRecipes: continuousRecipes,
+                baseRecipes: personalizedContinuousRecipes,
                 trendingRecipes: trendingRecipes,
-                backupRecipes: homeRecipes,
+                backupRecipes: personalizedBackupRecipes,
                 trendingIDs: trendingIDs,
-                fridgeItemIDs: fridgeIDs
+                fridgeItemIDs: fridgeIDs,
+                personalization: personalizationProfile
             )
         }
 
@@ -539,18 +786,20 @@ struct HomeView: View {
         trendingRecipes: [RankedRecipe],
         backupRecipes: [RankedRecipe],
         trendingIDs: Set<String>,
-        fridgeItemIDs: Set<String>
+        fridgeItemIDs: Set<String>,
+        personalization: FeedPersonalizationProfile
     ) -> [HomeFeedItem] {
         let cards: [HookedRecipeCard]
 
         if filter == .following {
+            let followedCreatorIDs = followStore.followingIds
             let followingRanked = viewModel.rankedFollowingRecipes(
-                followedCreatorIDs: Array(followStore.followingIds),
+                followedCreatorIDs: Array(followedCreatorIDs),
                 limit: 60
             )
             print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
             guard !followingRanked.isEmpty else { return [] }
-            cards = enforceFeedDiversity(
+            let followingCards = enforceFeedDiversity(
                 cards: buildHookedCards(
                     from: followingRanked,
                     preferTrending: false,
@@ -560,6 +809,44 @@ struct HomeView: View {
                 trendingCards: [],
                 targetCount: 30
             )
+            let primaryItems = buildEditorialFilteredItems(from: followingCards, targetCount: 14)
+
+            let primaryRecipeIDs: Set<String> = Set(
+                primaryItems.compactMap { item -> String? in
+                    guard case .recipe(let card, _) = item else { return nil }
+                    return card.ranked.recipe.id
+                }
+            )
+            let fallbackCandidates = mergedCandidateRecipes(
+                baseRecipes: baseRecipes,
+                trendingRecipes: trendingRecipes,
+                backupRecipes: backupRecipes
+            ).filter { ranked in
+                guard !primaryRecipeIDs.contains(ranked.recipe.id) else { return false }
+                if let creatorID = ranked.recipe.canonicalCreatorID,
+                   followedCreatorIDs.contains(creatorID) {
+                    return false
+                }
+                return true
+            }
+
+            let minimumTargetCount = 8
+            let fallbackTarget = min(4, max(0, minimumTargetCount - primaryItems.count))
+            if fallbackTarget > 0 {
+                let fallbackCards = enforceFeedDiversity(
+                    cards: buildHookedCards(
+                        from: fallbackCandidates,
+                        preferTrending: false,
+                        trendingIDs: trendingIDs,
+                        previousHook: followingCards.last?.hookKind
+                    ),
+                    trendingCards: [],
+                    targetCount: fallbackTarget
+                )
+                let fallbackItems = fallbackCards.prefix(fallbackTarget).map { HomeFeedItem.recipe($0, style: .compact) }
+                return deduplicatedFollowingFeedItems(primaryItems + [.followingFallbackSeparator] + fallbackItems)
+            }
+            return deduplicatedFollowingFeedItems(primaryItems)
         } else {
             let mergedCandidates = mergedCandidateRecipes(
                 baseRecipes: baseRecipes,
@@ -569,7 +856,8 @@ struct HomeView: View {
             let reranked = smartBoostedRanking(
                 for: filter,
                 candidates: mergedCandidates,
-                fridgeItemIDs: fridgeItemIDs
+                fridgeItemIDs: fridgeItemIDs,
+                personalization: personalization
             )
             cards = enforceFeedDiversity(
                 cards: buildHookedCards(
@@ -604,13 +892,47 @@ struct HomeView: View {
         return items
     }
 
+    private func deduplicatedFollowingFeedItems(_ items: [HomeFeedItem]) -> [HomeFeedItem] {
+        var seenRecipeIDs = Set<String>()
+        var deduplicated: [HomeFeedItem] = []
+        var separatorIndex: Int?
+
+        for item in items {
+            switch item {
+            case .recipe(let card, _):
+                guard !seenRecipeIDs.contains(card.ranked.recipe.id) else { continue }
+                seenRecipeIDs.insert(card.ranked.recipe.id)
+                deduplicated.append(item)
+            case .followingFallbackSeparator:
+                guard separatorIndex == nil else { continue }
+                separatorIndex = deduplicated.count
+                deduplicated.append(item)
+            case .fridge, .spotlight:
+                deduplicated.append(item)
+            }
+        }
+
+        if let separatorIndex {
+            let hasRecipesAfterSeparator = deduplicated.dropFirst(separatorIndex + 1).contains { item in
+                if case .recipe = item { return true }
+                return false
+            }
+            if !hasRecipesAfterSeparator {
+                deduplicated.remove(at: separatorIndex)
+            }
+        }
+
+        return deduplicated
+    }
+
     private func buildMiniFeedBlock(
         for filter: HomeQuickFilter,
         baseRecipes: [RankedRecipe],
         trendingRecipes: [RankedRecipe],
         backupRecipes: [RankedRecipe],
         trendingIDs: Set<String>,
-        fridgeItemIDs: Set<String>
+        fridgeItemIDs: Set<String>,
+        personalization: FeedPersonalizationProfile
     ) -> [HomeFeedItem] {
         if filter == .following {
             let followingRanked = viewModel.rankedFollowingRecipes(
@@ -636,7 +958,8 @@ struct HomeView: View {
         let reranked = smartBoostedRanking(
             for: filter,
             candidates: mergedCandidates,
-            fridgeItemIDs: fridgeItemIDs
+            fridgeItemIDs: fridgeItemIDs,
+            personalization: personalization
         )
 
         let cards = enforceFeedDiversity(
@@ -707,6 +1030,8 @@ struct HomeView: View {
             return "fridge-\(match.rankedRecipe.recipe.id)"
         case .spotlight(let ingredient):
             return "spotlight-\(ingredient.item.id)"
+        case .followingFallbackSeparator:
+            return "following-fallback-separator"
         }
     }
 
@@ -716,7 +1041,7 @@ struct HomeView: View {
             return [card.ranked.recipe.id]
         case .fridge(let match):
             return [match.rankedRecipe.recipe.id]
-        case .spotlight:
+        case .spotlight, .followingFallbackSeparator:
             return []
         }
     }
@@ -740,13 +1065,49 @@ struct HomeView: View {
     private func smartBoostedRanking(
         for filter: HomeQuickFilter,
         candidates: [RankedRecipe],
-        fridgeItemIDs: Set<String>
+        fridgeItemIDs: Set<String>,
+        personalization: FeedPersonalizationProfile
     ) -> [RankedRecipe] {
-        candidates
+        let scored = candidates
             .map { ranked in
                 let baseScore = min(1.0, max(0.0, ranked.score / 100.0))
                 let boost = smartSuggestionBoost(for: filter, ranked: ranked, fridgeItemIDs: fridgeItemIDs)
-                return (ranked: ranked, score: baseScore + boost)
+                let fridgeMatch = fridgeItemIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: ranked.recipe, fridgeItemIDs: fridgeItemIDs)
+                let personalizationEval = personalization.evaluation(for: ranked, fridgeMatchScore: fridgeMatch)
+                let score = baseScore + boost + personalizationEval.adjustment
+                return (ranked: ranked, score: score, reasons: personalizationEval.reasons)
+            }
+            .sorted { lhs, rhs in
+                if lhs.score != rhs.score {
+                    return lhs.score > rhs.score
+                }
+                return lhs.ranked.recipe.title.localizedCaseInsensitiveCompare(rhs.ranked.recipe.title) == .orderedAscending
+            }
+
+        if isFeedIntelligenceDebugEnabled {
+            let summary = scored
+                .prefix(3)
+                .map { "\($0.ranked.recipe.id):\(String(format: "%.3f", $0.score)):\($0.reasons.joined(separator: ","))" }
+                .joined(separator: " | ")
+            debugFeedIntelligence("phase=filter_ranked filter=\(filter.rawValue) count=\(scored.count) top=\(summary)")
+        }
+
+        return scored.map(\.ranked)
+    }
+
+    private func personalizedRanking(
+        candidates: [RankedRecipe],
+        personalization: FeedPersonalizationProfile,
+        fridgeItemIDs: Set<String>
+    ) -> [RankedRecipe] {
+        guard personalization.isActive else { return candidates }
+
+        let ranked = candidates
+            .map { ranked in
+                let baseScore = min(1.0, max(0.0, ranked.score / 100.0))
+                let fridgeMatch = fridgeItemIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: ranked.recipe, fridgeItemIDs: fridgeItemIDs)
+                let personalizationEval = personalization.evaluation(for: ranked, fridgeMatchScore: fridgeMatch)
+                return (ranked: ranked, score: baseScore + personalizationEval.adjustment, reasons: personalizationEval.reasons)
             }
             .sorted { lhs, rhs in
                 if lhs.score != rhs.score {
@@ -755,6 +1116,25 @@ struct HomeView: View {
                 return lhs.ranked.recipe.title.localizedCaseInsensitiveCompare(rhs.ranked.recipe.title) == .orderedAscending
             }
             .map(\.ranked)
+
+        if isFeedIntelligenceDebugEnabled {
+            debugFeedIntelligence("phase=personalization_active quick=\(String(format: "%.2f", personalization.quickRecipePreference)) seasonal=\(String(format: "%.2f", personalization.seasonalPreference)) fridge=\(String(format: "%.2f", personalization.fridgeActionAffinity)) saved_crispy=\(String(format: "%.2f", personalization.savedCrispiedAffinity))")
+        }
+
+        return ranked
+    }
+
+    private var isFeedIntelligenceDebugEnabled: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["SEASON_FEED_INTEL_DEBUG"] == "1"
+        #else
+        false
+        #endif
+    }
+
+    private func debugFeedIntelligence(_ message: String) {
+        guard isFeedIntelligenceDebugEnabled else { return }
+        print("[SEASON_FEED_INTEL] \(message)")
     }
 
     private func smartSuggestionBoost(
@@ -952,13 +1332,27 @@ struct HomeView: View {
 
     @ViewBuilder
     private func homeRecipeItem(card: HookedRecipeCard, style: HomeRecipeCardStyle) -> some View {
+        let followedCreator = isFollowedCreator(card.ranked.recipe.canonicalCreatorID)
         if style == .large {
-            largeRecipeCard(ranked: card.ranked, hook: card.hook)
+            largeRecipeCard(
+                ranked: card.ranked,
+                hook: card.hook,
+                showFollowingSignal: selectedQuickFilter == .following && followedCreator
+            )
                 .padding(.top, SeasonSpacing.sm)
                 .padding(.bottom, SeasonSpacing.sm)
         } else {
-            compactRecipeCard(ranked: card.ranked, hook: card.hook)
+            compactRecipeCard(
+                ranked: card.ranked,
+                hook: card.hook,
+                showFollowingSignal: selectedQuickFilter == .following && followedCreator
+            )
         }
+    }
+
+    private func isFollowedCreator(_ creatorID: String?) -> Bool {
+        guard let creatorID else { return false }
+        return followStore.followingIds.contains(creatorID)
     }
 
     private func enforceFeedDiversity(
@@ -1120,7 +1514,7 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func largeRecipeCard(ranked: RankedRecipe, hook: String) -> some View {
+    private func largeRecipeCard(ranked: RankedRecipe, hook: String, showFollowingSignal: Bool) -> some View {
         NavigationLink {
             RecipeDetailView(
                 rankedRecipe: ranked,
@@ -1142,6 +1536,16 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
+                    if showFollowingSignal {
+                        Text("·")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Text(viewModel.localizer.text(.following))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+
                     SeasonBadge(
                         text: hook,
                         horizontalPadding: SeasonSpacing.xs,
@@ -1162,7 +1566,8 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func compactRecipeCard(ranked: RankedRecipe, hook: String) -> some View {
+    private func compactRecipeCard(ranked: RankedRecipe, hook: String, showFollowingSignal: Bool) -> some View {
+        let emphasizeAuthor = selectedQuickFilter == .following
         NavigationLink {
             RecipeDetailView(
                 rankedRecipe: ranked,
@@ -1174,7 +1579,9 @@ struct HomeView: View {
                 recipe: ranked.recipe,
                 hook: hook,
                 seasonalityScore: ranked.seasonalityScore,
-                localizer: viewModel.localizer
+                localizer: viewModel.localizer,
+                emphasizeAuthor: emphasizeAuthor,
+                showFollowingSignal: showFollowingSignal
             )
         }
         .buttonStyle(.plain)
@@ -1456,6 +1863,8 @@ private struct HomeEditorialRecipeRow: View {
     let hook: String
     let seasonalityScore: Double
     let localizer: AppLocalizer
+    let emphasizeAuthor: Bool
+    let showFollowingSignal: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -1469,19 +1878,29 @@ private struct HomeEditorialRecipeRow: View {
                     .lineLimit(2)
 
                 Text(recipe.author)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .font(emphasizeAuthor ? .caption.weight(.semibold) : .caption.weight(.medium))
+                    .foregroundStyle(
+                        emphasizeAuthor
+                        ? AnyShapeStyle(.primary.opacity(0.88))
+                        : AnyShapeStyle(.secondary)
+                    )
                     .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    SeasonBadge(
-                        text: hook,
-                        horizontalPadding: SeasonSpacing.xs,
-                        verticalPadding: 4,
-                        cornerRadius: SeasonRadius.small,
-                        foreground: .secondary,
-                        background: SeasonColors.subtleSurface
-                    )
+                HStack(spacing: 4) {
+                    Text(hook)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    if showFollowingSignal {
+                        Text("•")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                        Text(localizer.text(.following))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1539,6 +1958,35 @@ private enum HomeQuickFilter: String, CaseIterable, Identifiable {
 
 }
 
+private enum HomeHeroState {
+    case readyNow(count: Int)
+    case almostReady(count: Int)
+    case seasonal(count: Int)
+}
+
+private enum HomeHeroDaypart {
+    case morning
+    case lunch
+    case afternoon
+    case evening
+    case lateNight
+
+    init(currentHour: Int) {
+        switch currentHour {
+        case 6...10:
+            self = .morning
+        case 11...14:
+            self = .lunch
+        case 15...17:
+            self = .afternoon
+        case 18...22:
+            self = .evening
+        default:
+            self = .lateNight
+        }
+    }
+}
+
 private struct HomeFeedBuild {
     let featured: RankedRecipe?
     let fridgeMatches: [FridgeMatchedRecipe]
@@ -1557,6 +2005,7 @@ private enum HomeFeedItem: Identifiable {
     case recipe(HookedRecipeCard, style: HomeRecipeCardStyle)
     case fridge(FridgeMatchedRecipe)
     case spotlight(RankedInSeasonItem)
+    case followingFallbackSeparator
 
     var id: String {
         switch self {
@@ -1566,6 +2015,8 @@ private enum HomeFeedItem: Identifiable {
             return "fridge-\(match.rankedRecipe.recipe.id)"
         case .spotlight(let item):
             return "spotlight-\(item.item.id)"
+        case .followingFallbackSeparator:
+            return "following-fallback-separator"
         }
     }
 }
@@ -1729,7 +2180,7 @@ private struct FridgeRecipeMatchesView: View {
 
             Section(header: SectionTitleCountRow(
                 title: produceViewModel.localizer.text(.bestMatches),
-                countText: "\(bestMatches.count)"
+                countText: bestMatches.count.compactFormatted()
             ).textCase(nil)) {
                 if bestMatches.isEmpty {
                     EmptyStateCard(
@@ -1749,7 +2200,7 @@ private struct FridgeRecipeMatchesView: View {
             if !quickOptions.isEmpty {
                 Section(header: SectionTitleCountRow(
                     title: produceViewModel.localizer.text(.quickOptions),
-                    countText: "\(quickOptions.count)"
+                    countText: quickOptions.count.compactFormatted()
                 ).textCase(nil)) {
                     ForEach(quickOptions) { match in
                         fridgeRecipeRow(match)
