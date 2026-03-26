@@ -57,7 +57,9 @@ final class FollowSyncManager {
         guard !followerID.isEmpty, followerID == authenticatedUserID else { return }
 
         let remoteRelations = await supabaseService.fetchFollows(for: followerID)
-        let addedCount = FollowStore.shared.mergeBackendFollows(remoteRelations)
+        let addedCount = await MainActor.run {
+            FollowStore.shared.mergeBackendFollows(remoteRelations)
+        }
         print("[SEASON_SUPABASE] request=syncFollowFromBackend phase=request_ok follower_id=\(followerID) fetched=\(remoteRelations.count) merged=\(addedCount)")
 
         await syncToBackend()
@@ -68,7 +70,9 @@ final class FollowSyncManager {
         isSyncingToBackend = true
         defer { isSyncingToBackend = false }
 
-        let localRelations = FollowStore.shared.currentFollowRelations()
+        let localRelations = await MainActor.run {
+            FollowStore.shared.currentFollowRelations()
+        }
         guard !localRelations.isEmpty else { return }
 
         for relation in localRelations {

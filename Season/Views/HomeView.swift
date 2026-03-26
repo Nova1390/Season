@@ -172,11 +172,39 @@ struct HomeView: View {
 
     private var homeHeroTitle: String {
         switch homeHeroState {
-        case .readyNow:
-            return localizedReadyNowHeroTitle(for: homeHeroDaypart)
-        case .almostReady:
-            return viewModel.localizer.text(.homeHeroAlmostReadyTitle)
+        case .readyNow(let count):
+            if let topReady = fridgeMatches.first(where: { $0.missingCount == 0 }) {
+                let totalMinutes = recipeTotalMinutes(topReady.rankedRecipe.recipe)
+                if totalMinutes > 0, totalMinutes <= 18 {
+                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
+                }
+            }
+
+            let format = count == 1
+                ? viewModel.localizer.text(.homeHeroReadySubtitleSingularFormat)
+                : viewModel.localizer.text(.homeHeroReadySubtitlePluralFormat)
+            return String(format: format, count)
+        case .almostReady(let count):
+            if let topAlmost = fridgeMatches.first(where: { $0.missingCount == 1 }) {
+                let totalMinutes = recipeTotalMinutes(topAlmost.rankedRecipe.recipe)
+                if totalMinutes > 0, totalMinutes <= 20 {
+                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
+                }
+            }
+            if count == 1 {
+                return viewModel.localizer.text(.quickActionOnlyOneIngredientMissing)
+            }
+            return String(format: viewModel.localizer.text(.homeHeroAlmostReadySubtitlePluralFormat), count)
         case .seasonal:
+            if let featuredRecipe {
+                let totalMinutes = recipeTotalMinutes(featuredRecipe.recipe)
+                if totalMinutes > 0, totalMinutes <= 20 {
+                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
+                }
+                if featuredRecipe.seasonalMatchPercent >= 90 {
+                    return viewModel.localizer.recipeTimingTitle(.perfectNow)
+                }
+            }
             return viewModel.localizer.text(.homeHeroSeasonalTitle)
         }
     }
@@ -194,6 +222,12 @@ struct HomeView: View {
                 : viewModel.localizer.text(.homeHeroAlmostReadySubtitlePluralFormat)
             return String(format: format, count)
         case .seasonal:
+            if let featuredRecipe {
+                return String(
+                    format: viewModel.localizer.text(.recipeReasonSeasonalMatchFormat),
+                    featuredRecipe.seasonalMatchPercent
+                )
+            }
             return viewModel.localizer.text(.homeHeroSeasonalSubtitle)
         }
     }
@@ -283,6 +317,12 @@ struct HomeView: View {
         guard !normalized.hasPrefix("test ") else { return nil }
 
         return trimmed
+    }
+
+    private func recipeTotalMinutes(_ recipe: Recipe) -> Int {
+        let prep = recipe.prepTimeMinutes ?? 0
+        let cook = recipe.cookTimeMinutes ?? 0
+        return prep + cook
     }
 
     private var topRightActions: some View {
@@ -1711,86 +1751,41 @@ struct HomeView: View {
         }
     }
 
-    private func hookCandidates(
-        for ranked: RankedRecipe,
-        preferTrending: Bool,
-        trendingIDs: Set<String>
-    ) -> [RecipePrimaryHook] {
-        var hooks: [String] = []
-        var mapped: [RecipePrimaryHook] = []
-
+    private func primaryHook(for ranked: RankedRecipe) -> RecipePrimaryHook {
         if let match = fridgeMatchByRecipeID[ranked.recipe.id] {
-            mapped.append(.init(
-                kind: .almostReady,
-                text: String(
-                format: viewModel.localizer.text(.ingredientMatchCountFormat),
-                match.matchingCount,
-                match.totalCount
+            if match.missingCount == 0 {
+                return .init(
+                    kind: .readyNow,
+                    text: viewModel.localizer.text(.readyNow)
                 )
-            ))
+            }
+
+            if match.missingCount == 1 {
+                return .init(
+                    kind: .almostReady,
+                    text: viewModel.localizer.text(.homeHookOneIngredientMissing)
+                )
+            }
         }
 
-        let total = (ranked.recipe.prepTimeMinutes ?? 0) + (ranked.recipe.cookTimeMinutes ?? 0)
-        if total > 0 && total <= 15 {
-            mapped.append(.init(
+        if let prepMinutes = ranked.recipe.prepTimeMinutes, prepMinutes > 0, prepMinutes <= 20 {
+            return .init(
                 kind: .quickMeal,
-                text: String(format: viewModel.localizer.text(.readyInMinutesFormat), total)
-            ))
+                text: String(format: viewModel.localizer.text(.readyInMinutesFormat), prepMinutes)
+            )
         }
 
-        if ranked.seasonalMatchPercent >= 88 {
-            mapped.append(.init(
+        if ranked.seasonalMatchPercent >= 75 {
+            return .init(
                 kind: .peakSeason,
-                text: viewModel.localizer.text(.seasonPeakNow)
-            ))
-        }
-
-        if preferTrending || trendingIDs.contains(ranked.recipe.id) {
-            mapped.append(.init(
-                kind: .trending,
-                text: viewModel.localizer.text(.trendingNowTitle)
-            ))
-        }
-
-        switch viewModel.recipeTimingLabel(for: ranked) {
-        case .perfectNow:
-            mapped.append(.init(
-                kind: .readyNow,
                 text: viewModel.localizer.recipeTimingTitle(.perfectNow)
-            ))
-        case .betterSoon:
-            mapped.append(.init(
-                kind: .peakSeason,
-                text: viewModel.localizer.recipeTimingTitle(.betterSoon)
-            ))
-        case .endingSoon:
-            mapped.append(.init(
-                kind: .peakSeason,
-                text: viewModel.localizer.recipeTimingTitle(.endingSoon)
-            ))
-        case .goodNow:
-            break
+            )
         }
 
-        if mapped.isEmpty {
-            mapped.append(.init(
-                kind: .readyNow,
-                text: viewModel.localizer.text(.seasonBestThisMonth)
-            ))
-        }
-
-        for hook in mapped.map(\.text) where !hooks.contains(hook) {
-            hooks.append(hook)
-        }
-
-        var unique: [String] = []
-        for hook in hooks where !unique.contains(hook) {
-            unique.append(hook)
-        }
-
-        return unique.compactMap { text in
-            mapped.first(where: { $0.text == text })
-        }
+        return .init(
+            kind: .trending,
+            text: viewModel.localizer.text(.homeHookTrendingFallback)
+        )
     }
 
     private func buildHookedCards(
@@ -1800,13 +1795,36 @@ struct HomeView: View {
         previousHook: HookKind?
     ) -> [HookedRecipeCard] {
         var lastHookKind = previousHook
+        var consecutiveTrendingCount = 0
         return recipes.map { ranked in
-            let candidates = hookCandidates(
-                for: ranked,
-                preferTrending: preferTrending,
-                trendingIDs: trendingIDs
-            )
-            let chosen = candidates.first(where: { $0.kind != lastHookKind }) ?? candidates.first ?? .init(kind: .readyNow, text: viewModel.localizer.text(.readyNow))
+            let primary = primaryHook(for: ranked)
+
+            var chosen = primary
+
+            // Soft anti-repetition guard: avoid 3 "Trending now" hooks in a row when possible.
+            if chosen.kind == .trending, consecutiveTrendingCount >= 2 {
+                if let match = fridgeMatchByRecipeID[ranked.recipe.id], match.missingCount <= 2 {
+                    chosen = match.missingCount == 0
+                        ? .init(kind: .readyNow, text: viewModel.localizer.text(.readyNow))
+                        : .init(kind: .almostReady, text: viewModel.localizer.text(.homeHookOneIngredientMissing))
+                } else if let prepMinutes = ranked.recipe.prepTimeMinutes, prepMinutes > 0, prepMinutes <= 20 {
+                    chosen = .init(
+                        kind: .quickMeal,
+                        text: String(format: viewModel.localizer.text(.readyInMinutesFormat), prepMinutes)
+                    )
+                } else if ranked.seasonalMatchPercent >= 80 {
+                    chosen = .init(
+                        kind: .peakSeason,
+                        text: viewModel.localizer.recipeTimingTitle(.perfectNow)
+                    )
+                }
+            }
+
+            if chosen.kind == .trending {
+                consecutiveTrendingCount += 1
+            } else {
+                consecutiveTrendingCount = 0
+            }
             lastHookKind = chosen.kind
             return HookedRecipeCard(ranked: ranked, hook: chosen.text, hookKind: chosen.kind)
         }

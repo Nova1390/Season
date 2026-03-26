@@ -270,6 +270,8 @@ enum AppTextKey: String {
     case recipeHookHighFiber
     case recipeHookSeasonalFavorite
     case recipeHookTrendingNow
+    case homeHookOneIngredientMissing
+    case homeHookTrendingFallback
     case mediaAddPhotos
     case mediaUseCamera
     case mediaNoImagesYet
@@ -796,6 +798,8 @@ struct AppLocalizer {
             .recipeHookHighFiber: "High fiber pick",
             .recipeHookSeasonalFavorite: "Seasonal favorite",
             .recipeHookTrendingNow: "Trending now",
+            .homeHookOneIngredientMissing: "1 ingredient missing",
+            .homeHookTrendingFallback: "Trending now",
             .mediaAddPhotos: "Add photos",
             .mediaUseCamera: "Use camera",
             .mediaNoImagesYet: "No images selected yet.",
@@ -1124,6 +1128,8 @@ struct AppLocalizer {
             .recipeHookHighFiber: "Ricca di fibre",
             .recipeHookSeasonalFavorite: "Preferita di stagione",
             .recipeHookTrendingNow: "In tendenza",
+            .homeHookOneIngredientMissing: "Manca 1 ingrediente",
+            .homeHookTrendingFallback: "Di tendenza",
             .mediaAddPhotos: "Aggiungi foto",
             .mediaUseCamera: "Usa fotocamera",
             .mediaNoImagesYet: "Nessuna immagine selezionata.",

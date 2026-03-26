@@ -208,6 +208,43 @@ struct Recipe: Identifiable, Codable, Hashable {
 
         return "Unknown"
     }
+
+    // Product-quality gate for primary discovery surfaces (Home/Search/Following).
+    // This intentionally does not delete or mutate recipes; it only controls feed eligibility.
+    var isFeedEligible: Bool {
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanedTitle.count >= 3 else { return false }
+
+        let normalizedTitle = cleanedTitle.lowercased()
+        let blockedSnippets = [
+            "test",
+            "debug",
+            "placeholder",
+            "tmp",
+            "sample",
+            "lorem",
+            "untitled"
+        ]
+        guard !blockedSnippets.contains(where: { normalizedTitle.contains($0) }) else { return false }
+
+        let creatorName = displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !creatorName.isEmpty else { return false }
+        guard creatorName.lowercased() != "unknown" else { return false }
+
+        let hasIngredients = !ingredients.isEmpty
+        let hasSteps = preparationSteps.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard hasIngredients, hasSteps else { return false }
+
+        // Visual viability for feed rows/hero surfaces.
+        let hasCover = (coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || (imageURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || images.contains {
+                ($0.localPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                    || ($0.remoteURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            }
+        let hasRenderableFallback = !author.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return hasCover || hasRenderableFallback
+    }
 }
 
 struct RankedRecipe: Identifiable {

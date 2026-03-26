@@ -25,11 +25,10 @@ enum RecipeStore {
 
     static func loadRecipes() -> [Recipe] {
         cacheLock.lock()
+        defer { cacheLock.unlock() }
         if let cachedRecipes {
-            cacheLock.unlock()
             return cachedRecipes
         }
-        cacheLock.unlock()
 
         let curated: [Recipe] = [
             Recipe(
@@ -262,13 +261,7 @@ enum RecipeStore {
             seen.insert(recipe.id).inserted
         }
         let normalized = normalizeCreatorIdentity(in: merged, profiles: profiles)
-        cacheLock.lock()
-        if let cachedRecipes {
-            cacheLock.unlock()
-            return cachedRecipes
-        }
         cachedRecipes = normalized
-        cacheLock.unlock()
         return normalized
     }
 

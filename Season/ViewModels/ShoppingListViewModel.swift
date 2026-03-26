@@ -472,31 +472,7 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "create",
             payload: createPayload
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=service_call")
-            do {
-                try await supabaseService.createShoppingListItem(
-                    localItemID: entry.id,
-                    ingredientType: mapped.ingredientType,
-                    ingredientID: mapped.ingredientID,
-                    customName: mapped.customName,
-                    quantity: mapped.quantity,
-                    unit: mapped.unit,
-                    sourceRecipeID: mapped.sourceRecipeID,
-                    isChecked: false,
-                    traceID: traceID
-                )
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughUpdate(_ entry: ShoppingListEntry) {
@@ -524,31 +500,7 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "update",
             payload: updatePayload
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=service_call")
-            do {
-                try await supabaseService.updateShoppingListItem(
-                    localItemID: entry.id,
-                    ingredientType: mapped.ingredientType,
-                    ingredientID: mapped.ingredientID,
-                    customName: mapped.customName,
-                    quantity: mapped.quantity,
-                    unit: mapped.unit,
-                    sourceRecipeID: mapped.sourceRecipeID,
-                    isChecked: false,
-                    traceID: traceID
-                )
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughDelete(_ entry: ShoppingListEntry) {
@@ -565,21 +517,7 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "delete",
             payload: ShoppingListDeleteOutboxMutationPayload(localItemID: entry.id)
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=service_call")
-            do {
-                try await supabaseService.deleteShoppingListItem(localItemID: entry.id, traceID: traceID)
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func mapEntryForCloudWrite(_ entry: ShoppingListEntry) -> (

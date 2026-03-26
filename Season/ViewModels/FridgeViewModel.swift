@@ -197,29 +197,7 @@ final class FridgeViewModel: ObservableObject {
                 unit: nil
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
-            do {
-                try await supabaseService.createFridgeItem(
-                    localItemID: localItemID,
-                    ingredientType: "produce",
-                    ingredientID: produceID,
-                    customName: nil,
-                    quantity: nil,
-                    unit: nil,
-                    traceID: traceID
-                )
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughCreateBasic(_ basicID: String) {
@@ -244,29 +222,7 @@ final class FridgeViewModel: ObservableObject {
                 unit: nil
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_call")
-            do {
-                try await supabaseService.createFridgeItem(
-                    localItemID: localItemID,
-                    ingredientType: "basic",
-                    ingredientID: basicID,
-                    customName: nil,
-                    quantity: nil,
-                    unit: nil,
-                    traceID: traceID
-                )
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughCreateCustom(_ item: FridgeCustomItem) {
@@ -291,29 +247,7 @@ final class FridgeViewModel: ObservableObject {
                 unit: parsed.unit
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=service_call")
-            do {
-                try await supabaseService.createFridgeItem(
-                    localItemID: item.id,
-                    ingredientType: "custom",
-                    ingredientID: nil,
-                    customName: item.name,
-                    quantity: parsed.quantity,
-                    unit: parsed.unit,
-                    traceID: traceID
-                )
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughDelete(localItemID: String) {
@@ -330,21 +264,7 @@ final class FridgeViewModel: ObservableObject {
             operationType: "delete",
             payload: FridgeOutboxDeletePayload(localItemID: localItemID)
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_call")
-            do {
-                try await supabaseService.deleteFridgeItem(localItemID: localItemID, traceID: traceID)
-                await MainActor.run {
-                    syncFeedback.show(.success)
-                }
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed error=\(error)")
-                await MainActor.run {
-                    syncFeedback.show(.error)
-                }
-            }
-        }
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func parseQuantityAndUnit(_ rawQuantity: String?) -> (quantity: Double?, unit: String?) {

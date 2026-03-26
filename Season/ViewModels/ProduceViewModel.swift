@@ -287,7 +287,7 @@ final class ProduceViewModel: ObservableObject {
             .split(separator: " ")
             .map { String($0) }
             .filter { !$0.isEmpty }
-        let ranked = rankedDiscoverableRecipes()
+        let ranked = rankedFeedEligibleDiscoverableRecipes()
         guard !trimmedQuery.isEmpty else { return ranked }
 
         let scoredResults: [(recipe: RankedRecipe, relevance: Int)] = ranked.compactMap { rankedRecipe -> (recipe: RankedRecipe, relevance: Int)? in
@@ -380,17 +380,17 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedTrendingRecipes(limit: Int = 6) -> [RankedRecipe] {
-        Array(rankedDiscoverableRecipes().prefix(max(1, limit)))
+        Array(rankedFeedEligibleDiscoverableRecipes().prefix(max(1, limit)))
     }
 
     func homeRankedRecipes(limit: Int = 12) -> [RankedRecipe] {
-        Array(rankedDiscoverableRecipes().prefix(max(1, limit)))
+        Array(rankedFeedEligibleDiscoverableRecipes().prefix(max(1, limit)))
     }
 
     func rankedTrendingNowRecipes(limit: Int = 6) -> [RankedRecipe] {
-        let homeResolved = rankedDiscoverableByID()
+        let homeResolved = rankedFeedEligibleDiscoverableByID()
 
-        return discoverableRecipes
+        return feedEligibleDiscoverableRecipes
             .sorted { lhs, rhs in
                 let leftScore = (0.6 * crispyScore(for: lhs)) + (0.4 * viewsScore(for: lhs))
                 let rightScore = (0.6 * crispyScore(for: rhs)) + (0.4 * viewsScore(for: rhs))
@@ -405,7 +405,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedSmartSuggestionRecipes(limit: Int = 6) -> [RankedRecipe] {
-        rankedDiscoverableRecipes()
+        rankedFeedEligibleDiscoverableRecipes()
             .map { ranked in
                 let homeScore = min(1.0, max(0.0, ranked.score / 100.0))
                 let nutrition = nutritionPreferenceScore(for: ranked.recipe)
@@ -423,7 +423,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func rankedFollowedRecipes(followedAuthors: Set<String>, limit: Int = 6) -> [RankedRecipe] {
-        let followed = rankedDiscoverableRecipes().filter { followedAuthors.contains($0.recipe.author) }
+        let followed = rankedFeedEligibleDiscoverableRecipes().filter { followedAuthors.contains($0.recipe.author) }
         return Array(followed.prefix(max(1, limit)))
     }
 
@@ -436,7 +436,7 @@ final class ProduceViewModel: ObservableObject {
         )
         guard !normalizedFollowedIDs.isEmpty else { return [] }
 
-        let followed = rankedDiscoverableRecipes().filter { ranked in
+        let followed = rankedFeedEligibleDiscoverableRecipes().filter { ranked in
             guard let creatorID = ranked.recipe.canonicalCreatorID else { return false }
             return normalizedFollowedIDs.contains(creatorID)
         }
@@ -644,7 +644,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func matchedRecipesForFridge(fridgeItemIDs: Set<String>) -> [FridgeMatchedRecipe] {
-        rankedDiscoverableRecipes()
+        rankedFeedEligibleDiscoverableRecipes()
             .map { rankedRecipe in
                 let weighted = weightedFridgeMatch(for: rankedRecipe.recipe, fridgeItemIDs: fridgeItemIDs)
                 return FridgeMatchedRecipe(
@@ -1265,6 +1265,10 @@ final class ProduceViewModel: ObservableObject {
         nonDeletedRecipes.filter { $0.publicationStatus == .published && !archivedRecipeIDs.contains($0.id) }
     }
 
+    private var feedEligibleDiscoverableRecipes: [Recipe] {
+        discoverableRecipes.filter(\.isFeedEligible)
+    }
+
     private var nutritionContext: NutritionService.Context {
         NutritionService.Context(
             produceItems: produceItems,
@@ -1337,11 +1341,19 @@ final class ProduceViewModel: ObservableObject {
         return ranked
     }
 
+    private func rankedFeedEligibleDiscoverableRecipes() -> [RankedRecipe] {
+        rankedDiscoverableRecipes().filter { $0.recipe.isFeedEligible }
+    }
+
     private func rankedDiscoverableByID() -> [String: RankedRecipe] {
         if cachedDiscoverableRankedByID.isEmpty {
             _ = rankedDiscoverableRecipes()
         }
         return cachedDiscoverableRankedByID
+    }
+
+    private func rankedFeedEligibleDiscoverableByID() -> [String: RankedRecipe] {
+        Dictionary(uniqueKeysWithValues: rankedFeedEligibleDiscoverableRecipes().map { ($0.recipe.id, $0) })
     }
 
     func homeRankingScore(for recipe: Recipe) -> Double {

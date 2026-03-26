@@ -467,19 +467,7 @@ struct SearchView: View {
     }
 
     private func isPresentableRecipe(_ recipe: Recipe) -> Bool {
-        let title = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return false }
-
-        let normalizedTitle = title.lowercased()
-        let blockedSnippets = ["test", "test jpg", "placeholder", "debug"]
-        let isLowQualityTitle = blockedSnippets.contains(where: { normalizedTitle.contains($0) })
-        if isLowQualityTitle { return false }
-
-        let author = recipe.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if author == "unknown" && isLowQualityTitle {
-            return false
-        }
-        return true
+        recipe.isFeedEligible
     }
 
     @ViewBuilder

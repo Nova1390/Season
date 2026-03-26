@@ -14,6 +14,8 @@ struct FeedPersonalizationProfile {
     let recentlyOpenedAtByRecipeID: [String: Date]
     let recentViewCountByRecipeID: [String: Int]
     let recentTouchedRecipeIDs: Set<String>
+    let recentOpenedCreatorIDs: Set<String>
+    let recentOpenedProduceIDs: Set<String>
 
     var isActive: Bool {
         quickRecipePreference > 0.01
@@ -22,6 +24,8 @@ struct FeedPersonalizationProfile {
             || savedCrispiedAffinity > 0.01
             || !creatorAffinity.isEmpty
             || !recentTouchedRecipeIDs.isEmpty
+            || !recentOpenedCreatorIDs.isEmpty
+            || !recentOpenedProduceIDs.isEmpty
     }
 
     func evaluation(
@@ -55,6 +59,24 @@ struct FeedPersonalizationProfile {
             let creatorBoost = min(0.08, 0.08 * creatorStrength)
             adjustment += creatorBoost
             reasons.append("creator")
+        }
+
+        // Soft continuity: lightly prioritize recipes related to recently opened/saved content.
+        if let creatorID = recipe.canonicalCreatorID,
+           recentOpenedCreatorIDs.contains(creatorID) {
+            adjustment += 0.03
+            reasons.append("continuity_creator")
+        }
+
+        let produceIDs = Set(recipe.ingredients.compactMap(\.produceID))
+        if !produceIDs.isEmpty && !recentOpenedProduceIDs.isEmpty {
+            let overlap = produceIDs.intersection(recentOpenedProduceIDs).count
+            if overlap > 0 {
+                let overlapRatio = Double(overlap) / Double(produceIDs.count)
+                let ingredientContinuity = min(0.04, 0.04 * overlapRatio)
+                adjustment += ingredientContinuity
+                reasons.append("continuity_ingredients")
+            }
         }
 
         let crispySignal = min(1.0, max(0.0, Double(recipe.crispy) / 160.0))
@@ -118,6 +140,8 @@ final class FeedPersonalizationService {
         var recentlyOpenedAtByRecipeID: [String: Date] = [:]
         var recentViewCountByRecipeID: [String: Int] = [:]
         var recentTouchedRecipeIDs: Set<String> = []
+        var recentOpenedCreatorIDs: Set<String> = []
+        var recentOpenedProduceIDs: Set<String> = []
 
         for event in events {
             switch event.eventType {
@@ -143,6 +167,14 @@ final class FeedPersonalizationService {
             }
 
             guard let ranked = recipeLookup[recipeID] else { continue }
+
+            if event.eventType == .recipeOpened || event.eventType == .recipeSaved || event.eventType == .recipeCrispied {
+                if let creatorID = ranked.recipe.canonicalCreatorID {
+                    recentOpenedCreatorIDs.insert(creatorID)
+                }
+                recentOpenedProduceIDs.formUnion(ranked.recipe.ingredients.compactMap(\.produceID))
+            }
+
             let weight = eventWeight(for: event.eventType)
             guard weight > 0 else { continue }
 
@@ -187,7 +219,9 @@ final class FeedPersonalizationService {
             savedCrispiedAffinity: savedCrispiedAffinity,
             recentlyOpenedAtByRecipeID: recentlyOpenedAtByRecipeID,
             recentViewCountByRecipeID: recentViewCountByRecipeID,
-            recentTouchedRecipeIDs: recentTouchedRecipeIDs
+            recentTouchedRecipeIDs: recentTouchedRecipeIDs,
+            recentOpenedCreatorIDs: recentOpenedCreatorIDs,
+            recentOpenedProduceIDs: recentOpenedProduceIDs
         )
     }
 
