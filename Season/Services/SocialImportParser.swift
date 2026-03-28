@@ -6,6 +6,7 @@ struct SocialImportSuggestion {
     let sourceCaptionRaw: String?
     let suggestedTitle: String?
     let suggestedIngredients: [RecipeIngredient]
+    let suggestedSteps: [String]
 }
 
 enum SocialImportParser {
@@ -18,25 +19,42 @@ enum SocialImportParser {
     ) -> SocialImportSuggestion {
         let normalizedURL = normalizeURL(sourceURLRaw)
         let platform = detectPlatform(from: normalizedURL)
-        let lines = captionRaw
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
 
-        let title = suggestTitle(from: lines)
-        let ingredients = suggestIngredients(
-            from: lines,
-            produceItems: produceItems,
-            basicIngredients: basicIngredients,
-            languageCode: languageCode
-        )
+        let structuredCaption = parseStructuredCaption(captionRaw)
+        let title: String?
+        let ingredients: [RecipeIngredient]
+        let steps: [String]
+
+        if let structuredCaption {
+            title = suggestTitle(
+                introLines: structuredCaption.introLines,
+                fallbackLines: structuredCaption.allLines
+            )
+            ingredients = suggestedStructuredIngredients(from: structuredCaption.ingredientLines)
+            steps = suggestedStructuredSteps(from: structuredCaption.stepLines)
+        } else {
+            let lines = captionRaw
+                .components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            title = suggestTitle(from: lines)
+            ingredients = suggestIngredients(
+                from: lines,
+                produceItems: produceItems,
+                basicIngredients: basicIngredients,
+                languageCode: languageCode
+            )
+            steps = []
+        }
 
         return SocialImportSuggestion(
             sourceURL: normalizedURL,
             sourcePlatform: platform,
             sourceCaptionRaw: captionRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : captionRaw,
             suggestedTitle: title,
-            suggestedIngredients: ingredients
+            suggestedIngredients: ingredients,
+            suggestedSteps: steps
         )
     }
 
@@ -70,6 +88,144 @@ enum SocialImportParser {
             return cleaned
         }
         return nil
+    }
+
+    private static func suggestTitle(introLines: [String], fallbackLines: [String]) -> String {
+        if let firstIntro = introLines.first(where: { !$0.isEmpty }) {
+            let firstSentence = firstIntro
+                .split(separator: ".", maxSplits: 1, omittingEmptySubsequences: true)
+                .first
+                .map(String.init)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !firstSentence.isEmpty {
+                return firstSentence
+            }
+        }
+        return suggestTitle(from: fallbackLines) ?? "Untitled recipe"
+    }
+
+    private static func parseStructuredCaption(_ rawCaption: String) -> StructuredCaption? {
+        let lines = rawCaption
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !lines.isEmpty else { return nil }
+
+        var introLines: [String] = []
+        var ingredientLines: [String] = []
+        var stepLines: [String] = []
+        var section: StructuredCaption.Section = .intro
+        var foundSectionHeader = false
+
+        for line in lines {
+            if let detectedSection = detectedSectionHeader(from: line) {
+                foundSectionHeader = true
+                section = detectedSection
+                continue
+            }
+
+            switch section {
+            case .intro:
+                introLines.append(line)
+            case .ingredients:
+                ingredientLines.append(line)
+            case .steps:
+                stepLines.append(line)
+            }
+        }
+
+        guard foundSectionHeader else { return nil }
+        return StructuredCaption(
+            allLines: lines,
+            introLines: introLines,
+            ingredientLines: ingredientLines,
+            stepLines: stepLines
+        )
+    }
+
+    private static func detectedSectionHeader(from line: String) -> StructuredCaption.Section? {
+        let normalized = normalizedSectionHeader(line)
+        if normalized.hasPrefix("ingredienti") || normalized.hasPrefix("ingredients") {
+            return .ingredients
+        }
+        if normalized.hasPrefix("procedimento")
+            || normalized.hasPrefix("preparazione")
+            || normalized.hasPrefix("steps")
+            || normalized.hasPrefix("method")
+            || normalized.hasPrefix("instructions") {
+            return .steps
+        }
+        return nil
+    }
+
+    private static func normalizedSectionHeader(_ raw: String) -> String {
+        raw
+            .lowercased()
+            .replacingOccurrences(of: ":", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func suggestedStructuredIngredients(from lines: [String]) -> [RecipeIngredient] {
+        lines
+            .map(cleanedStructuredIngredientLine)
+            .filter { !$0.isEmpty }
+            .map {
+                RecipeIngredient(
+                    produceID: nil,
+                    basicIngredientID: nil,
+                    quality: .basic,
+                    name: $0,
+                    quantityValue: 1,
+                    quantityUnit: .piece,
+                    rawIngredientLine: $0,
+                    mappingConfidence: .unmapped
+                )
+            }
+    }
+
+    private static func cleanedStructuredIngredientLine(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(
+                of: #"^\s*[-•\*]+\s*"#,
+                with: "",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func suggestedStructuredSteps(from lines: [String]) -> [String] {
+        let cleanedLines = lines
+            .map(cleanedStructuredStepLine)
+            .filter { !$0.isEmpty }
+
+        guard !cleanedLines.isEmpty else { return [] }
+
+        if cleanedLines.count > 1 {
+            return cleanedLines
+        }
+
+        let single = cleanedLines[0]
+        let sentenceSplit = single
+            .components(separatedBy: ". ")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return sentenceSplit.count > 1 ? sentenceSplit : cleanedLines
+    }
+
+    private static func cleanedStructuredStepLine(_ raw: String) -> String {
+        let noBullet = raw.replacingOccurrences(
+            of: #"^\s*[-•\*]+\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+        return noBullet.replacingOccurrences(
+            of: #"^\s*\d+[\)\.\-:]\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func suggestIngredients(
@@ -382,6 +538,19 @@ enum SocialImportParser {
             return .piece
         }
     }
+}
+
+private struct StructuredCaption {
+    enum Section {
+        case intro
+        case ingredients
+        case steps
+    }
+
+    let allLines: [String]
+    let introLines: [String]
+    let ingredientLines: [String]
+    let stepLines: [String]
 }
 
 private enum IngredientCatalogMatch {

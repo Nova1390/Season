@@ -162,9 +162,15 @@ enum AppTextKey: String {
     case importFromLinkSectionTitle
     case socialLink
     case socialCaptionRaw
+    case socialCaptionImportPrompt
+    case socialImportCaptionNudge
     case importDraft
     case importApplied
     case importNoMatches
+    case importWeakResultCaptionHint
+    case recipePublicSocialLinksHint
+    case importOwnContentOnlyHint
+    case socialImportSelectEligiblePostHint
     case cookWithWhatYouHave
     case ingredientMatchCountFormat
     case onlyMissingFormat
@@ -690,9 +696,15 @@ struct AppLocalizer {
             .importFromLinkSectionTitle: "Import from link",
             .socialLink: "TikTok or Instagram link",
             .socialCaptionRaw: "Paste caption/description (optional)",
+            .socialCaptionImportPrompt: "Paste caption to auto-fill ingredients",
+            .socialImportCaptionNudge: "Tip: paste the caption to improve ingredient extraction.",
             .importDraft: "Import draft",
             .importApplied: "Draft imported. Review and edit before publishing.",
             .importNoMatches: "No strong ingredient matches found. You can still edit manually.",
+            .importWeakResultCaptionHint: "Paste the caption to extract ingredients automatically.",
+            .recipePublicSocialLinksHint: "Optional public links shown on the recipe page. These are not used for import.",
+            .importOwnContentOnlyHint: "Import draft works only with your own eligible posts from connected Instagram/TikTok accounts.",
+            .socialImportSelectEligiblePostHint: "Select one eligible post URL from your connected account to enable import.",
             .cookWithWhatYouHave: "Cook with what you have",
             .ingredientMatchCountFormat: "%d/%d ingredients",
             .onlyMissingFormat: "Only %d missing",
@@ -1020,9 +1032,15 @@ struct AppLocalizer {
             .importFromLinkSectionTitle: "Importa da link",
             .socialLink: "Link TikTok o Instagram",
             .socialCaptionRaw: "Incolla caption/descrizione (opzionale)",
+            .socialCaptionImportPrompt: "Incolla la caption per compilare automaticamente gli ingredienti",
+            .socialImportCaptionNudge: "Suggerimento: incolla la caption per migliorare l'estrazione degli ingredienti.",
             .importDraft: "Importa bozza",
             .importApplied: "Bozza importata. Controlla e modifica prima di pubblicare.",
             .importNoMatches: "Nessuna corrispondenza ingredienti forte. Puoi modificare manualmente.",
+            .importWeakResultCaptionHint: "Incolla la caption per estrarre automaticamente gli ingredienti.",
+            .recipePublicSocialLinksHint: "Link pubblici opzionali mostrati nella ricetta. Non vengono usati per l'importazione.",
+            .importOwnContentOnlyHint: "Importa bozza funziona solo con post idonei del tuo account Instagram/TikTok collegato.",
+            .socialImportSelectEligiblePostHint: "Seleziona un URL post idoneo del tuo account collegato per abilitare l'importazione.",
             .cookWithWhatYouHave: "Cucina con quello che hai",
             .ingredientMatchCountFormat: "%d/%d ingredienti",
             .onlyMissingFormat: "Solo %d mancanti",

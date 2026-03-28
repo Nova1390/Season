@@ -915,7 +915,12 @@ struct RecipeDetailView: View {
         if hasIngredientInFridge(ingredient) {
             return viewModel.localizer.text(.youHave)
         }
-        return "\(viewModel.localizer.text(.missing)) · \(displayQuantityText(for: ingredient.recipeIngredient))"
+        let quantityText = displayQuantityText(for: ingredient.recipeIngredient)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !quantityText.isEmpty else {
+            return viewModel.localizer.text(.missing)
+        }
+        return "\(viewModel.localizer.text(.missing)) · \(quantityText)"
     }
 
     private var servingsScaleFactor: Double {
@@ -962,6 +967,10 @@ struct RecipeDetailView: View {
     }
 
     private func displayQuantityText(for ingredient: RecipeIngredient) -> String {
+        if shouldHideSyntheticFallbackQuantity(for: ingredient) {
+            return ""
+        }
+
         if !isScalable(ingredient),
            let raw = ingredient.rawIngredientLine?.trimmingCharacters(in: .whitespacesAndNewlines),
            !raw.isEmpty {
@@ -986,6 +995,28 @@ struct RecipeDetailView: View {
             }
         }
         return "\(valueText) \(viewModel.localizer.quantityUnitTitle(ingredient.quantityUnit))"
+    }
+
+    private func shouldHideSyntheticFallbackQuantity(for ingredient: RecipeIngredient) -> Bool {
+        guard ingredient.produceID == nil, ingredient.basicIngredientID == nil else { return false }
+        guard ingredient.quantityUnit == .piece else { return false }
+        guard abs(ingredient.quantityValue - 1) < 0.001 else { return false }
+
+        let raw = ingredient.rawIngredientLine?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !raw.isEmpty else { return false }
+        guard !raw.hasSuffix(":") else { return false }
+
+        if raw.range(of: #"(?i)\bquanto basta\b|\bq\s*\.?\s*b\s*\.?\b|\bqb\b"#, options: .regularExpression) != nil {
+            return true
+        }
+
+        if raw.range(of: #"^\d+\s+[^\d].+$"#, options: .regularExpression) != nil,
+           raw.range(of: #"(?i)^\d+\s*(g|kg|ml|l)\b"#, options: .regularExpression) == nil {
+            return true
+        }
+
+        return raw.split(whereSeparator: { $0.isWhitespace }).count > 1
     }
 
     private func formattedFractionValue(_ value: Double) -> String {
@@ -1177,9 +1208,12 @@ struct RecipeDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayIngredientName(for: ingredient))
                     .font(.body)
-                Text(displayQuantityText(for: ingredient.recipeIngredient))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                let quantityText = displayQuantityText(for: ingredient.recipeIngredient)
+                if !quantityText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(quantityText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()

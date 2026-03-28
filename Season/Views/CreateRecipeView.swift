@@ -17,6 +17,11 @@ private struct CreateStepDraft: Identifiable {
     var text: String = ""
 }
 
+private enum ImportedIngredientMatch {
+    case produce(ProduceItem)
+    case basic(BasicIngredient)
+}
+
 struct CreateRecipeView: View {
     struct PrefillDraft {
         let title: String
@@ -44,7 +49,6 @@ struct CreateRecipeView: View {
     private let initialDraftRecipeID: String?
     private let enableDraftMode: Bool
     @AppStorage("accountUsername") private var accountUsername = "Anna"
-    @AppStorage("linkedSocialAccountsRaw") private var linkedSocialAccountsRaw = ""
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
@@ -55,16 +59,15 @@ struct CreateRecipeView: View {
     @State private var coverImageID: String?
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showingCameraPicker = false
-    @State private var importLink = ""
+    @State private var importSourceURL = ""
     @State private var importCaptionRaw = ""
     @State private var detectedSourcePlatform: SocialSourcePlatform?
     @State private var ingredientDrafts: [CreateIngredientDraft] = [CreateIngredientDraft()]
     @State private var stepDrafts: [CreateStepDraft] = [CreateStepDraft()]
     @State private var showPublishError = false
     @State private var importFeedbackText = ""
+    @State private var showCaptionImportHint = false
     @State private var showImportTools = false
-    @State private var selectedImportProviderRaw = SocialAuthProvider.instagram.rawValue
-    @State private var selectedOwnedPostURL = ""
     @State private var selectedServings = 2
     @State private var showCameraUnavailableAlert = false
     @State private var currentDraftRecipeID: String?
@@ -212,9 +215,6 @@ struct CreateRecipeView: View {
                 if detectedSourcePlatform == nil {
                     detectedSourcePlatform = detectedPlatform(for: mediaLink)
                 }
-                if let firstProvider = importableLinkedAccounts.first?.provider.rawValue {
-                    selectedImportProviderRaw = firstProvider
-                }
                 if enableDraftMode, !draftLoadFailed {
                     lastSavedDraftFingerprint = persistedDraftFingerprint()
                 }
@@ -301,59 +301,31 @@ struct CreateRecipeView: View {
         VStack(alignment: .leading, spacing: 8) {
             DisclosureGroup(isExpanded: $showImportTools) {
                 VStack(alignment: .leading, spacing: 10) {
-                    if importableLinkedAccounts.isEmpty {
-                        Text(localizer.text(.socialImportConnectAccountsHint))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker(localizer.text(.socialImportProviderLabel), selection: $selectedImportProviderRaw) {
-                            ForEach(importableLinkedAccounts) { account in
-                                Text(providerDisplayName(account.provider))
-                                    .tag(account.provider.rawValue)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                    TextField(localizer.text(.mediaExternalLink), text: $importSourceURL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textFieldStyle(.roundedBorder)
 
-                        if selectedImportableAccount?.eligiblePostURLs.isEmpty == true {
-                            Text(localizer.text(.socialImportNoEligiblePostsHint))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ScrollView {
-                                VStack(spacing: 8) {
-                                    ForEach(selectedImportableAccount?.eligiblePostURLs ?? [], id: \.self) { url in
-                                        Button {
-                                            selectedOwnedPostURL = url
-                                            importLink = url
-                                        } label: {
-                                            HStack(spacing: 8) {
-                                                Image(systemName: selectedOwnedPostURL == url ? "checkmark.circle.fill" : "circle")
-                                                    .foregroundStyle(selectedOwnedPostURL == url ? .green : .secondary)
-                                                Text(url)
-                                                    .font(.caption)
-                                                    .lineLimit(1)
-                                                    .foregroundStyle(.primary)
-                                                Spacer()
-                                            }
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                    .fill(Color(.secondarySystemGroupedBackground))
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                            }
-                            .frame(maxHeight: 150)
-                        }
-                    }
-
-                    TextField(localizer.text(.socialCaptionRaw), text: $importCaptionRaw, axis: .vertical)
+                    TextField(localizer.text(.socialCaptionImportPrompt), text: $importCaptionRaw, axis: .vertical)
                         .lineLimit(3...5)
                         .textInputAutocapitalization(.sentences)
                         .textFieldStyle(.roundedBorder)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(showCaptionImportHint ? Color.orange.opacity(0.6) : .clear, lineWidth: 1)
+                        }
+                        .onChange(of: importCaptionRaw) { _, newValue in
+                            if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                showCaptionImportHint = false
+                            }
+                        }
+
+                    if showCaptionImportHint {
+                        Text(localizer.text(.socialImportCaptionNudge))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Button {
                         applySocialImport()
@@ -362,7 +334,7 @@ struct CreateRecipeView: View {
                             .font(.subheadline.weight(.semibold))
                     }
                     .buttonStyle(.bordered)
-                    .disabled(!canImportFromConnectedAccount)
+                    .disabled(!canImportFromAnyLink)
 
                     if !importFeedbackText.isEmpty {
                         Text(importFeedbackText)
@@ -396,6 +368,9 @@ struct CreateRecipeView: View {
     private var socialLinksSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle(localizer.recipeSocialLinksSectionTitle)
+            Text(localizer.text(.recipePublicSocialLinksHint))
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             TextField(localizer.recipeInstagramURLField, text: $instagramURL)
                 .keyboardType(.URL)
@@ -426,6 +401,9 @@ struct CreateRecipeView: View {
             sectionTitle(localizer.text(.ingredientsSectionTitle))
 
             ForEach($ingredientDrafts) { $ingredient in
+                let isSubsectionHeader = isSubsectionHeaderDraft(ingredient)
+                let hideQuantityControls = shouldHideQuantityControls(for: ingredient)
+
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .center, spacing: 8) {
                         VStack(alignment: .leading, spacing: 8) {
@@ -435,8 +413,9 @@ struct CreateRecipeView: View {
                             )
                             .textFieldStyle(.roundedBorder)
                             .focused($focusedIngredientID, equals: ingredient.id)
+                            .font(isSubsectionHeader ? .subheadline.weight(.semibold) : .body)
 
-                            if ingredientIsCustom(ingredient) {
+                            if ingredientIsCustom(ingredient) && !isSubsectionHeader {
                                 Text(localizer.text(.customIngredient))
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
@@ -508,19 +487,21 @@ struct CreateRecipeView: View {
                         .buttonStyle(.plain)
                     }
 
-                    HStack(spacing: 8) {
-                        TextField(localizer.text(.quantity), text: $ingredient.quantityValue)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 96)
+                    if !hideQuantityControls {
+                        HStack(spacing: 8) {
+                            TextField(localizer.text(.quantity), text: $ingredient.quantityValue)
+                                .keyboardType(.decimalPad)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 96)
 
-                        Picker(localizer.text(.quantity), selection: $ingredient.quantityUnit) {
-                            ForEach(supportedUnits(for: ingredient)) { unit in
-                                Text(localizer.quantityUnitTitle(unit)).tag(unit)
+                            Picker(localizer.text(.quantity), selection: $ingredient.quantityUnit) {
+                                ForEach(supportedUnits(for: ingredient)) { unit in
+                                    Text(localizer.quantityUnitTitle(unit)).tag(unit)
+                                }
                             }
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.vertical, 2)
@@ -743,13 +724,24 @@ struct CreateRecipeView: View {
                 ? draft.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
                 : draft.customName.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !customName.isEmpty else { return nil }
+            // Keep subsection labels visible in draft editing, but exclude them from final publish payload.
+            if isIngredientSubsectionHeader(customName) {
+                return nil
+            }
+
+            let isSyntheticFallback = isSyntheticCustomFallbackIngredientDraft(
+                draft,
+                resolvedName: customName
+            )
             return RecipeIngredient(
                 produceID: nil,
                 basicIngredientID: nil,
                 quality: .basic,
                 name: customName,
                 quantityValue: value,
-                quantityUnit: draft.quantityUnit
+                quantityUnit: draft.quantityUnit,
+                rawIngredientLine: isSyntheticFallback ? customName : nil,
+                mappingConfidence: isSyntheticFallback ? .unmapped : .high
             )
         }
     }
@@ -791,9 +783,18 @@ struct CreateRecipeView: View {
         }
     }
 
-    private var normalizedImportLink: String? {
-        let trimmed = selectedOwnedPostURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var normalizedImportSourceURL: String? {
+        let trimmed = importSourceURL.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var resolvedSourceURLForPublish: String? {
+        normalizedMediaLink
+    }
+
+    private var resolvedSourcePlatformForPublish: SocialSourcePlatform? {
+        guard let sourceURL = resolvedSourceURLForPublish else { return nil }
+        return detectedPlatform(for: sourceURL)
     }
 
     private var normalizedImportCaption: String? {
@@ -833,10 +834,10 @@ struct CreateRecipeView: View {
             mediaLinkURL: mediaLink,
             instagramURL: normalizedInstagramURL,
             tiktokURL: normalizedTikTokURL,
-            sourceURL: normalizedImportLink,
-            sourcePlatform: detectedSourcePlatform,
+            sourceURL: resolvedSourceURLForPublish,
+            sourcePlatform: resolvedSourcePlatformForPublish,
             sourceCaptionRaw: normalizedImportCaption,
-            importedFromSocial: normalizedImportLink != nil,
+            importedFromSocial: false,
             servings: selectedServings,
             prepTimeMinutes: prefillDraft?.prepTimeMinutes,
             cookTimeMinutes: prefillDraft?.cookTimeMinutes,
@@ -991,10 +992,10 @@ struct CreateRecipeView: View {
             imageURL: uploadedRecipeImageURL ?? existingRecipeImageURL,
             instagramURL: normalizedInstagramURL,
             tiktokURL: normalizedTikTokURL,
-            sourceURL: normalizedImportLink,
-            sourcePlatform: detectedSourcePlatform,
+            sourceURL: resolvedSourceURLForPublish,
+            sourcePlatform: resolvedSourcePlatformForPublish,
             sourceCaptionRaw: normalizedImportCaption,
-            importedFromSocial: normalizedImportLink != nil,
+            importedFromSocial: false,
             servings: selectedServings,
             prepTimeMinutes: prefillDraft?.prepTimeMinutes,
             cookTimeMinutes: prefillDraft?.cookTimeMinutes,
@@ -1050,82 +1051,298 @@ struct CreateRecipeView: View {
     }
 
     private func applySocialImport() {
-        guard canImportFromConnectedAccount else {
-            importFeedbackText = localizer.text(.socialImportOwnAccountOnly)
+        guard let sourceURL = normalizedImportSourceURL else {
+            importFeedbackText = localizer.text(.importNoMatches)
             return
         }
 
+        let cleanedCaption = removingEmojis(from: importCaptionRaw)
         let suggestion = SocialImportParser.parse(
-            sourceURLRaw: selectedOwnedPostURL,
-            captionRaw: importCaptionRaw,
+            sourceURLRaw: sourceURL,
+            captionRaw: cleanedCaption,
             produceItems: viewModel.produceItems,
             basicIngredients: BasicIngredientCatalog.all,
             languageCode: localizer.languageCode
         )
 
-        detectedSourcePlatform = suggestion.sourcePlatform
+        detectedSourcePlatform = suggestion.sourcePlatform ?? detectedPlatform(for: sourceURL)
+        mediaLink = sourceURL
 
-        if let suggestedTitle = suggestion.suggestedTitle, !suggestedTitle.isEmpty {
-            title = suggestedTitle
-        }
+        title = cleanedTitle(suggestion.suggestedTitle ?? "")
+
+        let mappedSteps = suggestion.suggestedSteps
+            .map { removingEmojis(from: $0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map { CreateStepDraft(text: $0) }
+        stepDrafts = mappedSteps.isEmpty ? [CreateStepDraft()] : mappedSteps
 
         if !suggestion.suggestedIngredients.isEmpty {
             ingredientDrafts = suggestion.suggestedIngredients.map {
-                CreateIngredientDraft(
-                    produceID: $0.produceID ?? "",
-                    basicIngredientID: $0.basicIngredientID ?? "",
-                    customName: ($0.produceID == nil && $0.basicIngredientID == nil) ? $0.name : "",
-                    searchText: $0.name,
-                    quantityValue: quantityValueString($0.quantityValue),
-                    quantityUnit: $0.quantityUnit
+                normalizedImportedIngredientDraft(from: $0)
+            }
+            if suggestion.suggestedIngredients.count <= 1 {
+                importFeedbackText = localizer.text(.importWeakResultCaptionHint)
+                showCaptionImportHint = true
+            } else {
+                importFeedbackText = "\(localizer.text(.importApplied)) (\(suggestion.suggestedIngredients.count))"
+                showCaptionImportHint = false
+            }
+        } else {
+            ingredientDrafts = [CreateIngredientDraft()]
+            importFeedbackText = localizer.text(.importWeakResultCaptionHint)
+            showCaptionImportHint = true
+        }
+        print("[SEASON_IMPORT] phase=generic_link_import source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count)")
+    }
+
+    private func normalizedImportedIngredientDraft(from ingredient: RecipeIngredient) -> CreateIngredientDraft {
+        let hasCatalogMapping = ingredient.produceID != nil || ingredient.basicIngredientID != nil
+        if hasCatalogMapping {
+            // Preserve existing mapped behavior for produce/basic ingredients.
+            return CreateIngredientDraft(
+                produceID: ingredient.produceID ?? "",
+                basicIngredientID: ingredient.basicIngredientID ?? "",
+                customName: "",
+                searchText: removingEmojis(from: ingredient.name).trimmingCharacters(in: .whitespacesAndNewlines),
+                quantityValue: quantityValueString(ingredient.quantityValue),
+                quantityUnit: ingredient.quantityUnit
+            )
+        }
+
+        let trimmedName = removingEmojis(from: ingredient.name).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return customImportedIngredientDraft(name: "")
+        }
+
+        if isIngredientSubsectionHeader(trimmedName) {
+            // Keep subsection labels editable but avoid treating them as measured ingredients.
+            return customImportedIngredientDraft(name: trimmedName)
+        }
+
+        if isQuantoBastaIngredient(trimmedName) {
+            // Preserve natural "q.b." lines without forcing numeric measurement semantics.
+            return customImportedIngredientDraft(name: cleanedQuantoBastaName(from: trimmedName))
+        }
+
+        if let fractional = parsedFractionalPieceIngredient(from: trimmedName) {
+            if let resolved = resolveImportedIngredientMatch(query: fractional.coreName) {
+                return catalogMatchedImportedDraft(
+                    from: resolved,
+                    quantityValue: fractional.quantity,
+                    quantityUnit: .piece
                 )
             }
-            importFeedbackText = localizer.text(.importApplied)
-        } else {
-            importFeedbackText = localizer.text(.importNoMatches)
+            return CreateIngredientDraft(
+                produceID: "",
+                basicIngredientID: "",
+                customName: trimmedName,
+                searchText: trimmedName,
+                quantityValue: quantityValueString(fractional.quantity),
+                quantityUnit: .piece
+            )
         }
 
-        if let sourceURL = suggestion.sourceURL,
-           mediaLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            mediaLink = sourceURL
+        let pattern = #"^(\d+)\s*(g|kg|ml|l)?\s*(.*)$"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return customImportedIngredientDraft(name: trimmedName)
+        }
+
+        let fullRange = NSRange(location: 0, length: trimmedName.utf16.count)
+        guard let match = regex.firstMatch(in: trimmedName, options: [], range: fullRange),
+              match.numberOfRanges == 4 else {
+            return customImportedIngredientDraft(name: trimmedName)
+        }
+
+        let quantityText = nsRangeString(match.range(at: 1), in: trimmedName)
+        let unitToken = nsRangeString(match.range(at: 2), in: trimmedName)
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsedName = nsRangeString(match.range(at: 3), in: trimmedName)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackName = parsedName.isEmpty ? trimmedName : parsedName
+
+        guard let baseQuantity = Int(quantityText) else {
+            return customImportedIngredientDraft(name: fallbackName)
+        }
+
+        // Natural phrase like "1 carota": attempt catalog match using parsed name,
+        // then fall back to preserving original line as editable custom text.
+        if unitToken.isEmpty {
+            if let resolved = resolveImportedIngredientMatch(query: fallbackName) {
+                return catalogMatchedImportedDraft(
+                    from: resolved,
+                    quantityValue: Double(baseQuantity),
+                    quantityUnit: .piece
+                )
+            }
+            return customImportedIngredientDraft(name: trimmedName)
+        }
+
+        let unitForMapping = unitToken
+        let (quantityValue, quantityUnit): (Double, RecipeQuantityUnit) = {
+            switch unitForMapping {
+            case "g":
+                return (Double(baseQuantity), .g)
+            case "kg":
+                return (Double(baseQuantity * 1000), .g)
+            case "ml":
+                return (Double(baseQuantity), .ml)
+            case "l":
+                return (Double(baseQuantity * 1000), .ml)
+            case "piece":
+                return (Double(baseQuantity), .piece)
+            default:
+                return (Double(baseQuantity), .g)
+            }
+        }()
+
+        if let resolved = resolveImportedIngredientMatch(query: fallbackName) {
+            return catalogMatchedImportedDraft(
+                from: resolved,
+                quantityValue: quantityValue,
+                quantityUnit: quantityUnit
+            )
+        }
+
+        return CreateIngredientDraft(
+            produceID: "",
+            basicIngredientID: "",
+            customName: fallbackName,
+            searchText: fallbackName,
+            quantityValue: quantityValueString(quantityValue),
+            quantityUnit: quantityUnit
+        )
+    }
+
+    private func catalogMatchedImportedDraft(
+        from resolved: ImportedIngredientMatch,
+        quantityValue: Double,
+        quantityUnit: RecipeQuantityUnit
+    ) -> CreateIngredientDraft {
+        switch resolved {
+        case .produce(let item):
+            return CreateIngredientDraft(
+                produceID: item.id,
+                basicIngredientID: "",
+                customName: "",
+                searchText: item.displayName(languageCode: localizer.languageCode),
+                quantityValue: quantityValueString(quantityValue),
+                quantityUnit: quantityUnit
+            )
+        case .basic(let item):
+            return CreateIngredientDraft(
+                produceID: "",
+                basicIngredientID: item.id,
+                customName: "",
+                searchText: item.displayName(languageCode: localizer.languageCode),
+                quantityValue: quantityValueString(quantityValue),
+                quantityUnit: quantityUnit
+            )
         }
     }
 
-    private var linkedSocialAccounts: [LinkedSocialAccount] {
-        SocialAccountLinkStore.decode(linkedSocialAccountsRaw)
+    private func customImportedIngredientDraft(name: String) -> CreateIngredientDraft {
+        let normalized = removingEmojis(from: name).trimmingCharacters(in: .whitespacesAndNewlines)
+        return CreateIngredientDraft(
+            produceID: "",
+            basicIngredientID: "",
+            customName: normalized,
+            searchText: normalized,
+            quantityValue: quantityValueString(1),
+            quantityUnit: .piece
+        )
     }
 
-    private var importableLinkedAccounts: [LinkedSocialAccount] {
-        linkedSocialAccounts.filter { $0.provider.supportsRecipeImport }
+    private func isQuantoBastaIngredient(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        if lowered.contains("quanto basta") { return true }
+        let pattern = #"\bq\s*\.?\s*b\s*\.?\b|\bqb\b"#
+        return lowered.range(of: pattern, options: .regularExpression) != nil
     }
 
-    private var selectedImportProvider: SocialAuthProvider? {
-        SocialAuthProvider(rawValue: selectedImportProviderRaw)
+    private func cleanedQuantoBastaName(from line: String) -> String {
+        var cleaned = line.replacingOccurrences(
+            of: #"(?i)\bquanto basta\b"#,
+            with: "",
+            options: .regularExpression
+        )
+        cleaned = cleaned.replacingOccurrences(
+            of: #"(?i)\bq\s*\.?\s*b\s*\.?\b|\bqb\b"#,
+            with: "",
+            options: .regularExpression
+        )
+        cleaned = cleaned.replacingOccurrences(
+            of: #"\s{2,}"#,
+            with: " ",
+            options: .regularExpression
+        )
+        cleaned = cleaned.trimmingCharacters(in: CharacterSet(charactersIn: " ,.;:-"))
+        return cleaned.isEmpty ? line.trimmingCharacters(in: .whitespacesAndNewlines) : cleaned
     }
 
-    private var selectedImportableAccount: LinkedSocialAccount? {
-        guard let selectedImportProvider else { return importableLinkedAccounts.first }
-        return importableLinkedAccounts.first(where: { $0.provider == selectedImportProvider })
-    }
+    private func parsedFractionalPieceIngredient(from line: String) -> (quantity: Double, coreName: String)? {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
 
-    private var canImportFromConnectedAccount: Bool {
-        guard let account = selectedImportableAccount else { return false }
-        let trimmed = selectedOwnedPostURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        return account.eligiblePostURLs.contains(where: {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmed) == .orderedSame
-        })
-    }
-
-    private func providerDisplayName(_ provider: SocialAuthProvider) -> String {
-        switch provider {
-        case .instagram:
-            return "Instagram"
-        case .tiktok:
-            return "TikTok"
-        case .apple:
-            return "Apple"
+        // Keep explicit measured-unit parsing in the existing flow.
+        if trimmed.range(of: #"(?i)\b(g|kg|ml|l)\b"#, options: .regularExpression) != nil {
+            return nil
         }
+
+        let lower = trimmed.lowercased()
+        let patterns: [(pattern: String, quantity: Double)] = [
+            (#"^(mezza|mezzo)\s+(.+)$"#, 0.5),
+            (#"^(half)\s+(.+)$"#, 0.5),
+            (#"^(quarter)\s+(.+)$"#, 0.25),
+            (#"^(1/2)\s+(.+)$"#, 0.5),
+            (#"^(1/4)\s+(.+)$"#, 0.25),
+            (#"^(3/4)\s+(.+)$"#, 0.75)
+        ]
+
+        for entry in patterns {
+            guard let regex = try? NSRegularExpression(pattern: entry.pattern, options: [.caseInsensitive]) else {
+                continue
+            }
+            let fullRange = NSRange(location: 0, length: lower.utf16.count)
+            guard let match = regex.firstMatch(in: lower, options: [], range: fullRange),
+                  match.numberOfRanges >= 3 else {
+                continue
+            }
+
+            let core = nsRangeString(match.range(at: 2), in: trimmed)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !core.isEmpty else { return nil }
+            if core.range(of: #"(?i)\b(g|kg|ml|l)\b"#, options: .regularExpression) != nil {
+                return nil
+            }
+            return (entry.quantity, core)
+        }
+
+        return nil
+    }
+
+    private func isIngredientSubsectionHeader(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasSuffix(":") else { return false }
+        let body = String(trimmed.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard body.count >= 2 else { return false }
+        return body.rangeOfCharacter(from: .letters) != nil
+    }
+
+    private func nsRangeString(_ range: NSRange, in source: String) -> String {
+        guard range.location != NSNotFound,
+              let swiftRange = Range(range, in: source) else {
+            return ""
+        }
+        return String(source[swiftRange])
+    }
+
+    private var canImportFromAnyLink: Bool {
+        guard let sourceURL = normalizedImportSourceURL else { return false }
+        guard let parsed = URL(string: sourceURL) else { return false }
+        guard let scheme = parsed.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return false }
+        return parsed.host?.isEmpty == false
     }
 
     @ViewBuilder
@@ -1155,6 +1372,214 @@ struct CreateRecipeView: View {
         draft.produceID.isEmpty
         && draft.basicIngredientID.isEmpty
         && !draft.customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func shouldHideQuantityControls(for draft: CreateIngredientDraft) -> Bool {
+        if isSubsectionHeaderDraft(draft) { return true }
+        return isSyntheticCustomFallbackIngredientDraft(draft)
+    }
+
+    private func isSubsectionHeaderDraft(_ draft: CreateIngredientDraft) -> Bool {
+        let displayName = ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines)
+        return ingredientIsCustom(draft) && isIngredientSubsectionHeader(displayName)
+    }
+
+    private func looksNaturalPieceLine(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"^\d+\s+[^\d].+$"#
+        guard trimmed.range(of: pattern, options: .regularExpression) != nil else { return false }
+        let lower = trimmed.lowercased()
+        let explicitUnitPattern = #"^\d+\s*(g|kg|ml|l)\b"#
+        return lower.range(of: explicitUnitPattern, options: .regularExpression) == nil
+    }
+
+    private func containsMultipleWords(_ line: String) -> Bool {
+        line
+            .split(whereSeparator: { $0.isWhitespace })
+            .count > 1
+    }
+
+    private func isSyntheticCustomFallbackIngredientDraft(
+        _ draft: CreateIngredientDraft,
+        resolvedName: String? = nil
+    ) -> Bool {
+        guard ingredientIsCustom(draft) else { return false }
+        let displayName = (resolvedName ?? ingredientDraftDisplayName(draft))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !displayName.isEmpty else { return false }
+        guard !isIngredientSubsectionHeader(displayName) else { return false }
+
+        let hasSyntheticPieceQuantity = draft.quantityUnit == .piece
+            && abs(parsedQuantityValue(draft.quantityValue) - 1) < 0.001
+        guard hasSyntheticPieceQuantity else { return false }
+
+        if isQuantoBastaIngredient(displayName) { return true }
+        if looksNaturalPieceLine(displayName) { return true }
+        return containsMultipleWords(displayName)
+    }
+
+    private func resolveImportedIngredientMatch(query: String) -> ImportedIngredientMatch? {
+        let coreQuery = extractCoreIngredientQuery(query)
+        let queryForMatching = coreQuery.isEmpty ? query : coreQuery
+        let normalizedQuery = normalizedIngredientMatchText(queryForMatching)
+        guard !normalizedQuery.isEmpty else { return nil }
+
+        var bestProduce: (item: ProduceItem, score: Int, length: Int)?
+        for item in viewModel.produceItems {
+            for term in importSearchTerms(
+                id: item.id,
+                localizedNames: item.localizedNames
+            ) {
+                guard let score = ingredientMatchScore(query: normalizedQuery, term: term) else { continue }
+                let candidate = (item: item, score: score, length: term.count)
+                if bestProduce == nil
+                    || candidate.score > bestProduce!.score
+                    || (candidate.score == bestProduce!.score && candidate.length > bestProduce!.length) {
+                    bestProduce = candidate
+                }
+            }
+        }
+
+        var bestBasic: (item: BasicIngredient, score: Int, length: Int)?
+        for item in BasicIngredientCatalog.all {
+            for term in importSearchTerms(
+                id: item.id,
+                localizedNames: item.localizedNames
+            ) {
+                guard let score = ingredientMatchScore(query: normalizedQuery, term: term) else { continue }
+                let candidate = (item: item, score: score, length: term.count)
+                if bestBasic == nil
+                    || candidate.score > bestBasic!.score
+                    || (candidate.score == bestBasic!.score && candidate.length > bestBasic!.length) {
+                    bestBasic = candidate
+                }
+            }
+        }
+
+        switch (bestProduce, bestBasic) {
+        case (.none, .none):
+            return nil
+        case let (.some(produce), .none):
+            return .produce(produce.item)
+        case let (.none, .some(basic)):
+            return .basic(basic.item)
+        case let (.some(produce), .some(basic)):
+            if produce.score != basic.score {
+                return produce.score > basic.score ? .produce(produce.item) : .basic(basic.item)
+            }
+            if produce.length != basic.length {
+                return produce.length > basic.length ? .produce(produce.item) : .basic(basic.item)
+            }
+            return .produce(produce.item)
+        }
+    }
+
+    private func importSearchTerms(id: String, localizedNames: [String: String]) -> [String] {
+        var seen = Set<String>()
+        var terms: [String] = []
+        let candidates = localizedNames.values + [
+            id,
+            id.replacingOccurrences(of: "_", with: " ")
+        ] + (importIngredientAliases[id] ?? [])
+
+        for candidate in candidates {
+            let normalized = normalizedIngredientMatchText(candidate)
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                terms.append(normalized)
+            }
+        }
+        return terms
+    }
+
+    private func ingredientMatchScore(query: String, term: String) -> Int? {
+        guard !query.isEmpty, !term.isEmpty else { return nil }
+        if query == term {
+            return 3
+        }
+        if query.hasPrefix(term) || term.hasPrefix(query) {
+            return 2
+        }
+        if term.count >= 4 && query.contains(term) {
+            return 1
+        }
+        return nil
+    }
+
+    private func normalizedIngredientMatchText(_ raw: String) -> String {
+        raw
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: #"[^a-z0-9\s]"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func removingEmojis(from text: String) -> String {
+        text.unicodeScalars
+            .filter { scalar in
+                !scalar.properties.isEmojiPresentation
+                && !scalar.properties.isEmoji
+            }
+            .map { String($0) }
+            .joined()
+    }
+
+    private func cleanedTitle(_ raw: String) -> String {
+        var cleaned = removingEmojis(from: raw)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        cleaned = cleaned.replacingOccurrences(
+            of: #"[!?.,:\-–—…\s]+$"#,
+            with: "",
+            options: .regularExpression
+        )
+        return cleaned.isEmpty ? "Untitled recipe" : cleaned
+    }
+
+    private func extractCoreIngredientQuery(_ raw: String) -> String {
+        let normalized = normalizedIngredientMatchText(raw)
+        guard !normalized.isEmpty else { return "" }
+
+        var working = normalized
+        // Drop quantity + common units at line start.
+        working = working.replacingOccurrences(
+            of: #"^\d+\s*(g|kg|ml|l)?\s*"#,
+            with: "",
+            options: .regularExpression
+        )
+
+        // Remove frequent filler tokens used in imported natural-language ingredient lines.
+        let fillers = [
+            "una", "un", "uno", "mezza", "mezzo", "mezze",
+            "di", "da", "con", "per",
+            "qb", "q b", "quanto", "basta",
+            "costa", "spicchio", "pezzo"
+        ]
+        let filteredTokens = working
+            .split(separator: " ")
+            .map(String.init)
+            .filter { token in !fillers.contains(token) && token.count >= 2 }
+
+        guard !filteredTokens.isEmpty else { return "" }
+        // Heuristic: last meaningful token usually carries the core ingredient identity.
+        return filteredTokens.last ?? ""
+    }
+
+    private var importIngredientAliases: [String: [String]] {
+        [
+            "rocket": ["arugula", "rucola"],
+            "eggplant": ["aubergine", "melanzana"],
+            "zucchini": ["courgette", "zucchina"],
+            "bell_pepper": ["bell pepper", "pepper", "peperone"],
+            "chickpeas": ["ceci", "garbanzo", "garbanzo beans"],
+            "lentils": ["lenticchie"],
+            "beans": ["fagioli"],
+            "green_beans": ["fagiolini", "string beans"],
+            "cream_cheese": ["formaggio spalmabile"],
+            "greek_yogurt": ["yogurt greco"]
+        ]
     }
 
     private func shouldShowIngredientSuggestions(for draft: CreateIngredientDraft) -> Bool {
