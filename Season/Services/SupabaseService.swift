@@ -102,6 +102,39 @@ struct CloudFridgeItem: Codable {
     let updated_at: String?
 }
 
+struct ParseRecipeCaptionFunctionIngredient: Codable {
+    let name: String
+    let quantity: Double?
+    let unit: String?
+}
+
+struct ParseRecipeCaptionFunctionResult: Codable {
+    let title: String?
+    let ingredients: [ParseRecipeCaptionFunctionIngredient]
+    let steps: [String]
+    let prepTimeMinutes: Double?
+    let cookTimeMinutes: Double?
+    let confidence: String
+    let inferredDish: String?
+}
+
+struct ParseRecipeCaptionFunctionError: Codable {
+    let code: String
+    let message: String
+}
+
+struct ParseRecipeCaptionFunctionResponse: Codable {
+    let ok: Bool
+    let result: ParseRecipeCaptionFunctionResult?
+    let error: ParseRecipeCaptionFunctionError?
+}
+
+private struct ParseRecipeCaptionFunctionRequest: Encodable {
+    let caption: String?
+    let url: String?
+    let languageCode: String
+}
+
 private struct CloudFollowRow: Codable {
     let id: String?
     let follower_id: String?
@@ -571,6 +604,38 @@ final class SupabaseService {
                 print("[SEASON_SUPABASE] phase=upload_failed bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased()) error=\(error)")
                 throw error
             }
+        }
+    }
+
+    func parseRecipeCaption(
+        caption: String?,
+        url: String?,
+        languageCode: String
+    ) async throws -> ParseRecipeCaptionFunctionResponse {
+        try await instrumentedRequest(name: "parseRecipeCaption") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalizedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedURL = url?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let payload = ParseRecipeCaptionFunctionRequest(
+                caption: normalizedCaption?.isEmpty == true ? nil : normalizedCaption,
+                url: normalizedURL?.isEmpty == true ? nil : normalizedURL,
+                languageCode: languageCode
+            )
+
+            return try await supabaseClient.functions.invoke(
+                "parse-recipe-caption",
+                options: FunctionInvokeOptions(
+                    method: .post,
+                    body: payload
+                )
+            )
         }
     }
 

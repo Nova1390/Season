@@ -168,6 +168,10 @@ enum AppTextKey: String {
     case importApplied
     case importNoMatches
     case importWeakResultCaptionHint
+    case importAnalyzing
+    case importQualityHigh
+    case importQualityMedium
+    case importQualityLow
     case recipePublicSocialLinksHint
     case importOwnContentOnlyHint
     case socialImportSelectEligiblePostHint
@@ -702,6 +706,10 @@ struct AppLocalizer {
             .importApplied: "Draft imported. Review and edit before publishing.",
             .importNoMatches: "No strong ingredient matches found. You can still edit manually.",
             .importWeakResultCaptionHint: "Paste the caption to extract ingredients automatically.",
+            .importAnalyzing: "Analyzing import…",
+            .importQualityHigh: "Recipe imported. Strong result — review before publishing.",
+            .importQualityMedium: "Recipe imported. Good start — check ingredients and steps.",
+            .importQualityLow: "Recipe imported as a starting draft — review carefully.",
             .recipePublicSocialLinksHint: "Optional public links shown on the recipe page. These are not used for import.",
             .importOwnContentOnlyHint: "Import draft works only with your own eligible posts from connected Instagram/TikTok accounts.",
             .socialImportSelectEligiblePostHint: "Select one eligible post URL from your connected account to enable import.",
@@ -1038,6 +1046,10 @@ struct AppLocalizer {
             .importApplied: "Bozza importata. Controlla e modifica prima di pubblicare.",
             .importNoMatches: "Nessuna corrispondenza ingredienti forte. Puoi modificare manualmente.",
             .importWeakResultCaptionHint: "Incolla la caption per estrarre automaticamente gli ingredienti.",
+            .importAnalyzing: "Analisi importazione in corso…",
+            .importQualityHigh: "Ricetta importata. Risultato solido — controlla prima di pubblicare.",
+            .importQualityMedium: "Ricetta importata. Buona base — controlla ingredienti e passaggi.",
+            .importQualityLow: "Ricetta importata come bozza iniziale — rivedi con attenzione.",
             .recipePublicSocialLinksHint: "Link pubblici opzionali mostrati nella ricetta. Non vengono usati per l'importazione.",
             .importOwnContentOnlyHint: "Importa bozza funziona solo con post idonei del tuo account Instagram/TikTok collegato.",
             .socialImportSelectEligiblePostHint: "Seleziona un URL post idoneo del tuo account collegato per abilitare l'importazione.",

@@ -1007,6 +1007,10 @@ struct RecipeDetailView: View {
         guard !raw.isEmpty else { return false }
         guard !raw.hasSuffix(":") else { return false }
 
+        if ingredient.mappingConfidence == .unmapped {
+            return true
+        }
+
         if raw.range(of: #"(?i)\bquanto basta\b|\bq\s*\.?\s*b\s*\.?\b|\bqb\b"#, options: .regularExpression) != nil {
             return true
         }

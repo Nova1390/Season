@@ -22,6 +22,43 @@ private enum ImportedIngredientMatch {
     case basic(BasicIngredient)
 }
 
+private struct ImportQualityBadge: View {
+    let confidence: SocialImportConfidence
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+
+            Text(label)
+                .font(.caption.weight(.semibold))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(color.opacity(0.12))
+        )
+    }
+
+    private var label: String {
+        switch confidence {
+        case .high: return "High quality"
+        case .medium: return "Good start"
+        case .low: return "Needs review"
+        }
+    }
+
+    private var color: Color {
+        switch confidence {
+        case .high: return Color.green
+        case .medium: return Color.orange
+        case .low: return Color.red
+        }
+    }
+}
+
 struct CreateRecipeView: View {
     struct PrefillDraft {
         let title: String
@@ -66,6 +103,8 @@ struct CreateRecipeView: View {
     @State private var stepDrafts: [CreateStepDraft] = [CreateStepDraft()]
     @State private var showPublishError = false
     @State private var importFeedbackText = ""
+    @State private var importConfidence: SocialImportConfidence?
+    @State private var isImportAnalyzing = false
     @State private var showCaptionImportHint = false
     @State private var showImportTools = false
     @State private var selectedServings = 2
@@ -328,18 +367,36 @@ struct CreateRecipeView: View {
                     }
 
                     Button {
-                        applySocialImport()
+                        Task {
+                            await applySocialImport()
+                        }
                     } label: {
                         Label(localizer.text(.importDraft), systemImage: "wand.and.stars")
                             .font(.subheadline.weight(.semibold))
                     }
                     .buttonStyle(.bordered)
-                    .disabled(!canImportFromAnyLink)
+                    .disabled(!canImportFromAnyLink || isImportAnalyzing)
+
+                    if let importConfidence {
+                        ImportQualityBadge(confidence: importConfidence)
+                            .padding(.top, 4)
+                            .scaleEffect(importConfidence == .low ? 1.02 : 1.0)
+                    }
 
                     if !importFeedbackText.isEmpty {
-                        Text(importFeedbackText)
+                        if isImportAnalyzing {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text(localizer.text(.importAnalyzing))
+                            }
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        } else {
+                            Text(importFeedbackText)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(.top, 8)
@@ -1050,14 +1107,17 @@ struct CreateRecipeView: View {
         )
     }
 
-    private func applySocialImport() {
+    @MainActor
+    private func applySocialImport() async {
         guard let sourceURL = normalizedImportSourceURL else {
+            importConfidence = nil
             importFeedbackText = localizer.text(.importNoMatches)
             return
         }
+        importConfidence = nil
 
         let cleanedCaption = removingEmojis(from: importCaptionRaw)
-        let suggestion = SocialImportParser.parse(
+        let localSuggestion = SocialImportParser.parse(
             sourceURLRaw: sourceURL,
             captionRaw: cleanedCaption,
             produceItems: viewModel.produceItems,
@@ -1065,9 +1125,44 @@ struct CreateRecipeView: View {
             languageCode: localizer.languageCode
         )
 
+        print("[SEASON_IMPORT] phase=local_parse_done source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+
+        if localSuggestion.confidence == .low {
+            isImportAnalyzing = true
+            importFeedbackText = localizer.text(.importAnalyzing)
+            defer { isImportAnalyzing = false }
+
+            print("[SEASON_IMPORT] phase=server_fallback_attempted source_url=\(sourceURL)")
+            do {
+                let serverResponse = try await SupabaseService.shared.parseRecipeCaption(
+                    caption: cleanedCaption,
+                    url: sourceURL,
+                    languageCode: localizer.languageCode
+                )
+                if let serverSuggestion = socialImportSuggestionFromServerResponse(
+                    serverResponse,
+                    sourceURL: sourceURL,
+                    fallbackCaption: cleanedCaption
+                ), isServerSuggestionUseful(serverSuggestion) {
+                    print("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(serverSuggestion.confidence.rawValue)")
+                    applyImportedSuggestion(serverSuggestion, sourceURL: sourceURL)
+                    return
+                }
+                print("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
+            } catch {
+                print("[SEASON_IMPORT] phase=server_fallback_failed source_url=\(sourceURL) error=\(error)")
+            }
+        }
+
+        print("[SEASON_IMPORT] phase=kept_local_result source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+        applyImportedSuggestion(localSuggestion, sourceURL: sourceURL)
+    }
+
+    @MainActor
+    private func applyImportedSuggestion(_ suggestion: SocialImportSuggestion, sourceURL: String) {
         detectedSourcePlatform = suggestion.sourcePlatform ?? detectedPlatform(for: sourceURL)
         mediaLink = sourceURL
-
+        importConfidence = suggestion.confidence
         title = cleanedTitle(suggestion.suggestedTitle ?? "")
 
         let mappedSteps = suggestion.suggestedSteps
@@ -1080,19 +1175,81 @@ struct CreateRecipeView: View {
             ingredientDrafts = suggestion.suggestedIngredients.map {
                 normalizedImportedIngredientDraft(from: $0)
             }
-            if suggestion.suggestedIngredients.count <= 1 {
-                importFeedbackText = localizer.text(.importWeakResultCaptionHint)
-                showCaptionImportHint = true
-            } else {
-                importFeedbackText = "\(localizer.text(.importApplied)) (\(suggestion.suggestedIngredients.count))"
-                showCaptionImportHint = false
-            }
+            importFeedbackText = importQualityFeedbackText(for: suggestion.confidence)
+            showCaptionImportHint = suggestion.confidence == .low
         } else {
             ingredientDrafts = [CreateIngredientDraft()]
-            importFeedbackText = localizer.text(.importWeakResultCaptionHint)
+            importFeedbackText = importQualityFeedbackText(for: .low)
             showCaptionImportHint = true
         }
-        print("[SEASON_IMPORT] phase=generic_link_import source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count)")
+
+        print("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
+    }
+
+    private func socialImportSuggestionFromServerResponse(
+        _ response: ParseRecipeCaptionFunctionResponse,
+        sourceURL: String,
+        fallbackCaption: String
+    ) -> SocialImportSuggestion? {
+        guard response.ok, let result = response.result else { return nil }
+
+        let mappedIngredients: [RecipeIngredient] = result.ingredients.compactMap { item in
+            let cleanedName = removingEmojis(from: item.name).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleanedName.isEmpty else { return nil }
+
+            let unit = RecipeQuantityUnit(rawValue: (item.unit ?? "").lowercased()) ?? .piece
+            let quantity = max(0.0001, item.quantity ?? 1)
+            return RecipeIngredient(
+                produceID: nil,
+                basicIngredientID: nil,
+                quality: .basic,
+                name: cleanedName,
+                quantityValue: quantity,
+                quantityUnit: unit,
+                rawIngredientLine: cleanedName,
+                mappingConfidence: .unmapped
+            )
+        }
+
+        let mappedSteps = result.steps
+            .map { removingEmojis(from: $0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return SocialImportSuggestion(
+            sourceURL: sourceURL,
+            sourcePlatform: detectedPlatform(for: sourceURL),
+            sourceCaptionRaw: fallbackCaption.isEmpty ? nil : fallbackCaption,
+            suggestedTitle: cleanedTitle(result.title ?? ""),
+            suggestedIngredients: mappedIngredients,
+            suggestedSteps: mappedSteps,
+            confidence: socialImportConfidence(from: result.confidence)
+        )
+    }
+
+    private func socialImportConfidence(from rawValue: String) -> SocialImportConfidence {
+        SocialImportConfidence(rawValue: rawValue.lowercased()) ?? .low
+    }
+
+    private func isServerSuggestionUseful(_ suggestion: SocialImportSuggestion) -> Bool {
+        if !suggestion.suggestedIngredients.isEmpty || !suggestion.suggestedSteps.isEmpty {
+            return true
+        }
+
+        let titleCandidate = suggestion.suggestedTitle?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return !titleCandidate.isEmpty && titleCandidate != "untitled recipe"
+    }
+
+    private func importQualityFeedbackText(for confidence: SocialImportConfidence) -> String {
+        switch confidence {
+        case .high:
+            return localizer.text(.importQualityHigh)
+        case .medium:
+            return localizer.text(.importQualityMedium)
+        case .low:
+            return localizer.text(.importQualityLow)
+        }
     }
 
     private func normalizedImportedIngredientDraft(from ingredient: RecipeIngredient) -> CreateIngredientDraft {
@@ -1413,16 +1570,32 @@ struct CreateRecipeView: View {
             && abs(parsedQuantityValue(draft.quantityValue) - 1) < 0.001
         guard hasSyntheticPieceQuantity else { return false }
 
+        if hasExplicitPieceToken(displayName) {
+            return false
+        }
         if isQuantoBastaIngredient(displayName) { return true }
         if looksNaturalPieceLine(displayName) { return true }
+        if !looksExplicitMeasuredLine(displayName) { return true }
         return containsMultipleWords(displayName)
     }
 
+    private func hasExplicitPieceToken(_ line: String) -> Bool {
+        line.range(
+            of: #"(?i)\b(piece|pieces|pezzo|pezzi)\b"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private func looksExplicitMeasuredLine(_ line: String) -> Bool {
+        line.range(
+            of: #"(?i)\b\d+\s*(g|kg|ml|l|tbsp|tsp|cup)\b"#,
+            options: .regularExpression
+        ) != nil
+    }
+
     private func resolveImportedIngredientMatch(query: String) -> ImportedIngredientMatch? {
-        let coreQuery = extractCoreIngredientQuery(query)
-        let queryForMatching = coreQuery.isEmpty ? query : coreQuery
-        let normalizedQuery = normalizedIngredientMatchText(queryForMatching)
-        guard !normalizedQuery.isEmpty else { return nil }
+        let normalizedQueries = importedIngredientMatchQueries(from: query)
+        guard !normalizedQueries.isEmpty else { return nil }
 
         var bestProduce: (item: ProduceItem, score: Int, length: Int)?
         for item in viewModel.produceItems {
@@ -1430,7 +1603,7 @@ struct CreateRecipeView: View {
                 id: item.id,
                 localizedNames: item.localizedNames
             ) {
-                guard let score = ingredientMatchScore(query: normalizedQuery, term: term) else { continue }
+                guard let score = bestIngredientMatchScore(queries: normalizedQueries, term: term) else { continue }
                 let candidate = (item: item, score: score, length: term.count)
                 if bestProduce == nil
                     || candidate.score > bestProduce!.score
@@ -1446,7 +1619,7 @@ struct CreateRecipeView: View {
                 id: item.id,
                 localizedNames: item.localizedNames
             ) {
-                guard let score = ingredientMatchScore(query: normalizedQuery, term: term) else { continue }
+                guard let score = bestIngredientMatchScore(queries: normalizedQueries, term: term) else { continue }
                 let candidate = (item: item, score: score, length: term.count)
                 if bestBasic == nil
                     || candidate.score > bestBasic!.score
@@ -1472,6 +1645,83 @@ struct CreateRecipeView: View {
             }
             return .produce(produce.item)
         }
+    }
+
+    private func importedIngredientMatchQueries(from raw: String) -> [String] {
+        let normalizedRaw = normalizedIngredientMatchText(raw)
+        guard !normalizedRaw.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var queries: [String] = []
+
+        func appendQuery(_ candidate: String) {
+            let normalized = normalizedIngredientMatchText(candidate)
+            guard !normalized.isEmpty else { return }
+            if seen.insert(normalized).inserted {
+                queries.append(normalized)
+            }
+        }
+
+        appendQuery(normalizedRaw)
+        appendQuery(strippedIngredientDescriptors(normalizedRaw))
+        appendQuery(extractCoreIngredientQuery(raw))
+
+        for query in queries {
+            let aliases = expandedIngredientQueryAliases(for: query)
+            for alias in aliases {
+                appendQuery(alias)
+            }
+        }
+
+        return queries
+    }
+
+    private func bestIngredientMatchScore(queries: [String], term: String) -> Int? {
+        var bestScore: Int?
+        for query in queries {
+            guard let score = ingredientMatchScore(query: query, term: term) else { continue }
+            bestScore = max(bestScore ?? score, score)
+        }
+        return bestScore
+    }
+
+    private func strippedIngredientDescriptors(_ normalized: String) -> String {
+        // Keep this intentionally conservative: remove lightweight descriptors,
+        // preserve the core noun (e.g. "cipolla bianca" -> "cipolla").
+        let descriptorTokens = Set([
+            "bianca", "bianco", "rosse", "rossa", "rosso", "verde",
+            "intero", "intera", "interi", "intere",
+            "secco", "secca", "secchi", "secche",
+            "grattugiato", "grattugiata",
+            "fresco", "fresca", "fresh",
+            "whole", "dry", "grated",
+            "tipo", "quality"
+        ])
+
+        let stripped = normalized
+            .split(separator: " ")
+            .map(String.init)
+            .filter { token in !descriptorTokens.contains(token) }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return stripped.isEmpty ? normalized : stripped
+    }
+
+    private func expandedIngredientQueryAliases(for normalizedQuery: String) -> [String] {
+        var aliases: [String] = []
+        for (pattern, mappedAliases) in importQueryAliases {
+            if queryContainsPhrase(normalizedQuery, phrase: pattern) {
+                aliases.append(contentsOf: mappedAliases)
+            }
+        }
+        return aliases
+    }
+
+    private func queryContainsPhrase(_ query: String, phrase: String) -> Bool {
+        if query == phrase { return true }
+        let pattern = #"(?<![a-z0-9])\#(NSRegularExpression.escapedPattern(for: phrase))(?![a-z0-9])"#
+        return query.range(of: pattern, options: .regularExpression) != nil
     }
 
     private func importSearchTerms(id: String, localizedNames: [String: String]) -> [String] {
@@ -1555,7 +1805,10 @@ struct CreateRecipeView: View {
             "una", "un", "uno", "mezza", "mezzo", "mezze",
             "di", "da", "con", "per",
             "qb", "q b", "quanto", "basta",
-            "costa", "spicchio", "pezzo"
+            "costa", "spicchio", "pezzo",
+            "bianca", "bianco", "rossa", "rosso",
+            "intero", "intera", "secco", "secca",
+            "grattugiato", "grattugiata", "fresco", "fresca"
         ]
         let filteredTokens = working
             .split(separator: " ")
@@ -1578,7 +1831,59 @@ struct CreateRecipeView: View {
             "beans": ["fagioli"],
             "green_beans": ["fagiolini", "string beans"],
             "cream_cheese": ["formaggio spalmabile"],
-            "greek_yogurt": ["yogurt greco"]
+            "greek_yogurt": ["yogurt greco"],
+            "onion": ["cipolla", "cipolla bianca", "cipolla rossa"],
+            "carrot": ["carota", "carote"],
+            "celery": ["sedano", "costa di sedano"],
+            "milk": ["latte", "latte intero"],
+            "flour": ["farina", "farina 00", "wheat flour"],
+            "butter": ["burro"],
+            "white_wine": ["vino bianco", "vino bianco secco"],
+            "beef_broth": ["brodo di manzo", "beef broth", "beef stock"],
+            "lemon": ["limone"],
+            "egg": ["uovo", "uova", "eggs"],
+            "parmesan": ["parmigiano", "parmigiano reggiano", "parmesan", "parmesan cheese"]
+        ]
+    }
+
+    private var importQueryAliases: [String: [String]] {
+        [
+            // Italian ↔ English high-value kitchen aliases used in social captions.
+            "cipolla": ["onion"],
+            "cipolla bianca": ["onion"],
+            "cipolla rossa": ["onion"],
+            "onion": ["cipolla"],
+            "carota": ["carrot"],
+            "carote": ["carrot"],
+            "carrot": ["carota"],
+            "sedano": ["celery"],
+            "costa di sedano": ["celery"],
+            "celery": ["sedano"],
+            "latte": ["milk"],
+            "latte intero": ["milk"],
+            "milk": ["latte"],
+            "farina": ["flour"],
+            "farina 00": ["flour"],
+            "wheat flour": ["flour"],
+            "flour": ["farina"],
+            "burro": ["butter"],
+            "butter": ["burro"],
+            "vino bianco": ["white wine"],
+            "vino bianco secco": ["white wine"],
+            "white wine": ["vino bianco"],
+            "brodo di manzo": ["beef broth", "beef stock"],
+            "beef broth": ["brodo di manzo"],
+            "beef stock": ["brodo di manzo"],
+            "limone": ["lemon"],
+            "lemon": ["limone"],
+            "uova": ["egg", "eggs"],
+            "uovo": ["egg"],
+            "eggs": ["uova"],
+            "egg": ["uovo", "uova"],
+            "parmigiano": ["parmesan", "parmigiano reggiano"],
+            "parmigiano reggiano": ["parmesan"],
+            "parmesan": ["parmigiano", "parmigiano reggiano"],
+            "parmigiano grattugiato": ["parmigiano", "parmesan"]
         ]
     }
 

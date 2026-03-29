@@ -1,5 +1,11 @@
 import Foundation
 
+enum SocialImportConfidence: String, Codable {
+    case high
+    case medium
+    case low
+}
+
 struct SocialImportSuggestion {
     let sourceURL: String?
     let sourcePlatform: SocialSourcePlatform?
@@ -7,6 +13,7 @@ struct SocialImportSuggestion {
     let suggestedTitle: String?
     let suggestedIngredients: [RecipeIngredient]
     let suggestedSteps: [String]
+    let confidence: SocialImportConfidence
 }
 
 enum SocialImportParser {
@@ -48,13 +55,21 @@ enum SocialImportParser {
             steps = []
         }
 
+        let confidence = classifyConfidence(
+            hasStructuredSections: structuredCaption != nil,
+            suggestedTitle: title,
+            suggestedIngredients: ingredients,
+            suggestedSteps: steps
+        )
+
         return SocialImportSuggestion(
             sourceURL: normalizedURL,
             sourcePlatform: platform,
             sourceCaptionRaw: captionRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : captionRaw,
             suggestedTitle: title,
             suggestedIngredients: ingredients,
-            suggestedSteps: steps
+            suggestedSteps: steps,
+            confidence: confidence
         )
     }
 
@@ -537,6 +552,55 @@ enum SocialImportParser {
         default:
             return .piece
         }
+    }
+
+    private static func classifyConfidence(
+        hasStructuredSections: Bool,
+        suggestedTitle: String?,
+        suggestedIngredients: [RecipeIngredient],
+        suggestedSteps: [String]
+    ) -> SocialImportConfidence {
+        let ingredientCount = suggestedIngredients.count
+        let stepCount = suggestedSteps.count
+        let mappedIngredientCount = suggestedIngredients.filter {
+            $0.produceID != nil || $0.basicIngredientID != nil
+        }.count
+        let hasMeaningfulTitle: Bool = {
+            guard let title = suggestedTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !title.isEmpty else { return false }
+            return title.lowercased() != "untitled recipe"
+        }()
+
+        if ingredientCount == 0 && stepCount == 0 {
+            return .low
+        }
+
+        var score = 0
+        if hasStructuredSections { score += 3 }
+        if ingredientCount >= 5 {
+            score += 2
+        } else if ingredientCount >= 2 {
+            score += 1
+        }
+        if stepCount >= 3 {
+            score += 2
+        } else if stepCount >= 1 {
+            score += 1
+        }
+        if hasMeaningfulTitle { score += 1 }
+        if mappedIngredientCount >= 3 {
+            score += 2
+        } else if mappedIngredientCount >= 1 {
+            score += 1
+        }
+
+        if ingredientCount <= 1 { score -= 1 }
+        if !hasStructuredSections && stepCount == 0 { score -= 1 }
+        if !hasStructuredSections && ingredientCount > 0 && mappedIngredientCount == 0 { score -= 2 }
+
+        if score >= 6 { return .high }
+        if score >= 3 { return .medium }
+        return .low
     }
 }
 
