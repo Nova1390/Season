@@ -35,6 +35,19 @@ enum SearchPrimaryType {
     case recipes
 }
 
+enum IngredientAliasMatch {
+    case produce(ProduceItem)
+    case basic(BasicIngredient)
+}
+
+struct ResolvedIngredient {
+    let recipeIngredient: RecipeIngredient
+    let displayName: String
+    let produceItem: ProduceItem?
+    let basicIngredient: BasicIngredient?
+    let isReconciled: Bool
+}
+
 enum RecipeTimingLabel: Hashable {
     case perfectNow
     case betterSoon
@@ -49,6 +62,16 @@ struct RecipeTimingInsight: Hashable {
 }
 
 final class ProduceViewModel: ObservableObject {
+    private struct UnifiedIngredientParityEntry {
+        let ingredientID: String
+        let slug: String
+        let ingredientType: String
+        let enName: String?
+        let itName: String?
+        let legacyProduceID: String?
+        let legacyBasicID: String?
+    }
+
     @Published private(set) var produceItems: [ProduceItem] = []
     @Published private(set) var recipes: [Recipe] = []
     @Published private(set) var userProfiles: [UserProfile] = []
@@ -69,8 +92,13 @@ final class ProduceViewModel: ObservableObject {
     private let recipeViewCountsStorageKey = "recipeViewCountsData"
     private let basicIngredients: [BasicIngredient]
     private let produceByID: [String: ProduceItem]
+    private let produceByNormalizedName: [String: ProduceItem]
     private let basicByID: [String: BasicIngredient]
     private let basicByNormalizedName: [String: BasicIngredient]
+    private var remoteIngredientAliasLookup: [String: IngredientAliasRecord] = [:]
+    private var unifiedIngredientByID: [String: UnifiedIngredientParityEntry] = [:]
+    private var unifiedAliasLookup: [String: IngredientAliasMatch] = [:]
+    private var unifiedNameLookup: [String: IngredientAliasMatch] = [:]
     private let nutritionService = NutritionService()
     private let supabaseService = SupabaseService.shared
     private let fallbackUnitProfile = IngredientUnitProfile(
@@ -99,6 +127,18 @@ final class ProduceViewModel: ObservableObject {
         let loadedBasic = BasicIngredientCatalog.all
         self.basicIngredients = loadedBasic
         self.produceByID = Dictionary(uniqueKeysWithValues: loadedProduce.map { ($0.id, $0) })
+        var normalizedProduceIndex: [String: ProduceItem] = [:]
+        for item in loadedProduce {
+            let normalizedID = item.id.replacingOccurrences(of: "_", with: " ").lowercased()
+            normalizedProduceIndex[normalizedID] = item
+            for localizedName in item.localizedNames.values {
+                normalizedProduceIndex[localizedName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = item
+            }
+            for alias in Self.ingredientAliasesSeed[item.id] ?? [] {
+                normalizedProduceIndex[alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = item
+            }
+        }
+        self.produceByNormalizedName = normalizedProduceIndex
         self.basicByID = Dictionary(uniqueKeysWithValues: loadedBasic.map { ($0.id, $0) })
         var normalizedNameIndex: [String: BasicIngredient] = [:]
         for ingredient in loadedBasic {
@@ -106,6 +146,9 @@ final class ProduceViewModel: ObservableObject {
             normalizedNameIndex[normalizedID] = ingredient
             for localizedName in ingredient.localizedNames.values {
                 normalizedNameIndex[localizedName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = ingredient
+            }
+            for alias in Self.ingredientAliasesSeed[ingredient.id] ?? [] {
+                normalizedNameIndex[alias.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = ingredient
             }
         }
         self.basicByNormalizedName = normalizedNameIndex
@@ -138,14 +181,285 @@ final class ProduceViewModel: ObservableObject {
             let loadedProfiles = RecipeStore.loadProfiles()
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.recipes = loadedRecipes
+                self.recipes = self.reconciledRecipesOnRead(loadedRecipes)
                 self.userProfiles = loadedProfiles
                 self.invalidateRecipeCaches()
                 let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000.0).rounded())
                 self.debugLoadTimingIfNeeded(label: "bootstrap recipes", count: loadedRecipes.count, elapsedMs: elapsedMs)
                 self.fetchRemoteRecipesAndMerge()
+                self.fetchRemoteIngredientAliases()
+                self.fetchUnifiedIngredientParityData()
             }
         }
+    }
+
+    private func fetchRemoteIngredientAliases() {
+        Task { [weak self] in
+            guard let self else { return }
+            let aliases = await supabaseService.fetchActiveIngredientAliases()
+            let lookup = self.aliasLookupMap(from: aliases)
+            await MainActor.run {
+                self.remoteIngredientAliasLookup = lookup
+                self.recipes = self.reconciledRecipesOnRead(self.recipes)
+                self.invalidateRecipeCaches()
+            }
+        }
+    }
+
+    private func fetchUnifiedIngredientParityData() {
+        Task { [weak self] in
+            guard let self else { return }
+            let catalog = await supabaseService.fetchUnifiedIngredientCatalogSummary()
+            let aliases = await supabaseService.fetchUnifiedIngredientAliases()
+            await MainActor.run {
+                self.applyUnifiedIngredientParityData(catalog: catalog, aliases: aliases)
+            }
+        }
+    }
+
+    private func aliasLookupMap(from aliases: [IngredientAliasRecord]) -> [String: IngredientAliasRecord] {
+        var lookup: [String: IngredientAliasRecord] = [:]
+        for alias in aliases where alias.isActive {
+            let normalized = normalizedSearchText(alias.normalizedAliasText)
+            guard !normalized.isEmpty else { continue }
+            if let current = lookup[normalized] {
+                let currentConfidence = current.confidence ?? -1
+                let candidateConfidence = alias.confidence ?? -1
+                if candidateConfidence > currentConfidence {
+                    lookup[normalized] = alias
+                }
+            } else {
+                lookup[normalized] = alias
+            }
+        }
+        return lookup
+    }
+
+    private func applyUnifiedIngredientParityData(
+        catalog: [UnifiedIngredientCatalogSummaryRecord],
+        aliases: [UnifiedIngredientAliasRecord]
+    ) {
+        var entriesByID: [String: UnifiedIngredientParityEntry] = [:]
+        var nameLookup: [String: IngredientAliasMatch] = [:]
+
+        for record in catalog {
+            let ingredientID = record.ingredientID.trimmingCharacters(in: .whitespacesAndNewlines)
+            let slug = record.slug.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ingredientType = record.ingredientType.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ingredientID.isEmpty, !slug.isEmpty, !ingredientType.isEmpty else { continue }
+
+            let entry = UnifiedIngredientParityEntry(
+                ingredientID: ingredientID,
+                slug: slug,
+                ingredientType: ingredientType,
+                enName: record.enName,
+                itName: record.itName,
+                legacyProduceID: record.legacyProduceID,
+                legacyBasicID: record.legacyBasicID
+            )
+            entriesByID[ingredientID] = entry
+
+            guard let match = ingredientAliasMatch(from: entry) else { continue }
+            appendUnifiedLookup(slug, match: match, into: &nameLookup)
+            appendUnifiedLookup(record.enName, match: match, into: &nameLookup)
+            appendUnifiedLookup(record.itName, match: match, into: &nameLookup)
+        }
+
+        var aliasLookup: [String: IngredientAliasMatch] = [:]
+        var aliasConfidenceLookup: [String: Double] = [:]
+        for alias in aliases where alias.isActive {
+            let normalized = normalizedSearchText(alias.normalizedAliasText)
+            guard !normalized.isEmpty else { continue }
+            guard let entry = entriesByID[alias.ingredientID],
+                  let match = ingredientAliasMatch(from: entry) else { continue }
+            let candidateConfidence = alias.confidence ?? -1
+            let currentConfidence = aliasConfidenceLookup[normalized] ?? -1
+            if aliasLookup[normalized] == nil || candidateConfidence >= currentConfidence {
+                aliasLookup[normalized] = match
+                aliasConfidenceLookup[normalized] = candidateConfidence
+            }
+        }
+
+        unifiedIngredientByID = entriesByID
+        unifiedAliasLookup = aliasLookup
+        unifiedNameLookup = nameLookup
+
+        print(
+            "[SEASON_UNIFIED_PARITY] phase=parity_cache_ready catalog_count=\(entriesByID.count) alias_count=\(aliasLookup.count) name_lookup_count=\(nameLookup.count)"
+        )
+    }
+
+    private func appendUnifiedLookup(
+        _ raw: String?,
+        match: IngredientAliasMatch,
+        into lookup: inout [String: IngredientAliasMatch]
+    ) {
+        guard let raw else { return }
+        let normalized = normalizedSearchText(raw)
+        guard !normalized.isEmpty else { return }
+        lookup[normalized] = match
+    }
+
+    private func ingredientAliasMatch(from entry: UnifiedIngredientParityEntry) -> IngredientAliasMatch? {
+        if entry.ingredientType == "produce",
+           let legacyProduceID = entry.legacyProduceID,
+           let produce = produceByID[legacyProduceID] {
+            return .produce(produce)
+        }
+
+        if entry.ingredientType == "basic",
+           let legacyBasicID = entry.legacyBasicID,
+           let basic = basicByID[legacyBasicID] {
+            return .basic(basic)
+        }
+
+        // Bridge case: prefer whichever legacy mapping exists.
+        if let legacyProduceID = entry.legacyProduceID,
+           let produce = produceByID[legacyProduceID] {
+            return .produce(produce)
+        }
+
+        if let legacyBasicID = entry.legacyBasicID,
+           let basic = basicByID[legacyBasicID] {
+            return .basic(basic)
+        }
+
+        return nil
+    }
+
+    private func reconciledRecipesOnRead(_ recipes: [Recipe]) -> [Recipe] {
+        recipes.map { reconcileRecipeOnRead($0) }
+    }
+
+    private func reconcileRecipeOnRead(_ recipe: Recipe) -> Recipe {
+        let unresolvedCount = recipe.ingredients.filter { $0.produceID == nil && $0.basicIngredientID == nil }.count
+        guard unresolvedCount > 0 else {
+            print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
+            return recipe
+        }
+
+        print("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
+
+        var successCount = 0
+        let reconciledIngredients = recipe.ingredients.map { ingredient -> RecipeIngredient in
+            guard ingredient.produceID == nil, ingredient.basicIngredientID == nil else { return ingredient }
+
+            let sourceText = ingredient.rawIngredientLine?
+                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
+                : ingredient.name
+            let normalizedQuery = normalizedSearchText(sourceText)
+            guard !normalizedQuery.isEmpty else { return ingredient }
+
+            let matched = resolveIngredientAlias(query: normalizedQuery)
+                ?? resolveCatalogMatchForCustomIngredient(query: normalizedQuery)
+            guard let matched else { return ingredient }
+
+            successCount += 1
+            switch matched {
+            case .produce(let item):
+                return RecipeIngredient(
+                    produceID: item.id,
+                    basicIngredientID: nil,
+                    quality: .coreSeasonal,
+                    name: item.displayName(languageCode: localizer.languageCode),
+                    quantityValue: ingredient.quantityValue,
+                    quantityUnit: ingredient.quantityUnit,
+                    rawIngredientLine: ingredient.rawIngredientLine ?? ingredient.name,
+                    mappingConfidence: .medium
+                )
+            case .basic(let item):
+                return RecipeIngredient(
+                    produceID: nil,
+                    basicIngredientID: item.id,
+                    quality: .basic,
+                    name: item.displayName(languageCode: localizer.languageCode),
+                    quantityValue: ingredient.quantityValue,
+                    quantityUnit: ingredient.quantityUnit,
+                    rawIngredientLine: ingredient.rawIngredientLine ?? ingredient.name,
+                    mappingConfidence: .medium
+                )
+            }
+        }
+
+        guard successCount > 0 else {
+            print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
+            return recipe
+        }
+
+        print("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
+        var updated = recipe
+        updated = Recipe(
+            id: recipe.id,
+            title: recipe.title,
+            author: recipe.author,
+            creatorId: recipe.creatorId,
+            creatorDisplayName: recipe.creatorDisplayName,
+            creatorAvatarURL: recipe.creatorAvatarURL,
+            ingredients: reconciledIngredients,
+            preparationSteps: recipe.preparationSteps,
+            prepTimeMinutes: recipe.prepTimeMinutes,
+            cookTimeMinutes: recipe.cookTimeMinutes,
+            difficulty: recipe.difficulty,
+            servings: recipe.servings,
+            crispy: recipe.crispy,
+            viewCount: recipe.viewCount,
+            dietaryTags: recipe.dietaryTags,
+            seasonalMatchPercent: recipe.seasonalMatchPercent,
+            createdAt: recipe.createdAt,
+            externalMedia: recipe.externalMedia,
+            images: recipe.images,
+            coverImageID: recipe.coverImageID,
+            coverImageName: recipe.coverImageName,
+            mediaLinkURL: recipe.mediaLinkURL,
+            instagramURL: recipe.instagramURL,
+            tiktokURL: recipe.tiktokURL,
+            sourceURL: recipe.sourceURL,
+            sourceName: recipe.sourceName,
+            sourcePlatform: recipe.sourcePlatform,
+            sourceCaptionRaw: recipe.sourceCaptionRaw,
+            importedFromSocial: recipe.importedFromSocial,
+            sourceType: recipe.sourceType,
+            isUserGenerated: recipe.isUserGenerated,
+            imageURL: recipe.imageURL,
+            imageSource: recipe.imageSource,
+            attributionText: recipe.attributionText,
+            publicationStatus: recipe.publicationStatus,
+            isRemix: recipe.isRemix,
+            originalRecipeID: recipe.originalRecipeID,
+            originalRecipeTitle: recipe.originalRecipeTitle,
+            originalAuthorName: recipe.originalAuthorName
+        )
+        return updated
+    }
+
+    private func resolveCatalogMatchForCustomIngredient(query: String) -> IngredientAliasMatch? {
+        let normalized = normalizedSearchText(query)
+        guard !normalized.isEmpty else { return nil }
+
+        let legacyMatch = resolveLegacyCatalogMatch(query: normalized)
+        let unifiedMatch = resolveUnifiedCatalogMatch(query: normalized)
+        logUnifiedParity(path: "catalog_match", query: normalized, legacy: legacyMatch, unified: unifiedMatch)
+        return legacyMatch
+    }
+
+    private func resolveLegacyCatalogMatch(query: String) -> IngredientAliasMatch? {
+        if let produce = produceByNormalizedName[query] {
+            return .produce(produce)
+        }
+        if let basic = basicByNormalizedName[query] {
+            return .basic(basic)
+        }
+
+        let normalizedAsID = query.replacingOccurrences(of: " ", with: "_")
+        if let produce = produceByID[normalizedAsID] {
+            return .produce(produce)
+        }
+        if let basic = basicByID[normalizedAsID] {
+            return .basic(basic)
+        }
+
+        return nil
     }
 
     private func fetchRemoteRecipesAndMerge() {
@@ -155,7 +469,7 @@ final class ProduceViewModel: ObservableObject {
                 let remoteRecipes = try await supabaseService.fetchRecipes()
                 await MainActor.run {
                     let mergedRecipes = self.mergedRecipes(local: self.recipes, remote: remoteRecipes)
-                    self.recipes = mergedRecipes
+                    self.recipes = self.reconciledRecipesOnRead(mergedRecipes)
                     self.invalidateRecipeCaches()
                 }
             } catch {
@@ -680,6 +994,109 @@ final class ProduceViewModel: ObservableObject {
         basicByID[id]
     }
 
+    func resolveIngredientAlias(query: String) -> IngredientAliasMatch? {
+        let normalized = normalizedSearchText(query)
+        guard !normalized.isEmpty else { return nil }
+        let legacy = resolveLegacyAliasMatch(query: normalized)
+        let unified = resolveUnifiedAliasMatch(query: normalized)
+        logUnifiedParity(path: "alias_lookup", query: normalized, legacy: legacy, unified: unified)
+        return legacy
+    }
+
+    // Import-only resolution path: unified catalog first, legacy fallback.
+    // Returned type remains legacy-compatible (.produce/.basic) so write paths stay unchanged.
+    func resolveIngredientForImport(query: String) -> IngredientAliasMatch? {
+        let normalized = normalizedSearchText(query)
+        guard !normalized.isEmpty else { return nil }
+
+        let unified = resolveUnifiedAliasMatch(query: normalized)
+            ?? resolveUnifiedCatalogMatch(query: normalized)
+        if let unified {
+            let unifiedKey = parityMatchKey(unified)
+            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_used path=import query=\(normalized) value=\(unifiedKey)")
+            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_mapped_to_legacy path=import query=\(normalized) value=\(unifiedKey)")
+            return unified
+        }
+
+        let legacy = resolveLegacyAliasMatch(query: normalized)
+            ?? resolveLegacyCatalogMatch(query: normalized)
+        if let legacy {
+            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_failed_fallback_legacy path=import query=\(normalized) legacy=\(parityMatchKey(legacy))")
+        }
+        return legacy
+    }
+
+    private func resolveLegacyAliasMatch(query: String) -> IngredientAliasMatch? {
+        guard let record = remoteIngredientAliasLookup[query] else { return nil }
+
+        if let produceID = record.produceID,
+           let produce = produceByID[produceID] {
+            return .produce(produce)
+        }
+
+        if let basicID = record.basicIngredientID,
+           let basic = basicByID[basicID] {
+            return .basic(basic)
+        }
+
+        return nil
+    }
+
+    private func resolveUnifiedAliasMatch(query: String) -> IngredientAliasMatch? {
+        unifiedAliasLookup[query]
+    }
+
+    private func resolveUnifiedCatalogMatch(query: String) -> IngredientAliasMatch? {
+        if let alias = unifiedAliasLookup[query] {
+            return alias
+        }
+        if let direct = unifiedNameLookup[query] {
+            return direct
+        }
+        return nil
+    }
+
+    private func parityMatchKey(_ match: IngredientAliasMatch?) -> String {
+        guard let match else { return "none" }
+        switch match {
+        case .produce(let item):
+            return "produce:\(item.id)"
+        case .basic(let item):
+            return "basic:\(item.id)"
+        }
+    }
+
+    private func logUnifiedParity(
+        path: String,
+        query: String,
+        legacy: IngredientAliasMatch?,
+        unified: IngredientAliasMatch?
+    ) {
+        let legacyKey = parityMatchKey(legacy)
+        let unifiedKey = parityMatchKey(unified)
+
+        if legacyKey == "none", unifiedKey == "none" {
+            return
+        }
+
+        if legacyKey == unifiedKey {
+            print("[SEASON_UNIFIED_PARITY] phase=parity_match_same path=\(path) query=\(query) value=\(legacyKey)")
+            return
+        }
+
+        if legacyKey == "none" {
+            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_legacy path=\(path) query=\(query) unified=\(unifiedKey)")
+            return
+        }
+
+        if unifiedKey == "none" {
+            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_unified path=\(path) query=\(query) legacy=\(legacyKey)")
+            return
+        }
+
+        print("[SEASON_UNIFIED_PARITY] phase=parity_match_diff path=\(path) query=\(query) legacy=\(legacyKey) unified=\(unifiedKey)")
+    }
+
     func recipe(forID id: String) -> Recipe? {
         recipes.first(where: { $0.id == id })
     }
@@ -892,17 +1309,102 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func recipeIngredientDisplayName(_ ingredient: RecipeIngredient) -> String {
+        resolveIngredientForDisplay(ingredient).displayName
+    }
+
+    func resolveIngredientForDisplay(_ ingredient: RecipeIngredient) -> ResolvedIngredient {
         if let produceID = ingredient.produceID,
            let item = produceItem(forID: produceID) {
-            return item.displayName(languageCode: localizer.languageCode)
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: item.displayName(languageCode: localizer.languageCode),
+                produceItem: item,
+                basicIngredient: nil,
+                isReconciled: false
+            )
         }
 
         if let basicID = ingredient.basicIngredientID,
            let basic = basicIngredient(forID: basicID) {
-            return basic.displayName(languageCode: localizer.languageCode)
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: basic.displayName(languageCode: localizer.languageCode),
+                produceItem: nil,
+                basicIngredient: basic,
+                isReconciled: false
+            )
         }
 
-        return ingredient.name
+        let sourceText = ingredient.rawIngredientLine?
+            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
+            : ingredient.name
+        let normalizedQuery = normalizedSearchText(sourceText)
+        guard !normalizedQuery.isEmpty else {
+            print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: ingredient.name,
+                produceItem: nil,
+                basicIngredient: nil,
+                isReconciled: false
+            )
+        }
+
+        print("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
+
+        let match = resolveUnifiedAliasMatch(query: normalizedQuery)
+            ?? resolveUnifiedCatalogMatch(query: normalizedQuery)
+            ?? resolveIngredientForImport(query: normalizedQuery)
+        guard let match else {
+            print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: ingredient.name,
+                produceItem: nil,
+                basicIngredient: nil,
+                isReconciled: false
+            )
+        }
+
+        switch match {
+        case .produce(let item):
+            print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
+            return ResolvedIngredient(
+                recipeIngredient: RecipeIngredient(
+                    produceID: item.id,
+                    basicIngredientID: nil,
+                    quality: .coreSeasonal,
+                    name: item.displayName(languageCode: localizer.languageCode),
+                    quantityValue: ingredient.quantityValue,
+                    quantityUnit: ingredient.quantityUnit,
+                    rawIngredientLine: ingredient.rawIngredientLine ?? ingredient.name,
+                    mappingConfidence: .medium
+                ),
+                displayName: item.displayName(languageCode: localizer.languageCode),
+                produceItem: item,
+                basicIngredient: nil,
+                isReconciled: true
+            )
+        case .basic(let item):
+            print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
+            return ResolvedIngredient(
+                recipeIngredient: RecipeIngredient(
+                    produceID: nil,
+                    basicIngredientID: item.id,
+                    quality: .basic,
+                    name: item.displayName(languageCode: localizer.languageCode),
+                    quantityValue: ingredient.quantityValue,
+                    quantityUnit: ingredient.quantityUnit,
+                    rawIngredientLine: ingredient.rawIngredientLine ?? ingredient.name,
+                    mappingConfidence: .medium
+                ),
+                displayName: item.displayName(languageCode: localizer.languageCode),
+                produceItem: nil,
+                basicIngredient: item,
+                isReconciled: true
+            )
+        }
     }
 
     func recipeNutritionSummary(for recipe: Recipe) -> RecipeNutritionSummary? {
@@ -1771,18 +2273,20 @@ final class ProduceViewModel: ObservableObject {
         return terms
     }
 
+    private static let ingredientAliasesSeed: [String: [String]] = [
+        "rocket": ["arugula", "rucola"],
+        "eggplant": ["aubergine", "melanzana"],
+        "zucchini": ["courgette", "zucchina"],
+        "bell_pepper": ["bell pepper", "pepper", "peperone"],
+        "chickpeas": ["ceci", "garbanzo", "garbanzo beans"],
+        "lentils": ["lenticchie"],
+        "beans": ["fagioli"],
+        "green_beans": ["fagiolini", "string beans"],
+        "cream_cheese": ["formaggio spalmabile"],
+        "greek_yogurt": ["yogurt greco"]
+    ]
+
     private var ingredientAliases: [String: [String]] {
-        [
-            "rocket": ["arugula", "rucola"],
-            "eggplant": ["aubergine", "melanzana"],
-            "zucchini": ["courgette", "zucchina"],
-            "bell_pepper": ["bell pepper", "pepper", "peperone"],
-            "chickpeas": ["ceci", "garbanzo", "garbanzo beans"],
-            "lentils": ["lenticchie"],
-            "beans": ["fagioli"],
-            "green_beans": ["fagiolini", "string beans"],
-            "cream_cheese": ["formaggio spalmabile"],
-            "greek_yogurt": ["yogurt greco"]
-        ]
+        Self.ingredientAliasesSeed
     }
 }

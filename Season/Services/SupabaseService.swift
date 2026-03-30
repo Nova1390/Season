@@ -107,6 +107,68 @@ struct CloudFridgeItem: Codable {
     let updated_at: String?
 }
 
+struct IngredientAliasRecord: Sendable {
+    let produceID: String?
+    let basicIngredientID: String?
+    let aliasText: String
+    let normalizedAliasText: String
+    let languageCode: String?
+    let source: String
+    let confidence: Double?
+    let isActive: Bool
+}
+
+struct UnifiedIngredientCatalogSummaryRecord: Sendable {
+    let ingredientID: String
+    let slug: String
+    let ingredientType: String
+    let enName: String?
+    let itName: String?
+    let legacyProduceID: String?
+    let legacyBasicID: String?
+}
+
+struct UnifiedIngredientAliasRecord: Sendable {
+    let ingredientID: String
+    let aliasText: String
+    let normalizedAliasText: String
+    let languageCode: String?
+    let source: String
+    let confidence: Double?
+    let isActive: Bool
+}
+
+private struct CloudIngredientAliasRow: Codable {
+    let produce_id: String?
+    let basic_ingredient_id: String?
+    let alias_text: String?
+    let normalized_alias_text: String?
+    let language_code: String?
+    let source: String?
+    let confidence: Double?
+    let is_active: Bool?
+}
+
+private struct CloudUnifiedIngredientCatalogSummaryRow: Codable {
+    let ingredient_id: String
+    let slug: String
+    let ingredient_type: String
+    let en_name: String?
+    let it_name: String?
+    let legacy_produce_id: String?
+    let legacy_basic_id: String?
+}
+
+private struct CloudUnifiedIngredientAliasRow: Codable {
+    let ingredient_id: String?
+    let alias_text: String?
+    let normalized_alias_text: String?
+    let language_code: String?
+    let source: String?
+    let confidence: Double?
+    let is_active: Bool?
+}
+
 struct ParseRecipeCaptionFunctionIngredient: Codable {
     let name: String
     let quantity: Double?
@@ -132,6 +194,14 @@ struct ParseRecipeCaptionFunctionResponse: Codable {
     let ok: Bool
     let result: ParseRecipeCaptionFunctionResult?
     let error: ParseRecipeCaptionFunctionError?
+}
+
+struct CustomIngredientObservation: Sendable {
+    let normalizedText: String
+    let rawExample: String
+    let languageCode: String?
+    let source: String
+    let latestRecipeID: String?
 }
 
 private struct ParseRecipeCaptionFunctionRequest: Encodable {
@@ -797,6 +867,172 @@ final class SupabaseService {
                 .execute()
 
             return try JSONDecoder().decode([CloudFridgeItem].self, from: response.data)
+        }
+    }
+
+    func fetchActiveIngredientAliases() async -> [IngredientAliasRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_ALIAS] phase=fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .from("ingredient_aliases")
+                .select()
+                .eq("is_active", value: true)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudIngredientAliasRow].self, from: response.data)
+            let records = rows.compactMap { row -> IngredientAliasRecord? in
+                let normalized = row.normalized_alias_text?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased() ?? ""
+                guard !normalized.isEmpty else { return nil }
+
+                let alias = row.alias_text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? normalized
+                let produceID = row.produce_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let basicID = row.basic_ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard (produceID?.isEmpty == false) != (basicID?.isEmpty == false) else { return nil }
+                let sourceValue = row.source?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+                return IngredientAliasRecord(
+                    produceID: produceID?.isEmpty == true ? nil : produceID,
+                    basicIngredientID: basicID?.isEmpty == true ? nil : basicID,
+                    aliasText: alias,
+                    normalizedAliasText: normalized,
+                    languageCode: row.language_code?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    source: sourceValue.isEmpty ? "manual" : sourceValue,
+                    confidence: row.confidence,
+                    isActive: row.is_active ?? true
+                )
+            }
+            print("[SEASON_ALIAS] phase=fetch_ok count=\(records.count)")
+            return records
+        } catch {
+            if isMissingIngredientAliasesTableError(error) {
+                print("[SEASON_ALIAS] phase=fetch_failed reason=table_missing error=\(error)")
+                return []
+            }
+            print("[SEASON_ALIAS] phase=fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func fetchUnifiedIngredientCatalogSummary() async -> [UnifiedIngredientCatalogSummaryRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .from("ingredient_catalog_summary")
+                .select()
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudUnifiedIngredientCatalogSummaryRow].self, from: response.data)
+            let records = rows.map { row in
+                UnifiedIngredientCatalogSummaryRecord(
+                    ingredientID: row.ingredient_id.trimmingCharacters(in: .whitespacesAndNewlines),
+                    slug: row.slug.trimmingCharacters(in: .whitespacesAndNewlines),
+                    ingredientType: row.ingredient_type.trimmingCharacters(in: .whitespacesAndNewlines),
+                    enName: row.en_name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    itName: row.it_name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    legacyProduceID: row.legacy_produce_id?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    legacyBasicID: row.legacy_basic_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            }
+            print("[SEASON_UNIFIED] phase=catalog_fetch_ok count=\(records.count)")
+            return records
+        } catch {
+            if isMissingUnifiedIngredientSummaryRelationError(error) {
+                print("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=relation_missing error=\(error)")
+                return []
+            }
+            print("[SEASON_UNIFIED] phase=catalog_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func fetchUnifiedIngredientAliases() async -> [UnifiedIngredientAliasRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .from("ingredient_aliases_v2")
+                .select()
+                .eq("is_active", value: true)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudUnifiedIngredientAliasRow].self, from: response.data)
+            let records = rows.compactMap { row -> UnifiedIngredientAliasRecord? in
+                let ingredientID = row.ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let normalized = row.normalized_alias_text?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased() ?? ""
+                guard !ingredientID.isEmpty, !normalized.isEmpty else { return nil }
+
+                let aliasText = row.alias_text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? normalized
+                let sourceValue = row.source?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                return UnifiedIngredientAliasRecord(
+                    ingredientID: ingredientID,
+                    aliasText: aliasText,
+                    normalizedAliasText: normalized,
+                    languageCode: row.language_code?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    source: sourceValue.isEmpty ? "manual" : sourceValue,
+                    confidence: row.confidence,
+                    isActive: row.is_active ?? true
+                )
+            }
+            print("[SEASON_UNIFIED] phase=alias_v2_fetch_ok count=\(records.count)")
+            return records
+        } catch {
+            if isMissingUnifiedIngredientAliasesRelationError(error) {
+                print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=relation_missing error=\(error)")
+                return []
+            }
+            print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func observeCustomIngredientObservations(_ observations: [CustomIngredientObservation]) async {
+        guard !observations.isEmpty else { return }
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed reason=missing_configuration count=\(observations.count)")
+            return
+        }
+        guard supabaseClient.auth.currentUser != nil else {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_skipped reason=unauthenticated count=\(observations.count)")
+            return
+        }
+
+        for observation in observations {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=observed normalized_text=\(observation.normalizedText) source=\(observation.source)")
+            var params: [String: String] = [
+                "p_normalized_text": observation.normalizedText,
+                "p_raw_example": observation.rawExample,
+                "p_source": observation.source
+            ]
+            if let languageCode = observation.languageCode, !languageCode.isEmpty {
+                params["p_language_code"] = languageCode
+            }
+            if let latestRecipeID = observation.latestRecipeID, !latestRecipeID.isEmpty {
+                params["p_latest_recipe_id"] = latestRecipeID
+            }
+
+            do {
+                _ = try await supabaseClient
+                    .rpc("observe_custom_ingredient", params: params)
+                    .execute()
+                print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_succeeded normalized_text=\(observation.normalizedText)")
+            } catch {
+                print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed normalized_text=\(observation.normalizedText) error=\(error)")
+            }
         }
     }
 
@@ -1534,6 +1770,27 @@ final class SupabaseService {
         let message = String(describing: error).lowercased()
         return message.contains("relation") &&
             message.contains("follows") &&
+            message.contains("does not exist")
+    }
+
+    private func isMissingIngredientAliasesTableError(_ error: Error) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("relation") &&
+            message.contains("ingredient_aliases") &&
+            message.contains("does not exist")
+    }
+
+    private func isMissingUnifiedIngredientSummaryRelationError(_ error: Error) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("relation") &&
+            message.contains("ingredient_catalog_summary") &&
+            message.contains("does not exist")
+    }
+
+    private func isMissingUnifiedIngredientAliasesRelationError(_ error: Error) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("relation") &&
+            message.contains("ingredient_aliases_v2") &&
             message.contains("does not exist")
     }
 

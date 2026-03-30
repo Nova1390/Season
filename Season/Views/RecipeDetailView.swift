@@ -1180,15 +1180,14 @@ struct RecipeDetailView: View {
 
     private var ingredientRows: [IngredientRow] {
         rankedRecipe.recipe.ingredients.map { ingredient in
-            let item = ingredient.produceID.flatMap { viewModel.produceItem(forID: $0) }
-            let basic = ingredient.basicIngredientID.flatMap { viewModel.basicIngredient(forID: $0) }
-            let name = viewModel.recipeIngredientDisplayName(ingredient)
+            let resolved = viewModel.resolveIngredientForDisplay(ingredient)
             return IngredientRow(
-                id: ingredient.id,
-                name: name,
-                item: item,
-                basic: basic,
-                recipeIngredient: ingredient
+                id: resolved.recipeIngredient.id,
+                name: resolved.displayName,
+                item: resolved.produceItem,
+                basic: resolved.basicIngredient,
+                recipeIngredient: resolved.recipeIngredient,
+                isReconciled: resolved.isReconciled
             )
         }
     }
@@ -1335,6 +1334,7 @@ private struct IngredientRow {
     let item: ProduceItem?
     let basic: BasicIngredient?
     let recipeIngredient: RecipeIngredient
+    let isReconciled: Bool
 }
 
 private struct RecipeHeroView: View {
