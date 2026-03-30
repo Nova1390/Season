@@ -204,10 +204,30 @@ struct CustomIngredientObservation: Sendable {
     let latestRecipeID: String?
 }
 
+struct CustomIngredientObservationInsightRecord: Sendable {
+    let normalizedText: String
+    let occurrenceCount: Int
+    let exampleCount: Int
+    let latestExample: String?
+    let languageCode: String?
+    let source: String?
+    let priorityScore: Double
+}
+
 private struct ParseRecipeCaptionFunctionRequest: Encodable {
     let caption: String?
     let url: String?
     let languageCode: String
+}
+
+private struct CloudCustomIngredientObservationInsightRow: Codable {
+    let normalized_text: String?
+    let occurrence_count: Int?
+    let example_count: Int?
+    let latest_example: String?
+    let language_code: String?
+    let source: String?
+    let priority_score: Double?
 }
 
 private struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
@@ -1033,6 +1053,45 @@ final class SupabaseService {
             } catch {
                 print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed normalized_text=\(observation.normalizedText) error=\(error)")
             }
+        }
+    }
+
+    func fetchCustomIngredientObservationInsights(limit: Int = 50) async -> [CustomIngredientObservationInsightRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=insights_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let params: [String: AnyJSON] = [
+                "limit_count": .integer(max(1, limit)),
+                "only_status_new": .bool(true),
+                "sort_mode": .string("priority")
+            ]
+            let response = try await supabaseClient
+                .rpc("custom_ingredient_observation_insights", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudCustomIngredientObservationInsightRow].self, from: response.data)
+            let records = rows.compactMap { row -> CustomIngredientObservationInsightRecord? in
+                let normalizedText = row.normalized_text?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                guard !normalizedText.isEmpty else { return nil }
+                return CustomIngredientObservationInsightRecord(
+                    normalizedText: normalizedText,
+                    occurrenceCount: max(0, row.occurrence_count ?? 0),
+                    exampleCount: max(0, row.example_count ?? 0),
+                    latestExample: row.latest_example?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    languageCode: row.language_code?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    source: row.source?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    priorityScore: row.priority_score ?? 0
+                )
+            }
+            print("[SEASON_CUSTOM_INGREDIENT] phase=insights_fetch_ok count=\(records.count)")
+            return records
+        } catch {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=insights_fetch_failed error=\(error)")
+            return []
         }
     }
 

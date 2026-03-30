@@ -938,10 +938,7 @@ struct CreateRecipeView: View {
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
             originalAuthorName: prefillDraft?.originalAuthorName
         )
-        observeUnresolvedCustomIngredients(
-            from: ingredientsForDraftSave,
-            latestRecipeID: currentDraftRecipeID
-        )
+        observeUnresolvedCustomIngredients(latestRecipeID: currentDraftRecipeID)
         lastSavedDraftFingerprint = fingerprint
         if showFeedback {
             flashDraftSavedFeedback()
@@ -1108,10 +1105,7 @@ struct CreateRecipeView: View {
             return
         }
 
-        observeUnresolvedCustomIngredients(
-            from: ingredientsForPublish,
-            latestRecipeID: recipeID
-        )
+        observeUnresolvedCustomIngredients(latestRecipeID: recipeID)
 
         currentDraftRecipeID = recipeID
         dismiss()
@@ -2009,63 +2003,99 @@ struct CreateRecipeView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedLine.isEmpty else { return nil }
         guard !isQuantoBastaIngredient(cleanedLine) else { return nil }
+        let forwardPattern = #"(?i)(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|clove|cloves|piece|pieces)\s+([^,;\n]+)"#
+        let reversedPattern = #"(?i)^([^,;\n]+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|clove|cloves|piece|pieces)\s*$"#
 
-        // Examples handled:
-        // 200g pasta, 60 g flour, 250ml milk, 2 tbsp olive oil, 1 tsp salt, 1 clove garlic
-        // Also supports inline section labels, e.g. "Ingredienti: 200g pasta"
-        let pattern = #"(?i)(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|clove|cloves|piece|pieces)\s+([^,;\n]+)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return nil
+        func mappedUnitAndQuantity(_ quantityRawValue: String, unitRawValue: String) -> (value: Double, unit: RecipeQuantityUnit)? {
+            let normalizedQuantity = quantityRawValue
+                .replacingOccurrences(of: ",", with: ".")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let baseQuantity = Double(normalizedQuantity), baseQuantity > 0 else { return nil }
+
+            let unitRaw = unitRawValue
+                .lowercased()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            switch unitRaw {
+            case "g":
+                return (baseQuantity, .g)
+            case "kg":
+                return (baseQuantity * 1000, .g)
+            case "ml":
+                return (baseQuantity, .ml)
+            case "l":
+                return (baseQuantity * 1000, .ml)
+            case "tbsp":
+                return (baseQuantity, .tbsp)
+            case "tsp":
+                return (baseQuantity, .tsp)
+            case "clove", "cloves", "piece", "pieces":
+                return (baseQuantity, .piece)
+            default:
+                return nil
+            }
         }
+
+        func normalizedRecoveredName(_ raw: String) -> String {
+            var nameRaw = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            nameRaw = nameRaw.replacingOccurrences(
+                of: #"(?i)^(di|of)\s+"#,
+                with: "",
+                options: .regularExpression
+            )
+            nameRaw = nameRaw.replacingOccurrences(
+                of: #"(?i)^(ingredienti|ingredients)\s*:\s*"#,
+                with: "",
+                options: .regularExpression
+            )
+            let normalizedName = normalizedCommonIngredientPhrase(nameRaw)
+            return normalizedName.isEmpty ? nameRaw : normalizedName
+        }
+
         let fullRange = NSRange(location: 0, length: cleanedLine.utf16.count)
-        guard let match = regex.firstMatch(in: cleanedLine, options: [], range: fullRange),
-              match.numberOfRanges == 4 else {
-            return nil
+
+        // Pass 1: existing forward format.
+        if let regex = try? NSRegularExpression(pattern: forwardPattern, options: [.caseInsensitive]),
+           let match = regex.firstMatch(in: cleanedLine, options: [], range: fullRange),
+           match.numberOfRanges == 4 {
+            let quantityRaw = nsRangeString(match.range(at: 1), in: cleanedLine)
+            let unitRaw = nsRangeString(match.range(at: 2), in: cleanedLine)
+            let recoveredName = normalizedRecoveredName(nsRangeString(match.range(at: 3), in: cleanedLine))
+            guard !recoveredName.isEmpty,
+                  let mapped = mappedUnitAndQuantity(quantityRaw, unitRawValue: unitRaw) else { return nil }
+            return ExplicitQuantityRecovery(
+                quantityValue: mapped.value,
+                quantityUnit: mapped.unit,
+                cleanedName: recoveredName,
+                sourceLine: cleanedLine
+            )
         }
 
-        let quantityRaw = nsRangeString(match.range(at: 1), in: cleanedLine)
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let unitRaw = nsRangeString(match.range(at: 2), in: cleanedLine)
-            .lowercased()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        var nameRaw = nsRangeString(match.range(at: 3), in: cleanedLine)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        nameRaw = nameRaw.replacingOccurrences(
-            of: #"(?i)^(di|of)\s+"#,
-            with: "",
-            options: .regularExpression
-        )
-        guard let baseQuantity = Double(quantityRaw), baseQuantity > 0 else { return nil }
-        guard !nameRaw.isEmpty else { return nil }
+        // Pass 2: reversed format "<ingredient> <number> <unit>".
+        if let regex = try? NSRegularExpression(pattern: reversedPattern, options: [.caseInsensitive]),
+           let match = regex.firstMatch(in: cleanedLine, options: [], range: fullRange),
+           match.numberOfRanges == 4 {
+            let recoveredName = normalizedRecoveredName(nsRangeString(match.range(at: 1), in: cleanedLine))
+            let quantityRaw = nsRangeString(match.range(at: 2), in: cleanedLine)
+            let unitRaw = nsRangeString(match.range(at: 3), in: cleanedLine)
+            guard !recoveredName.isEmpty,
+                  let mapped = mappedUnitAndQuantity(quantityRaw, unitRawValue: unitRaw) else { return nil }
 
-        let mapped: (value: Double, unit: RecipeQuantityUnit)
-        switch unitRaw {
-        case "g":
-            mapped = (baseQuantity, .g)
-        case "kg":
-            mapped = (baseQuantity * 1000, .g)
-        case "ml":
-            mapped = (baseQuantity, .ml)
-        case "l":
-            mapped = (baseQuantity * 1000, .ml)
-        case "tbsp":
-            mapped = (baseQuantity, .tbsp)
-        case "tsp":
-            mapped = (baseQuantity, .tsp)
-        case "clove", "cloves", "piece", "pieces":
-            mapped = (baseQuantity, .piece)
-        default:
-            return nil
+            print(
+                "[SEASON_IMPORT] phase=explicit_quantity_recovered_reversed_format " +
+                "line=\(cleanedLine) name=\(recoveredName) " +
+                "quantity=\(quantityValueString(mapped.value)) unit=\(mapped.unit.rawValue)"
+            )
+
+            return ExplicitQuantityRecovery(
+                quantityValue: mapped.value,
+                quantityUnit: mapped.unit,
+                cleanedName: recoveredName,
+                sourceLine: cleanedLine
+            )
         }
 
-        let normalizedName = normalizedCommonIngredientPhrase(nameRaw)
-        return ExplicitQuantityRecovery(
-            quantityValue: mapped.value,
-            quantityUnit: mapped.unit,
-            cleanedName: normalizedName.isEmpty ? nameRaw : normalizedName,
-            sourceLine: cleanedLine
-        )
+        return nil
     }
 
     private func explicitQuantityRecoveryCandidate(
@@ -2079,6 +2109,7 @@ struct CreateRecipeView: View {
             "ingredient=\(ingredientName) normalized=\(normalizedIngredient) raw_source=\(rawSourceLine)"
         )
 
+        // Prioritize exact line match (raw source line) before caption-wide scan.
         if let direct = parsedExplicitQuantityRecovery(from: rawSourceLine) {
             print(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_found " +
@@ -2387,10 +2418,9 @@ struct CreateRecipeView: View {
         return isNonCountableIngredientName(name)
     }
 
-    private func observeUnresolvedCustomIngredients(
-        from ingredients: [RecipeIngredient],
-        latestRecipeID: String?
-    ) {
+    private func observeUnresolvedCustomIngredients(latestRecipeID: String?) {
+        let ingredients = recipeIngredientsForPublish
+        print("[SEASON_OBSERVATION] phase=observation_pipeline_stage=final_draft ingredient_count=\(ingredients.count)")
         let observations = unresolvedCustomIngredientObservations(
             from: ingredients,
             latestRecipeID: latestRecipeID
@@ -2410,52 +2440,41 @@ struct CreateRecipeView: View {
         var observations: [CustomIngredientObservation] = []
 
         for ingredient in ingredients {
-            guard ingredient.produceID == nil, ingredient.basicIngredientID == nil else { continue }
-            let normalized = normalizedCustomIngredientObservationText(ingredient.name)
-            guard !normalized.isEmpty else { continue }
-            guard seen.insert(normalized).inserted else { continue }
+            let finalName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ingredientType: String
+            if ingredient.produceID != nil {
+                ingredientType = "produce"
+            } else if ingredient.basicIngredientID != nil {
+                ingredientType = "basic"
+            } else {
+                ingredientType = "custom"
+            }
 
-            let rawExample = ingredient.rawIngredientLine?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-                ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
-                : ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !rawExample.isEmpty else { continue }
+            print("[SEASON_OBSERVATION] phase=observation_evaluated_final ingredient=\(finalName) type=\(ingredientType)")
 
-            if let resolutionReason = observationSkipReasonForResolvedIngredient(rawExample) {
-                print("[SEASON_OBSERVATION] phase=observation_skipped_resolved ingredient=\(rawExample) reason=\(resolutionReason)")
+            if ingredientType != "custom" {
+                print("[SEASON_OBSERVATION] phase=observation_skipped_final_resolved ingredient=\(finalName) type=\(ingredientType)")
                 continue
             }
+
+            let normalized = normalizedCustomIngredientObservationText(finalName)
+            guard !normalized.isEmpty else { continue }
+            guard seen.insert(normalized).inserted else { continue }
 
             let source = customIngredientObservationSource(for: ingredient)
             observations.append(
                 CustomIngredientObservation(
                     normalizedText: normalized,
-                    rawExample: rawExample,
+                    rawExample: finalName,
                     languageCode: localizer.languageCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : localizer.languageCode,
                     source: source,
                     latestRecipeID: latestRecipeID
                 )
             )
-            print("[SEASON_OBSERVATION] phase=observation_logged_unresolved ingredient=\(rawExample)")
+            print("[SEASON_OBSERVATION] phase=observation_logged_final_unresolved ingredient=\(finalName)")
         }
 
         return observations
-    }
-
-    private func observationSkipReasonForResolvedIngredient(_ rawIngredientText: String) -> String? {
-        let queries = importedIngredientMatchQueries(from: rawIngredientText)
-        guard !queries.isEmpty else { return nil }
-
-        for query in queries {
-            guard let match = viewModel.resolveIngredientForImport(query: query) else { continue }
-            switch match {
-            case .produce(let item):
-                return "deterministic_produce_match:\(item.id)"
-            case .basic(let item):
-                return "deterministic_basic_match:\(item.id)"
-            }
-        }
-
-        return nil
     }
 
     private func customIngredientObservationSource(for ingredient: RecipeIngredient) -> String {

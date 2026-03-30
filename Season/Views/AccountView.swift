@@ -353,6 +353,29 @@ struct AccountView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
+                        NavigationLink {
+                            IngredientResolutionCandidatesView(viewModel: viewModel)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "list.bullet.clipboard")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Resolution candidates")
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color(.secondarySystemGroupedBackground))
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         TextField(viewModel.localizer.text(.supabaseEmailField), text: $supabaseTestEmail)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
