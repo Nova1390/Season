@@ -2420,6 +2420,11 @@ struct CreateRecipeView: View {
                 : ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !rawExample.isEmpty else { continue }
 
+            if let resolutionReason = observationSkipReasonForResolvedIngredient(rawExample) {
+                print("[SEASON_OBSERVATION] phase=observation_skipped_resolved ingredient=\(rawExample) reason=\(resolutionReason)")
+                continue
+            }
+
             let source = customIngredientObservationSource(for: ingredient)
             observations.append(
                 CustomIngredientObservation(
@@ -2430,9 +2435,27 @@ struct CreateRecipeView: View {
                     latestRecipeID: latestRecipeID
                 )
             )
+            print("[SEASON_OBSERVATION] phase=observation_logged_unresolved ingredient=\(rawExample)")
         }
 
         return observations
+    }
+
+    private func observationSkipReasonForResolvedIngredient(_ rawIngredientText: String) -> String? {
+        let queries = importedIngredientMatchQueries(from: rawIngredientText)
+        guard !queries.isEmpty else { return nil }
+
+        for query in queries {
+            guard let match = viewModel.resolveIngredientForImport(query: query) else { continue }
+            switch match {
+            case .produce(let item):
+                return "deterministic_produce_match:\(item.id)"
+            case .basic(let item):
+                return "deterministic_basic_match:\(item.id)"
+            }
+        }
+
+        return nil
     }
 
     private func customIngredientObservationSource(for ingredient: RecipeIngredient) -> String {
