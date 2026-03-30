@@ -37,6 +37,11 @@ enum SupabaseServiceError: LocalizedError {
     }
 }
 
+enum ParseRecipeCaptionInvokeError: Error {
+    case tooFrequent(retryAfterSeconds: Int?)
+    case dailyLimitReached
+}
+
 struct SupabaseProfileProbe: Decodable {
     let id: UUID
 }
@@ -133,6 +138,21 @@ private struct ParseRecipeCaptionFunctionRequest: Encodable {
     let caption: String?
     let url: String?
     let languageCode: String
+}
+
+private struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
+    struct ErrorBody: Decodable {
+        let code: String
+        let message: String
+    }
+
+    struct MetaBody: Decodable {
+        let retryAfterSeconds: Int?
+    }
+
+    let ok: Bool
+    let error: ErrorBody?
+    let meta: MetaBody?
 }
 
 private struct CloudFollowRow: Codable {
@@ -617,9 +637,25 @@ final class SupabaseService {
                 throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
             }
 
-            guard supabaseClient.auth.currentUser != nil else {
+            guard let authenticatedUser = supabaseClient.auth.currentUser else {
+                print("[SEASON_IMPORT_AUTH] phase=missing_current_user has_session=false invoke_with_authenticated_context=false")
                 throw SupabaseServiceError.unauthenticated
             }
+
+            let accessToken: String
+            do {
+                accessToken = try await supabaseClient.auth.session.accessToken
+            } catch {
+                print("[SEASON_IMPORT_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=false invoke_with_authenticated_context=false error=\(error)")
+                throw SupabaseServiceError.unauthenticated
+            }
+            guard let anonKey = self.configuration?.anonKey,
+                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
+            }
+
+            supabaseClient.functions.setAuth(token: accessToken)
+            print("[SEASON_IMPORT_AUTH] phase=session_ready user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=true invoke_with_authenticated_context=true")
 
             let normalizedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedURL = url?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -629,13 +665,39 @@ final class SupabaseService {
                 languageCode: languageCode
             )
 
-            return try await supabaseClient.functions.invoke(
-                "parse-recipe-caption",
-                options: FunctionInvokeOptions(
-                    method: .post,
-                    body: payload
+            print("[SEASON_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased()) authenticated_context=true")
+            do {
+                return try await supabaseClient.functions.invoke(
+                    "parse-recipe-caption",
+                    options: FunctionInvokeOptions(
+                        method: .post,
+                        headers: [
+                            "Authorization": "Bearer \(accessToken)",
+                            "apikey": anonKey
+                        ],
+                        body: payload
+                    )
                 )
-            )
+            } catch let functionsError as FunctionsError {
+                switch functionsError {
+                case .httpError(let code, let data):
+                    if code == 429,
+                       let parsed = try? JSONDecoder().decode(ParseRecipeCaptionFunctionErrorEnvelope.self, from: data),
+                       let errorCode = parsed.error?.code {
+                        if errorCode == "TOO_FREQUENT_REQUESTS" {
+                            throw ParseRecipeCaptionInvokeError.tooFrequent(
+                                retryAfterSeconds: parsed.meta?.retryAfterSeconds
+                            )
+                        }
+                        if errorCode == "RATE_LIMIT_EXCEEDED" {
+                            throw ParseRecipeCaptionInvokeError.dailyLimitReached
+                        }
+                    }
+                    throw functionsError
+                case .relayError:
+                    throw functionsError
+                }
+            }
         }
     }
 

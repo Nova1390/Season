@@ -172,6 +172,8 @@ enum AppTextKey: String {
     case importQualityHigh
     case importQualityMedium
     case importQualityLow
+    case importRateLimitCooldown
+    case importRateLimitDaily
     case recipePublicSocialLinksHint
     case importOwnContentOnlyHint
     case socialImportSelectEligiblePostHint
@@ -710,6 +712,8 @@ struct AppLocalizer {
             .importQualityHigh: "Recipe imported. Strong result — review before publishing.",
             .importQualityMedium: "Recipe imported. Good start — check ingredients and steps.",
             .importQualityLow: "Recipe imported as a starting draft — review carefully.",
+            .importRateLimitCooldown: "You're doing that too quickly. Try again in a moment.",
+            .importRateLimitDaily: "Daily import limit reached. Try again tomorrow.",
             .recipePublicSocialLinksHint: "Optional public links shown on the recipe page. These are not used for import.",
             .importOwnContentOnlyHint: "Import draft works only with your own eligible posts from connected Instagram/TikTok accounts.",
             .socialImportSelectEligiblePostHint: "Select one eligible post URL from your connected account to enable import.",
@@ -1050,6 +1054,8 @@ struct AppLocalizer {
             .importQualityHigh: "Ricetta importata. Risultato solido — controlla prima di pubblicare.",
             .importQualityMedium: "Ricetta importata. Buona base — controlla ingredienti e passaggi.",
             .importQualityLow: "Ricetta importata come bozza iniziale — rivedi con attenzione.",
+            .importRateLimitCooldown: "Lo stai facendo troppo rapidamente. Riprova tra un attimo.",
+            .importRateLimitDaily: "Limite giornaliero import raggiunto. Riprova domani.",
             .recipePublicSocialLinksHint: "Link pubblici opzionali mostrati nella ricetta. Non vengono usati per l'importazione.",
             .importOwnContentOnlyHint: "Importa bozza funziona solo con post idonei del tuo account Instagram/TikTok collegato.",
             .socialImportSelectEligiblePostHint: "Seleziona un URL post idoneo del tuo account collegato per abilitare l'importazione.",

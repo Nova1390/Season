@@ -86,15 +86,17 @@ Each ingredient object MUST have EXACTLY these keys:
 
 Rules:
 1) Preserve natural ingredient lines when uncertain.
-2) If quantity is unclear, use null.
-3) If unit is unclear, use null.
-4) Prefer null over guessing.
-5) Do not invent ingredients not present in the caption.
-6) Do not invent steps not present in the caption.
-7) Do not infer prep/cook times unless explicitly stated.
-8) Do not infer servings unless explicitly stated.
-9) Keep ingredient names human-readable.
-10) confidence should reflect extraction quality (high/medium/low), not certainty about cooking quality.
+2) If quantity is explicitly written in the caption (e.g. 200g, 60 g, 250ml, 1 piece), you MUST extract it as a numeric quantity + unit.
+3) If quantity is unclear, use null.
+4) If unit is unclear, use null.
+5) Prefer null over guessing.
+6) Do not invent ingredients not present in the caption.
+7) Do not invent steps not present in the caption.
+8) Do not infer prep/cook times unless explicitly stated.
+9) Do not infer servings unless explicitly stated.
+10) Keep ingredient names human-readable.
+11) confidence should reflect extraction quality (high/medium/low), not certainty about cooking quality.
+12) "prefer null over guessing" applies only when quantity is NOT explicitly present in the caption.
 
 Example 1 (structured, high quality)
 INPUT:
