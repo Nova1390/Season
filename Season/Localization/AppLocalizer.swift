@@ -231,6 +231,9 @@ enum AppTextKey: String {
     case recipeNutritionPerServingBasisFormat
     case recipeNutritionEstimatedNote
     case createRecipeSubtitle
+    case publishFailedTitle
+    case publishFailedMessage
+    case publishAuthRequiredMessage
     case done
     case homeHeroSubtitle
     case homeHeroQuestion
@@ -771,6 +774,9 @@ struct AppLocalizer {
             .recipeNutritionPerServingBasisFormat: "Based on %d servings",
             .recipeNutritionEstimatedNote: "Estimated values per serving using ingredient nutrition per 100 g.",
             .createRecipeSubtitle: "Recipe creation editor is coming soon.",
+            .publishFailedTitle: "Publish failed",
+            .publishFailedMessage: "We couldn't publish your recipe right now. Please try again.",
+            .publishAuthRequiredMessage: "Sign in to publish recipes.",
             .done: "Done",
             .homeHeroSubtitle: "Seasonal recipes and ingredients picked for you",
             .homeHeroQuestion: "Cook something fresh today",
@@ -1113,6 +1119,9 @@ struct AppLocalizer {
             .recipeNutritionPerServingBasisFormat: "Basato su %d porzioni",
             .recipeNutritionEstimatedNote: "Valori stimati per porzione, calcolati da nutrienti per 100 g.",
             .createRecipeSubtitle: "L'editor ricette completo arrivera presto.",
+            .publishFailedTitle: "Pubblicazione non riuscita",
+            .publishFailedMessage: "Non siamo riusciti a pubblicare la ricetta adesso. Riprova.",
+            .publishAuthRequiredMessage: "Accedi per pubblicare ricette.",
             .done: "Fine",
             .homeHeroSubtitle: "Ricette e ingredienti stagionali scelti per te",
             .homeHeroQuestion: "Cucina qualcosa di fresco oggi",

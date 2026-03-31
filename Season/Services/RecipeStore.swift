@@ -299,6 +299,13 @@ enum RecipeStore {
         cacheLock.unlock()
     }
 
+    static func clearUserSessionData() {
+        cacheLock.lock()
+        cachedRecipes = nil
+        UserDefaults.standard.removeObject(forKey: userRecipesStorageKey)
+        cacheLock.unlock()
+    }
+
     private static func loadPersistedUserRecipes() -> [Recipe] {
         guard let data = UserDefaults.standard.data(forKey: userRecipesStorageKey) else {
             return []

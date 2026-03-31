@@ -40,14 +40,6 @@ enum IngredientAliasMatch {
     case basic(BasicIngredient)
 }
 
-struct IngredientResolutionCandidate {
-    let normalizedText: String
-    let occurrenceCount: Int
-    let latestExample: String
-    let suggestedMatch: IngredientAliasMatch?
-    let confidence: Double
-}
-
 struct ResolvedIngredient {
     let recipeIngredient: RecipeIngredient
     let displayName: String
@@ -88,7 +80,6 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var archivedRecipeIDs: Set<String> = []
     @Published private(set) var deletedRecipeIDs: Set<String> = []
     @Published private(set) var recipeViewCounts: [String: Int] = [:]
-    @Published private(set) var ingredientResolutionCandidates: [IngredientResolutionCandidate] = []
     @Published private(set) var homeFeedRefreshID: Int = 0
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
@@ -183,6 +174,31 @@ final class ProduceViewModel: ObservableObject {
         return resolved
     }
 
+    func resetForLogout() {
+        RecipeStore.clearUserSessionData()
+
+        savedRecipeIDs = []
+        crispiedRecipeIDs = []
+        archivedRecipeIDs = []
+        deletedRecipeIDs = []
+        recipeViewCounts = [:]
+        recipes = []
+        userProfiles = []
+
+        UserDefaults.standard.removeObject(forKey: savedRecipeIDsStorageKey)
+        UserDefaults.standard.removeObject(forKey: crispiedRecipeIDsStorageKey)
+        UserDefaults.standard.removeObject(forKey: archivedRecipeIDsStorageKey)
+        UserDefaults.standard.removeObject(forKey: deletedRecipeIDsStorageKey)
+        UserDefaults.standard.removeObject(forKey: recipeViewCountsStorageKey)
+
+        remoteIngredientAliasLookup = [:]
+        unifiedIngredientByID = [:]
+        unifiedAliasLookup = [:]
+        unifiedNameLookup = [:]
+        invalidateRecipeCaches()
+        loadBootstrapContent()
+    }
+
     private func loadBootstrapContent() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let startedAt = CFAbsoluteTimeGetCurrent()
@@ -198,7 +214,6 @@ final class ProduceViewModel: ObservableObject {
                 self.fetchRemoteRecipesAndMerge()
                 self.fetchRemoteIngredientAliases()
                 self.fetchUnifiedIngredientParityData()
-                self.fetchIngredientResolutionCandidates()
             }
         }
     }
@@ -225,92 +240,6 @@ final class ProduceViewModel: ObservableObject {
                 self.applyUnifiedIngredientParityData(catalog: catalog, aliases: aliases)
             }
         }
-    }
-
-    private func fetchIngredientResolutionCandidates(limit: Int = 50) {
-        Task { [weak self] in
-            guard let self else { return }
-            let insights = await supabaseService.fetchCustomIngredientObservationInsights(limit: limit)
-            let candidates = self.buildIngredientResolutionCandidates(from: insights)
-            await MainActor.run {
-                self.ingredientResolutionCandidates = candidates
-            }
-        }
-    }
-
-    private func buildIngredientResolutionCandidates(
-        from insights: [CustomIngredientObservationInsightRecord]
-    ) -> [IngredientResolutionCandidate] {
-        var built: [(candidate: IngredientResolutionCandidate, priorityScore: Double)] = []
-
-        for insight in insights {
-            let normalizedText = insight.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !normalizedText.isEmpty else { continue }
-
-            let latestExample = (insight.latestExample?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
-                ? insight.latestExample!.trimmingCharacters(in: .whitespacesAndNewlines)
-                : normalizedText
-
-            let directMatch = resolveIngredientForImport(query: normalizedText)
-            let phraseQueries = candidatePhraseQueries(for: latestExample)
-            let phraseMatch = directMatch == nil
-                ? phraseQueries.compactMap { resolveIngredientForImport(query: $0) }.first
-                : nil
-
-            let suggestedMatch = directMatch ?? phraseMatch
-            let confidence: Double
-            if directMatch != nil {
-                confidence = 0.95
-            } else if phraseMatch != nil {
-                confidence = 0.65
-            } else {
-                confidence = 0.25
-            }
-
-            let candidate = IngredientResolutionCandidate(
-                normalizedText: normalizedText,
-                occurrenceCount: insight.occurrenceCount,
-                latestExample: latestExample,
-                suggestedMatch: suggestedMatch,
-                confidence: confidence
-            )
-
-            let matchLabel = parityMatchKey(suggestedMatch)
-            print(
-                "[SEASON_CANDIDATE_QUEUE] phase=candidate_generated text=\(normalizedText) match=\(matchLabel) confidence=\(confidence)"
-            )
-            built.append((candidate: candidate, priorityScore: insight.priorityScore))
-        }
-
-        return built
-            .sorted { lhs, rhs in
-                if lhs.priorityScore != rhs.priorityScore {
-                    return lhs.priorityScore > rhs.priorityScore
-                }
-                if lhs.candidate.occurrenceCount != rhs.candidate.occurrenceCount {
-                    return lhs.candidate.occurrenceCount > rhs.candidate.occurrenceCount
-                }
-                return lhs.candidate.normalizedText.localizedCaseInsensitiveCompare(rhs.candidate.normalizedText) == .orderedAscending
-            }
-            .map(\.candidate)
-    }
-
-    private func candidatePhraseQueries(for raw: String) -> [String] {
-        let normalized = normalizedSearchText(raw)
-        guard !normalized.isEmpty else { return [] }
-
-        let stripped = normalized
-            .replacingOccurrences(of: "fresh ", with: "")
-            .replacingOccurrences(of: "extra virgin ", with: "")
-            .replacingOccurrences(of: "evo ", with: "")
-            .replacingOccurrences(of: "clove ", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        var queries: [String] = [normalized]
-        if !stripped.isEmpty, stripped != normalized {
-            queries.append(stripped)
-        }
-        var seen = Set<String>()
-        return queries.filter { seen.insert($0).inserted }
     }
 
     private func aliasLookupMap(from aliases: [IngredientAliasRecord]) -> [String: IngredientAliasRecord] {
@@ -735,10 +664,6 @@ final class ProduceViewModel: ObservableObject {
         }
 
         return .ingredients
-    }
-
-    func topIngredientResolutionCandidates(limit: Int = 20) -> [IngredientResolutionCandidate] {
-        Array(ingredientResolutionCandidates.prefix(max(1, limit)))
     }
 
     func monthNames(for months: [Int]) -> String {
@@ -1637,16 +1562,6 @@ final class ProduceViewModel: ObservableObject {
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
         print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
-
-        Task {
-            do {
-                try await SupabaseService.shared.createRecipe(recipe)
-                print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(recipe.id)")
-            } catch {
-                print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(recipe.id) error=\(error)")
-                print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
-            }
-        }
 
         return recipe
     }

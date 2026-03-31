@@ -388,6 +388,13 @@ final class ShoppingListViewModel: ObservableObject {
         return basicCatalogByID[basicID]
     }
 
+    func resetForLogout() {
+        entries = []
+        storage.removeObject(forKey: storageKey)
+        storage.removeObject(forKey: "shoppingListItemIDs")
+        outboxStore.clearAll()
+    }
+
     private func save() {
         let encoded = try? JSONEncoder().encode(entries)
         storage.set(encoded, forKey: storageKey)

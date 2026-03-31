@@ -56,6 +56,12 @@ final class OutboxStore {
         }
     }
 
+    func clearAll() {
+        queue.sync {
+            storage.removeObject(forKey: storageKey)
+        }
+    }
+
     private func loadAll() -> [OutboxMutationRecord] {
         guard let data = storage.data(forKey: storageKey) else {
             return []

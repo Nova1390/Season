@@ -19,6 +19,13 @@ struct AccountView: View {
     @State private var showNutritionPreferences = false
     @State private var linkingInProgressProvider: SocialAuthProvider?
     @State private var authErrorMessage = ""
+    @State private var authEmail = ""
+    @State private var authPassword = ""
+    @State private var authUsernameInput = ""
+    @State private var authModeIsSignUp = false
+    @State private var authActionRunning = false
+    @State private var authStatusMessage = ""
+    @State private var authStatusIsError = false
     @State private var socialLinkStatusMessage = ""
     @State private var socialLinkStatusIsError = false
     @State private var selectedDraftEditorRoute: DraftEditorRoute?
@@ -56,7 +63,9 @@ struct AccountView: View {
     @State private var showingDraftDeleteConfirmation = false
     @State private var selectedAvatarPhotoItem: PhotosPickerItem?
     @State private var avatarUploadRunning = false
+    @State private var showingLogoutConfirmation = false
     @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
     private let backfillService = BackfillService()
@@ -102,6 +111,14 @@ struct AccountView: View {
             }
         } message: {
             Text("This action cannot be undone.")
+        }
+        .alert("Log out?", isPresented: $showingLogoutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Log out", role: .destructive) {
+                logout()
+            }
+        } message: {
+            Text("You will need to sign in again to access Season.")
         }
         .onAppear {
             migrateLegacyAccessTokensIfNeeded()
@@ -307,6 +324,129 @@ struct AccountView: View {
     private var preferencesSection: some View {
         Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                Label("Authentication", systemImage: "person.badge.key")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                if let authenticatedUserID = currentAuthenticatedUserID {
+                    Text("Signed in • \(authenticatedUserID)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    let visibleUsername = cloudProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines)
+                        ?? accountUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !visibleUsername.isEmpty {
+                        Text("Username: @\(visibleUsername)")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+
+                    if let email = currentAuthenticatedEmail, !email.isEmpty {
+                        Text("Email: \(email)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    if let requiredUsername = requiredUsernamePrompt {
+                        Text(requiredUsername)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if shouldRequireUsernameOnboarding {
+                        TextField("Choose username", text: $authUsernameInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+
+                        Button {
+                            saveUsername()
+                        } label: {
+                            Text("Save username")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(authActionRunning || authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+
+                    Button(role: .destructive) {
+                        showingLogoutConfirmation = true
+                    } label: {
+                        Text("Log out")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(authActionRunning)
+                } else {
+                    Button {
+                        link(provider: .apple)
+                    } label: {
+                        Label("Sign in with Apple", systemImage: "applelogo")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(linkingInProgressProvider != nil)
+
+                    if linkingInProgressProvider == .apple {
+                        Text("Signing in…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    TextField("Email", text: $authEmail)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textFieldStyle(.roundedBorder)
+
+                    SecureField("Password", text: $authPassword)
+                        .textFieldStyle(.roundedBorder)
+
+                    if authModeIsSignUp {
+                        TextField("Username", text: $authUsernameInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    Button {
+                        submitEmailAuth()
+                    } label: {
+                        Text(authModeIsSignUp ? "Sign up" : "Sign in")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(authActionRunning || authEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || authPassword.isEmpty || (authModeIsSignUp && authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+
+                    Button {
+                        authModeIsSignUp.toggle()
+                    } label: {
+                        Text(authModeIsSignUp ? "Have an account? Sign in" : "Need an account? Sign up")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(authActionRunning)
+                }
+
+                if authActionRunning {
+                    Text("Processing authentication…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !authStatusMessage.isEmpty {
+                    Text(authStatusMessage)
+                        .font(.caption)
+                        .foregroundStyle(authStatusIsError ? .red : .secondary)
+                }
+            }
+            .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.accountSocialProfilesTitle, systemImage: "link")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -352,29 +492,6 @@ struct AccountView: View {
                         Text(viewModel.localizer.text(.supabaseTestDescription))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-
-                        NavigationLink {
-                            IngredientResolutionCandidatesView(viewModel: viewModel)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "list.bullet.clipboard")
-                                    .font(.subheadline.weight(.semibold))
-                                Text("Resolution candidates")
-                                    .font(.subheadline.weight(.semibold))
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color(.secondarySystemGroupedBackground))
-                            )
-                        }
-                        .buttonStyle(.plain)
 
                         TextField(viewModel.localizer.text(.supabaseEmailField), text: $supabaseTestEmail)
                             .keyboardType(.emailAddress)
@@ -968,6 +1085,42 @@ struct AccountView: View {
         SocialAccountLinkStore.decode(linkedSocialAccountsRaw)
     }
 
+    private var currentAuthenticatedUserID: String? {
+        let id = supabaseService.currentAuthenticatedUserID()?.uuidString.lowercased() ?? ""
+        return id.isEmpty ? nil : id
+    }
+
+    private var currentAuthenticatedEmail: String? {
+        supabaseService.currentAuthenticatedEmail()
+    }
+
+    private var shouldRequireUsernameOnboarding: Bool {
+        guard currentAuthenticatedUserID != nil else { return false }
+        let username = cloudProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return username.isEmpty
+    }
+
+    private var requiredUsernamePrompt: String? {
+        guard shouldRequireUsernameOnboarding else { return nil }
+        return "Choose a username to complete account setup."
+    }
+
+    private func validateUsernameForAuth(_ raw: String) -> String? {
+        let username = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if username.count < 3 {
+            return "Username must be at least 3 characters."
+        }
+        if username.count > 24 {
+            return "Username must be at most 24 characters."
+        }
+        let pattern = "^[a-zA-Z0-9_]+$"
+        let valid = username.range(of: pattern, options: .regularExpression) != nil
+        if !valid {
+            return "Use only letters, numbers, and underscore."
+        }
+        return nil
+    }
+
     private func linkedAccount(for provider: SocialAuthProvider) -> LinkedSocialAccount? {
         linkedAccounts.first(where: { $0.provider == provider })
     }
@@ -1190,6 +1343,158 @@ struct AccountView: View {
         }
     }
 
+    private func submitEmailAuth() {
+        guard !authActionRunning else { return }
+
+        let email = authEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let password = authPassword
+        let username = authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !email.isEmpty, !password.isEmpty else { return }
+        if authModeIsSignUp {
+            if let validationError = validateUsernameForAuth(username) {
+                authStatusMessage = validationError
+                authStatusIsError = true
+                return
+            }
+        }
+
+        authActionRunning = true
+        authStatusMessage = ""
+        authStatusIsError = false
+
+        Task {
+            defer { authActionRunning = false }
+            do {
+                let userID: UUID
+                if authModeIsSignUp {
+                    userID = try await supabaseService.signUpWithEmail(email: email, password: password)
+                    print("[SEASON_AUTH] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
+                    let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: userID)
+                    guard available else {
+                        throw NSError(domain: "SeasonAuth", code: 409, userInfo: [NSLocalizedDescriptionKey: "That username is already taken."])
+                    }
+                    try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
+                    print("[SEASON_AUTH] phase=username_saved_success user_id=\(userID.uuidString.lowercased()) username=\(username)")
+                } else {
+                    userID = try await supabaseService.signInWithEmail(email: email, password: password)
+                    print("[SEASON_AUTH] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
+                }
+
+                let refreshedProfile = try await supabaseService.fetchMyProfile()
+                await MainActor.run {
+                    cloudProfile = refreshedProfile
+                    applyCloudProfileSocialLinksToInputs(refreshedProfile)
+                    let hasUsername = !(refreshedProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                    print("[SEASON_AUTH] phase=username_check user_id=\(userID.uuidString.lowercased()) exists=\(hasUsername)")
+                    authStatusMessage = authModeIsSignUp ? "Account created." : "Signed in."
+                    authStatusIsError = false
+                    if !hasUsername {
+                        authStatusMessage = "Signed in. Choose a username to continue."
+                    }
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                if authModeIsSignUp {
+                    print("[SEASON_AUTH] phase=email_sign_up_failed error=\(details)")
+                } else {
+                    print("[SEASON_AUTH] phase=email_sign_in_failed error=\(details)")
+                }
+                await MainActor.run {
+                    authStatusMessage = details
+                    authStatusIsError = true
+                }
+            }
+        }
+    }
+
+    private func saveUsername() {
+        guard !authActionRunning else { return }
+        let username = authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !username.isEmpty else { return }
+        if let validationError = validateUsernameForAuth(username) {
+            authStatusMessage = validationError
+            authStatusIsError = true
+            return
+        }
+
+        authActionRunning = true
+        authStatusMessage = ""
+        authStatusIsError = false
+
+        Task {
+            defer { authActionRunning = false }
+            do {
+                let currentUserID = supabaseService.currentAuthenticatedUserID()
+                let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: currentUserID)
+                guard available else {
+                    throw NSError(domain: "SeasonAuth", code: 409, userInfo: [NSLocalizedDescriptionKey: "That username is already taken."])
+                }
+                try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
+                print("[SEASON_AUTH] phase=username_saved_success user_id=\(currentAuthenticatedUserID ?? "nil") username=\(username)")
+                let refreshedProfile = try await supabaseService.fetchMyProfile()
+                await MainActor.run {
+                    cloudProfile = refreshedProfile
+                    applyCloudProfileSocialLinksToInputs(refreshedProfile)
+                    authStatusMessage = "Username saved."
+                    authStatusIsError = false
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                print("[SEASON_AUTH] phase=username_saved_failed error=\(details)")
+                await MainActor.run {
+                    authStatusMessage = details
+                    authStatusIsError = true
+                }
+            }
+        }
+    }
+
+    private func logout() {
+        guard !authActionRunning else { return }
+        print("[SEASON_AUTH] phase=logout_started")
+        authActionRunning = true
+        authStatusMessage = ""
+        authStatusIsError = false
+
+        Task {
+            defer { authActionRunning = false }
+            do {
+                try await supabaseService.signOut()
+                print("[SEASON_AUTH] phase=supabase_logout_succeeded")
+                await MainActor.run {
+                    viewModel.resetForLogout()
+                    shoppingListViewModel.resetForLogout()
+                    fridgeViewModel.resetForLogout()
+                    accountUsername = "You"
+                    followedAuthorsRaw = ""
+                    linkedSocialAccountsRaw = ""
+                    accountProfileImageURL = ""
+                    authEmail = ""
+                    authPassword = ""
+                    authUsernameInput = ""
+                    authModeIsSignUp = false
+                    cloudProfile = nil
+                    cloudLinkedAccounts = []
+                    hasAttemptedCloudProfileLoad = false
+                    hasAttemptedCloudLinkedAccountsLoad = false
+                    socialLinkStatusMessage = ""
+                    socialLinkStatusIsError = false
+                    print("[SEASON_AUTH] phase=local_state_cleared")
+                    authStatusMessage = "Logged out."
+                    authStatusIsError = false
+                    print("[SEASON_AUTH] phase=ui_reset_completed")
+                }
+            } catch {
+                let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                print("[SEASON_AUTH] phase=logout_failed error=\(details)")
+                await MainActor.run {
+                    authStatusMessage = details
+                    authStatusIsError = true
+                }
+            }
+        }
+    }
+
     private func link(provider: SocialAuthProvider) {
         guard linkingInProgressProvider == nil else { return }
         authErrorMessage = ""
@@ -1206,6 +1511,8 @@ struct AccountView: View {
                 authLogger.debug("[\(attemptID, privacy: .public)] Calling auth service for provider=\(provider.rawValue, privacy: .public)")
                 let result = try await socialAuthService.authenticate(with: provider)
                 authLogger.debug("[\(attemptID, privacy: .public)] Auth success provider=\(result.provider.rawValue, privacy: .public) userID=\(result.providerUserID, privacy: .public)")
+                let currentAuthUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased() ?? "nil"
+                print("[SEASON_AUTH] phase=auth_flow_completed provider=\(provider.rawValue) has_session=\(currentAuthUserID != "nil") current_user_id=\(currentAuthUserID)")
                 let account = LinkedSocialAccount(
                     provider: provider,
                     providerUserID: result.providerUserID,
@@ -1220,6 +1527,19 @@ struct AccountView: View {
                     linkedAt: Date()
                 )
                 upsertLinkedAccount(account)
+                let refreshedProfile = try await supabaseService.fetchMyProfile()
+                cloudProfile = refreshedProfile
+                applyCloudProfileSocialLinksToInputs(refreshedProfile)
+                let hasUsername = !(refreshedProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                print("[SEASON_AUTH] phase=username_check provider=\(provider.rawValue) exists=\(hasUsername)")
+                if !hasUsername {
+                    let fallback = accountUsername.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if !fallback.isEmpty {
+                        authUsernameInput = fallback
+                    }
+                    authStatusMessage = "Choose a username to complete account setup."
+                    authStatusIsError = false
+                }
                 print("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
                 socialLinkStatusMessage = "\(providerTitle(provider)) connected."
                 socialLinkStatusIsError = false

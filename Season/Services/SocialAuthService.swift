@@ -389,6 +389,21 @@ private final class AppleSignInCoordinator: NSObject,
 private struct AppleSignInAuthenticator {
     @MainActor
     func authenticate() async throws -> SocialAuthResult {
-        try await AppleSignInCoordinator().signIn()
+        let result = try await AppleSignInCoordinator().signIn()
+        let idToken = result.accessToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !idToken.isEmpty else {
+            print("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_identity_token")
+            throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In did not return an identity token.")
+        }
+
+        do {
+            let userID = try await SupabaseService.shared.signInWithAppleIDToken(idToken)
+            print("[SEASON_AUTH] phase=apple_session_established has_session=true user_id=\(userID.uuidString.lowercased())")
+            return result
+        } catch {
+            let currentUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased() ?? "nil"
+            print("[SEASON_AUTH] phase=apple_session_established has_session=false user_id=\(currentUserID) error=\(error)")
+            throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In succeeded, but Supabase session could not be established.")
+        }
     }
 }

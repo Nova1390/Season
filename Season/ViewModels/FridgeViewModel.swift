@@ -147,6 +147,15 @@ final class FridgeViewModel: ObservableObject {
         allIngredientIDSet
     }
 
+    func resetForLogout() {
+        produceIDs = []
+        basicIngredientIDs = []
+        customItems = []
+        storage.removeObject(forKey: storageKey)
+        storage.removeObject(forKey: legacyStorageKey)
+        outboxStore.clearAll()
+    }
+
     private func save() {
         let payload = FridgeSelectionPayload(
             produceIDs: produceIDs,

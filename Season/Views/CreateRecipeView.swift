@@ -102,6 +102,7 @@ struct CreateRecipeView: View {
     @State private var ingredientDrafts: [CreateIngredientDraft] = [CreateIngredientDraft()]
     @State private var stepDrafts: [CreateStepDraft] = [CreateStepDraft()]
     @State private var showPublishError = false
+    @State private var publishErrorMessage = ""
     @State private var importFeedbackText = ""
     @State private var importConfidence: SocialImportConfidence?
     @State private var importServerNoticeText = ""
@@ -226,8 +227,10 @@ struct CreateRecipeView: View {
                     }
                 }
             }
-            .alert(localizer.text(.createRecipeSubtitle), isPresented: $showPublishError) {
+            .alert(localizer.text(.publishFailedTitle), isPresented: $showPublishError) {
                 Button(localizer.text(.commonOK), role: .cancel) {}
+            } message: {
+                Text(publishErrorMessage.isEmpty ? localizer.text(.publishFailedMessage) : publishErrorMessage)
             }
             .alert(localizer.text(.cameraUnavailableTitle), isPresented: $showCameraUnavailableAlert) {
                 Button(localizer.text(.commonOK), role: .cancel) {}
@@ -1049,6 +1052,15 @@ struct CreateRecipeView: View {
         isPublishing = true
         defer { isPublishing = false }
 
+        let currentAuthUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased()
+        print("[SEASON_RECIPE] phase=publish_auth_check current_auth_user_id=\(currentAuthUserID ?? "nil")")
+        guard currentAuthUserID != nil else {
+            print("[SEASON_RECIPE] phase=publish_blocked reason=unauthenticated")
+            publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
+            showPublishError = true
+            return
+        }
+
         let recipeID = currentDraftRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
         let existingRecipeImageURL = viewModel.recipe(forID: recipeID)?.imageURL
         var uploadedRecipeImageURL: String? = nil
@@ -1072,7 +1084,7 @@ struct CreateRecipeView: View {
         }
 
         let ingredientsForPublish = recipeIngredientsForPublish
-        let published = viewModel.publishRecipe(
+        guard let published = viewModel.publishRecipe(
             title: title,
             author: accountUsername,
             ingredients: ingredientsForPublish,
@@ -1098,9 +1110,23 @@ struct CreateRecipeView: View {
             originalRecipeID: prefillDraft?.originalRecipeID,
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
             originalAuthorName: prefillDraft?.originalAuthorName
-        )
+        ) else {
+            publishErrorMessage = localizer.text(.publishFailedMessage)
+            showPublishError = true
+            return
+        }
 
-        if published == nil {
+        print("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
+        do {
+            try await SupabaseService.shared.createRecipe(published)
+            print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
+        } catch {
+            print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
+            if case SupabaseServiceError.unauthenticated = error {
+                publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
+            } else {
+                publishErrorMessage = localizer.text(.publishFailedMessage)
+            }
             showPublishError = true
             return
         }
