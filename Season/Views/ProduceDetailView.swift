@@ -33,19 +33,21 @@ struct ProduceDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
                 heroSection
                 identityBlock
+                actionsBlock
+                relatedRecipesSection
                 if let produceItem {
                     seasonalitySection(for: produceItem)
                 }
-                actionsBlock
                 if let nutrition = ingredientNutrition {
                     nutritionSection(nutrition)
                 }
             }
             .padding(.horizontal, SeasonSpacing.md)
-            .padding(.vertical, SeasonSpacing.sm)
+            .padding(.top, SeasonSpacing.sm)
+            .padding(.bottom, SeasonSpacing.xl)
         }
         .background(SeasonColors.primarySurface)
         .safeAreaInset(edge: .bottom) {
@@ -68,7 +70,7 @@ struct ProduceDetailView: View {
     @ViewBuilder
     private var heroSection: some View {
         if let produceItem {
-            ProduceHeroImageView(item: produceItem, height: 228)
+            ProduceHeroImageView(item: produceItem, height: 284)
                 .overlay(alignment: .bottomLeading) {
                     ZStack(alignment: .bottomLeading) {
                         LinearGradient(
@@ -83,11 +85,11 @@ struct ProduceDetailView: View {
                         .allowsHitTesting(false)
 
                         Text(ingredientDisplayName)
-                            .font(.headline.weight(.semibold))
+                            .font(.title2.weight(.bold))
                             .foregroundStyle(.white.opacity(0.96))
                             .lineLimit(2)
-                            .padding(.horizontal, SeasonSpacing.sm)
-                            .padding(.bottom, SeasonSpacing.sm)
+                            .padding(.horizontal, SeasonSpacing.md)
+                            .padding(.bottom, SeasonSpacing.md)
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous))
@@ -107,70 +109,65 @@ struct ProduceDetailView: View {
                         .allowsHitTesting(false)
 
                         Text(ingredientDisplayName)
-                            .font(.headline.weight(.semibold))
+                            .font(.title2.weight(.bold))
                             .foregroundStyle(.white.opacity(0.96))
                             .lineLimit(2)
-                            .padding(.horizontal, SeasonSpacing.sm)
-                            .padding(.bottom, SeasonSpacing.sm)
+                            .padding(.horizontal, SeasonSpacing.md)
+                            .padding(.bottom, SeasonSpacing.md)
                     }
                 }
         }
     }
 
     private var identityBlock: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: SeasonSpacing.xs) {
+        HStack(alignment: .top, spacing: SeasonSpacing.sm) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(ingredientDisplayName)
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .tracking(-0.3)
                     .foregroundStyle(.primary)
 
-                Spacer(minLength: 8)
-
-                if let produceItem {
-                    SeasonalStatusBadge(
-                        score: produceItem.seasonalityScore(month: viewModel.currentMonth),
-                        delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
-                        localizer: viewModel.localizer
-                    )
-                }
+                Text(identitySubtitle)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer(minLength: SeasonSpacing.sm)
 
             if let produceItem {
-                Text(viewModel.localizer.categoryTitle(for: produceItem.category))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(viewModel.localizer.text(.basicIngredient))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                SeasonalStatusBadge(
+                    score: produceItem.seasonalityScore(month: viewModel.currentMonth),
+                    delta: produceItem.seasonalityDelta(month: viewModel.currentMonth),
+                    localizer: viewModel.localizer
+                )
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
     }
 
     private var actionsBlock: some View {
-        HStack(spacing: SeasonSpacing.xs) {
+        VStack(spacing: SeasonSpacing.xs) {
             Button {
                 toggleShoppingListState()
                 pulseShoppingButton()
             } label: {
-                actionToggleLabel(
+                primaryActionLabel(
                     text: isInShoppingList ? "In List" : "Add to List",
-                    systemImage: isInShoppingList ? "checkmark" : "plus",
-                    foreground: isInShoppingList ? Color.green.opacity(0.98) : .primary,
-                    background: isInShoppingList ? Color.green.opacity(0.16) : SeasonColors.subtleSurface
+                    systemImage: isInShoppingList ? "checkmark" : "plus"
                 )
             }
-            .buttonStyle(.plain)
-            .scaleEffect(shoppingButtonPulse ? 0.97 : 1.0)
-            .animation(.spring(response: 0.24, dampingFraction: 0.75), value: shoppingButtonPulse)
+            .buttonStyle(PressableCardButtonStyle())
+            .scaleEffect(shoppingButtonPulse ? SeasonMotion.pressScale : 1.0)
+            .opacity(shoppingButtonPulse ? SeasonMotion.pressOpacity : 1.0)
+            .animation(SeasonMotion.pressAnimation, value: shoppingButtonPulse)
 
             if supportsFridgeState {
                 Button {
                     toggleFridgeState()
                     pulseFridgeButton()
                 } label: {
-                    actionToggleLabel(
+                    secondaryActionLabel(
                         text: isInFridge ? "In Fridge" : "Add to Fridge",
                         systemImage: isInFridge ? "snowflake" : "plus",
                         foreground: isInFridge ? Color(red: 0.15, green: 0.55, blue: 0.72) : .primary,
@@ -179,14 +176,38 @@ struct ProduceDetailView: View {
                             : SeasonColors.subtleSurface
                     )
                 }
-                .buttonStyle(.plain)
-                .scaleEffect(fridgeButtonPulse ? 0.97 : 1.0)
-                .animation(.spring(response: 0.24, dampingFraction: 0.75), value: fridgeButtonPulse)
+                .buttonStyle(PressableCardButtonStyle())
+                .scaleEffect(fridgeButtonPulse ? SeasonMotion.pressScale : 1.0)
+                .opacity(fridgeButtonPulse ? SeasonMotion.pressOpacity : 1.0)
+                .animation(SeasonMotion.pressAnimation, value: fridgeButtonPulse)
             }
         }
+        .padding(.top, 2)
     }
 
-    private func actionToggleLabel(
+    private func primaryActionLabel(
+        text: String,
+        systemImage: String
+    ) -> some View {
+        Label(text, systemImage: systemImage)
+            .lineLimit(1)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [SeasonColors.seasonGreen, SeasonColors.seasonGreen.opacity(0.88)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+    }
+
+    private func secondaryActionLabel(
         text: String,
         systemImage: String,
         foreground: Color,
@@ -197,9 +218,9 @@ struct ProduceDetailView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(foreground)
             .frame(maxWidth: .infinity)
-            .frame(height: 40)
+            .frame(height: 54)
             .background(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(background)
             )
     }
@@ -244,69 +265,130 @@ struct ProduceDetailView: View {
     }
 
     private func nutritionSection(_ nutrition: ProduceNutrition) -> some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            Text(viewModel.localizer.text(.nutrition))
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-                nutritionRow(
-                    title: viewModel.localizer.text(.calories),
-                    value: "\(nutrition.calories) kcal"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.protein),
-                    value: "\(formatted(nutrition.protein)) g"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.carbs),
-                    value: "\(formatted(nutrition.carbs)) g"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.fat),
-                    value: "\(formatted(nutrition.fat)) g"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.fiber),
-                    value: "\(formatted(nutrition.fiber)) g"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.vitaminC),
-                    value: "\(formatted(nutrition.vitaminC)) mg"
-                )
-                nutritionRow(
-                    title: viewModel.localizer.text(.potassium),
-                    value: "\(formatted(nutrition.potassium)) mg"
-                )
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.localizer.text(.nutritionSourceCaption))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                if let nutritionReference = validNutritionReference {
-                    Text(nutritionReference)
-                        .font(.caption2)
+        SeasonCardContainer(
+            content: {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Nutrition highlights")
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(.secondary)
+
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: SeasonSpacing.sm),
+                            GridItem(.flexible(), spacing: SeasonSpacing.sm)
+                        ],
+                        spacing: SeasonSpacing.sm
+                    ) {
+                        nutritionHighlightItem(
+                            label: viewModel.localizer.text(.calories),
+                            value: "\(nutrition.calories) kcal"
+                        )
+                        nutritionHighlightItem(
+                            label: viewModel.localizer.text(.fiber),
+                            value: "\(formatted(nutrition.fiber)) g",
+                            accent: true
+                        )
+                        nutritionHighlightItem(
+                            label: viewModel.localizer.text(.vitaminC),
+                            value: "\(formatted(nutrition.vitaminC)) mg",
+                            accent: true
+                        )
+                        nutritionHighlightItem(
+                            label: viewModel.localizer.text(.potassium),
+                            value: "\(formatted(nutrition.potassium)) mg"
+                        )
+                    }
+
+                    Text("Nutrition (per 100 g)")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.secondary)
+
+                    nutritionRow(
+                        title: viewModel.localizer.text(.calories),
+                        value: "\(nutrition.calories) kcal"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.protein),
+                        value: "\(formatted(nutrition.protein)) g"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.carbs),
+                        value: "\(formatted(nutrition.carbs)) g"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.fat),
+                        value: "\(formatted(nutrition.fat)) g"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.fiber),
+                        value: "\(formatted(nutrition.fiber)) g"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.vitaminC),
+                        value: "\(formatted(nutrition.vitaminC)) mg"
+                    )
+                    nutritionRow(
+                        title: viewModel.localizer.text(.potassium),
+                        value: "\(formatted(nutrition.potassium)) mg"
+                    )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.localizer.text(.nutritionSourceCaption))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+
+                        if let nutritionReference = validNutritionReference {
+                            Text(nutritionReference)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.top, 8)
                 }
-            }
-            .padding(.top, 2)
-        }
+                .padding(SeasonSpacing.md)
+            },
+            cornerRadius: SeasonRadius.large,
+            background: Color(.systemBackground),
+            backgroundOpacity: 0.8,
+            borderOpacity: 0.008,
+            shadowOpacity: 0.0015,
+            shadowRadius: 1.2,
+            shadowY: 1
+        )
     }
 
-    @ViewBuilder
+    private func nutritionHighlightItem(label: String, value: String, accent: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary.opacity(0.9))
+                .lineLimit(1)
+            Text(value)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(accent ? Color(red: 0.25, green: 0.45, blue: 0.27) : .primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(accent ? Color.green.opacity(0.1) : SeasonColors.subtleSurface.opacity(0.7))
+        )
+    }
+
     private func nutritionRow(title: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: SeasonSpacing.sm) {
             Text(title)
-                .foregroundStyle(.secondary)
-            Spacer()
+                .font(.subheadline)
+                .foregroundStyle(.secondary.opacity(0.9))
+            Spacer(minLength: SeasonSpacing.md)
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(.primary)
         }
-        .font(.subheadline)
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
     }
 
     private func formatted(_ value: Double) -> String {
@@ -432,28 +514,17 @@ struct ProduceDetailView: View {
 
     @ViewBuilder
     private func basicHeroImage(for ingredient: BasicIngredient) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(.secondarySystemGroupedBackground),
-                            Color(.tertiarySystemGroupedBackground)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            Image(systemName: "leaf.circle.fill")
-                .font(.system(size: 64, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            Text(String(ingredient.displayName(languageCode: viewModel.localizer.languageCode).prefix(1)))
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.secondary)
-                .offset(y: 1)
-        }
+        IngredientVisualView(
+            name: ingredient.displayName(languageCode: viewModel.localizer.languageCode),
+            produceCategory: nil,
+            basicCategory: ingredient.category,
+            imageName: nil,
+            cornerRadius: SeasonRadius.xl,
+            imageContentMode: .fit,
+            imagePaddingRatio: 0.08,
+            iconScale: 0.24,
+            showsNameInFallback: true
+        )
         .frame(maxWidth: .infinity)
         .frame(height: 228)
         .overlay(alignment: .bottomLeading) {
@@ -486,6 +557,166 @@ struct ProduceDetailView: View {
         }
 
         return trimmedReference
+    }
+
+    private var relatedRecipes: [Recipe] {
+        let keyProduceID = produceItem?.id
+        let keyBasicID = basicIngredient?.id
+
+        guard keyProduceID != nil || keyBasicID != nil else { return [] }
+
+        let recipes = RecipeStore.loadRecipes()
+            .filter(\.isFeedEligible)
+            .filter { recipe in
+                recipe.ingredients.contains { ingredient in
+                    if let keyProduceID, ingredient.produceID == keyProduceID { return true }
+                    if let keyBasicID, ingredient.basicIngredientID == keyBasicID { return true }
+                    return false
+                }
+            }
+
+        return Array(recipes.prefix(4))
+    }
+
+    private var rankedRelatedRecipes: [RankedRecipe] {
+        relatedRecipes.compactMap { viewModel.rankedRecipe(forID: $0.id) }
+    }
+
+    @ViewBuilder
+    private var relatedRecipesSection: some View {
+        if !rankedRelatedRecipes.isEmpty {
+            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+                HStack {
+                    Text("What to cook with this")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("\(rankedRelatedRecipes.count)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                if let featured = rankedRelatedRecipes.first {
+                    NavigationLink {
+                        RecipeDetailView(
+                            rankedRecipe: featured,
+                            viewModel: viewModel,
+                            shoppingListViewModel: shoppingListViewModel
+                        )
+                    } label: {
+                        relatedRecipeHeroCard(featured.recipe)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressableCardButtonStyle())
+                }
+
+                if rankedRelatedRecipes.count > 1 {
+                    VStack(spacing: SeasonSpacing.xs) {
+                        ForEach(Array(rankedRelatedRecipes.dropFirst()), id: \.recipe.id) { ranked in
+                            NavigationLink {
+                                RecipeDetailView(
+                                    rankedRecipe: ranked,
+                                    viewModel: viewModel,
+                                    shoppingListViewModel: shoppingListViewModel
+                                )
+                            } label: {
+                                relatedRecipeCompactCard(ranked.recipe)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PressableCardButtonStyle())
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func relatedRecipeHeroCard(_ recipe: Recipe) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RecipeThumbnailView(recipe: recipe, size: 280)
+                .frame(maxWidth: .infinity)
+                .frame(height: 172)
+                .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous))
+
+            Text(recipe.title)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+
+            recipeMetaLine(recipe)
+        }
+        .padding(SeasonSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                .fill(SeasonColors.secondarySurface.opacity(0.78))
+        )
+    }
+
+    private func relatedRecipeCompactCard(_ recipe: Recipe) -> some View {
+        HStack(spacing: SeasonSpacing.sm) {
+            RecipeThumbnailView(recipe: recipe, size: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(recipe.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                    .foregroundStyle(.primary)
+                recipeMetaLine(recipe)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(SeasonSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.9))
+        )
+    }
+
+    @ViewBuilder
+    private func recipeMetaLine(_ recipe: Recipe) -> some View {
+        HStack(spacing: 8) {
+            if let totalMinutes = totalRecipeMinutes(for: recipe) {
+                Label("\(totalMinutes) min", systemImage: "clock")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            if let difficulty = difficultyLabel(for: recipe) {
+                Text("•")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.55))
+                Text(difficulty)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func totalRecipeMinutes(for recipe: Recipe) -> Int? {
+        let prep = recipe.prepTimeMinutes ?? 0
+        let cook = recipe.cookTimeMinutes ?? 0
+        let total = prep + cook
+        return total > 0 ? total : nil
+    }
+
+    private func difficultyLabel(for recipe: Recipe) -> String? {
+        guard let difficulty = recipe.difficulty else { return nil }
+        switch difficulty {
+        case .easy:
+            return "Easy"
+        case .medium:
+            return "Medium"
+        case .hard:
+            return "Hard"
+        }
+    }
+
+    private var identitySubtitle: String {
+        if let produceItem {
+            return viewModel.localizer.categoryTitle(for: produceItem.category)
+        }
+        return viewModel.localizer.text(.basicIngredient)
     }
 
 }

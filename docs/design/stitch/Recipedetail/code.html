@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary": "#ffffff",
+              "on-primary-container": "#f8ffed",
+              "on-error": "#ffffff",
+              "on-primary-fixed-variant": "#3d4b34",
+              "on-surface": "#1a1c1b",
+              "surface-container-high": "#e8e8e6",
+              "surface": "#f9f9f7",
+              "on-primary-fixed": "#131f0b",
+              "surface-container-low": "#f4f4f2",
+              "secondary-container": "#ffad91",
+              "on-tertiary-container": "#fffbff",
+              "primary-fixed-dim": "#bcccae",
+              "secondary-fixed": "#ffdbcf",
+              "on-error-container": "#93000a",
+              "secondary-fixed-dim": "#ffb59b",
+              "surface-dim": "#dadad8",
+              "on-secondary": "#ffffff",
+              "on-background": "#1a1c1b",
+              "on-secondary-fixed": "#380d00",
+              "surface-container-lowest": "#ffffff",
+              "error-container": "#ffdad6",
+              "surface-variant": "#e2e3e1",
+              "outline": "#75786f",
+              "surface-bright": "#f9f9f7",
+              "inverse-surface": "#2f3130",
+              "surface-container-highest": "#e2e3e1",
+              "inverse-on-surface": "#f1f1ef",
+              "on-primary": "#ffffff",
+              "on-surface-variant": "#444840",
+              "on-secondary-fixed-variant": "#703722",
+              "on-secondary-container": "#793e29",
+              "primary": "#526048",
+              "background": "#f9f9f7",
+              "outline-variant": "#c5c8bd",
+              "surface-tint": "#54634a",
+              "primary-fixed": "#d8e8c8",
+              "on-tertiary-fixed-variant": "#5a3f4c",
+              "error": "#ba1a1a",
+              "surface-container": "#eeeeec",
+              "on-tertiary-fixed": "#2b1420",
+              "secondary": "#8c4e37",
+              "inverse-primary": "#bcccae",
+              "tertiary-container": "#8b6c7a",
+              "primary-container": "#6a795f",
+              "tertiary-fixed": "#ffd8e9",
+              "tertiary": "#715462",
+              "tertiary-fixed-dim": "#e2bccd"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            box-shadow: 0 8px 24px rgba(26, 28, 27, 0.04);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface">
+<!-- Top Navigation Bar (Contextual Suppression Logic: Back Action implies temporary departure, but keeping "Season" Brand ID) -->
+<header class="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full editorial-shadow">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#7D8C71]" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-headline tracking-tighter font-bold text-2xl text-[#526048]">Season</h1>
+</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-[#7D8C71]" data-icon="favorite">favorite</span>
+</div>
+</header>
+<main class="pb-32 pt-16">
+<!-- Hero Section -->
+<section class="relative w-full aspect-[4/5] md:aspect-video overflow-hidden mb-8">
+<img class="w-full h-full object-cover" data-alt="Close-up of creamy butternut squash risotto topped with crispy charred sage leaves and toasted pine nuts in a rustic ceramic bowl." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0SwOqKpor9gKoi8U4Pbat-hrRW6J9vs0xDak2e8QQuzpBZVPCIbmqAqxKm8gyOtNqvT3Z5689Qog3QQS7ZqsDnP8lkpzDALyTJN_Aj5IrtBKiaNG74ZZu3svB3sT7zAcTp6JTykBkY11WRMG-nSMr6evvpdRz2ylBczuZ-gd9GhiNDF930RNcr-qHz4eLLIjNAG0RcHRpw-7kRDp7spYeoFZrpDdrYho5voNS8qPCfCql7Nw3GE7u0yxU1KvmDd4fX32DvSLL13q4"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface/40 to-transparent"></div>
+<div class="absolute bottom-8 left-8 right-8 text-white">
+<div class="inline-flex items-center gap-2 bg-primary/90 backdrop-blur-md px-4 py-1.5 rounded-full mb-4">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold">Best Match (5/5)</span>
+</div>
+<h2 class="font-headline text-4xl md:text-5xl font-extrabold tracking-tighter leading-tight mb-4">Charred Sage &amp; Butternut Squash Risotto</h2>
+<div class="flex items-center gap-6 font-label text-sm font-medium">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Portrait of professional chef Elena Vance in a clean white kitchen setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqdZCmgILGkuZ9Eqqh3-kLzJvMlrngfrjPKgDCMsBa0RJRPXMA7S5yO_FeUb51Ft11e8LMNyQIMaRhw5e6tSivXCXacTtzh_0mLyApQNnZmCU_XuhyA3ZdEKbXE1cMtvf2v1hYxP6LyzpzwzZ6xwsOJGCruDcT8HUv1ZahTxrxq_opHe70UUxm1Ny-Rac-tPnYHFXCTuGWglf1DFeqaEEUhoOTWhV3bw4i70ac7lj9b8rRN2GgE8GIaI1WJmwuqJDHSiV2DxxQkZcR"/>
+<span>Elena Vance</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span>45 mins total</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-secondary">🔥</span>
+<span>Crispy Score: 94</span>
+</div>
+</div>
+</div>
+</section>
+<div class="px-6 md:max-w-4xl md:mx-auto">
+<!-- Creator + Action Bar -->
+<section class="flex items-center justify-between mb-10">
+<div class="flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="Elena Vance portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAm4nqcNA66vNA-nSPWox6A8f1rLsDPT1QDVDStj0REx0VYyThEuL0C-82mDY-qrtgdBSflaKGjwN1-Jq_zzK9DwwIjmYCwYybHlu61MGLcu5Ztd-mgeVqWszfj_0LIDlAsyXQMt_iinKmNxjZ1Xz_el_q8IRECinquORD_ug2sQg8suYETaR6cFe8qsL0DnM6Cz4BubHZwiGZhnsaJpqNnTiER05ZTrCgUGb3EhNhJuQPi17I4GRycXgVVHiVdfz3wW7Fbt6YJIYdY"/>
+<div>
+<p class="font-headline font-bold text-lg">Elena Vance</p>
+<p class="text-on-surface-variant text-sm">Professional Chef</p>
+</div>
+<button class="ml-2 bg-surface-container-high text-on-surface px-4 py-1.5 rounded-full text-xs font-bold font-label transition-colors hover:bg-outline-variant">FOLLOWING</button>
+</div>
+<div class="flex gap-3">
+<button class="p-3 rounded-full bg-surface-container-low text-primary transition-transform active:scale-90">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</button>
+<button class="p-3 rounded-full bg-surface-container-low text-primary transition-transform active:scale-90">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+</button>
+</div>
+</section>
+<!-- Recipe Intelligence Block -->
+<section class="mb-10">
+<div class="bg-surface-container-lowest p-8 rounded-xl editorial-shadow grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined" data-icon="kitchen">kitchen</span>
+<span class="font-label text-[10px] uppercase tracking-widest font-bold">Fridge</span>
+</div>
+<p class="font-headline font-bold text-xl">5/5 ingredients</p>
+<p class="text-on-surface-variant text-sm">Everything in stock</p>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined" data-icon="eco">eco</span>
+<span class="font-label text-[10px] uppercase tracking-widest font-bold">Season</span>
+</div>
+<p class="font-headline font-bold text-xl">Peak Season</p>
+<p class="text-on-surface-variant text-sm">Autumn Harvest</p>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+<span class="font-label text-[10px] uppercase tracking-widest font-bold">Status</span>
+</div>
+<p class="font-headline font-bold text-xl">Ready to cook</p>
+<p class="text-on-surface-variant text-sm">Save a trip to store</p>
+</div>
+</div>
+</section>
+<!-- Primary CTA -->
+<section class="mb-12">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-white py-5 rounded-lg font-headline font-extrabold text-lg transition-opacity hover:opacity-90 active:scale-[0.98]">
+                    Cook Now
+                </button>
+</section>
+<!-- Nutrition Block -->
+<section class="mb-16">
+<div class="flex justify-between items-center py-6 border-y border-outline-variant/10">
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold mb-1">Calories</p>
+<p class="font-headline font-bold text-lg">480 kcal</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold mb-1">Protein</p>
+<p class="font-headline font-bold text-lg">12g</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold mb-1">Carbs</p>
+<p class="font-headline font-bold text-lg">65g</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold mb-1">Fat</p>
+<p class="font-headline font-bold text-lg">18g</p>
+</div>
+</div>
+</section>
+<!-- Ingredients Section -->
+<section class="mb-20">
+<div class="flex justify-between items-end mb-8">
+<h3 class="font-headline text-3xl font-extrabold tracking-tighter">Ingredients</h3>
+<p class="text-primary font-label text-sm font-bold">5 Items</p>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg group">
+<div class="flex flex-col">
+<span class="font-headline font-bold text-lg">Arborio Rice</span>
+<span class="text-on-surface-variant text-sm">300g</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-primary">In Fridge</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-1 rounded-full text-sm" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg">
+<div class="flex flex-col">
+<span class="font-headline font-bold text-lg">Butternut Squash</span>
+<span class="text-on-surface-variant text-sm">1 Medium, Diced</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-primary">In Fridge</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-1 rounded-full text-sm" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg">
+<div class="flex flex-col">
+<span class="font-headline font-bold text-lg">Fresh Sage</span>
+<span class="text-on-surface-variant text-sm">1 Bunch</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-primary">In Fridge</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-1 rounded-full text-sm" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg">
+<div class="flex flex-col">
+<span class="font-headline font-bold text-lg">Vegetable Stock</span>
+<span class="text-on-surface-variant text-sm">1.2 Litres</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-primary">In Fridge</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-1 rounded-full text-sm" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-lg">
+<div class="flex flex-col">
+<span class="font-headline font-bold text-lg">Parmesan Cheese</span>
+<span class="text-on-surface-variant text-sm">50g, Grated</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-primary">In Fridge</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-1 rounded-full text-sm" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Instructions Section -->
+<section class="mb-20">
+<h3 class="font-headline text-3xl font-extrabold tracking-tighter mb-10">Method</h3>
+<div class="space-y-12">
+<div class="flex gap-8">
+<span class="font-headline text-5xl font-extrabold text-primary-fixed-dim shrink-0">01</span>
+<div class="pt-2">
+<h4 class="font-headline font-bold text-xl mb-3">Roast the Squash</h4>
+<p class="text-on-surface-variant leading-relaxed">Toss diced butternut squash with olive oil, salt, and pepper. Roast at 200°C for 25 minutes until caramelized and tender. Set aside half for blending into the stock for extra creaminess.</p>
+</div>
+</div>
+<div class="flex gap-8">
+<span class="font-headline text-5xl font-extrabold text-primary-fixed-dim shrink-0">02</span>
+<div class="pt-2">
+<h4 class="font-headline font-bold text-xl mb-3">Char the Sage</h4>
+<p class="text-on-surface-variant leading-relaxed">In a small pan, heat a knob of butter. Fry the fresh sage leaves until crispy and slightly darkened. Remove and drain on paper towels. This oil will carry the intense sage aroma into the risotto base.</p>
+</div>
+</div>
+<div class="flex gap-8">
+<span class="font-headline text-5xl font-extrabold text-primary-fixed-dim shrink-0">03</span>
+<div class="pt-2">
+<h4 class="font-headline font-bold text-xl mb-3">The Risotto Base</h4>
+<p class="text-on-surface-variant leading-relaxed">Sauté finely chopped shallots in the sage butter. Add Arborio rice and toast for 2 minutes. Gradually add hot stock, one ladle at a time, stirring constantly until the rice is al dente and creamy.</p>
+</div>
+</div>
+<div class="flex gap-8">
+<span class="font-headline text-5xl font-extrabold text-primary-fixed-dim shrink-0">04</span>
+<div class="pt-2">
+<h4 class="font-headline font-bold text-xl mb-3">Final Finish</h4>
+<p class="text-on-surface-variant leading-relaxed">Fold in the roasted squash cubes, blended squash purée, and plenty of Parmesan. Season generously. Garnish with the charred sage leaves and a final crack of black pepper.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Context Block -->
+<section class="pb-12 text-center">
+<p class="text-on-surface-variant/60 italic text-sm max-w-sm mx-auto">
+                    This recipe is a perfect match for your current inventory and is a seasonal favorite.
+                </p>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Suppressed on detail view as per "The Destination Rule" but included for system compliance if needed. In detail views, we usually hide global nav to focus on the task) -->
+<!-- However, to strictly follow the prompt's request for "Premium iOS recipe detail screen" and the JSON mapping: -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-8 pb-8 pt-4 bg-white/70 backdrop-blur-xl rounded-t-[3rem] editorial-shadow">
+<div class="flex flex-col items-center justify-center text-stone-400 p-3 hover:text-[#526048] transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="local_library">local_library</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest font-bold mt-1">Discover</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#7D8C71] text-white rounded-full p-3 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="potted_plant">potted_plant</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest font-bold mt-1">Garden</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-400 p-3 hover:text-[#526048] transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest font-bold mt-1">Saved</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-400 p-3 hover:text-[#526048] transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span class="font-manrope text-[10px] uppercase tracking-widest font-bold mt-1">Kitchen</span>
+</div>
+</nav>
+</body></html>

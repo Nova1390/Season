@@ -176,11 +176,10 @@ struct AuthGateView: View {
             print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=authenticated")
             phase = .authenticated
         } catch {
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) state=unauthenticated error=\(error.localizedDescription)")
-            if phase == .authenticated {
-                contentSessionID = UUID()
-            }
-            phase = .unauthenticated
+            // Keep authenticated session users in a recoverable onboarding state when profile read fails.
+            // Do not route to unauthenticated unless the session itself is missing.
+            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username reason=profile_unavailable error=\(error.localizedDescription)")
+            phase = .needsUsername
         }
     }
 }
@@ -202,129 +201,177 @@ private struct AuthEntryScreen: View {
 
     var body: some View {
         ZStack {
+            Image("auth_stitch_login_bg")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+
             LinearGradient(
-                colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
+                stops: [
+                    .init(color: Color.black.opacity(0.24), location: 0.0),
+                    .init(color: Color.black.opacity(0.12), location: 0.22),
+                    .init(color: Color.black.opacity(0.08), location: 0.42),
+                    .init(color: Color(.systemBackground).opacity(0.62), location: 0.72),
+                    .init(color: Color(.systemBackground).opacity(0.82), location: 1.0)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                Spacer()
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
 
-                VStack(spacing: 10) {
-                    Text("Eat better, in season.")
-                        .font(.largeTitle.weight(.bold))
-                        .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Eat better,\nin season.")
+                            .font(.system(size: 53, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.black.opacity(0.88))
+                            .lineSpacing(-2)
+                            .minimumScaleFactor(0.85)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Text("Save recipes, manage your fridge, and cook smarter. Free. Now and forever.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 12)
-                }
-
-                VStack(spacing: 12) {
-                    Button {
-                        continueWithApple()
-                    } label: {
-                        Label("Continue with Apple", systemImage: "applelogo")
-                            .frame(maxWidth: .infinity)
+                        Text("Turn what’s in your fridge into smarter seasonal meals.")
+                            .font(.system(size: 19, weight: .regular, design: .default))
+                            .foregroundStyle(Color.black.opacity(0.58))
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isLoading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, mode == .entry ? 28 : 18)
 
-                    if mode == .entry {
-                        Button("Sign up with email") {
-                            clearStatus()
-                            mode = .signUp
-                        }
-                        .buttonStyle(.bordered)
-                        .frame(maxWidth: .infinity)
-                        .disabled(isLoading)
-
-                        Button("Already have an account? Log in") {
-                            clearStatus()
-                            mode = .logIn
-                        }
-                        .buttonStyle(.plain)
-                        .font(.footnote.weight(.semibold))
-                        .disabled(isLoading)
-                    } else {
-                        VStack(spacing: 10) {
-                            TextField("Email", text: $email)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.emailAddress)
-                                .autocorrectionDisabled()
-                                .textFieldStyle(.roundedBorder)
-
-                            SecureField("Password", text: $password)
-                                .textFieldStyle(.roundedBorder)
-
-                            if mode == .signUp {
-                                TextField("Username", text: $username)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .textFieldStyle(.roundedBorder)
-
-                                Text("3-24 chars • letters, numbers, underscore")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                    VStack(spacing: 12) {
+                        if mode == .entry {
+                            Button {
+                                continueWithApple()
+                            } label: {
+                                Label("Continue with Apple", systemImage: "applelogo")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.9)
+                                    .frame(maxWidth: .infinity, minHeight: 56)
                             }
+                            .buttonStyle(AuthGateAppleButtonStyle())
+                            .disabled(isLoading)
+
+                            Button {
+                                clearStatus()
+                                mode = .signUp
+                            } label: {
+                                Text("Sign up with email")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.9)
+                                    .frame(maxWidth: .infinity, minHeight: 56)
+                            }
+                            .buttonStyle(AuthGateEmailButtonStyle())
+                            .disabled(isLoading)
+
+                            Button {
+                                clearStatus()
+                                mode = .logIn
+                            } label: {
+                                Text("Already have an account? \(Text("Log in").underline())")
+                                    .font(.footnote.weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.9)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.black.opacity(0.58))
+                            .padding(.top, 6)
+                            .disabled(isLoading)
+                        } else {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(mode == .signUp ? "Create your account" : "Welcome back")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(Color.black.opacity(0.82))
+
+                                Group {
+                                    TextField("Email", text: $email)
+                                        .textInputAutocapitalization(.never)
+                                        .keyboardType(.emailAddress)
+                                        .autocorrectionDisabled()
+
+                                    SecureField("Password", text: $password)
+
+                                    if mode == .signUp {
+                                        TextField("Username", text: $username)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                    }
+                                }
+                                .textFieldStyle(AuthGateTextFieldStyle())
+
+                                if mode == .signUp {
+                                    Text("3-24 chars • letters, numbers, underscore")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.black.opacity(0.56))
+                                }
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(Color(.systemBackground).opacity(0.72))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                            )
+
+                            Button {
+                                submitEmailAuth()
+                            } label: {
+                                Text(mode == .signUp ? "Create account" : "Log in")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.9)
+                                    .frame(maxWidth: .infinity, minHeight: 56)
+                            }
+                            .buttonStyle(AuthGateEmailButtonStyle())
+                            .disabled(
+                                isLoading ||
+                                email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                                password.isEmpty ||
+                                (mode == .signUp && UsernameValidation.validationError(for: username) != nil)
+                            )
+
+                            Button("Back") {
+                                clearStatus()
+                                mode = .entry
+                            }
+                            .buttonStyle(.plain)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.black.opacity(0.64))
+                            .disabled(isLoading)
                         }
 
-                        Button(mode == .signUp ? "Create account" : "Log in") {
-                            submitEmailAuth()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
-                        .disabled(
-                            isLoading ||
-                            email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                            password.isEmpty ||
-                            (mode == .signUp && UsernameValidation.validationError(for: username) != nil)
-                        )
-
-                        Button("Back") {
-                            clearStatus()
-                            mode = .entry
-                        }
-                        .buttonStyle(.plain)
-                        .font(.footnote.weight(.semibold))
-                        .disabled(isLoading)
-                    }
-
-                    if isLoading {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("Processing…")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.top, 4)
-                    } else if !statusMessage.isEmpty {
-                        Text(statusMessage)
-                            .font(.caption)
-                            .foregroundStyle(isError ? .red : .secondary)
-                            .multilineTextAlignment(.center)
+                        if isLoading {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text("Processing…")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.black.opacity(0.60))
+                            }
                             .padding(.top, 4)
+                        } else if !statusMessage.isEmpty {
+                            Text(statusMessage)
+                                .font(.caption)
+                                .foregroundStyle(isError ? .red.opacity(0.95) : Color.black.opacity(0.64))
+                                .multilineTextAlignment(.center)
+                                .padding(.top, 4)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(18)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color(.systemBackground).opacity(0.86))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                )
-
-                Spacer()
+                .frame(maxWidth: 390)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 24)
+            .safeAreaPadding(.top, 16)
+            .safeAreaPadding(.bottom, 18)
         }
     }
 
@@ -397,6 +444,56 @@ private struct AuthEntryScreen: View {
                 }
             }
         }
+    }
+}
+
+private struct AuthGateAppleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.white)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.black.opacity(configuration.isPressed ? 0.88 : 0.94))
+            )
+            .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+private struct AuthGateEmailButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.white.opacity(0.98))
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.49, green: 0.55, blue: 0.44), Color(red: 0.58, green: 0.63, blue: 0.53)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 6)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+private struct AuthGateTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.86))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            )
     }
 }
 

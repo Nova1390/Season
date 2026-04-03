@@ -194,22 +194,25 @@ struct CreateRecipeView: View {
                     .padding()
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            composerStateSummary
                             heroComposerSection
-                            titleSection
-                            socialLinksSection
-                            servingsSection
                             importFromLinkSection
+                            titleSection
+                            servingsSection
                             ingredientsSection
                             stepsSection
+                            socialLinksSection
                             previewSection
                             Color.clear.frame(height: 12)
                         }
-                        .padding()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 12)
                     }
                 }
             }
-            .background(Color(.systemBackground))
+            .background(SeasonColors.primarySurface)
             .navigationTitle(localizer.text(.createRecipe))
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
@@ -251,10 +254,6 @@ struct CreateRecipeView: View {
             }
             .onAppear {
                 loadExistingDraftIfNeeded()
-                if enableDraftMode, currentDraftRecipeID == nil, !draftLoadFailed {
-                    let createdDraft = viewModel.createEmptyDraftRecipe(author: accountUsername)
-                    currentDraftRecipeID = createdDraft.id
-                }
                 if detectedSourcePlatform == nil {
                     detectedSourcePlatform = detectedPlatform(for: mediaLink)
                 }
@@ -266,7 +265,18 @@ struct CreateRecipeView: View {
     }
 
     private var heroComposerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Text("Composer")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                composerStateBadge
+            }
+
             ZStack(alignment: .bottomLeading) {
                 heroImageContent
                     .frame(maxWidth: .infinity)
@@ -290,8 +300,7 @@ struct CreateRecipeView: View {
                         Label(localizer.text(.mediaAddPhotos), systemImage: "photo")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.white.opacity(0.92))
+                    .buttonStyle(SeasonPrimaryButtonStyle())
 
                     Button {
                         openCameraIfAvailable()
@@ -299,8 +308,7 @@ struct CreateRecipeView: View {
                         Label(localizer.text(.mediaUseCamera), systemImage: "camera")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.white.opacity(0.92))
+                    .buttonStyle(SeasonSecondaryButtonStyle())
                 }
                 .padding(12)
             }
@@ -309,14 +317,8 @@ struct CreateRecipeView: View {
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
                 .font(.subheadline)
-                .padding(.vertical, 8)
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(Color(.separator).opacity(0.4))
-                        .frame(height: 1)
-                }
                 .onChange(of: mediaLink) { _, newValue in
                     detectedSourcePlatform = detectedPlatform(for: newValue)
                 }
@@ -338,6 +340,8 @@ struct CreateRecipeView: View {
                 }
             }
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .primary))
     }
 
     private var importFromLinkSection: some View {
@@ -378,7 +382,7 @@ struct CreateRecipeView: View {
                         Label(localizer.text(.importDraft), systemImage: "wand.and.stars")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(SeasonSecondaryButtonStyle())
                     .disabled(!canImportFromAnyLink || isImportAnalyzing)
 
                     if let importConfidence {
@@ -412,24 +416,38 @@ struct CreateRecipeView: View {
                 .padding(.top, 8)
             } label: {
                 HStack {
-                    Text(localizer.text(.importFromLinkSectionTitle))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizer.text(.importFromLinkSectionTitle))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("Import and refine from social links or caption")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     Image(systemName: "wand.and.stars")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.33, green: 0.38, blue: 0.28))
                 }
+                .padding(.vertical, 2)
             }
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .secondary))
+        .tint(SeasonColors.seasonGreen)
     }
 
     private var titleSection: some View {
-        TextField(localizer.text(.createRecipe), text: $title, axis: .vertical)
-            .font(.system(size: 32, weight: .semibold, design: .default))
-            .lineLimit(2...3)
-            .textFieldStyle(.plain)
-            .padding(.vertical, 6)
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle(localizer.text(.titleSectionTitle))
+            TextField(recipeTitlePlaceholder, text: $title, axis: .vertical)
+                .font(.system(size: 34, weight: .bold, design: .default))
+                .lineLimit(2...3)
+                .textFieldStyle(.plain)
+                .padding(.vertical, 6)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
     }
 
     private var socialLinksSection: some View {
@@ -451,16 +469,26 @@ struct CreateRecipeView: View {
                 .autocorrectionDisabled()
                 .textFieldStyle(.roundedBorder)
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .tertiary))
     }
 
     private var servingsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Stepper(value: $selectedServings, in: 1...12) {
+            sectionTitle("Servings")
+            HStack {
                 Text(String(format: localizer.text(.servesFormat), selectedServings))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
+                Spacer()
+                Stepper(value: $selectedServings, in: 1...12) {
+                    EmptyView()
+                }
+                .labelsHidden()
             }
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .secondary))
     }
 
     private var ingredientsSection: some View {
@@ -471,7 +499,7 @@ struct CreateRecipeView: View {
                 let isSubsectionHeader = isSubsectionHeaderDraft(ingredient)
                 let hideQuantityControls = shouldHideQuantityControls(for: ingredient)
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center, spacing: 8) {
                         VStack(alignment: .leading, spacing: 8) {
                             TextField(
@@ -539,7 +567,7 @@ struct CreateRecipeView: View {
                                 }
                                 .background(
                                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(Color(.secondarySystemGroupedBackground))
+                                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.78))
                                 )
                             }
                         }
@@ -571,11 +599,7 @@ struct CreateRecipeView: View {
                         }
                     }
                 }
-                .padding(.vertical, 2)
-
-                if ingredient.id != ingredientDrafts.last?.id {
-                    Divider()
-                }
+                .padding(.vertical, 6)
             }
 
             Button {
@@ -586,8 +610,11 @@ struct CreateRecipeView: View {
                 Label(localizer.text(.addIngredient), systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(SeasonSecondaryButtonStyle())
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .primary))
+        .tint(SeasonColors.seasonGreen)
     }
 
     private var stepsSection: some View {
@@ -611,10 +638,7 @@ struct CreateRecipeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
-                if step.id != stepDrafts.last?.id {
-                    Divider()
-                }
+                .padding(.vertical, 6)
             }
 
             Button {
@@ -623,8 +647,11 @@ struct CreateRecipeView: View {
                 Label(localizer.text(.addStep), systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(SeasonSecondaryButtonStyle())
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .primary))
+        .tint(SeasonColors.seasonGreen)
     }
 
     private var previewSection: some View {
@@ -650,14 +677,12 @@ struct CreateRecipeView: View {
                     )
             }
         }
+        .padding(14)
+        .background(createSectionContainer(priority: .tertiary))
     }
 
     private var publishBar: some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(Color(.separator).opacity(0.25))
-                .frame(height: 1)
-
             VStack(spacing: 0) {
                 if enableDraftMode {
                     HStack(spacing: 10) {
@@ -666,10 +691,9 @@ struct CreateRecipeView: View {
                         } label: {
                             Text(localizer.text(.saveDraft))
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 13)
-                                .font(.headline)
+                                .font(.subheadline.weight(.semibold))
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(!canSaveDraft)
 
                         Button {
@@ -677,10 +701,9 @@ struct CreateRecipeView: View {
                         } label: {
                             Text(localizer.text(.publishRecipe))
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 13)
-                                .font(.headline)
+                                .font(.subheadline.weight(.semibold))
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(SeasonPrimaryButtonStyle())
                         .disabled(!canPublish || isPublishing)
                     }
                 } else {
@@ -690,10 +713,9 @@ struct CreateRecipeView: View {
                         } label: {
                             Text(localizer.text(.publishRecipe))
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 13)
-                                .font(.headline)
+                                .font(.subheadline.weight(.semibold))
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(SeasonPrimaryButtonStyle())
                         .disabled(!canPublish || isPublishing)
                     }
                 }
@@ -704,16 +726,57 @@ struct CreateRecipeView: View {
                         Text(localizer.text(.saved))
                             .font(.caption.weight(.semibold))
                     }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
                 }
             }
-            .padding(.horizontal)
-            .padding(.top, 10)
-            .padding(.bottom, 8)
-            .background(Color(.systemBackground))
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+            .background(
+                SeasonColors.primarySurface.opacity(0.94)
+                    .overlay(
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.05))
+                            .frame(height: 0.6),
+                        alignment: .top
+                    )
+            )
         }
+    }
+
+    private var composerStateSummary: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(composerStateTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(composerStateSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            composerStateBadge
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(SeasonColors.secondarySurface.opacity(0.64))
+        )
+    }
+
+    private var composerStateBadge: some View {
+        Text(composerStateTitle)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(composerStateColor)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(composerStateColor.opacity(0.14))
+            )
     }
 
     @ViewBuilder
@@ -905,8 +968,68 @@ struct CreateRecipeView: View {
         currentDraftRecipeID != nil && !draftLoadFailed
     }
 
+    private var recipeTitlePlaceholder: String {
+        localizer.languageCode.hasPrefix("it") ? "Titolo ricetta" : "Recipe title"
+    }
+
+    private var hasMeaningfulIngredientsForComposer: Bool {
+        !recipeIngredientsForPublish.isEmpty
+    }
+
+    private var hasMeaningfulStepsForComposer: Bool {
+        !stepTextsForPublish.isEmpty
+    }
+
+    private var hasLoadedDraftForComposer: Bool {
+        enableDraftMode && currentDraftRecipeID != nil && !draftLoadFailed
+    }
+
+    private var composerStateTitle: String {
+        if hasLoadedDraftForComposer {
+            return "Draft"
+        }
+        if canPublish {
+            return "Ready"
+        }
+        if hasMeaningfulIngredientsForComposer || hasMeaningfulStepsForComposer || !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Editing"
+        }
+        return "Start here"
+    }
+
+    private var composerStateSubtitle: String {
+        if hasLoadedDraftForComposer {
+            return "Continue refining your saved draft."
+        }
+        if canPublish {
+            return "Your recipe has enough detail to publish."
+        }
+        if hasMeaningfulIngredientsForComposer || hasMeaningfulStepsForComposer || !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Keep adding ingredients, steps, and media."
+        }
+        return "Add a title, ingredients, and steps to begin."
+    }
+
+    private var composerStateColor: Color {
+        switch composerStateTitle {
+        case "Ready":
+            return Color(red: 0.16, green: 0.65, blue: 0.30)
+        case "Draft":
+            return Color(red: 0.43, green: 0.50, blue: 0.38)
+        case "Editing":
+            return Color(red: 0.84, green: 0.58, blue: 0.18)
+        default:
+            return Color(red: 0.33, green: 0.38, blue: 0.28)
+        }
+    }
+
     private func persistDraftIfNeeded(showFeedback: Bool = false) {
-        guard enableDraftMode, let currentDraftRecipeID else { return }
+        guard enableDraftMode else { return }
+        if currentDraftRecipeID == nil, !draftLoadFailed {
+            let createdDraft = viewModel.createEmptyDraftRecipe(author: accountUsername)
+            currentDraftRecipeID = createdDraft.id
+        }
+        guard let currentDraftRecipeID else { return }
         let fingerprint = persistedDraftFingerprint()
         guard fingerprint != lastSavedDraftFingerprint else {
             if showFeedback {
@@ -1109,7 +1232,8 @@ struct CreateRecipeView: View {
             isRemix: prefillDraft?.isRemix ?? false,
             originalRecipeID: prefillDraft?.originalRecipeID,
             originalRecipeTitle: prefillDraft?.originalRecipeTitle,
-            originalAuthorName: prefillDraft?.originalAuthorName
+            originalAuthorName: prefillDraft?.originalAuthorName,
+            commitLocally: false
         ) else {
             publishErrorMessage = localizer.text(.publishFailedMessage)
             showPublishError = true
@@ -1119,6 +1243,8 @@ struct CreateRecipeView: View {
         print("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
         do {
             try await SupabaseService.shared.createRecipe(published)
+            viewModel.commitPublishedRecipeLocally(published)
+            print("[SEASON_RECIPE] phase=local_publish_committed_after_remote recipe_id=\(published.id)")
             print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
         } catch {
             print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
@@ -2362,8 +2488,39 @@ struct CreateRecipeView: View {
     @ViewBuilder
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.subheadline.weight(.semibold))
+            .font(.caption.weight(.bold))
+            .textCase(.uppercase)
+            .tracking(0.8)
             .foregroundStyle(.secondary)
+    }
+
+    private enum CreateSectionPriority {
+        case primary
+        case secondary
+        case tertiary
+    }
+
+    @ViewBuilder
+    private func createSectionContainer(priority: CreateSectionPriority) -> some View {
+        switch priority {
+        case .primary:
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.93))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.primary.opacity(0.055), lineWidth: 0.65)
+                )
+        case .secondary:
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground).opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.035), lineWidth: 0.6)
+                )
+        case .tertiary:
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground).opacity(0.34))
+        }
     }
 
     private func supportedUnits(for draft: CreateIngredientDraft) -> [RecipeQuantityUnit] {

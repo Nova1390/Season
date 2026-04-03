@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-fixed-dim": "#e2bccd",
+              "secondary": "#8c4e37",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary-fixed": "#2b1420",
+              "surface-variant": "#e2e3e1",
+              "outline-variant": "#c5c8bd",
+              "on-error-container": "#93000a",
+              "primary-fixed": "#d8e8c8",
+              "on-error": "#ffffff",
+              "surface-dim": "#dadad8",
+              "on-tertiary-fixed-variant": "#5a3f4c",
+              "on-surface-variant": "#444840",
+              "inverse-primary": "#bcccae",
+              "error-container": "#ffdad6",
+              "tertiary": "#715462",
+              "inverse-surface": "#2f3130",
+              "inverse-on-surface": "#f1f1ef",
+              "secondary-container": "#ffad91",
+              "background": "#f9f9f7",
+              "on-primary-fixed-variant": "#3d4b34",
+              "on-primary-fixed": "#131f0b",
+              "outline": "#75786f",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#f8ffed",
+              "surface-bright": "#f9f9f7",
+              "secondary-fixed-dim": "#ffb59b",
+              "on-background": "#1a1c1b",
+              "tertiary-container": "#8b6c7a",
+              "surface": "#f9f9f7",
+              "on-surface": "#1a1c1b",
+              "surface-tint": "#54634a",
+              "surface-container-high": "#e8e8e6",
+              "primary-container": "#6a795f",
+              "on-secondary-fixed": "#380d00",
+              "on-secondary-container": "#793e29",
+              "surface-container": "#eeeeec",
+              "primary": "#526048",
+              "surface-container-highest": "#e2e3e1",
+              "on-tertiary-container": "#fffbff",
+              "on-secondary-fixed-variant": "#703722",
+              "on-secondary": "#ffffff",
+              "error": "#ba1a1a",
+              "primary-fixed-dim": "#bcccae",
+              "tertiary-fixed": "#ffd8e9",
+              "secondary-fixed": "#ffdbcf",
+              "surface-container-low": "#f4f4f2"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- Top Navigation Anchor (Desktop/Top View) -->
+<header class="fixed top-0 w-full z-50 bg-[#f9f9f7]/70 dark:bg-[#1a1c1b]/70 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#526048] dark:text-[#c5c8bd] hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200" data-icon="menu">menu</span>
+<h1 class="font-['Manrope'] tracking-tight font-bold text-2xl text-[#526048] dark:text-[#f9f9f7]">Fridge</h1>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-[#74796d] hover:opacity-80 transition-opacity font-['Manrope'] font-medium" href="#">Home</a>
+<a class="text-[#74796d] hover:opacity-80 transition-opacity font-['Manrope'] font-medium" href="#">Explore</a>
+<a class="text-[#526048] font-bold hover:opacity-80 transition-opacity font-['Manrope']" href="#">Fridge</a>
+<a class="text-[#74796d] hover:opacity-80 transition-opacity font-['Manrope'] font-medium" href="#">List</a>
+</nav>
+<span class="material-symbols-outlined text-[#526048] dark:text-[#c5c8bd] hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-200" data-icon="add">add</span>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-5xl mx-auto">
+<!-- TOP AREA -->
+<div class="flex justify-between items-end mb-10">
+<div class="space-y-1">
+<span class="label-sm text-[10px] uppercase tracking-[0.05em] font-bold text-primary">Your Harvest</span>
+<h2 class="text-4xl font-headline font-extrabold tracking-tight text-on-background">Fridge</h2>
+</div>
+<button class="bg-primary text-on-primary px-6 py-3 rounded-lg flex items-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-sm">
+<span class="material-symbols-outlined text-xl" data-icon="add">add</span>
+<span class="font-medium">Add Ingredients</span>
+</button>
+</div>
+<!-- FRIDGE SUMMARY BLOCK -->
+<section class="mb-12">
+<div class="bg-surface-container-low rounded-xl p-8 flex flex-col md:flex-row gap-8 justify-around items-center">
+<div class="text-center group cursor-default">
+<p class="text-sm font-label uppercase tracking-widest text-outline mb-1">Total Items</p>
+<p class="text-4xl font-headline font-extrabold text-primary">12</p>
+</div>
+<div class="hidden md:block w-px h-12 bg-outline-variant/20"></div>
+<div class="text-center group cursor-default">
+<p class="text-sm font-label uppercase tracking-widest text-outline mb-1">In Season</p>
+<div class="flex items-center gap-2">
+<p class="text-4xl font-headline font-extrabold text-secondary">5</p>
+<span class="material-symbols-outlined text-secondary" data-icon="eco" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+</div>
+<div class="hidden md:block w-px h-12 bg-outline-variant/20"></div>
+<div class="text-center group cursor-default">
+<p class="text-sm font-label uppercase tracking-widest text-outline mb-1">Recipe Ops</p>
+<p class="text-4xl font-headline font-extrabold text-primary">3</p>
+</div>
+</div>
+</section>
+<!-- INVENTORY AREA (Bento Grid) -->
+<section class="mb-16">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-xl font-headline font-bold">Current Stock</h3>
+<span class="text-primary font-medium text-sm">Sort by Freshness</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<!-- Ingredient Card 1 -->
+<div class="group bg-surface-container-lowest rounded-lg p-3 hover:shadow-xl transition-all duration-500 overflow-hidden">
+<div class="aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="close-up of fresh curly dark green kale leaves with water droplets and soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHgjCN1Gzol84WnlR4ti1ko13AkwcaI3owYwhPXTWl-FgZ4Iz4RPhMAVndHh8hGXH2CJXgbE1II2lH5lrtyWEyMBRcXTo2bw9ulh5a7GcvFgAcQ6ol7UUwgQnt9qRvKWpYlbaRfIrdeif-2J9KtQZ-67lolhHLtBSU6A3OwnE6FIWKHO7yAmYSpjZpb_wXEHOv9NplBGBUJjTUvi_etS7V9wTMG_YuVhhbUNC6K9T6aj4SqGZpwyYIsrJRPAyYxklE5i9KUal9aiYK"/>
+</div>
+<div class="px-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-on-surface">Kale</h4>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-container/20 text-primary">Fresh</span>
+</div>
+<p class="text-sm text-outline-variant">2 Bunches</p>
+</div>
+</div>
+<!-- Ingredient Card 2 -->
+<div class="group bg-surface-container-lowest rounded-lg p-3 hover:shadow-xl transition-all duration-500 overflow-hidden">
+<div class="aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="fresh raw Atlantic salmon fillet with vibrant orange color and marbled texture on a clean marble surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8yfyt6LZaNSDG-Mv64IES7Yrel3J43etHoJfxXA_shgDcj47sOXzA2MVlRC2ZraPC7xGBFNd2xocWPkK9XaQ1RWkM-PUx8i6LickaNNEsx7iT0a6ian5h5LYF0rbMzFxFhOdWzOLtvgVjyQpAwkE4XdtTZFHEODPnSjtWmPd3OXNeZ04szFasFHA9XW3sF7sH87f5fAe6LqVK2QhJ0Fecsg8ubqt_YqjJbYO0YHJLm-gG-9zkqrfDxRA_mRpYD8VJr1W-1upzH711"/>
+</div>
+<div class="px-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-on-surface">Salmon</h4>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary">Eat Soon</span>
+</div>
+<p class="text-sm text-outline-variant">500g</p>
+</div>
+</div>
+<!-- Ingredient Card 3 -->
+<div class="group bg-surface-container-lowest rounded-lg p-3 hover:shadow-xl transition-all duration-500 overflow-hidden">
+<div class="aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="bright yellow organic lemons with textured skin arranged on a neutral linen cloth with soft morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXIim4LjFRKz70Y_nHnOZJnbWRImpejnePiGe48Z1_8bwnHfq6h5Np6QQiRBRPSFKXYj3MN3i3S-2YmYmnzgnp2nTy11_ltmGwa5tz32_yyqhi0BxlQZaO1cQtfk75UF8QsaNaVdbQ1n9TuD5POKJ_9dxeVe2iHsgg2AQKT9vbUkP_RjdCcFTj4U1P1SpikcW5YCZHPFBr4IqYS5d8QhlqVcvI2ijU7yQw66lRdzXfEDTmlTcZoaW-b2Wo9FK2dmoOj3WuZsaavgAS"/>
+</div>
+<div class="px-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-on-surface">Lemon</h4>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-container/20 text-primary">Fresh</span>
+</div>
+<p class="text-sm text-outline-variant">3 Items</p>
+</div>
+</div>
+<!-- Ingredient Card 4 -->
+<div class="group bg-surface-container-lowest rounded-lg p-3 hover:shadow-xl transition-all duration-500 overflow-hidden">
+<div class="aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="close-up of whole garlic bulbs with papery white skin on a dark rustic wooden background with atmospheric lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC22K8edpJ7q_lmvVLsY5Nuq3PHmdfrkrhH2_EhPWAs0Sr4epEQYNLWh4_N-jz-l1inTF7-bysuby7LsI-TWPw0EredtG60xrr0zWWBF3iHYsT_jtIjg9gcWOm5VvlWmzyopXP8nhlZk5xi1Hsr6p15crZE8FczT2J3yePiHrgHoS2MQ_hSZMphu8I37UUUkmoxuu8JaOH5IoioatNGzPTrhKLiUTT5xd5hCCxvc5gAEDilZSbUY9thCuUt_ZoJkhlP87EpB-iA7t6X"/>
+</div>
+<div class="px-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-on-surface">Garlic</h4>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-container/20 text-primary">Pantry</span>
+</div>
+<p class="text-sm text-outline-variant">2 Bulbs</p>
+</div>
+</div>
+</div>
+</section>
+<!-- SMART COOKING BLOCK -->
+<section class="mb-20">
+<div class="relative rounded-xl overflow-hidden bg-on-background group">
+<div class="absolute inset-0 opacity-60">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" data-alt="gourmet plated kale and salmon sauté with lemon zest and toasted pine nuts in a professional culinary style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7Tc8ReSozSoOdeoHtCrtmfY4hgmYRiBBGYSJxFPXPnrXxRarISZK2_Vn4Wzz4rZlVmIAsH75RWsqR3QVxuzI2pLqTdHPTB9SZtOi-RLMR7A7QbTlnumY-rLCCmziHeijuhHvK9TWi_wjIsNh8a-k2gieppgdbcm38QSeF13RTvSQgoICswOVMz9mCrL9ToNberxBB6LTvVwp-e0GFm9BfhqjeLH7K7453k72wOwGSe-br7DMDg5CFSlc2-bJr8b7_iR1-UOrDMNpM"/>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-on-background via-on-background/40 to-transparent"></div>
+<div class="relative p-10 md:p-16 flex flex-col justify-end min-h-[400px]">
+<span class="label-sm text-[11px] uppercase tracking-widest font-bold text-primary-fixed mb-4">Cooking Opportunity</span>
+<h3 class="text-3xl md:text-5xl font-headline font-extrabold text-white mb-6 leading-tight max-w-md">What to cook with your ingredients?</h3>
+<div class="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+<div class="bg-white/10 backdrop-blur-md rounded-lg p-6 flex items-center gap-4 border border-white/10">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="close up macro shot of seared salmon and vibrant kale leaves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmC0npjeWRquxPhyXBvpiH14UUsQA-LeGa9esMy4vqwovoGMpz67lslJ6SUyenUIgnikZOVJ8zmyAnZ7KUUtki9ZMsM07-7pmIJW2MTzZ1uxCiRqEI_izm8S7HOuRxX99yUPN13Y_J4T40h-KYV1xXpnXbAuaCcSYY7HrfhW-9H3PciXxyhrjKrxssOQZRgTSccwLgF0BuUmWDrKdCLOot9Q59kl8uzJJ9UK8A1OJjFlPLIUczOUWunz4O7uPHhZqzUUF-D2zgLbSI"/>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">Kale &amp; Salmon Sauté</h4>
+<p class="text-white/60 text-sm">Uses 4 of your items • 15 mins</p>
+</div>
+</div>
+<button class="bg-primary-fixed text-on-primary-fixed px-8 py-4 rounded-lg font-bold hover:bg-white transition-colors flex items-center gap-2">
+                            View Recipe
+                            <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- EMPTY STATE (Secondary context placeholder) -->
+<section class="hidden py-20 text-center flex flex-col items-center">
+<div class="w-32 h-32 bg-surface-container-high rounded-full flex items-center justify-center mb-8">
+<span class="material-symbols-outlined text-5xl text-outline-variant" data-icon="kitchen" style="font-variation-settings: 'FILL' 1;">kitchen</span>
+</div>
+<h3 class="text-2xl font-headline font-bold mb-3">Your fridge is looking light</h3>
+<p class="text-on-surface-variant max-w-xs mb-8">Add your first seasonal ingredients to see recipe ideas and freshness tracking.</p>
+<button class="bg-secondary text-on-secondary px-8 py-3 rounded-full font-medium">Add Ingredients</button>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-8 pt-4 bg-[#f4f4f2]/80 dark:bg-[#1a1c1b]/80 backdrop-blur-2xl z-50 rounded-t-[3rem] shadow-[0_-8px_24px_rgba(26,28,27,0.04)]">
+<a class="flex flex-col items-center justify-center text-[#74796d] p-2 hover:bg-[#e8e8e6] dark:hover:bg-[#2a2c2b] rounded-full active:scale-90 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#74796d] p-2 hover:bg-[#e8e8e6] dark:hover:bg-[#2a2c2b] rounded-full active:scale-90 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#526048] text-white rounded-[1.5rem] px-5 py-2 active:scale-90 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="kitchen" style="font-variation-settings: 'FILL' 1;">kitchen</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Fridge</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#74796d] p-2 hover:bg-[#e8e8e6] dark:hover:bg-[#2a2c2b] rounded-full active:scale-90 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-medium mt-1">List</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#74796d] p-2 hover:bg-[#e8e8e6] dark:hover:bg-[#2a2c2b] rounded-full active:scale-90 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Manrope'] text-[10px] uppercase tracking-[0.05em] font-medium mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

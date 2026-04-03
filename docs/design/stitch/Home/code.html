@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Season - Smart Kitchen Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed-dim": "#bcccae",
+              "inverse-surface": "#2f3130",
+              "tertiary-fixed-dim": "#e2bccd",
+              "secondary-fixed-dim": "#ffb59b",
+              "outline-variant": "#c5c8bd",
+              "on-primary-fixed": "#131f0b",
+              "inverse-on-surface": "#f1f1ef",
+              "tertiary-fixed": "#ffd8e9",
+              "on-secondary-fixed": "#380d00",
+              "background": "#f9f9f7",
+              "on-error": "#ffffff",
+              "surface-dim": "#dadad8",
+              "on-primary-fixed-variant": "#3d4b34",
+              "surface-tint": "#54634a",
+              "surface-container-high": "#e8e8e6",
+              "outline": "#75786f",
+              "on-background": "#1a1c1b",
+              "on-error-container": "#93000a",
+              "on-secondary-fixed-variant": "#703722",
+              "secondary-container": "#ffad91",
+              "on-primary-container": "#f8ffed",
+              "primary-container": "#6a795f",
+              "on-secondary-container": "#793e29",
+              "surface-container": "#eeeeec",
+              "primary": "#526048",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "on-surface-variant": "#444840",
+              "tertiary-container": "#8b6c7a",
+              "surface-variant": "#e2e3e1",
+              "primary-fixed": "#d8e8c8",
+              "secondary-fixed": "#ffdbcf",
+              "inverse-primary": "#bcccae",
+              "tertiary": "#715462",
+              "surface-container-low": "#f4f4f2",
+              "surface": "#f9f9f7",
+              "on-tertiary-fixed": "#2b1420",
+              "surface-bright": "#f9f9f7",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#1a1c1b",
+              "on-secondary": "#ffffff",
+              "secondary": "#8c4e37",
+              "error-container": "#ffdad6",
+              "surface-container-highest": "#e2e3e1",
+              "on-tertiary-container": "#fffbff",
+              "error": "#ba1a1a",
+              "on-tertiary-fixed-variant": "#5a3f4c"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed-variant">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full z-50 bg-[#f9f9f7]/70 dark:bg-stone-900/70 backdrop-blur-xl shadow-[0_8px_24px_rgba(26,28,27,0.04)]">
+<div class="flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container border border-outline/10">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a woman with natural lighting and soft blurred garden background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqlKbyGw3IAyY2nbYLLSu3Z1FACfADd7a1gO67P18yGNg2w2dGyhuj_bslw8pCPNF1TyTQRwS01I4PGwD91JhD76iKtmNLNUCUPjAUZIgBXUL9fvJUsygcwIfl7G5WQdHqVsnCcy-cA4d3mtY6-6Qu0MNtiNbZa-jNHP7ekyC85vE3MNNOVS5dI8uFqc9YsTXNyByxrOrbzLx4nTk4F4l6zkmsb7zEkZCT8FybNOq46GpzNjmKWj30PYRqDl_fb3zdFw5S3aI1eiQ2"/>
+</div>
+<h1 class="font-headline font-extrabold tracking-tighter text-[#526048] dark:text-[#f9f9f7] text-2xl">Season</h1>
+</div>
+<button class="text-[#526048] dark:text-[#a3b18a] hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+</div>
+</header>
+<main class="pb-32 space-y-12">
+<!-- HERO SECTION (Optimized for Fridge Utility) -->
+<section class="px-6 pt-4">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-sm group">
+<img alt="Charred Sage &amp; Butternut Squash Risotto" class="w-full h-full object-cover" data-alt="overhead shot of a creamy butternut squash risotto topped with crispy fried sage leaves and shaved parmesan in a rustic ceramic bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOmwUPXHXpvZdIqDW765xgHYJtyDV5XLKmBHKOKyltXo3R9PfMKAEd4iyVMA0P_4Pxbh44wXW-dwZA-dDljxZGRUkZSb3rMcrUjfKVumIkQ_4rrttCeMMlrmahXOgQ-EscVC2aoEnfvS3KFKcAWLiqDE4E-zPzBp1ye-lHbyTW8XrH9gx6Ztdm67A6X2GourRWlvmUjz1uYecZXgQHnL24_ODQUkItOJx9LYL540DswIR7Fwn5q0k_AlU87Chi4kffUSdM8HQUYnru"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+<div class="absolute top-6 right-6">
+<div class="bg-white/90 backdrop-blur rounded-lg px-3 py-2 flex items-center gap-2 shadow-lg">
+<span class="material-symbols-outlined text-primary text-lg" data-icon="kitchen" style="font-variation-settings: 'FILL' 1;">kitchen</span>
+<span class="text-[10px] font-extrabold font-label text-primary uppercase">Best Match (5/5)</span>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 p-8 w-full">
+<span class="inline-block bg-primary-container text-on-primary-container font-label text-[10px] uppercase tracking-[0.1em] font-bold px-3 py-1 rounded-full mb-3">USE UP YOUR SQUASH &amp; SAGE</span>
+<h2 class="font-headline font-extrabold text-4xl text-white tracking-tighter leading-tight mb-4">Charred Sage &amp; Butternut Squash Risotto</h2>
+<button class="bg-primary text-on-primary px-8 py-3 rounded-md font-semibold hover:opacity-90 transition-all flex items-center gap-2 group-active:scale-95">
+                        Cook Now
+                        <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- READY TO COOK (Elevated Fridge Match) -->
+<section>
+<div class="px-6 flex justify-between items-end mb-6">
+<div>
+<span class="font-label text-[10px] uppercase tracking-[0.1em] font-bold text-secondary">Inventory Matches</span>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-on-surface">Ready to Cook Now</h3>
+</div>
+<button class="text-primary font-semibold text-sm">View all</button>
+</div>
+<div class="flex gap-6 overflow-x-auto no-scrollbar px-6">
+<!-- Card 1 -->
+<div class="min-w-[280px] bg-surface-container-lowest rounded-lg overflow-hidden group shadow-sm border border-outline-variant/20">
+<div class="h-40 overflow-hidden relative">
+<img alt="Avocado Bowl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="vibrant healthy salad bowl with sliced avocado, quinoa, and fresh greens on a white background with bright morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRj14ybOnq43Im8YGugw5ai4QfX7ENx9jOZ9vopNYUOyFt5xljIdC3Yi4V5d-Bvwnr_3Vkhbtk8-i0zGnj80cON_efOA1GBqcIgUew6P0weOzL5-MUpKQUz1Wyzcv-Qo3s_F4iqJ2ROROAZsuR0WRo1oVVwu2eyKEADln9RZluP59utIhtnswnPyK8FYMKu2q4gSo_-lQ7um6PAmAEQAaPL5aXavyMr7rJImJpoxJ6b1iFtTmuyyBWZlOn2XjKA8TWyAymCTZ5S0L-"/>
+<div class="absolute top-3 left-3 bg-primary/90 backdrop-blur text-white px-2 py-1 rounded text-[10px] font-bold">3/5 IN STOCK</div>
+</div>
+<div class="p-5">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">Roasted Root Veggie Salad</h4>
+<p class="text-on-surface-variant text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span> Quick · 25 mins
+                    </p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[280px] bg-surface-container-lowest rounded-lg overflow-hidden group shadow-sm border border-outline-variant/20">
+<div class="h-40 overflow-hidden relative">
+<img alt="Lentil Soup" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="steaming bowl of earthy lentil soup with a dollop of yogurt and fresh herbs on a rustic wooden table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHrerx6qx7C8dBV6X0uFwKXuWkkBOlDzU1ccynbUl1KpwrRVOsCcKp2jMT4zq3GWs2MH9fdbzMEE2aWsnaNJR_FIdBjkUM45t3KPWmuKWklrVuoN2aCIGoSUNOhmGLD48qGMzN-44IGDH89xR62juL1mDK-TCyGmtKyB2RDOtYSaYVaPvzJVWonUw6SurfY25i9rOxrqv9jRIwpaM1oZG71jdxpeAT1zwBEMbnX-hYjFtIAWERV-a-i-mcFnu0RyyL_TISOSgbB9m-"/>
+<div class="absolute top-3 left-3 bg-primary/90 backdrop-blur text-white px-2 py-1 rounded text-[10px] font-bold">4/5 IN STOCK</div>
+</div>
+<div class="p-5">
+<h4 class="font-headline font-bold text-lg leading-tight mb-1">Miso-Glazed Pumpkin</h4>
+<p class="text-on-surface-variant text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="bolt">bolt</span> Easy · 40 mins
+                    </p>
+</div>
+</div>
+</div>
+</section>
+<!-- PEAK SEASON (Connectivity Focus) -->
+<section class="bg-surface-container-low py-12">
+<div class="px-6 flex justify-between items-end mb-8">
+<div>
+<span class="font-label text-[10px] uppercase tracking-[0.1em] font-bold text-primary">Harvest Calendar</span>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-on-surface">Peak Season Now</h3>
+</div>
+<button class="text-primary font-semibold text-sm flex items-center gap-1">
+                View All <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<div class="flex gap-4 overflow-x-auto no-scrollbar px-6">
+<button class="flex flex-col items-center min-w-[100px] group">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-outline-variant/10 group-active:scale-95 transition-transform">
+<img alt="Leeks" class="w-12 h-12 object-cover rounded-full" data-alt="close up of fresh organic leeks with water droplets" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBn3vM7-5izNstB9PkU81_5dOeRIbSGVJMxoXQF-xr3AoU2HrjFnNwaYAg683n_4Xg_FCBQNf-M_aJr79d4W6ezSX3ONKkiyt-1KirHt2bZJXRAOuVPhvwy92tdbZZ42vNpfd94e0LsWmCEXvO2t1NYyCSAsiU8KQzYQneJuh0Q-DPIehF12BRk4I4B5GJaSpv9r4woo4eunXyj3u9doeJf2MDW6LOMfcmWStYbIyzUB67WXsv2_le7S9VQF5MYHpfWzt_PYcyqDFn5"/>
+</div>
+<span class="text-xs font-bold mb-0.5">Leeks</span>
+<span class="text-[9px] text-on-surface-variant uppercase font-medium">12 recipes</span>
+</button>
+<button class="flex flex-col items-center min-w-[100px] group">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-outline-variant/10 group-active:scale-95 transition-transform">
+<img alt="Figs" class="w-12 h-12 object-cover rounded-full" data-alt="ripe halved mission figs showing deep red interior texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRytagqgu1UDYU4lOH60x2eFbiWp2wDckEkwIn3d14BZIiHjiw-RbrpXg_pBBjIDTonU2OWzxvrVkDOAvzAJgRxgn4DzuLWmtRdSzHRESJVb3sNSAoxzKfdNu1JI8NSWWBpRLy5Rsd6dTfzqiT46NRmWhVaj0ul7mxkykm_fuFNAj6E031Ui2jLGdU9azyhPZhqBUcrh_7aNBpHNw4jW0J8-prpBTdbde4ZBZaE-ThL8leU7Y4_rUbpO-12iuln9tHVTJhaLM8UoTO"/>
+</div>
+<span class="text-xs font-bold mb-0.5">Figs</span>
+<span class="text-[9px] text-on-surface-variant uppercase font-medium">8 recipes</span>
+</button>
+<button class="flex flex-col items-center min-w-[100px] group">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-outline-variant/10 group-active:scale-95 transition-transform">
+<img alt="Pears" class="w-12 h-12 object-cover rounded-full" data-alt="crisp green pears with textured skin and soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMrjduUZiqyOeNuWmvca0rs2JWsAdmu1mSjZnaQQCVHhiZ2YQwOLCr9tDEURH4UYdzBQoZ-IHcxCdIoOXILizRr48QSS5FKNzyyOiIbZubf4CG-PcmSn7K1699gEUmsr5SrL3QrMVufqmGi4qL6_4-i1hh7zSuJrULREKX2cb1rIZ-ElDv5PijTt6mYY3SA_doqqQS3UIjH5a_OE1aPyhZN7K_SbS_1quNpISk2kkivAD_RKY9eyreStK_Nlz7EYVWquDIe7O9d-vY"/>
+</div>
+<span class="text-xs font-bold mb-0.5">Pears</span>
+<span class="text-[9px] text-on-surface-variant uppercase font-medium">24 recipes</span>
+</button>
+<button class="flex flex-col items-center min-w-[100px] group">
+<div class="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-outline-variant/10 group-active:scale-95 transition-transform">
+<img alt="Kale" class="w-12 h-12 object-cover rounded-full" data-alt="vibrant curly kale leaves with rich green tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9a2Gg2hUDkBlTNG1tBFCcABnpFElbg2W2_tQekq_yHV6UyIohRrlRG2Yto1wXGtrRj13cP4wYUB4bWLSJHBxDdvdYi-FeqJptaa6t47H1V-hcYdCAC5wJtQGmlzdZwiQQZkEpmLXvDYmLIrKX2j5u_IG-iI93ozTUTJM9Dkmsw3qfu_VqpNWvfSl-bz6WyVqdbWeAPRxc1OyRaikGF0oQ393hI52O7bWqeph9odEZhGzxcnrrpocBEMK5WW03TkfMahezKiZqXCEm"/>
+</div>
+<span class="text-xs font-bold mb-0.5">Kale</span>
+<span class="text-[9px] text-on-surface-variant uppercase font-medium">15 recipes</span>
+</button>
+</div>
+</section>
+<!-- WEEKLY DISCOVERIES (De-prioritized/Compact) -->
+<section class="px-6 mb-12">
+<div class="mb-6">
+<span class="font-label text-[10px] uppercase tracking-[0.1em] font-bold text-primary">Curated For You</span>
+<h3 class="font-headline font-bold text-2xl tracking-tight text-on-surface">Weekly Discoveries</h3>
+</div>
+<div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+<!-- Compact Story -->
+<div class="min-w-[200px] h-32 rounded-lg overflow-hidden relative flex-shrink-0 group">
+<img alt="Brunch" class="w-full h-full object-cover" data-alt="minimalist breakfast table with soft morning shadows, a ceramic cup, and fresh sourdough bread" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDVLRgxX59h-f46kZlMM-YUK8zV_HNpl3_2ntUuzK5Jm5Eq-rXz_ky-GPqQKHrFFAOFS6wYHqJClOiOSEMrGfKOk0hoIqT-NAyXiQsMclvyowQgbdWfOkSp1tYIopwGbP9MPNawi7r0ZOk-_ppfvkxjRLg5ENlx7tuAl6W8hz7FHD5lnDLy25mbzOCO-QppOlvoNC5tiG_1KGLeIUG82F0iZ1_99eyJpnS8Mlxq_iGk1xzQ7NXKWjURMwv-SV_NBUFDV5LsDsOtz0I"/>
+<div class="absolute inset-0 bg-black/40 flex items-end p-3">
+<p class="text-white text-xs font-bold leading-tight line-clamp-2">The Art of the Slow Sunday Brunch</p>
+</div>
+</div>
+<!-- Compact Guide -->
+<div class="min-w-[200px] h-32 rounded-lg bg-secondary-fixed p-4 flex flex-col justify-between flex-shrink-0">
+<h4 class="font-headline font-bold text-xs text-on-secondary-container leading-tight">Mastering Your Fridge Pantry</h4>
+<div class="flex -space-x-1.5">
+<div class="w-5 h-5 rounded-full bg-white/50 border border-secondary-fixed"></div>
+<div class="w-5 h-5 rounded-full bg-white/70 border border-secondary-fixed"></div>
+<span class="text-[8px] font-bold text-on-secondary-container uppercase pl-2 self-center">+12 More</span>
+</div>
+</div>
+<!-- New Discovery -->
+<div class="min-w-[200px] h-32 rounded-lg bg-surface-container p-4 flex flex-col justify-between flex-shrink-0">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-xs text-on-surface leading-tight max-w-[120px]">Golden Hour Ginger Elixir</h4>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="local_bar">local_bar</span>
+</div>
+<span class="text-[9px] font-bold text-primary uppercase">DRINKS</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-8 pt-2 bg-[#f9f9f7]/70 dark:bg-stone-900/70 backdrop-blur-xl rounded-t-xl z-50 shadow-[0_-8px_24px_rgba(26,28,27,0.04)]">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-[#526048] dark:bg-[#6a795f] text-white rounded-full p-3 scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-manrope text-[10px] uppercase tracking-[0.05em] font-semibold mt-0.5">Home</span>
+</a>
+<!-- Explore -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 p-2 hover:text-[#526048] dark:hover:text-[#f9f9f7] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-manrope text-[10px] uppercase tracking-[0.05em] font-semibold mt-0.5">Explore</span>
+</a>
+<!-- Fridge -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 p-2 hover:text-[#526048] dark:hover:text-[#f9f9f7] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="kitchen">kitchen</span>
+<span class="font-manrope text-[10px] uppercase tracking-[0.05em] font-semibold mt-0.5">Fridge</span>
+</a>
+<!-- List -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 p-2 hover:text-[#526048] dark:hover:text-[#f9f9f7] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-manrope text-[10px] uppercase tracking-[0.05em] font-semibold mt-0.5">List</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 p-2 hover:text-[#526048] dark:hover:text-[#f9f9f7] transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-manrope text-[10px] uppercase tracking-[0.05em] font-semibold mt-0.5">Profile</span>
+</a>
+</nav>
+<!-- Contextual FAB -->
+<button class="fixed right-6 bottom-28 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform z-40">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</body></html>

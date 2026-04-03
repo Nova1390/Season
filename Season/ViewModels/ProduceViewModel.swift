@@ -1482,7 +1482,8 @@ final class ProduceViewModel: ObservableObject {
         isRemix: Bool = false,
         originalRecipeID: String? = nil,
         originalRecipeTitle: String? = nil,
-        originalAuthorName: String? = nil
+        originalAuthorName: String? = nil,
+        commitLocally: Bool = true
     ) -> Recipe? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSteps = steps
@@ -1554,6 +1555,17 @@ final class ProduceViewModel: ObservableObject {
         )
         recipe.imageURL = (trimmedImageURL?.isEmpty == false) ? trimmedImageURL : nil
 
+        if commitLocally {
+            commitPublishedRecipeLocally(recipe)
+            print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
+        } else {
+            print("[SEASON_RECIPE] phase=publish_recipe_built recipe_id=\(recipe.id) local_commit=false")
+        }
+
+        return recipe
+    }
+
+    func commitPublishedRecipeLocally(_ recipe: Recipe) {
         if let existingIndex = recipes.firstIndex(where: { $0.id == recipe.id }) {
             recipes[existingIndex] = recipe
         } else {
@@ -1561,9 +1573,6 @@ final class ProduceViewModel: ObservableObject {
         }
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
-        print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
-
-        return recipe
     }
 
     func recipeReasonText(for ranked: RankedRecipe) -> String {

@@ -32,6 +32,48 @@ enum SeasonColors {
     static let secondarySurface = Color(.secondarySystemGroupedBackground)
     static let subtleSurface = Color(.tertiarySystemGroupedBackground)
     static let mutedChipSurface = Color(.systemGray6)
+    static let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
+    static let seasonGreenSoft = Color(red: 0.84, green: 0.90, blue: 0.79)
+    static let warningOrange = Color(red: 0.84, green: 0.58, blue: 0.18)
+}
+
+enum SeasonChipSemantic {
+    case positive
+    case warning
+    case neutral
+
+    var foreground: Color {
+        switch self {
+        case .positive:
+            return SeasonColors.seasonGreen.opacity(0.9)
+        case .warning:
+            return SeasonColors.warningOrange.opacity(0.9)
+        case .neutral:
+            return Color.primary.opacity(0.68)
+        }
+    }
+
+    var background: Color {
+        switch self {
+        case .positive:
+            return SeasonColors.seasonGreenSoft.opacity(0.38)
+        case .warning:
+            return SeasonColors.warningOrange.opacity(0.14)
+        case .neutral:
+            return SeasonColors.subtleSurface
+        }
+    }
+
+    var borderColor: Color {
+        switch self {
+        case .positive:
+            return SeasonColors.seasonGreen.opacity(0.14)
+        case .warning:
+            return SeasonColors.warningOrange.opacity(0.18)
+        case .neutral:
+            return Color.primary.opacity(0.07)
+        }
+    }
 }
 
 extension View {
@@ -96,12 +138,81 @@ struct SeasonCard<Content: View>: View {
 }
 
 struct PressableCardButtonStyle: ButtonStyle {
-    var pressedScale: CGFloat = 0.97
+    var pressedScale: CGFloat = SeasonMotion.pressScale
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? pressedScale : 1.0)
-            .animation(.easeOut(duration: 0.18), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? SeasonMotion.pressOpacity : 1.0)
+            .animation(SeasonMotion.pressAnimation, value: configuration.isPressed)
+    }
+}
+
+enum SeasonMotion {
+    static let pressScale: CGFloat = 0.98
+    static let pressOpacity: Double = 0.96
+    static let pressAnimation: Animation = .easeOut(duration: 0.16)
+}
+
+struct SeasonPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [SeasonColors.seasonGreen, SeasonColors.seasonGreen.opacity(0.88)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? SeasonMotion.pressScale : 1.0)
+            .opacity(configuration.isPressed ? SeasonMotion.pressOpacity : 1.0)
+            .animation(SeasonMotion.pressAnimation, value: configuration.isPressed)
+    }
+}
+
+struct SeasonSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(SeasonColors.secondarySurface.opacity(0.84))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.7)
+            )
+            .scaleEffect(configuration.isPressed ? SeasonMotion.pressScale : 1.0)
+            .opacity(configuration.isPressed ? SeasonMotion.pressOpacity : 1.0)
+            .animation(SeasonMotion.pressAnimation, value: configuration.isPressed)
+    }
+}
+
+struct SeasonDestructiveButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.red.opacity(0.9))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.red.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.red.opacity(0.18), lineWidth: 0.7)
+            )
+            .scaleEffect(configuration.isPressed ? SeasonMotion.pressScale : 1.0)
+            .opacity(configuration.isPressed ? SeasonMotion.pressOpacity : 1.0)
+            .animation(SeasonMotion.pressAnimation, value: configuration.isPressed)
     }
 }
 
@@ -230,29 +341,38 @@ struct SeasonSectionHeader: View {
 struct SeasonStatChip: View {
     let icon: String
     let text: String
-    var background: Color = SeasonColors.subtleSurface
-    var foreground: Color = Color.primary.opacity(0.76)
+    var semantic: SeasonChipSemantic = .neutral
+    var background: Color? = nil
+    var foreground: Color? = nil
     var borderOpacity: Double = 0.08
+    private var resolvedForeground: Color { foreground ?? semantic.foreground }
+    private var resolvedBackground: Color { background ?? semantic.background }
+    private var resolvedBorder: Color {
+        if background == nil && foreground == nil {
+            return semantic.borderColor
+        }
+        return Color.primary.opacity(borderOpacity)
+    }
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(SeasonTypography.captionStrong)
-                .foregroundStyle(foreground)
+                .foregroundStyle(resolvedForeground)
             Text(text)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(foreground)
+                .foregroundStyle(resolvedForeground)
                 .lineLimit(1)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
             Capsule(style: .continuous)
-                .fill(background)
+                .fill(resolvedBackground)
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(Color.primary.opacity(borderOpacity), lineWidth: 0.6)
+                .stroke(resolvedBorder, lineWidth: 0.5)
         )
     }
 }
@@ -260,11 +380,12 @@ struct SeasonStatChip: View {
 struct SeasonBadge: View {
     let text: String
     var icon: String?
+    var semantic: SeasonChipSemantic = .neutral
     var horizontalPadding: CGFloat = 8
     var verticalPadding: CGFloat = 4
     var cornerRadius: CGFloat = SeasonRadius.small
-    var foreground: Color = .secondary
-    var background: Color = SeasonColors.subtleSurface
+    var foreground: Color? = nil
+    var background: Color? = nil
 
     var body: some View {
         HStack(spacing: 5) {
@@ -276,12 +397,16 @@ struct SeasonBadge: View {
                 .font(SeasonTypography.captionStrong)
                 .lineLimit(1)
         }
-        .foregroundStyle(foreground)
+        .foregroundStyle(foreground ?? semantic.foreground)
         .seasonChipStyle(
             horizontalPadding: horizontalPadding,
             verticalPadding: verticalPadding,
             cornerRadius: cornerRadius,
-            background: background
+            background: background ?? semantic.background
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke((foreground == nil && background == nil ? semantic.borderColor : Color.primary.opacity(0.055)), lineWidth: 0.5)
         )
     }
 }
@@ -291,10 +416,10 @@ struct SeasonCardContainer<Content: View>: View {
     var cornerRadius: CGFloat = SeasonRadius.large
     var background: Color = Color(.systemBackground)
     var backgroundOpacity: Double = 1.0
-    var borderOpacity: Double = 0.09
-    var shadowOpacity: Double = 0.028
-    var shadowRadius: CGFloat = 8
-    var shadowY: CGFloat = 3
+    var borderOpacity: Double = 0.06
+    var shadowOpacity: Double = 0.02
+    var shadowRadius: CGFloat = 6
+    var shadowY: CGFloat = 2
 
     var body: some View {
         content
@@ -689,6 +814,155 @@ func resolvedProduceImageName(for item: ProduceItem) -> String? {
     return nil
 }
 
+struct IngredientVisualView: View {
+    let name: String
+    let produceCategory: ProduceCategoryKey?
+    let basicCategory: BasicIngredientCategory?
+    let imageName: String?
+    var cornerRadius: CGFloat = 10
+    var imageContentMode: ContentMode = .fit
+    var imagePaddingRatio: CGFloat = 0.08
+    var iconScale: CGFloat = 0.5
+    var showsNameInFallback: Bool = false
+
+    private var resolvedImageName: String? {
+        guard let imageName else { return nil }
+        let trimmed = imageName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, hasAsset(named: trimmed) else { return nil }
+        return trimmed
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let imagePadding = max(4, side * imagePaddingRatio)
+            let iconSize = max(16, side * iconScale)
+            let initial = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1)).uppercased()
+
+            ZStack {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: fallbackGradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                if let resolvedImageName {
+                    Group {
+                        if imageContentMode == .fill {
+                            Image(resolvedImageName)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(resolvedImageName)
+                                .resizable()
+                                .scaledToFit()
+                                .padding(imagePadding)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                } else {
+                    VStack(spacing: max(2, side * 0.04)) {
+                        Image(systemName: fallbackSymbol)
+                            .font(.system(size: iconSize, weight: .semibold))
+                            .foregroundStyle(Color.primary.opacity(0.48))
+
+                        if showsNameInFallback, !initial.isEmpty, side > 120 {
+                            Text(initial)
+                                .font(.system(size: max(14, side * 0.12), weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.primary.opacity(0.26))
+                        }
+                    }
+                }
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        }
+    }
+
+    private var fallbackSymbol: String {
+        if let produceCategory {
+            switch produceCategory {
+            case .vegetable, .legume:
+                return "leaf.fill"
+            case .fruit:
+                return "apple.logo"
+            case .tuber:
+                return "square.grid.2x2.fill"
+            }
+        }
+
+        if let basicCategory {
+            switch basicCategory {
+            case .dairy:
+                return "drop.fill"
+            case .condiments:
+                return "drop.circle.fill"
+            case .herbsAromatics:
+                return "flame.fill"
+            case .legumes:
+                return "leaf.fill"
+            case .pantry:
+                return "archivebox.fill"
+            case .proteins, .carbs:
+                return "cube.fill"
+            }
+        }
+
+        return "cube.fill"
+    }
+
+    private var fallbackGradient: [Color] {
+        if produceCategory != nil {
+            return [
+                SeasonColors.seasonGreenSoft.opacity(0.38),
+                SeasonColors.secondarySurface.opacity(0.95)
+            ]
+        }
+
+        if let basicCategory {
+            switch basicCategory {
+            case .dairy:
+                return [
+                    Color(red: 0.97, green: 0.95, blue: 0.90),
+                    SeasonColors.secondarySurface.opacity(0.94)
+                ]
+            case .condiments:
+                return [
+                    Color(red: 0.97, green: 0.93, blue: 0.84),
+                    SeasonColors.secondarySurface.opacity(0.95)
+                ]
+            case .herbsAromatics:
+                return [
+                    Color(red: 0.95, green: 0.90, blue: 0.85),
+                    SeasonColors.secondarySurface.opacity(0.95)
+                ]
+            case .legumes:
+                return [
+                    SeasonColors.seasonGreenSoft.opacity(0.32),
+                    SeasonColors.secondarySurface.opacity(0.95)
+                ]
+            case .pantry, .proteins, .carbs:
+                return [
+                    SeasonColors.secondarySurface.opacity(0.96),
+                    SeasonColors.subtleSurface.opacity(0.96)
+                ]
+            }
+        }
+
+        return [
+            SeasonColors.secondarySurface.opacity(0.96),
+            SeasonColors.subtleSurface.opacity(0.96)
+        ]
+    }
+}
+
 struct CategoryIconView: View {
     let category: ProduceCategoryKey
     var size: CGFloat = 20
@@ -716,23 +990,17 @@ struct ProduceThumbnailView: View {
     var size: CGFloat = 46
 
     var body: some View {
-        let resolvedName = resolvedProduceImageName(for: item)
-
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.tertiarySystemGroupedBackground))
-
-            if let resolvedName {
-                Image(resolvedName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(size * 0.08)
-            } else {
-                CategoryIconView(category: item.category, size: size * 0.62)
-            }
-        }
+        IngredientVisualView(
+            name: item.displayName(languageCode: "en"),
+            produceCategory: item.category,
+            basicCategory: nil,
+            imageName: resolvedProduceImageName(for: item),
+            cornerRadius: 10,
+            imageContentMode: .fit,
+            imagePaddingRatio: 0.08,
+            iconScale: 0.54
+        )
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -741,27 +1009,17 @@ struct ProduceHeroImageView: View {
     var height: CGFloat = 200
 
     var body: some View {
-        let resolvedName = resolvedProduceImageName(for: item)
-
-        ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            if let resolvedName {
-                Image(resolvedName)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(SeasonSpacing.md)
-            } else {
-                CategoryIconView(category: item.category, size: 74)
-            }
-        }
+        IngredientVisualView(
+            name: item.displayName(languageCode: "en"),
+            produceCategory: item.category,
+            basicCategory: nil,
+            imageName: resolvedProduceImageName(for: item),
+            cornerRadius: 14,
+            imageContentMode: .fit,
+            imagePaddingRatio: 0.08,
+            iconScale: 0.24,
+            showsNameInFallback: true
+        )
         .frame(maxWidth: .infinity)
         .frame(height: height)
     }

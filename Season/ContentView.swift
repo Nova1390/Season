@@ -11,7 +11,6 @@ struct ContentView: View {
 
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
-    @AppStorage("accountUsername") private var accountUsername = "Anna"
     @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
     @StateObject private var fridgeViewModel = FridgeViewModel()
@@ -109,8 +108,9 @@ struct ContentView: View {
                     )
 
                     Button {
-                        let draft = viewModel.createEmptyDraftRecipe(author: accountUsername)
-                        activeDraftRecipeID = draft.id
+                        // Avoid mutating recipe/feed state before navigation.
+                        // CreateRecipeView will initialize draft state when presented.
+                        activeDraftRecipeID = nil
                         showingCreateRecipe = true
                     } label: {
                         VStack(spacing: 2) {

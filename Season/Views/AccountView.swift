@@ -71,16 +71,23 @@ struct AccountView: View {
     private let backfillService = BackfillService()
     private let reconciliationDiagnosticsService = ReconciliationDiagnosticsService()
     private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
+    private let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
+    private let seasonGreenSoft = Color(red: 0.84, green: 0.90, blue: 0.79)
 
     var body: some View {
-        List {
-            profileHeaderSection
-            librarySection
-            preferencesSection
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                profileHeaderSection
+                librarySection
+                preferencesSection
+                diagnosticsSection
+                Color.clear.frame(height: 8)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(Color(.systemGroupedBackground))
+        .background(SeasonColors.primarySurface)
         .navigationTitle(viewModel.localizer.text(.accountTab))
         .safeAreaInset(edge: .bottom) {
             Color.clear
@@ -142,129 +149,185 @@ struct AccountView: View {
     }
 
     private var profileHeaderSection: some View {
-        Section(header: Text(viewModel.localizer.text(.profile)).textCase(nil)) {
-            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                HStack(alignment: .top, spacing: 12) {
-                    PhotosPicker(
-                        selection: $selectedAvatarPhotoItem,
-                        matching: .images
-                    ) {
+        VStack(alignment: .center, spacing: 12) {
+            sectionHeader(viewModel.localizer.text(.profile))
+
+            PhotosPicker(
+                selection: $selectedAvatarPhotoItem,
+                matching: .images
+            ) {
+                Circle()
+                    .fill(Color(.tertiarySystemGroupedBackground))
+                    .frame(width: 84, height: 84)
+                    .overlay(profileAvatarContent)
+                    .overlay(
                         Circle()
-                            .fill(Color(.tertiarySystemGroupedBackground))
-                            .frame(width: 68, height: 68)
-                            .overlay(profileAvatarContent)
-                            .overlay {
-                                if avatarUploadRunning {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                        .tint(.secondary)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(accountDisplayName)
-                            .font(.title2.weight(.semibold))
-                        Text(accountHandleLine)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        if let cloudLanguageLine {
-                            Text(cloudLanguageLine)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if !creatorSocialProfileLinks.isEmpty {
-                            HStack(spacing: 10) {
-                                ForEach(creatorSocialProfileLinks, id: \.platform) { link in
-                                    Button {
-                                        guard let url = URL(string: link.url) else { return }
-                                        openURL(url)
-                                    } label: {
-                                        creatorSocialIcon(for: link.platform)
-                                            .frame(width: 20, height: 20)
-                                            .frame(minWidth: 32, minHeight: 32)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                    Spacer()
-                }
-
-                InlineStatsRow(
-                    stats: [
-                        String(format: viewModel.localizer.text(.recipeCountFormat), myRecipeTotalCount),
-                        String(format: viewModel.localizer.text(.followedAuthorsCountFormat), followedAuthorsCount),
-                        "\(savedRecipes.count) \(viewModel.localizer.text(.savedRecipes).lowercased())"
-                    ]
-                )
-
-                NavigationLink {
-                    AuthorProfileView(
-                        authorName: publicProfileAuthorName,
-                        viewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel,
-                        profileSocialLinks: publicProfileSocialLinks,
-                        profileAvatarURL: cloudProfile?.avatar_url
+                            .stroke(seasonGreen.opacity(0.16), lineWidth: 1)
                     )
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.crop.square")
-                            .font(.subheadline.weight(.semibold))
-                        Text(viewModel.localizer.text(.previewPublicProfile))
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(.secondarySystemGroupedBackground))
-                    )
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(viewModel.localizer.text(.badges))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-
-                    if myBadges.isEmpty {
-                        Text(viewModel.localizer.text(.noBadgesYet))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(myBadges) { badge in
-                                    UserBadgePill(badge: badge, localizer: viewModel.localizer)
-                                }
-                            }
+                    .overlay {
+                        if avatarUploadRunning {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.secondary)
                         }
+                    }
+            }
+            .buttonStyle(.plain)
+
+            VStack(spacing: 3) {
+                Text(accountDisplayName)
+                    .font(.title2.weight(.bold))
+                    .multilineTextAlignment(.center)
+                Text(accountHandleLine)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if let cloudLanguageLine {
+                    Text(cloudLanguageLine)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !creatorSocialProfileLinks.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(creatorSocialProfileLinks, id: \.platform) { link in
+                        Button {
+                            guard let url = URL(string: link.url) else { return }
+                            openURL(url)
+                        } label: {
+                            creatorSocialIcon(for: link.platform)
+                                .frame(width: 18, height: 18)
+                                .frame(minWidth: 36, minHeight: 36)
+                                .background(
+                                    Circle()
+                                        .fill(seasonGreen.opacity(0.10))
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(seasonGreen.opacity(0.14), lineWidth: 0.8)
+                                )
+                        }
+                        .buttonStyle(SoftPressButtonStyle())
                     }
                 }
             }
+
+            if !myBadges.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(myBadges) { badge in
+                            UserBadgePill(badge: badge, localizer: viewModel.localizer)
+                                .padding(.horizontal, 2)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(.systemBackground).opacity(0.88))
+                                )
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .stroke(seasonGreen.opacity(0.12), lineWidth: 0.7)
+                                )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+            } else {
+                Text(viewModel.localizer.text(.noBadgesYet))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 0) {
+                profileStatColumn(value: "\(savedRecipes.count)", label: viewModel.localizer.text(.savedRecipes))
+                Rectangle()
+                    .fill(seasonGreen.opacity(0.12))
+                    .frame(width: 1, height: 28)
+                profileStatColumn(value: "\(myActiveRecipes.count)", label: viewModel.localizer.text(.myRecipes))
+                Rectangle()
+                    .fill(seasonGreen.opacity(0.12))
+                    .frame(width: 1, height: 28)
+                profileStatColumn(value: "\(myDraftRecipes.count)", label: viewModel.localizer.text(.draftRecipes))
+            }
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.64))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(seasonGreen.opacity(0.08), lineWidth: 0.6)
+            )
+
+            NavigationLink {
+                AuthorProfileView(
+                    authorName: publicProfileAuthorName,
+                    viewModel: viewModel,
+                    shoppingListViewModel: shoppingListViewModel,
+                    profileSocialLinks: publicProfileSocialLinks,
+                    profileAvatarURL: cloudProfile?.avatar_url
+                )
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.square")
+                    .font(.footnote.weight(.semibold))
+                    Text(viewModel.localizer.text(.previewPublicProfile))
+                        .font(.subheadline.weight(.semibold))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(seasonGreen.opacity(0.76))
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(seasonGreen.opacity(0.11))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(seasonGreen.opacity(0.16), lineWidth: 0.8)
+                )
+            }
+            .buttonStyle(SoftPressButtonStyle())
         }
+        .frame(maxWidth: .infinity)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.95))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(seasonGreen.opacity(0.10), lineWidth: 0.8)
+        )
+    }
+
+    private func profileStatColumn(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(seasonGreen)
+            Text(label.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
     }
 
     private var librarySection: some View {
-        Section(header: Text(viewModel.localizer.text(.myRecipes)).textCase(nil)) {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("My Library")
+
+            VStack(alignment: .leading, spacing: 14) {
             librarySubheader(title: viewModel.localizer.text(.savedRecipes), count: savedRecipes.count)
 
             if savedRecipes.isEmpty {
                 libraryEmptyRow(symbol: "bookmark", subtitle: viewModel.localizer.text(.savedRecipesEmptySubtitle))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             } else {
                 ForEach(savedRecipes) { ranked in
                     recipeRow(ranked: ranked, managementMode: nil)
@@ -275,8 +338,6 @@ struct AccountView: View {
 
             if myActiveRankedRecipes.isEmpty {
                 libraryEmptyRow(symbol: "fork.knife", subtitle: viewModel.localizer.text(.noResults))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             } else {
                 ForEach(myActiveRankedRecipes) { ranked in
                     recipeRow(ranked: ranked, managementMode: .active)
@@ -287,8 +348,6 @@ struct AccountView: View {
 
             if myDraftRecipes.isEmpty {
                 libraryEmptyRow(symbol: "doc.text", subtitle: viewModel.localizer.text(.draftRecipesEmptySubtitle))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
             } else {
                 ForEach(myDraftRecipes) { draftRecipe in
                     recipeRow(recipe: draftRecipe, ranked: nil, managementMode: .draft)
@@ -298,12 +357,25 @@ struct AccountView: View {
             Button {
                 showingCreateRecipeAlert = true
             } label: {
-                Text(viewModel.localizer.text(.createRecipe))
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                    Text(viewModel.localizer.text(.createRecipe))
+                        .font(.headline.weight(.semibold))
+                }
+                .foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(
+                        colors: [seasonGreen, seasonGreen.opacity(0.86)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .buttonStyle(.plain)
 
             librarySubheader(title: viewModel.localizer.text(.archivedRecipes), count: myArchivedRankedRecipes.count)
 
@@ -311,18 +383,35 @@ struct AccountView: View {
                 Text(viewModel.localizer.text(.archivedRecipesEmptySubtitle))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
             } else {
                 ForEach(myArchivedRankedRecipes) { ranked in
                     recipeRow(ranked: ranked, managementMode: .archived)
                 }
             }
         }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [seasonGreenSoft.opacity(0.54), seasonGreenSoft.opacity(0.34)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(seasonGreen.opacity(0.12), lineWidth: 0.8)
+            )
+        }
     }
 
     private var preferencesSection: some View {
-        Section(header: Text(viewModel.localizer.text(.settingsTab)).textCase(nil)) {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Account & Preferences")
+
+            VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label("Authentication", systemImage: "person.badge.key")
                     .font(.subheadline.weight(.semibold))
@@ -369,7 +458,7 @@ struct AccountView: View {
                             Text("Save username")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(SeasonPrimaryButtonStyle())
                         .disabled(authActionRunning || authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
 
@@ -379,7 +468,7 @@ struct AccountView: View {
                         Text("Log out")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(SeasonDestructiveButtonStyle())
                     .disabled(authActionRunning)
                 } else {
                     Button {
@@ -388,7 +477,7 @@ struct AccountView: View {
                         Label("Sign in with Apple", systemImage: "applelogo")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SeasonPrimaryButtonStyle())
                     .disabled(linkingInProgressProvider != nil)
 
                     if linkingInProgressProvider == .apple {
@@ -419,7 +508,7 @@ struct AccountView: View {
                         Text(authModeIsSignUp ? "Sign up" : "Sign in")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SeasonSecondaryButtonStyle())
                     .disabled(authActionRunning || authEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || authPassword.isEmpty || (authModeIsSignUp && authUsernameInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
 
                     Button {
@@ -443,8 +532,15 @@ struct AccountView: View {
                 }
             }
             .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+            )
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.accountSocialProfilesTitle, systemImage: "link")
@@ -469,7 +565,7 @@ struct AccountView: View {
                     Text(viewModel.localizer.accountSocialProfilesSaveAction)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(SeasonSecondaryButtonStyle())
                 .disabled(socialProfilesSaveRunning)
 
                 if socialProfilesSaveRunning {
@@ -483,8 +579,91 @@ struct AccountView: View {
                 }
             }
             .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+            )
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                Label(viewModel.localizer.text(.language), systemImage: "globe")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Picker(viewModel.localizer.text(.language), selection: $selectedLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.pickerLabel)
+                            .tag(language.rawValue)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, 2)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+            )
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                DisclosureGroup(isExpanded: $showNutritionPreferences) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(NutritionPriorityDimension.allCases) { dimension in
+                            preferenceRow(for: dimension)
+                        }
+
+                        Text(viewModel.localizer.text(.nutritionComparisonBasisNote))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Label(viewModel.localizer.text(.nutritionPreferences), systemImage: "heart.text.square")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(viewModel.localizer.text(.nutritionPreferencesHint))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+            )
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.92))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.7)
+            )
+        }
+        .tint(seasonGreen)
+    }
+
+    private var diagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("System Diagnostics")
+                .opacity(0.74)
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 DisclosureGroup(isExpanded: $showSupabaseAuthTest) {
@@ -508,7 +687,7 @@ struct AccountView: View {
                             Text(viewModel.localizer.text(.supabaseRunTestAction))
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(supabaseTestRunning || supabaseTestEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || supabaseTestPassword.isEmpty)
 
                         Button {
@@ -517,7 +696,7 @@ struct AccountView: View {
                             Text("Fetch profile")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(supabaseTestRunning || supabaseProfileFetchRunning || supabaseRecipeStatesFetchRunning)
 
                         Button {
@@ -526,7 +705,7 @@ struct AccountView: View {
                             Text("Fetch recipe states")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -545,7 +724,7 @@ struct AccountView: View {
                             Text("Fetch shopping list items")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -564,7 +743,7 @@ struct AccountView: View {
                             Text("Fetch fridge items")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -583,7 +762,7 @@ struct AccountView: View {
                             Text("Process outbox")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -602,7 +781,7 @@ struct AccountView: View {
                             Text("Run soft sync read")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -621,7 +800,7 @@ struct AccountView: View {
                             Text("Run reconciliation diagnostics")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -639,7 +818,7 @@ struct AccountView: View {
                             Text("Run backfill")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(SeasonSecondaryButtonStyle())
                         .disabled(
                             supabaseTestRunning ||
                             supabaseProfileFetchRunning ||
@@ -756,54 +935,18 @@ struct AccountView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
-
-            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label(viewModel.localizer.text(.language), systemImage: "globe")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Picker(viewModel.localizer.text(.language), selection: $selectedLanguage) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.pickerLabel)
-                            .tag(language.rawValue)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            }
-            .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
-
-            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                DisclosureGroup(isExpanded: $showNutritionPreferences) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(NutritionPriorityDimension.allCases) { dimension in
-                            preferenceRow(for: dimension)
-                        }
-
-                        Text(viewModel.localizer.text(.nutritionComparisonBasisNote))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 6)
-                } label: {
-                    Label(viewModel.localizer.text(.nutritionPreferences), systemImage: "heart.text.square")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(viewModel.localizer.text(.nutritionPreferencesHint))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 2)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.52))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.025), lineWidth: 0.6)
+            )
+            .opacity(0.8)
         }
+        .tint(.secondary)
     }
 
     private enum ManagementMode {
@@ -842,8 +985,6 @@ struct AccountView: View {
             }
         }
         .buttonStyle(.plain)
-        .listRowSeparator(.visible)
-        .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             switch managementMode {
             case .active:
@@ -866,7 +1007,7 @@ struct AccountView: View {
                 } label: {
                     Label(viewModel.localizer.text(.restoreRecipe), systemImage: "arrow.uturn.left")
                 }
-                .tint(.blue)
+                .tint(seasonGreen)
 
                 Button(role: .destructive) {
                     viewModel.deleteRecipe(recipe)
@@ -915,7 +1056,17 @@ struct AccountView: View {
 
             Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.95))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(seasonGreen.opacity(0.08), lineWidth: 0.7)
+        )
+        .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
     }
 
     private var myActiveRecipes: [Recipe] {
@@ -1026,7 +1177,6 @@ struct AccountView: View {
             title: title,
             countText: String(format: viewModel.localizer.text(.recipeCountFormat), count)
         )
-        .padding(.top, 6)
     }
 
     private func libraryEmptyRow(symbol: String, subtitle: String) -> some View {
@@ -1236,6 +1386,23 @@ struct AccountView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+        }
+    }
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.caption.weight(.bold))
+            .tracking(1.0)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+    }
+
+    private struct SoftPressButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .opacity(configuration.isPressed ? 0.9 : 1)
+                .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
         }
     }
 

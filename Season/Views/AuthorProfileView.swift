@@ -15,6 +15,7 @@ struct AuthorProfileView: View {
     let profileSocialLinks: [CreatorSocialLink]
     let profileAvatarURL: String?
     @Environment(\.openURL) private var openURL
+    private let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
 
     init(
         authorName: String,
@@ -34,22 +35,20 @@ struct AuthorProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+            VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
                 profileHeaderSection
 
                 if !profileSocialLinks.isEmpty {
-                    Divider().opacity(0.14)
                     socialLinksSection
                 }
 
-                Divider().opacity(0.14)
                 creatorRecipesSection
             }
             .padding(.horizontal, SeasonSpacing.md)
             .padding(.top, SeasonSpacing.md)
             .padding(.bottom, SeasonLayout.bottomBarContentClearance)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(SeasonColors.primarySurface)
         .navigationTitle(authorName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -64,112 +63,135 @@ struct AuthorProfileView: View {
     }
 
     private var profileHeaderSection: some View {
-        SeasonAuthorHeaderView(
-            name: authorName,
-            subtitle: viewModel.localizer.text(.creatorProfileSubtitle),
-            metadataText: compactRecipeCountText,
-            avatar: {
+        VStack(alignment: .center, spacing: 12) {
+            ZStack(alignment: .bottomTrailing) {
                 Circle()
                     .fill(Color(.tertiarySystemGroupedBackground))
-                    .frame(width: 92, height: 92)
+                    .frame(width: 116, height: 116)
                     .overlay(avatarContent)
                     .overlay(
                         Circle()
-                            .stroke(Color(red: 0.55, green: 0.46, blue: 0.30).opacity(0.25), lineWidth: 1.0)
+                            .stroke(seasonGreen.opacity(0.22), lineWidth: 1.1)
                     )
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 3)
-            },
-            trailingAction: {
-                if canShowFollowButton {
-                    Button {
-                        toggleFollow()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: isFollowing ? "person.fill.checkmark" : "person.badge.plus")
-                                .font(.caption.weight(.medium))
-                                .frame(width: 14)
-                            Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                        .foregroundStyle(isFollowing ? .primary : Color(.systemBackground))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .frame(minWidth: 108)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(
-                                    isFollowing
-                                    ? Color(.tertiarySystemGroupedBackground)
-                                    : Color.primary.opacity(0.76)
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                }
-            },
-            stats: {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        SeasonStatChip(
-                            icon: "person.2.fill",
-                            text: estimatedFollowersStatText,
-                            background: Color(red: 0.88, green: 0.83, blue: 0.73).opacity(0.46)
-                        )
-                        SeasonStatChip(
-                            icon: "flame.fill",
-                            text: "\(totalCrispy.compactFormatted()) \(viewModel.localizer.text(.crispyAction).lowercased())",
-                            background: Color(red: 0.90, green: 0.78, blue: 0.63).opacity(0.46)
-                        )
-                        SeasonStatChip(
-                            icon: "leaf",
-                            text: "\(Int(averageSeasonalMatch.rounded()))% \(viewModel.localizer.text(.seasonalMatch).lowercased())",
-                            background: Color(red: 0.77, green: 0.86, blue: 0.75).opacity(0.4)
-                        )
-                    }
-                }
-            },
-            badges: {
-                VStack(alignment: .leading, spacing: 8) {
-                    SeasonSectionHeader(title: viewModel.localizer.text(.badges))
+                    .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 4)
 
-                    if authorBadges.isEmpty {
-                        Text(viewModel.localizer.text(.noBadgesYet))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: 150), spacing: 8, alignment: .leading)],
-                            alignment: .leading,
-                            spacing: 8
-                        ) {
-                            ForEach(authorBadges) { badge in
-                                UserBadgePill(badge: badge, localizer: viewModel.localizer)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(Color(red: 0.89, green: 0.85, blue: 0.77).opacity(0.33))
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .stroke(Color(red: 0.53, green: 0.46, blue: 0.33).opacity(0.12), lineWidth: 0.6)
-                                    )
-                            }
-                        }
-                    }
+                if !authorBadges.isEmpty {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.white, seasonGreen)
+                        .padding(6)
+                        .background(
+                            Circle()
+                                .fill(Color(.systemBackground))
+                        )
                 }
             }
-        )
-        .padding(SeasonSpacing.md)
+
+            VStack(spacing: 3) {
+                Text(authorName)
+                    .font(.system(size: 34, weight: .heavy))
+                    .tracking(-0.5)
+                    .multilineTextAlignment(.center)
+
+                Text(viewModel.localizer.text(.creatorProfileSubtitle))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if !authorBadges.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(authorBadges) { badge in
+                            UserBadgePill(badge: badge, localizer: viewModel.localizer)
+                                .padding(.horizontal, 2)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(.systemBackground).opacity(0.78))
+                                )
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .stroke(seasonGreen.opacity(0.12), lineWidth: 0.7)
+                                )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 2)
+            }
+
+            if canShowFollowButton {
+                Button {
+                    toggleFollow()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isFollowing ? "person.fill.checkmark" : "person.badge.plus")
+                            .font(.subheadline.weight(.semibold))
+                        Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                            .font(.headline.weight(.semibold))
+                    }
+                    .foregroundStyle(isFollowing ? Color.primary : Color.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(buttonBackgroundStyle)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(seasonGreen.opacity(isFollowing ? 0.10 : 0.05), lineWidth: 0.6)
+                    )
+                }
+                .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+                .accessibilityLabel(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+            }
+
+            HStack(spacing: 0) {
+                profileStatColumn(
+                    value: formattedFollowerCount(followerCountValue),
+                    label: viewModel.localizer.text(.followers)
+                )
+
+                Rectangle()
+                    .fill(seasonGreen.opacity(0.12))
+                    .frame(width: 1, height: 30)
+
+                profileStatColumn(
+                    value: "\(rankedRecipes.count.compactFormatted())",
+                    label: viewModel.localizer.text(.recipes)
+                )
+
+                Rectangle()
+                    .fill(seasonGreen.opacity(0.12))
+                    .frame(width: 1, height: 30)
+
+                profileStatColumn(
+                    value: "\(totalCrispy.compactFormatted())",
+                    label: viewModel.localizer.text(.crispyAction)
+                )
+            }
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.68))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(seasonGreen.opacity(0.09), lineWidth: 0.7)
+            )
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.96, green: 0.93, blue: 0.87).opacity(0.92),
-                            Color(red: 0.94, green: 0.90, blue: 0.82).opacity(0.58),
-                            Color(red: 0.91, green: 0.87, blue: 0.80).opacity(0.28)
+                            Color(red: 0.95, green: 0.93, blue: 0.88).opacity(0.92),
+                            Color(red: 0.94, green: 0.91, blue: 0.85).opacity(0.65),
+                            Color(red: 0.92, green: 0.89, blue: 0.82).opacity(0.44)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -177,54 +199,31 @@ struct AuthorProfileView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(red: 0.45, green: 0.38, blue: 0.26).opacity(0.12), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(seasonGreen.opacity(0.11), lineWidth: 0.8)
         )
     }
 
     private var socialLinksSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(viewModel.localizer.accountSocialProfilesTitle)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-
+        VStack(alignment: .leading, spacing: 12) {
+            SeasonSectionHeader(title: viewModel.localizer.accountSocialProfilesTitle)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(profileSocialLinks) { link in
-                        Button {
-                            guard let url = URL(string: link.url) else { return }
-                            openURL(url)
-                        } label: {
-                            HStack(spacing: 8) {
-                                socialIcon(for: link.platform)
-                                    .frame(width: 16, height: 16)
-                                Text(link.platform == .instagram ? viewModel.localizer.commonInstagram : viewModel.localizer.commonTikTok)
-                                    .font(.subheadline.weight(.semibold))
-                                Text(socialDisplayValue(for: link))
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                Image(systemName: "arrow.up.right.square")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color(.tertiarySystemGroupedBackground))
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        socialLinkChip(for: link)
                     }
                 }
             }
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground).opacity(0.52))
+        )
     }
 
     private var creatorRecipesSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
             SeasonSectionHeader(
                 title: viewModel.localizer.text(.publishedRecipes),
                 trailingText: compactRecipeCountText
@@ -238,33 +237,134 @@ struct AuthorProfileView: View {
                 )
                 .padding(.vertical, 20)
             } else {
-                VStack(spacing: 8) {
-                    ForEach(rankedRecipes) { ranked in
-                        NavigationLink {
-                            RecipeDetailView(
-                                rankedRecipe: ranked,
-                                viewModel: viewModel,
-                                shoppingListViewModel: shoppingListViewModel
-                            )
-                        } label: {
-                            RecipeCardView(
-                                recipe: ranked.recipe,
-                                title: ranked.recipe.title,
-                                subtitle: viewModel.recipeReasonText(for: ranked),
-                                metadataText: "\(viewModel.compactCountText(ranked.recipe.crispy)) \(viewModel.localizer.text(.crispyAction).lowercased())",
-                                seasonalityScore: ranked.seasonalityScore,
-                                localizer: viewModel.localizer,
-                                variant: .profile,
-                                cardBackground: SeasonColors.secondarySurface,
-                                cardBackgroundOpacity: 0.55,
-                                cardBorderOpacity: 0.05
-                            )
-                        }
-                        .buttonStyle(.plain)
+                VStack(spacing: 10) {
+                    featuredRecipeCard
+                    ForEach(Array(rankedRecipes.dropFirst())) { ranked in
+                        creatorRecipeCard(ranked)
                     }
                 }
             }
         }
+    }
+
+    private func creatorRecipeCard(_ ranked: RankedRecipe) -> some View {
+        NavigationLink {
+            RecipeDetailView(
+                rankedRecipe: ranked,
+                viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel
+            )
+        } label: {
+            RecipeCardView(
+                recipe: ranked.recipe,
+                title: ranked.recipe.title,
+                subtitle: viewModel.recipeReasonText(for: ranked),
+                metadataText: "\(viewModel.compactCountText(ranked.recipe.crispy)) \(viewModel.localizer.text(.crispyAction).lowercased())",
+                seasonalityScore: ranked.seasonalityScore,
+                localizer: viewModel.localizer,
+                variant: .profile,
+                cardBackground: Color(.systemBackground),
+                cardBackgroundOpacity: 0.92,
+                cardBorderOpacity: 0.05,
+                cardShadowOpacity: 0.015,
+                cardShadowRadius: 8,
+                cardShadowY: 2
+            )
+        }
+        .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+    }
+
+    @ViewBuilder
+    private var featuredRecipeCard: some View {
+        if let featured = rankedRecipes.first {
+            NavigationLink {
+                RecipeDetailView(
+                    rankedRecipe: featured,
+                    viewModel: viewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
+                RecipeCardView(
+                    recipe: featured.recipe,
+                    title: featured.recipe.title,
+                    subtitle: viewModel.recipeReasonText(for: featured),
+                    metadataText: "\(viewModel.compactCountText(featured.recipe.crispy)) \(viewModel.localizer.text(.crispyAction).lowercased())",
+                    seasonalityScore: featured.seasonalityScore,
+                    localizer: viewModel.localizer,
+                    variant: .feedLarge,
+                    cardBackground: Color(.systemBackground),
+                    cardBackgroundOpacity: 0.96,
+                    cardBorderOpacity: 0.05,
+                    cardShadowOpacity: 0.02,
+                    cardShadowRadius: 10,
+                    cardShadowY: 3
+                )
+            }
+            .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+        }
+    }
+
+    private func socialLinkChip(for link: CreatorSocialLink) -> some View {
+        Button {
+            guard let url = URL(string: link.url) else { return }
+            openURL(url)
+        } label: {
+            HStack(spacing: 8) {
+                socialIcon(for: link.platform)
+                    .frame(width: 16, height: 16)
+                    .padding(6)
+                    .background(
+                        Circle()
+                            .fill(seasonGreen.opacity(0.12))
+                    )
+                Text(socialDisplayValue(for: link))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.95))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(seasonGreen.opacity(0.09), lineWidth: 0.7)
+            )
+        }
+        .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+    }
+
+    private func profileStatColumn(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(seasonGreen)
+            Text(label.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var buttonBackgroundStyle: AnyShapeStyle {
+        if isFollowing {
+            return AnyShapeStyle(Color(.tertiarySystemGroupedBackground))
+        }
+        return AnyShapeStyle(
+            LinearGradient(
+                colors: [SeasonColors.seasonGreen, SeasonColors.seasonGreen.opacity(0.88)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 
     private var rankedRecipes: [RankedRecipe] {

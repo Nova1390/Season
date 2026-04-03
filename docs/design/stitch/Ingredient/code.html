@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#1a1c1b",
+              "secondary-fixed-dim": "#ffb59b",
+              "secondary-fixed": "#ffdbcf",
+              "on-error": "#ffffff",
+              "primary-fixed": "#d8e8c8",
+              "on-secondary": "#ffffff",
+              "background": "#f9f9f7",
+              "surface-container-highest": "#e2e3e1",
+              "on-secondary-fixed": "#380d00",
+              "inverse-primary": "#bcccae",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#3d4b34",
+              "on-primary": "#ffffff",
+              "inverse-surface": "#2f3130",
+              "on-primary-fixed": "#131f0b",
+              "primary-container": "#6a795f",
+              "on-tertiary-fixed-variant": "#5a3f4c",
+              "surface-dim": "#dadad8",
+              "surface-container-low": "#f4f4f2",
+              "on-surface-variant": "#444840",
+              "on-secondary-container": "#793e29",
+              "surface-tint": "#54634a",
+              "on-primary-container": "#f8ffed",
+              "tertiary": "#715462",
+              "surface": "#f9f9f7",
+              "on-tertiary-fixed": "#2b1420",
+              "secondary-container": "#ffad91",
+              "error-container": "#ffdad6",
+              "outline": "#75786f",
+              "surface-variant": "#e2e3e1",
+              "error": "#ba1a1a",
+              "on-tertiary-container": "#fffbff",
+              "tertiary-fixed-dim": "#e2bccd",
+              "on-secondary-fixed-variant": "#703722",
+              "primary-fixed-dim": "#bcccae",
+              "on-background": "#1a1c1b",
+              "surface-container-high": "#e8e8e6",
+              "surface-container": "#eeeeec",
+              "secondary": "#8c4e37",
+              "inverse-on-surface": "#f1f1ef",
+              "tertiary-container": "#8b6c7a",
+              "outline-variant": "#c5c8bd",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#ffd8e9",
+              "surface-bright": "#f9f9f7",
+              "primary": "#526048"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        background-color: #f9f9f7;
+        color: #1a1c1b;
+      }
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
+      .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<header class="fixed top-0 w-full z-50 bg-stone-50/70 dark:bg-stone-900/70 backdrop-blur-xl shadow-[0_8px_24px_rgba(26,28,27,0.04)] flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-emerald-900 dark:text-emerald-50 hover:opacity-80 transition-opacity active:scale-95 duration-200">arrow_back</button>
+<span class="font-['Manrope'] text-xl tracking-tighter font-bold text-emerald-950 dark:text-white">Season</span>
+</div>
+<button class="material-symbols-outlined text-emerald-900 dark:text-emerald-50 hover:opacity-80 transition-opacity active:scale-95 duration-200" style="font-variation-settings: 'FILL' 1;">favorite</button>
+</header>
+<main class="pt-16 pb-32">
+<section class="relative w-full h-[486px] overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up overhead view of high-quality raw arborio rice grains in a rustic dark ceramic bowl with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQRkTmgCc9FxgWAXU94cha4rAmd5ibw-oiL8tyQ_shYGT2z7B_dtv0f-ZYPQ7cTehkReQNGJi0egKcunua2OONWPkS8GLNEp1Grk-Y_v0IvZALaiN7seju5kZsu76W4DEoK8YVkuB27moOZxNnhRrZm__0KZlUclqi882o8yqOb-woXUxQ7wwAB8qpm8RYL7KDSo_WagwH1maCQZryWyh_gWtTocfzba2o1KJHIzgA_LYzmzXFq_n7FOcycoASzwzLjb4kHDCA8aDY"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+</section>
+<section class="px-6 -mt-20 relative z-10">
+<div class="flex flex-col gap-2 mb-6">
+<span class="w-fit bg-primary-fixed text-on-primary-fixed-variant px-4 py-1.5 rounded-full text-[11px] font-['Inter'] font-bold tracking-[0.05em] uppercase">Perfect in season</span>
+<h1 class="font-['Manrope'] text-5xl font-extrabold tracking-[-0.02em] text-on-surface">Arborio Rice</h1>
+</div>
+<div class="flex flex-col gap-8">
+<button class="bg-primary hover:bg-primary-container text-on-primary py-5 rounded-lg font-['Manrope'] font-bold text-lg shadow-sm active:scale-95 transition-all duration-200">
+                    Add to fridge
+                </button>
+<div class="space-y-4">
+<h3 class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold text-stone-500">About</h3>
+<p class="text-on-surface-variant leading-relaxed text-lg font-light">
+                        The soul of any authentic risotto, <span class="font-semibold text-primary">Arborio rice</span> is a short-grain powerhouse known for its high starch content, creating that signature creamy texture while maintaining a firm bite.
+                    </p>
+</div>
+<div class="bg-surface-container-low rounded-xl p-8 flex flex-col gap-6">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-1">
+<h3 class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold text-stone-500">Harvest Cycle</h3>
+<p class="text-xl font-bold font-['Manrope'] text-on-surface">Peaks in Autumn</p>
+</div>
+<span class="material-symbols-outlined text-primary scale-150">calendar_today</span>
+</div>
+<div class="flex justify-between items-center gap-1">
+<div class="h-12 flex-1 rounded-full bg-surface-container-highest/50 flex items-center justify-center text-[10px] font-bold text-stone-400">WINT</div>
+<div class="h-12 flex-1 rounded-full bg-surface-container-highest/50 flex items-center justify-center text-[10px] font-bold text-stone-400">SPR</div>
+<div class="h-12 flex-1 rounded-full bg-surface-container-highest/50 flex items-center justify-center text-[10px] font-bold text-stone-400">SUM</div>
+<div class="h-16 flex-[1.5] rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-on-primary shadow-lg shadow-primary/20">AUTUMN</div>
+</div>
+<p class="text-sm text-on-surface-variant italic">Available year-round, but most flavorful post-harvest in October.</p>
+</div>
+<section class="mt-8">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-['Manrope'] text-2xl font-extrabold tracking-tight">What to cook with this</h2>
+<button class="text-primary font-bold text-sm">View all</button>
+</div>
+<div class="flex flex-col gap-8">
+<div class="relative group cursor-pointer">
+<div class="w-full h-80 rounded-lg overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Rustic plate of charred sage and butternut squash risotto with shaved parmesan and olive oil drizzle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7ih6y6iFXlPg3bJVhqMkPByj1xMIQ-cCtjN6wyQZoVbTfjmLjH4zoYKaak65Me955cFB8AWbWHMyCTUwJ-zLmOQtzQzK8_Knz1XBeOSxxHlgUGqtdhZgSuxf84A_M5j1rwB5lVHAgi0yYy_rS132R-42GBkQ7_Hom3_buoY8Wbii-NZ3xTZ5TAcQmmgLTKx6HEp3R_u5BWyNawRKorIOwmjiRb7lMngrkT6iF7tettFdOCi66YfiubLQUz7erxVKAn3CieQhATdPZ"/>
+</div>
+<div class="mt-4">
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase mb-1 block">Featured Recipe</span>
+<h3 class="font-['Manrope'] text-2xl font-bold text-on-surface">Charred Sage &amp; Butternut Squash Risotto</h3>
+<div class="flex gap-4 mt-2">
+<span class="flex items-center gap-1 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span> 45 min
+                                    </span>
+<span class="flex items-center gap-1 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">restaurant</span> Intermediate
+                                    </span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="bg-surface-container-lowest rounded-lg p-3 flex gap-4 items-center shadow-sm">
+<div class="w-24 h-24 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Creamy mushroom risotto topped with fresh herbs and cracked black pepper in a white bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnrtwPLfx2dep_slSVONO34dBMTW5ofTDBPXm1KpwieKKPS3FCrbaGdoAwoxStfIxWlHlG51Sg3COW2zakkt4idX4zOG0xHcJ5JtMGxNaJJ2vVaKTXyUYOTujEcY8wZKF_PQpFyHFlkc9zDm9cPs-WP0-teQiVOnovlKeBrtfzD57YwVfw5UVeYdftouidqG93Dd3D2qBdni-lf86vBCe5nl-WsvXLNicU6lSlNsCBRN0cWoonHCfuMYEIlBeTCPLjKzUE0G2ZcSBw"/>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-['Manrope'] font-bold text-on-surface">Creamy Mushroom Risotto</h4>
+<p class="text-xs text-on-surface-variant">Earthy porcini &amp; wild thyme</p>
+<div class="flex gap-3 mt-1">
+<span class="text-[10px] bg-surface-container-high px-2 py-0.5 rounded">35 min</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3 flex gap-4 items-center shadow-sm">
+<div class="w-24 h-24 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Vibrant lemon and asparagus risotto with microgreens and zesty lemon peel garnish" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYK3NtGYw_v5iPddDhOBc2_xst8GmgAYkyTJJT2GOhQUcTlrmuvFzHOWnG_OpEty_dhlBNfz_d6sW9NHHW2_Wsgbcn_jMBpq-Ajo14guZ4p5xKiLpjPoccPycYHG1ttBFe5hdMW-umwmk1Q2TgJOwlpQo3gE19vOxs5Ex3t3VhwEB_RNhlJ8hP3iYSPhZpIXx9dvfQqcK4wh_Otpx2-hT1BpY9DfjGGjw1NAqAifN-0xmF7Gvb5EM7I6rYsgqX7hdgj5zvWL7xQ1Aw"/>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="font-['Manrope'] font-bold text-on-surface">Lemon &amp; Asparagus Risotto</h4>
+<p class="text-xs text-on-surface-variant">Bright spring flavors with zest</p>
+<div class="flex gap-3 mt-1">
+<span class="text-[10px] bg-surface-container-high px-2 py-0.5 rounded">30 min</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 w-full h-24 flex justify-around items-center px-8 pb-4 bg-stone-50/80 dark:bg-stone-950/80 backdrop-blur-2xl rounded-t-[3rem] z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+<a class="flex flex-col items-center justify-center bg-emerald-100 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-50 rounded-full px-5 py-2 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">local_mall</span>
+<span class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold">Market</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">kitchen</span>
+<span class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold">Kitchen</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold">Journal</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Manrope'] text-[11px] uppercase tracking-[0.05em] font-bold">Profile</span>
+</a>
+</nav>
+</body></html>

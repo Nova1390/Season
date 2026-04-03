@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-lowest": "#ffffff",
+            "on-secondary": "#ffffff",
+            "inverse-primary": "#bcccae",
+            "secondary": "#8c4e37",
+            "inverse-on-surface": "#f1f1ef",
+            "surface": "#f9f9f7",
+            "secondary-container": "#ffad91",
+            "on-primary-fixed": "#131f0b",
+            "primary-fixed-dim": "#bcccae",
+            "surface-tint": "#54634a",
+            "on-secondary-fixed": "#380d00",
+            "primary-container": "#6a795f",
+            "on-error-container": "#93000a",
+            "surface-container-high": "#e8e8e6",
+            "error-container": "#ffdad6",
+            "surface-container-highest": "#e2e3e1",
+            "secondary-fixed-dim": "#ffb59b",
+            "on-tertiary-fixed": "#2b1420",
+            "on-error": "#ffffff",
+            "tertiary": "#715462",
+            "surface-variant": "#e2e3e1",
+            "on-tertiary-container": "#fffbff",
+            "inverse-surface": "#2f3130",
+            "outline-variant": "#c5c8bd",
+            "error": "#ba1a1a",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#f8ffed",
+            "surface-container": "#eeeeec",
+            "outline": "#75786f",
+            "tertiary-fixed": "#ffd8e9",
+            "primary": "#526048",
+            "on-surface-variant": "#444840",
+            "surface-bright": "#f9f9f7",
+            "surface-container-low": "#f4f4f2",
+            "on-secondary-fixed-variant": "#703722",
+            "tertiary-fixed-dim": "#e2bccd",
+            "on-tertiary": "#ffffff",
+            "tertiary-container": "#8b6c7a",
+            "primary-fixed": "#d8e8c8",
+            "on-tertiary-fixed-variant": "#5a3f4c",
+            "surface-dim": "#dadad8",
+            "on-primary-fixed-variant": "#3d4b34",
+            "on-secondary-container": "#793e29",
+            "on-surface": "#1a1c1b",
+            "secondary-fixed": "#ffdbcf",
+            "on-background": "#1a1c1b",
+            "background": "#f9f9f7"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Shared TopAppBar -->
+<header class="bg-[#f4f4f2]/80 dark:bg-stone-900/80 backdrop-blur-lg flex justify-between items-end w-full px-6 pb-4 h-32 fixed top-0 z-40">
+<div class="flex flex-col">
+<span class="text-2xl font-black tracking-tighter text-[#7D8C71] dark:text-[#a3b199] font-headline">Discovery</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-stone-400 dark:text-stone-500 hover:opacity-80 transition-opacity scale-95 active:duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="close up studio portrait of a woman with a warm smile, natural lighting, soft organic background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC44VUkn3yiCPcTxsOzcemrijilRzVOP618wEDM2eVpRYCDPWm109SmaZjpxpnbDRW3MSUlP3iNADJTfiwqWDFilvL7frEibv2Rg5fRpAAi42ntqTzRDvR2hf_i44RXA8G2VqruvCwFejtCP1EasLp9ZTQnCJDXYTIa7B7rFTZ6mxCpdUcNeD6fQKnfAy3aZ7whWjm-e9wNrI_Fm-pWHG7E1UcisEgvlsR9f_ITva0KYr6Hww3Oh7E1XiGYKVNThROycjYFYJz8lJgd"/>
+</div>
+</div>
+</header>
+<main class="pt-36 pb-32 px-6 space-y-10 max-w-2xl mx-auto">
+<!-- Top Search Area -->
+<section class="space-y-6">
+<div class="relative group">
+<div class="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</div>
+<input class="w-full h-16 pl-14 pr-6 bg-surface-container-highest border-none rounded-xl text-lg font-medium focus:ring-0 focus:bg-surface-container-lowest transition-all placeholder:text-outline/60" placeholder="Search recipes or ingredients..." type="text"/>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-3 overflow-x-auto hide-scrollbar -mx-6 px-6">
+<button class="px-6 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm whitespace-nowrap">Recipes</button>
+<button class="px-6 py-3 bg-surface-container-high text-on-surface-variant rounded-full font-semibold text-sm whitespace-nowrap">Ingredients</button>
+<button class="px-6 py-3 bg-surface-container-high text-on-surface-variant rounded-full font-semibold text-sm whitespace-nowrap">Fridge Ready</button>
+<button class="px-6 py-3 bg-surface-container-high text-on-surface-variant rounded-full font-semibold text-sm whitespace-nowrap">Seasonal</button>
+</div>
+</section>
+<!-- Peak Season Now -->
+<section class="space-y-6">
+<div class="flex justify-between items-center">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Peak Season Now</h2>
+<span class="text-primary text-sm font-bold uppercase tracking-widest">Autumn</span>
+</div>
+<div class="flex gap-6 overflow-x-auto hide-scrollbar -mx-6 px-6">
+<!-- Ingredient 1 -->
+<div class="flex flex-col items-center space-y-3 shrink-0">
+<div class="w-24 h-24 rounded-full bg-surface-container-low p-1">
+<div class="w-full h-full rounded-full overflow-hidden">
+<img alt="Blood Orange" class="w-full h-full object-cover" data-alt="studio shot of halved blood oranges showing deep red pulp on a textured linen surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2_LsjjN7a-hzaiuet6Qg55B21B9aA5x_SBVHBsqNhZxSjuUlslfFdY3W9Fe71pcY89WM6fCQAJvBJ00yMX0UWV7PDnn4aV_CpqGy8Dz_zrpLeiZ89aribNLSqEWqjhRjSeSFmIVKM1D7IkgtQnvuQj7fbeyF6I-5IuH8oJXdYnJfvdWhFGmbuOkktSutgVNnscoCXZ7mdT1ibDtytYMMAORHYWrweL2FMmOdyB9O4mKF2ci9F2tZMBH_ECq64sJSW7Tu9mc0AGPVE"/>
+</div>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Blood Orange</p>
+<p class="text-xs text-outline font-medium">12 Recipes</p>
+</div>
+</div>
+<!-- Ingredient 2 -->
+<div class="flex flex-col items-center space-y-3 shrink-0">
+<div class="w-24 h-24 rounded-full bg-surface-container-low p-1">
+<div class="w-full h-full rounded-full overflow-hidden">
+<img alt="Parsnip" class="w-full h-full object-cover" data-alt="rustic heap of fresh organic parsnips with some dirt on a wooden table, warm kitchen light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBt77YfUy8SfcA948ZmVDXuSA0GmTGNHgMTvug4a2TZ6WDDSlktYyjc0m09s6zPS0alNV3E0XANwbenpRBDpdTX9KCuBJFexKEdqt_mCtB4aqeNpY9cccSjm8-_bUhYn7b45w13h6ANYSj8mcR30sTdcRPQRBZDJXnVPdFGflb2ewOLfzVW98FIeiV0ioZsJ7GTYYAenoHAnhXhBtlCa8U7WuWKoJe-rS4LYCpK1wPr3jrmzwf2BYGzdV1Tuud6x-WmPQBkw6kNhcmq"/>
+</div>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Parsnip</p>
+<p class="text-xs text-outline font-medium">8 Recipes</p>
+</div>
+</div>
+<!-- Ingredient 3 -->
+<div class="flex flex-col items-center space-y-3 shrink-0">
+<div class="w-24 h-24 rounded-full bg-surface-container-low p-1">
+<div class="w-full h-full rounded-full overflow-hidden">
+<img alt="Kale" class="w-full h-full object-cover" data-alt="macro detail of fresh curly green kale leaves with water droplets, vibrant green tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_KaWkq3ZDdvvmMlsW-6HFRaYp7vhjoLjJqaPY6JD68Bc8KgNPfz-6W4-rK6RHs5ct1V52K7IJ2fX9Fj6fEQWM0BiwfveoWvnCqOUIGf-7wMGjfy_L_bSOr6o3By3w9EX9IE0b8ced1-1o-BHYRtLGFh7lRe25HjG4S7mwJSWrzR8gDBCyWMcOuAZ_O_reVQNWYxmCWh7VHjK1gakNQ9ayq2CMHabF5Ogpeb9F_V_hHiZrtBwh4etKWo8he5jKFRNNvU76WOcrpaB8"/>
+</div>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Kale</p>
+<p class="text-xs text-outline font-medium">24 Recipes</p>
+</div>
+</div>
+<!-- Ingredient 4 -->
+<div class="flex flex-col items-center space-y-3 shrink-0">
+<div class="w-24 h-24 rounded-full bg-surface-container-low p-1">
+<div class="w-full h-full rounded-full overflow-hidden">
+<img alt="Pears" class="w-full h-full object-cover" data-alt="bosc pears on a stone countertop, moody dramatic lighting, high contrast aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1v0XSq1pRbDjVT8lePgrNS7_9xAJxfWbhqLAjWSCUnM6ITz1tA5RxIgrcF3N59q8UVFte3Zh_6COX6iSTn1TsQFS5VRh5b9UnFV1ZYI047zcrRNowVx4gsq_3-2X1p-ixUr2P3ZX_LloIC0JlteBCKT2CNyf3KD4ywNYQfsslLmRy7eaAtyPNqC5FQs5iqkqC-94ydZCO7snlq4gFGioqhNaecl479FyOzUVD0Io078K7HyZjcetotCzRfgEfC8js9f8xC_sUsn6i"/>
+</div>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Pears</p>
+<p class="text-xs text-outline font-medium">15 Recipes</p>
+</div>
+</div>
+</div>
+</section>
+<!-- From Your Fridge -->
+<section class="space-y-6">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">From Your Fridge</h2>
+<div class="relative bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(26,28,27,0.04)] group">
+<div class="h-80 w-full overflow-hidden">
+<img alt="Healthy Bowl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="overhead view of a vibrant grain bowl with roasted parsnips, kale, and orange glaze, editorial food photography style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8rPgTefP-PMP42tnxsgsLQUXUwBPdMTt3RUJD-pTtZBFiu0fPag2vx1NuCvDWodZDWX2nWzR03e6AOzGX2zxtbL31nFgn8aCm-ddP8sg-QuBDEKnHPVFWZcCmy55wmkQYECIHsohj1x5F2dGCGGeYcs51M_3VVDsx1_amGXe0n3CkF6vmB_otIX2xKvi50fX3OLKiwXLCCrOPJNFmoRHOPsNJJbfOKkQM8M_iPb45tJYeKNgRfzEbqmEC0W44pPi1DttvEheMAOpE"/>
+</div>
+<div class="absolute top-4 right-4">
+<span class="bg-secondary text-white px-4 py-2 rounded-full font-bold text-xs shadow-lg uppercase tracking-wider">3/5 ingredients</span>
+</div>
+<div class="p-8 space-y-3">
+<h3 class="font-headline text-2xl font-bold leading-tight">Glazed Harvest Bowl with Roasted Parsnips</h3>
+<p class="text-on-surface-variant text-base leading-relaxed">A perfect autumn meal utilizing the kale and oranges sitting in your crisper drawer.</p>
+<div class="flex items-center gap-4 pt-2">
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs font-bold uppercase tracking-wider">25 MINS</span>
+</div>
+<div class="flex items-center gap-1 text-secondary">
+<span class="material-symbols-outlined text-sm" data-icon="local_fire_department">local_fire_department</span>
+<span class="text-xs font-bold uppercase tracking-wider">MEDIUM EFFORT</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trending Now -->
+<section class="space-y-8">
+<h2 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Trending Now</h2>
+<!-- Recipe List Item 1 -->
+<div class="flex gap-6 items-start">
+<div class="w-32 h-32 rounded-lg overflow-hidden shrink-0 bg-surface-container-low">
+<img alt="Crispy Potatoes" class="w-full h-full object-cover" data-alt="extreme close-up of golden crispy smashed potatoes seasoned with sea salt and rosemary, bright daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG47IWBzrtaNWU-PWQrYBDtWc63S8sGf7iEs6HymKDf3ICrGUX3B6g9Uz7TccNtwrlpiEav4MHoD_B3HC65sVtCjR5fAguo4W2BIAetkFKvk_xPXEOxN2UsxFeYp_LJs2yGCtmjGM3xprjGRMSDapy50zGAGujlFXuJ1UJaVRKMNluOQfqzvZssImK55PIdh2g_6zs_UgKHCglKsGusc599lKIcOtrm_a643VLMdeXCwdYQzG_rO-AmkTZOOsCt2oK7ZeGH04PqMSS"/>
+</div>
+<div class="flex-1 space-y-2">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-lg leading-snug">Crispy Rosemary Smashed Potatoes</h4>
+<button class="text-outline hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex gap-0.5">
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-surface-container-highest"></div>
+</div>
+<span class="text-[10px] font-black uppercase text-primary tracking-widest">Crispy Score 8.5</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">By Chef Julianne • 1.2k saves</p>
+</div>
+</div>
+<!-- Recipe List Item 2 -->
+<div class="flex gap-6 items-start">
+<div class="w-32 h-32 rounded-lg overflow-hidden shrink-0 bg-surface-container-low">
+<img alt="Winter Salad" class="w-full h-full object-cover" data-alt="gourmet winter salad with mixed greens, sliced pears, and walnuts on a white ceramic plate, clean minimal style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEz2whUoD9kKr1oXlC1B_kIi5MEL_D_IOQGwjCDATMn73nEinFOlhYJ120W-3ZTbhNoqyMsG_FRdyLJbXJqVShsQ_f6qdO6fCEdbMwv53pfpL47EzAIDfghCeTi2ErTeJiiVqMdeOyYP0M0CDXOgIt1QmgVRCisI4anU-DiDcgtQMXQW4a1hoMoIfzE14b7RxYzjkZjlGOcK2KNeXEfcqM7ihjR7U6BTBaZnixZsCZbrG96E_-zhPds-ez4tbEKRwTJPaNiSKzC-zE"/>
+</div>
+<div class="flex-1 space-y-2">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-lg leading-snug">Pear &amp; Walnut Winter Green Salad</h4>
+<button class="text-outline hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex gap-0.5">
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-surface-container-highest"></div>
+<div class="w-4 h-1.5 rounded-full bg-surface-container-highest"></div>
+<div class="w-4 h-1.5 rounded-full bg-surface-container-highest"></div>
+<div class="w-4 h-1.5 rounded-full bg-surface-container-highest"></div>
+</div>
+<span class="text-[10px] font-black uppercase text-primary tracking-widest">Crispy Score 2.0</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">By Green Kitchen • 850 saves</p>
+</div>
+</div>
+<!-- Recipe List Item 3 -->
+<div class="flex gap-6 items-start">
+<div class="w-32 h-32 rounded-lg overflow-hidden shrink-0 bg-surface-container-low">
+<img alt="Baked Goods" class="w-full h-full object-cover" data-alt="thick slice of sourdough bread with melting butter and roasted garlic on a dark slate plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkzNO4AgyANsHn-BEMmaOXiRdr9c21a2SzRyfBjYPGMgwpCP7_KhDMAa1DnJSeSdl_kcf7olyPm4Yi0Of6Yia5urCFZU4Di5dHnaS2RIy-oBDKMa77bugZAC0eh5Qi06PWvJKIHnZuoTsTGQxCm6RIT2TZ_ET2DwL46xMruT1KUkaU0ICQLFkUAE1NHywx8bgW4SeEZyX-DYPV8XBgt7baxkUo_7KgY_dfvSnQjg68k20oeD1fIhIoddHdZ0Y8WdfhALRbVsjDlYzL"/>
+</div>
+<div class="flex-1 space-y-2">
+<div class="flex justify-between items-start">
+<h4 class="font-headline font-bold text-lg leading-snug">Hard-Crust Garlic Sourdough</h4>
+<button class="text-outline hover:text-secondary transition-colors">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex gap-0.5">
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+<div class="w-4 h-1.5 rounded-full bg-primary"></div>
+</div>
+<span class="text-[10px] font-black uppercase text-primary tracking-widest">Crispy Score 10.0</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">By The Baker's Den • 2.4k saves</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Shared BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-8 pt-4 pb-8 bg-white/70 dark:bg-black/70 backdrop-blur-2xl shadow-[0_-8px_24px_rgba(26,28,27,0.04)] rounded-t-xl">
+<!-- Tab 1 -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-5 py-2 hover:text-[#7D8C71] dark:hover:text-[#a3b199] transition-colors tap-highlight-transparent transition-transform duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="spa">spa</span>
+<span class="font-manrope text-[11px] font-semibold tracking-wide uppercase">Seasonal</span>
+</a>
+<!-- Tab 2 (Active: Explore) -->
+<a class="flex flex-col items-center justify-center bg-[#7D8C71] text-white rounded-full px-5 py-2 tap-highlight-transparent transition-transform duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="search" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-manrope text-[11px] font-semibold tracking-wide uppercase">Explore</span>
+</a>
+<!-- Tab 3 -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-5 py-2 hover:text-[#7D8C71] dark:hover:text-[#a3b199] transition-colors tap-highlight-transparent transition-transform duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="inventory_2">inventory_2</span>
+<span class="font-manrope text-[11px] font-semibold tracking-wide uppercase">Kitchen</span>
+</a>
+<!-- Tab 4 -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 px-5 py-2 hover:text-[#7D8C71] dark:hover:text-[#a3b199] transition-colors tap-highlight-transparent transition-transform duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="bookmark">bookmark</span>
+<span class="font-manrope text-[11px] font-semibold tracking-wide uppercase">Saved</span>
+</a>
+</nav>
+</body></html>

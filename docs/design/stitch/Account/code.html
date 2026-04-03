@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Season — My Account</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#e2e3e1",
+              "on-background": "#1a1c1b",
+              "surface-tint": "#54634a",
+              "primary": "#526048",
+              "on-secondary-fixed": "#380d00",
+              "tertiary-container": "#8b6c7a",
+              "surface-dim": "#dadad8",
+              "on-primary-fixed": "#131f0b",
+              "secondary-container": "#ffad91",
+              "surface-container-highest": "#e2e3e1",
+              "on-tertiary": "#ffffff",
+              "on-surface-variant": "#444840",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#6a795f",
+              "outline-variant": "#c5c8bd",
+              "surface-container-low": "#f4f4f2",
+              "outline": "#75786f",
+              "tertiary-fixed": "#ffd8e9",
+              "primary-fixed": "#d8e8c8",
+              "on-secondary": "#ffffff",
+              "background": "#f9f9f7",
+              "surface-container-high": "#e8e8e6",
+              "on-tertiary-fixed": "#2b1420",
+              "on-primary-container": "#f8ffed",
+              "inverse-on-surface": "#f1f1ef",
+              "inverse-primary": "#bcccae",
+              "on-primary-fixed-variant": "#3d4b34",
+              "on-tertiary-fixed-variant": "#5a3f4c",
+              "on-tertiary-container": "#fffbff",
+              "on-primary": "#ffffff",
+              "error-container": "#ffdad6",
+              "tertiary": "#715462",
+              "surface-container": "#eeeeec",
+              "surface-bright": "#f9f9f7",
+              "on-secondary-fixed-variant": "#703722",
+              "surface": "#f9f9f7",
+              "secondary": "#8c4e37",
+              "tertiary-fixed-dim": "#e2bccd",
+              "on-error-container": "#93000a",
+              "error": "#ba1a1a",
+              "on-surface": "#1a1c1b",
+              "primary-fixed-dim": "#bcccae",
+              "on-error": "#ffffff",
+              "on-secondary-container": "#793e29",
+              "inverse-surface": "#2f3130",
+              "secondary-fixed-dim": "#ffb59b",
+              "secondary-fixed": "#ffdbcf"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-low font-body text-on-surface">
+<!-- Shared Component: TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-stone-50/70 backdrop-blur-xl flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-emerald-900 transition-opacity hover:opacity-70 active:scale-95 duration-200 cursor-pointer" data-icon="settings">settings</span>
+</div>
+<h1 class="font-['Manrope'] tracking-tight font-bold text-lg text-emerald-900">Profile</h1>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-emerald-900 transition-opacity hover:opacity-70 active:scale-95 duration-200 cursor-pointer" data-icon="logout">logout</span>
+</div>
+</nav>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto space-y-10">
+<!-- PROFILE HEADER BLOCK -->
+<section class="flex flex-col items-center text-center space-y-6">
+<div class="relative">
+<div class="w-32 h-32 rounded-full overflow-hidden shadow-sm">
+<img alt="Elena Vance" class="w-full h-full object-cover" data-alt="Close-up portrait of a woman with a warm, natural expression in a sunlit garden setting, soft bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEG-HAk6sla0cS1Vm98pcnLdL4WXbuSFNhSSsLMb2ONQFZXWPyAUZcTvTD7GkhvuwujJZN7SFrv96kk8jWScpsvh7rECpn8Bzo19JPZmtP0cLRSAzT4vL8btMoKIKhS0lDRK0bFcvoZho-6_1r7c-BkHVRMoNpXlrOE8YFF-WwJDlvsDCvhUX8_3kmQUy6QHD7VUcIw7jPD2wpQ0vhjs_DQCHDJq9Pyf0tXBq64wyl5_RPkLZ1sQFVbTE7iSPR4Q1MiVroVQHezgxA"/>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-primary p-2 rounded-full border-4 border-surface-container-low">
+<span class="material-symbols-outlined text-on-primary text-sm" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="space-y-1">
+<h2 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Elena Vance</h2>
+<p class="font-label text-sm text-on-surface-variant/70 tracking-wide">@elenavance</p>
+</div>
+<div class="flex flex-wrap justify-center gap-2">
+<span class="px-4 py-1.5 bg-primary-fixed text-on-primary-fixed-variant text-[10px] font-bold uppercase tracking-widest rounded-full">Seasoned Chef</span>
+<span class="px-4 py-1.5 bg-secondary-fixed text-on-secondary-fixed-variant text-[10px] font-bold uppercase tracking-widest rounded-full">Local Harvester</span>
+</div>
+<div class="flex items-center justify-center gap-8 py-4 w-full">
+<div class="flex flex-col items-center">
+<span class="font-headline text-xl font-bold text-primary">42</span>
+<span class="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">Saved</span>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col items-center">
+<span class="font-headline text-xl font-bold text-primary">12</span>
+<span class="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">Published</span>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col items-center">
+<span class="font-headline text-xl font-bold text-primary">8</span>
+<span class="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">Drafts</span>
+</div>
+</div>
+<button class="text-secondary font-semibold text-sm hover:opacity-70 transition-opacity">
+                View Public Profile
+            </button>
+</section>
+<!-- MY LIBRARY BLOCK -->
+<section class="space-y-4">
+<h3 class="font-label text-[11px] font-bold uppercase tracking-[0.15em] text-on-surface-variant ml-4">My Library</h3>
+<div class="bg-surface-container-lowest rounded-lg overflow-hidden transition-shadow duration-300">
+<div class="divide-y divide-surface-container-low">
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+</div>
+<span class="font-medium text-on-surface">Saved Recipes</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-sm font-medium">42</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+</div>
+<span class="font-medium text-on-surface">My Published Recipes</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-sm font-medium">12</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+</div>
+<span class="font-medium text-on-surface">Drafts</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant text-sm font-medium">8</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+</div>
+<span class="font-medium text-on-surface">Archived</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+<button class="w-full py-5 rounded-lg bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold shadow-md active:scale-[0.98] transition-transform duration-200 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="add_circle">add_circle</span>
+                Create New Recipe
+            </button>
+</section>
+<!-- SETTINGS BLOCK -->
+<section class="space-y-4">
+<h3 class="font-label text-[11px] font-bold uppercase tracking-[0.15em] text-on-surface-variant ml-4">Account &amp; Preferences</h3>
+<div class="bg-surface-container-lowest rounded-lg overflow-hidden">
+<div class="divide-y divide-surface-container-low">
+<div class="flex items-center justify-between p-5">
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter mb-0.5">Authentication</span>
+<span class="font-medium text-on-surface">Linked to Apple ID</span>
+</div>
+<span class="material-symbols-outlined text-primary" data-icon="face">face</span>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<span class="font-medium text-on-surface">Edit Social Links</span>
+<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-xs" data-icon="share">share</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Language Preference</span>
+<span class="text-xs text-on-surface-variant">English (US)</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="language">language</span>
+</div>
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Nutrition Preferences</span>
+<div class="flex gap-2 mt-1">
+<span class="text-[10px] px-2 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed-variant font-medium">Vegetarian</span>
+<span class="text-[10px] px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed-variant font-medium">High Protein</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="nutrition">nutrition</span>
+</div>
+<div class="p-5 text-center active:bg-error-container/20 transition-colors cursor-pointer">
+<span class="text-error font-semibold text-sm">Log Out</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ADVANCED / DIAGNOSTICS -->
+<section class="pt-8 text-center space-y-4">
+<button class="text-on-surface-variant/40 text-[10px] uppercase font-bold tracking-widest hover:text-primary transition-colors">
+                System Diagnostics
+            </button>
+<div class="text-[10px] text-on-surface-variant/30 font-medium">
+                App Version 2.4.1
+            </div>
+</section>
+</main>
+<!-- Shared Component: BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-3 pb-8 bg-stone-50/80 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-8px_24px_rgba(26,28,27,0.04)] z-50">
+<div class="flex flex-col items-center justify-center text-stone-500 px-5 py-2 transition-transform duration-300 ease-out active:scale-90 hover:text-emerald-700 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-['Inter'] text-[10px] font-semibold uppercase tracking-widest">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-500 px-5 py-2 transition-transform duration-300 ease-out active:scale-90 hover:text-emerald-700 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="search">search</span>
+<span class="font-['Inter'] text-[10px] font-semibold uppercase tracking-widest">Explore</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-500 px-5 py-2 transition-transform duration-300 ease-out active:scale-90 hover:text-emerald-700 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="kitchen">kitchen</span>
+<span class="font-['Inter'] text-[10px] font-semibold uppercase tracking-widest">Fridge</span>
+</div>
+<div class="flex flex-col items-center justify-center text-stone-500 px-5 py-2 transition-transform duration-300 ease-out active:scale-90 hover:text-emerald-700 cursor-pointer">
+<span class="material-symbols-outlined mb-1" data-icon="format_list_bulleted">format_list_bulleted</span>
+<span class="font-['Inter'] text-[10px] font-semibold uppercase tracking-widest">List</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-emerald-100 text-emerald-900 rounded-full px-5 py-2 transition-transform duration-300 ease-out active:scale-90 cursor-default">
+<span class="material-symbols-outlined mb-1" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-['Inter'] text-[10px] font-semibold uppercase tracking-widest">Profile</span>
+</div>
+</nav>
+</body></html>
