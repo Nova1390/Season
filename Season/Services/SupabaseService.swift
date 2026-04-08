@@ -55,6 +55,7 @@ struct Profile: Codable {
     let created_at: String?
     let display_name: String?
     let season_username: String?
+    let is_admin: Bool?
     let avatar_url: String?
     let preferred_language: String?
     let is_public: Bool?
@@ -142,6 +143,60 @@ struct UnifiedIngredientAliasRecord: Sendable {
     let isActive: Bool
 }
 
+struct CatalogResolutionCandidateRecord: Sendable, Identifiable {
+    let normalizedText: String
+    let occurrenceCount: Int
+    let suggestedResolutionType: String
+    let existingAliasStatus: String
+    let priorityScore: Double?
+
+    var id: String { normalizedText }
+}
+
+struct ReadyCatalogEnrichmentDraftRecord: Sendable, Identifiable {
+    let normalizedText: String
+    let ingredientType: String
+    let canonicalNameIT: String?
+    let canonicalNameEN: String?
+    let suggestedSlug: String?
+    let confidenceScore: Double?
+    let needsManualReview: Bool
+    let updatedAt: Date?
+
+    var id: String { normalizedText }
+}
+
+struct CatalogEnrichmentDraftRecord: Sendable, Identifiable {
+    let normalizedText: String
+    let status: String
+    let ingredientType: String
+    let canonicalNameIT: String?
+    let canonicalNameEN: String?
+    let suggestedSlug: String?
+    let suggestedAliases: [String]
+    let defaultUnit: String?
+    let supportedUnits: [String]
+    let isSeasonal: Bool?
+    let seasonMonths: [Int]
+    let confidenceScore: Double?
+    let needsManualReview: Bool
+    let reasoningSummary: String?
+    let reviewerNote: String?
+    let validatedReady: Bool
+    let validationErrors: [String]
+    let updatedAt: Date?
+
+    var id: String { normalizedText }
+}
+
+struct CatalogEnrichmentDraftMutationResult: Sendable {
+    let normalizedText: String
+    let status: String
+    let ingredientType: String
+    let validatedReady: Bool
+    let validationErrors: [String]
+}
+
 private struct CloudIngredientAliasRow: Codable {
     let produce_id: String?
     let basic_ingredient_id: String?
@@ -151,6 +206,55 @@ private struct CloudIngredientAliasRow: Codable {
     let source: String?
     let confidence: Double?
     let is_active: Bool?
+}
+
+private struct CloudCatalogResolutionCandidateRow: Codable {
+    let normalized_text: String?
+    let occurrence_count: Int?
+    let suggested_resolution_type: String?
+    let existing_alias_status: String?
+    let priority_score: Double?
+}
+
+private struct CloudReadyCatalogEnrichmentDraftRow: Codable {
+    let normalized_text: String?
+    let ingredient_type: String?
+    let canonical_name_it: String?
+    let canonical_name_en: String?
+    let suggested_slug: String?
+    let confidence_score: Double?
+    let needs_manual_review: Bool?
+    let updated_at: String?
+}
+
+private struct CloudCatalogEnrichmentDraftRow: Codable {
+    let normalized_text: String?
+    let status: String?
+    let ingredient_type: String?
+    let canonical_name_it: String?
+    let canonical_name_en: String?
+    let suggested_slug: String?
+    let suggested_aliases: [String]?
+    let default_unit: String?
+    let supported_units: [String]?
+    let is_seasonal: Bool?
+    let season_months: [Int]?
+    let confidence_score: Double?
+    let needs_manual_review: Bool?
+    let reasoning_summary: String?
+    let reviewer_note: String?
+    let validated_ready: Bool?
+    let validation_errors: [String]?
+    let updated_at: String?
+}
+
+private struct CloudCatalogEnrichmentDraftMutationRow: Codable {
+    let normalized_text: String?
+    let status: String?
+    let ingredient_type: String?
+    let validated_ready: Bool?
+    let is_ready: Bool?
+    let validation_errors: [String]?
 }
 
 private struct CloudUnifiedIngredientCatalogSummaryRow: Codable {
@@ -405,6 +509,41 @@ final class SupabaseService {
     func currentAuthenticatedEmail() -> String? {
         let value = client?.auth.currentUser?.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return value.isEmpty ? nil : value
+    }
+
+    func isCurrentUserCatalogAdmin() async -> Bool {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed reason=missing_configuration")
+            return false
+        }
+
+        let currentUserID = supabaseClient.auth.currentUser?.id.uuidString.lowercased()
+        print("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_called current_user_id=\(currentUserID ?? "nil")")
+
+        if currentUserID == nil {
+            do {
+                let sessionUserID = try await supabaseClient.auth.session.user.id.uuidString.lowercased()
+                print("[SEASON_CATALOG_ADMIN] phase=admin_status_session_restored user_id=\(sessionUserID)")
+            } catch {
+                print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_skipped reason=unauthenticated error=\(error)")
+                return false
+            }
+        }
+
+        do {
+            let response = try await supabaseClient
+                .rpc("is_current_user_catalog_admin")
+                .execute()
+            let rawResponse = String(data: response.data, encoding: .utf8) ?? "<non_utf8>"
+            print("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_response raw=\(rawResponse)")
+            let isAdmin = decodeRPCBoolean(response.data, key: "is_current_user_catalog_admin")
+            let payloadDescription = describeRPCPayload(response.data)
+            print("[SEASON_CATALOG_ADMIN] phase=admin_status_decode payload=\(payloadDescription) decoded_is_admin=\(isAdmin)")
+            return isAdmin
+        } catch {
+            print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed error=\(error)")
+            return false
+        }
     }
 
     func isUsernameAvailable(_ username: String, excludingUserID: UUID? = nil) async throws -> Bool {
@@ -1186,6 +1325,308 @@ final class SupabaseService {
             } catch {
                 print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed normalized_text=\(observation.normalizedText) error=\(error)")
             }
+        }
+    }
+
+    func fetchCatalogResolutionCandidates(limit: Int = 50) async -> [CatalogResolutionCandidateRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .from("catalog_resolution_candidate_queue")
+                .select("normalized_text,occurrence_count,suggested_resolution_type,existing_alias_status,priority_score")
+                .limit(max(1, limit))
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudCatalogResolutionCandidateRow].self, from: response.data)
+            let mapped = rows.compactMap { row -> CatalogResolutionCandidateRecord? in
+                let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                guard !normalizedText.isEmpty else { return nil }
+                return CatalogResolutionCandidateRecord(
+                    normalizedText: normalizedText,
+                    occurrenceCount: max(0, row.occurrence_count ?? 0),
+                    suggestedResolutionType: (row.suggested_resolution_type?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                        ? row.suggested_resolution_type!.trimmingCharacters(in: .whitespacesAndNewlines)
+                        : "unknown",
+                    existingAliasStatus: (row.existing_alias_status?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                        ? row.existing_alias_status!.trimmingCharacters(in: .whitespacesAndNewlines)
+                        : "none",
+                    priorityScore: row.priority_score
+                )
+            }
+
+            let sorted = mapped.sorted { lhs, rhs in
+                if lhs.occurrenceCount != rhs.occurrenceCount {
+                    return lhs.occurrenceCount > rhs.occurrenceCount
+                }
+                let leftPriority = lhs.priorityScore ?? -Double.greatestFiniteMagnitude
+                let rightPriority = rhs.priorityScore ?? -Double.greatestFiniteMagnitude
+                if leftPriority != rightPriority {
+                    return leftPriority > rightPriority
+                }
+                return lhs.normalizedText < rhs.normalizedText
+            }
+
+            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_ok count=\(sorted.count)")
+            return sorted
+        } catch {
+            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func approveCatalogAlias(normalizedText: String, ingredientID: String) async throws {
+        try await instrumentedRequest(name: "approveCatalogAlias", metadata: "normalized_text=\(normalizedText)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let targetIngredientID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty, !targetIngredientID.isEmpty else { return }
+
+            print("[SEASON_CATALOG_ADMIN] phase=approve_alias_started normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
+            let payload: [String: String] = [
+                "p_normalized_text": normalized,
+                "p_ingredient_id": targetIngredientID
+            ]
+
+            _ = try await supabaseClient
+                .rpc("approve_reconciliation_alias", params: payload)
+                .execute()
+
+            print("[SEASON_CATALOG_ADMIN] phase=approve_alias_succeeded normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
+        }
+    }
+
+    func fetchReadyCatalogEnrichmentDrafts(limit: Int = 50) async -> [ReadyCatalogEnrichmentDraftRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .rpc("list_ready_catalog_enrichment_drafts", params: ["limit_count": max(1, limit)])
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudReadyCatalogEnrichmentDraftRow].self, from: response.data)
+            let iso8601 = ISO8601DateFormatter()
+            let mapped = rows.compactMap { row -> ReadyCatalogEnrichmentDraftRecord? in
+                let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+                guard !normalizedText.isEmpty else { return nil }
+                let ingredientType = row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown"
+                return ReadyCatalogEnrichmentDraftRecord(
+                    normalizedText: normalizedText,
+                    ingredientType: ingredientType,
+                    canonicalNameIT: row.canonical_name_it?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    canonicalNameEN: row.canonical_name_en?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    suggestedSlug: row.suggested_slug?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    confidenceScore: row.confidence_score,
+                    needsManualReview: row.needs_manual_review ?? true,
+                    updatedAt: row.updated_at.flatMap { iso8601.date(from: $0) }
+                )
+            }
+
+            let sorted = mapped.sorted { lhs, rhs in
+                switch (lhs.updatedAt, rhs.updatedAt) {
+                case let (left?, right?) where left != right:
+                    return left > right
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                default:
+                    break
+                }
+                return lhs.normalizedText < rhs.normalizedText
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_ok count=\(sorted.count)")
+            return sorted
+        } catch {
+            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func createCatalogIngredientFromEnrichmentDraft(normalizedText: String) async throws {
+        try await instrumentedRequest(name: "createCatalogIngredientFromEnrichmentDraft", metadata: "normalized_text=\(normalizedText)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { return }
+
+            print("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_started normalized_text=\(normalized)")
+            _ = try await supabaseClient
+                .rpc("create_catalog_ingredient_from_enrichment_draft", params: ["p_normalized_text": normalized])
+                .execute()
+            print("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_succeeded normalized_text=\(normalized)")
+        }
+    }
+
+    func fetchCatalogEnrichmentDraft(normalizedText: String) async -> CatalogEnrichmentDraftRecord? {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed reason=missing_configuration")
+            return nil
+        }
+        let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return nil }
+
+        do {
+            let response = try await supabaseClient
+                .rpc("get_catalog_ingredient_enrichment_draft", params: ["p_normalized_text": normalized])
+                .execute()
+            let rows = try JSONDecoder().decode([CloudCatalogEnrichmentDraftRow].self, from: response.data)
+            guard let row = rows.first else { return nil }
+            let iso8601 = ISO8601DateFormatter()
+            let mapped = CatalogEnrichmentDraftRecord(
+                normalizedText: row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? normalized,
+                status: row.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "pending",
+                ingredientType: row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown",
+                canonicalNameIT: row.canonical_name_it?.trimmingCharacters(in: .whitespacesAndNewlines),
+                canonicalNameEN: row.canonical_name_en?.trimmingCharacters(in: .whitespacesAndNewlines),
+                suggestedSlug: row.suggested_slug?.trimmingCharacters(in: .whitespacesAndNewlines),
+                suggestedAliases: row.suggested_aliases ?? [],
+                defaultUnit: row.default_unit?.trimmingCharacters(in: .whitespacesAndNewlines),
+                supportedUnits: row.supported_units ?? [],
+                isSeasonal: row.is_seasonal,
+                seasonMonths: row.season_months ?? [],
+                confidenceScore: row.confidence_score,
+                needsManualReview: row.needs_manual_review ?? true,
+                reasoningSummary: row.reasoning_summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+                reviewerNote: row.reviewer_note?.trimmingCharacters(in: .whitespacesAndNewlines),
+                validatedReady: row.validated_ready ?? false,
+                validationErrors: row.validation_errors ?? [],
+                updatedAt: row.updated_at.flatMap { iso8601.date(from: $0) }
+            )
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_ok normalized_text=\(normalized) status=\(mapped.status)")
+            return mapped
+        } catch {
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed normalized_text=\(normalized) error=\(error)")
+            return nil
+        }
+    }
+
+    func upsertCatalogEnrichmentDraft(
+        normalizedText: String,
+        status: String,
+        ingredientType: String,
+        canonicalNameIT: String?,
+        canonicalNameEN: String?,
+        suggestedSlug: String?,
+        defaultUnit: String?,
+        supportedUnits: [String],
+        isSeasonal: Bool?,
+        seasonMonths: [Int],
+        confidenceScore: Double?,
+        needsManualReview: Bool,
+        reasoningSummary: String?
+    ) async throws -> CatalogEnrichmentDraftMutationResult {
+        try await instrumentedRequest(name: "upsertCatalogEnrichmentDraft", metadata: "normalized_text=\(normalizedText)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("normalized_text")
+            }
+            let canonicalNameITValue = canonicalNameIT?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let canonicalNameENValue = canonicalNameEN?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let suggestedSlugValue = suggestedSlug?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let defaultUnitValue = defaultUnit?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let reasoningSummaryValue = reasoningSummary?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let canonicalNameITJSON: AnyJSON = (canonicalNameITValue?.isEmpty == false) ? .string(canonicalNameITValue!) : .null
+            let canonicalNameENJSON: AnyJSON = (canonicalNameENValue?.isEmpty == false) ? .string(canonicalNameENValue!) : .null
+            let suggestedSlugJSON: AnyJSON = (suggestedSlugValue?.isEmpty == false) ? .string(suggestedSlugValue!) : .null
+            let defaultUnitJSON: AnyJSON = (defaultUnitValue?.isEmpty == false) ? .string(defaultUnitValue!) : .null
+            let reasoningSummaryJSON: AnyJSON = (reasoningSummaryValue?.isEmpty == false) ? .string(reasoningSummaryValue!) : .null
+
+            let params: [String: AnyJSON] = [
+                "p_normalized_text": .string(normalized),
+                "p_status": .string(status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()),
+                "p_ingredient_type": .string(ingredientType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()),
+                "p_canonical_name_it": canonicalNameITJSON,
+                "p_canonical_name_en": canonicalNameENJSON,
+                "p_suggested_slug": suggestedSlugJSON,
+                "p_default_unit": defaultUnitJSON,
+                "p_supported_units": .array(supportedUnits.map { .string($0) }),
+                "p_is_seasonal": isSeasonal.map { .bool($0) } ?? .null,
+                "p_season_months": .array(seasonMonths.map { .integer($0) }),
+                "p_confidence_score": confidenceScore.map { .double($0) } ?? .null,
+                "p_needs_manual_review": .bool(needsManualReview),
+                "p_reasoning_summary": reasoningSummaryJSON,
+                "p_reviewer_note": .null
+            ]
+
+            let response = try await supabaseClient
+                .rpc("upsert_catalog_ingredient_enrichment_draft", params: params)
+                .execute()
+            let rows = try JSONDecoder().decode([CloudCatalogEnrichmentDraftMutationRow].self, from: response.data)
+            guard let row = rows.first else {
+                throw SupabaseServiceError.missingConfiguration("upsert_catalog_ingredient_enrichment_draft response")
+            }
+
+            let result = CatalogEnrichmentDraftMutationResult(
+                normalizedText: row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? normalized,
+                status: row.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? status.lowercased(),
+                ingredientType: row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ingredientType.lowercased(),
+                validatedReady: row.validated_ready ?? row.is_ready ?? false,
+                validationErrors: row.validation_errors ?? []
+            )
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_upsert_ok normalized_text=\(result.normalizedText) status=\(result.status) validated_ready=\(result.validatedReady)")
+            return result
+        }
+    }
+
+    func validateCatalogEnrichmentDraft(
+        normalizedText: String
+    ) async throws -> CatalogEnrichmentDraftMutationResult {
+        try await instrumentedRequest(name: "validateCatalogEnrichmentDraft", metadata: "normalized_text=\(normalizedText)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("normalized_text")
+            }
+
+            let response = try await supabaseClient
+                .rpc("validate_catalog_ingredient_enrichment_draft", params: ["p_normalized_text": normalized])
+                .execute()
+            let rows = try JSONDecoder().decode([CloudCatalogEnrichmentDraftMutationRow].self, from: response.data)
+            guard let row = rows.first else {
+                throw SupabaseServiceError.missingConfiguration("validate_catalog_ingredient_enrichment_draft response")
+            }
+
+            let result = CatalogEnrichmentDraftMutationResult(
+                normalizedText: row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? normalized,
+                status: row.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "pending",
+                ingredientType: row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown",
+                validatedReady: row.validated_ready ?? row.is_ready ?? false,
+                validationErrors: row.validation_errors ?? []
+            )
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_validate_ok normalized_text=\(result.normalizedText) validated_ready=\(result.validatedReady)")
+            return result
         }
     }
 
@@ -1980,6 +2421,65 @@ final class SupabaseService {
 
     private func notifyAuthStateDidChange() {
         NotificationCenter.default.post(name: .seasonAuthStateDidChange, object: nil)
+    }
+
+    private func decodeRPCBoolean(_ data: Data, key: String) -> Bool {
+        guard let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) else {
+            return false
+        }
+
+        if let number = json as? NSNumber {
+            return number.boolValue
+        }
+        if let boolValue = json as? Bool {
+            return boolValue
+        }
+        if let textValue = json as? String {
+            let normalized = textValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return normalized == "true" || normalized == "t" || normalized == "1"
+        }
+        if let dict = json as? [String: Any], let boolValue = dict[key] as? Bool {
+            return boolValue
+        }
+        if let dict = json as? [String: Any], let number = dict[key] as? NSNumber {
+            return number.boolValue
+        }
+        if let dict = json as? [String: Any], let textValue = dict[key] as? String {
+            let normalized = textValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return normalized == "true" || normalized == "t" || normalized == "1"
+        }
+        if let array = json as? [Any], let first = array.first {
+            if let number = first as? NSNumber {
+                return number.boolValue
+            }
+            if let boolValue = first as? Bool {
+                return boolValue
+            }
+            if let textValue = first as? String {
+                let normalized = textValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return normalized == "true" || normalized == "t" || normalized == "1"
+            }
+            if let dict = first as? [String: Any], let boolValue = dict[key] as? Bool {
+                return boolValue
+            }
+            if let dict = first as? [String: Any], let number = dict[key] as? NSNumber {
+                return number.boolValue
+            }
+            if let dict = first as? [String: Any], let textValue = dict[key] as? String {
+                let normalized = textValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return normalized == "true" || normalized == "t" || normalized == "1"
+            }
+        }
+
+        return false
+    }
+
+    private func describeRPCPayload(_ data: Data) -> String {
+        guard let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) else {
+            let raw = String(data: data, encoding: .utf8) ?? "<non_utf8>"
+            return "type=parse_failed value=\(raw)"
+        }
+        return "type=\(type(of: json)) value=\(json)"
     }
 
     private static func loadConfiguration(from bundle: Bundle) throws -> SupabaseConfiguration {

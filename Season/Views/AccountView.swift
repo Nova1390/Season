@@ -64,6 +64,7 @@ struct AccountView: View {
     @State private var selectedAvatarPhotoItem: PhotosPickerItem?
     @State private var avatarUploadRunning = false
     @State private var showingLogoutConfirmation = false
+    @State private var hasCatalogAdminAccess = false
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
@@ -80,7 +81,9 @@ struct AccountView: View {
                 profileHeaderSection
                 librarySection
                 preferencesSection
-                diagnosticsSection
+                if hasCatalogAdminAccess {
+                    diagnosticsSection
+                }
                 Color.clear.frame(height: 8)
             }
             .padding(.horizontal, 16)
@@ -132,6 +135,19 @@ struct AccountView: View {
             loadCloudProfileForReadOnlyDisplayIfNeeded()
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
             applyCloudProfileSocialLinksToInputs(cloudProfile)
+            Task {
+                await refreshCatalogAdminAccess()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .seasonAuthStateDidChange)) { _ in
+            Task {
+                await refreshCatalogAdminAccess()
+            }
+        }
+        .onChange(of: currentAuthenticatedUserID) { _, _ in
+            Task {
+                await refreshCatalogAdminAccess()
+            }
         }
         .onChange(of: selectedAvatarPhotoItem) { _, newItem in
             guard let newItem else { return }
@@ -666,6 +682,15 @@ struct AccountView: View {
                 .opacity(0.74)
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                NavigationLink {
+                    CatalogCandidatesDebugView()
+                } label: {
+                    Label("Catalog Candidates (Debug)", systemImage: "list.bullet.rectangle")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(SeasonSecondaryButtonStyle())
+
                 DisclosureGroup(isExpanded: $showSupabaseAuthTest) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(viewModel.localizer.text(.supabaseTestDescription))
@@ -1255,6 +1280,15 @@ struct AccountView: View {
         return "Choose a username to complete account setup."
     }
 
+    @MainActor
+    private func refreshCatalogAdminAccess() async {
+        print("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_started current_user_id=\(currentAuthenticatedUserID ?? "nil")")
+        hasCatalogAdminAccess = await AdminAccessControl.fetchIsCurrentUserAdmin(
+            supabaseService: supabaseService
+        )
+        print("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_completed has_access=\(hasCatalogAdminAccess)")
+    }
+
     private func validateUsernameForAuth(_ raw: String) -> String? {
         let username = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if username.count < 3 {
@@ -1644,6 +1678,7 @@ struct AccountView: View {
                     cloudLinkedAccounts = []
                     hasAttemptedCloudProfileLoad = false
                     hasAttemptedCloudLinkedAccountsLoad = false
+                    hasCatalogAdminAccess = false
                     socialLinkStatusMessage = ""
                     socialLinkStatusIsError = false
                     print("[SEASON_AUTH] phase=local_state_cleared")
