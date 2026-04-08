@@ -59,7 +59,7 @@ canonical_match as (
   select
     u.normalized_text,
     count(distinct ck.ingredient_id) as canonical_match_count,
-    (array_agg(distinct ck.ingredient_id order by ck.ingredient_id::text))[1] as canonical_candidate_ingredient_id,
+    (array_agg(distinct ck.ingredient_id order by ck.ingredient_id))[1] as canonical_candidate_ingredient_id,
     (array_agg(distinct ck.slug order by ck.slug))[1] as canonical_candidate_slug,
     (array_agg(distinct ck.display_name order by ck.display_name))[1] as canonical_candidate_name
   from unresolved u
