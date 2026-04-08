@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Season — Eat what the earth is giving</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --surface:               #f9f9f7;
+      --surface-low:           #f4f4f2;
+      --surface-lowest:        #ffffff;
+      --surface-high:          #e8e8e6;
+      --primary:               #526048;
+      --primary-container:     #6a795f;
+      --on-primary:            #ffffff;
+      --secondary-fixed:       #ffdbcf;
+      --secondary-text:        #793e29;
+      --on-surface:            #1a1c1b;
+      --on-surface-variant:    #3f4440;
+      --outline-variant:       #c5c8bd;
+
+      --font-display: 'Manrope', sans-serif;
+      --font-body:    'Inter', sans-serif;
+
+      --radius-sm: 0.5rem;
+      --radius-md: 1.5rem;
+      --radius-lg: 2rem;
+      --radius-xl: 3rem;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--surface);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 2rem);
+      max-width: 1100px;
+      background: rgba(255,255,255,0.70);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 9999px;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(26,28,27,0.04);
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.75rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      text-decoration: none;
+      transition: color 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover { color: var(--primary); }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      color: var(--on-primary) !important;
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      font-weight: 600 !important;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .nav-cta:hover { opacity: 0.88; }
+
+    /* Hamburger (mobile only) */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 9999px;
+      transition: transform 0.25s, opacity 0.25s;
+    }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile drawer */
+    .nav-drawer {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(249,249,247,0.97);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 99;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+    }
+    .nav-drawer.open { display: flex; }
+    .nav-drawer a {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--on-surface);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-drawer a:hover { color: var(--primary); }
+    .nav-drawer .drawer-cta {
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      color: white !important;
+      padding: 0.85rem 2.5rem;
+      border-radius: 9999px;
+      font-size: 1rem !important;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8rem 1.5rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Organic background blobs */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      right: -15%;
+      width: 60vw;
+      height: 60vw;
+      max-width: 700px;
+      max-height: 700px;
+      background: radial-gradient(ellipse at center, rgba(106,121,95,0.10) 0%, transparent 70%);
+      border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+      animation: blob-drift 18s ease-in-out infinite alternate;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: -10%;
+      width: 50vw;
+      height: 50vw;
+      max-width: 600px;
+      max-height: 600px;
+      background: radial-gradient(ellipse at center, rgba(255,219,207,0.30) 0%, transparent 70%);
+      border-radius: 45% 55% 40% 60% / 60% 40% 55% 45%;
+      animation: blob-drift 22s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes blob-drift {
+      from { transform: translate(0,0) rotate(0deg); }
+      to   { transform: translate(3%,5%) rotate(8deg); }
+    }
+
+    .hero-inner {
+      max-width: 780px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .season-tag {
+      display: inline-block;
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--secondary-text);
+      background: var(--secondary-fixed);
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      margin-bottom: 2rem;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      color: var(--on-surface);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--primary);
+    }
+
+    .hero-sub {
+      font-family: var(--font-body);
+      font-size: clamp(1rem, 2.2vw, 1.2rem);
+      font-weight: 400;
+      color: var(--on-surface-variant);
+      max-width: 520px;
+      margin: 0 auto 3rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      color: var(--on-primary);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.85rem 2rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 8px 24px rgba(82,96,72,0.20);
+    }
+    .btn-primary:hover { opacity: 0.90; transform: translateY(-1px); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--secondary-fixed);
+      color: var(--secondary-text);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.85rem 2rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-secondary:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* ─── PHONE MOCKUP ─── */
+    .phone-wrap {
+      margin-top: 5rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 1.5rem;
+    }
+
+    .phone {
+      width: 220px;
+      aspect-ratio: 9/19.5;
+      background: var(--surface-lowest);
+      border-radius: 2.5rem;
+      box-shadow:
+        0 40px 80px rgba(26,28,27,0.12),
+        0 0 0 1.5px rgba(26,28,27,0.06),
+        inset 0 0 0 2px rgba(255,255,255,0.9);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .phone.phone--center {
+      transform: translateY(-2.5rem);
+      width: 240px;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Phone 1: Home */
+    .phone-home .ph-header {
+      background: var(--surface-low);
+      padding: 2.5rem 1rem 1rem;
+      font-family: var(--font-display);
+    }
+    .phone-home .ph-greeting {
+      font-size: 0.55rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+      margin-bottom: 0.2rem;
+    }
+    .phone-home .ph-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--on-surface);
+    }
+    .phone-home .ph-card {
+      margin: 0.75rem;
+      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      border-radius: 1.25rem;
+      padding: 1rem;
+      color: white;
+      flex-shrink: 0;
+    }
+    .phone-home .ph-card-label {
+      font-size: 0.42rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.75;
+      margin-bottom: 0.3rem;
+    }
+    .phone-home .ph-card-title {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .phone-home .ph-card-meta {
+      font-size: 0.4rem;
+      opacity: 0.7;
+    }
+    .phone-home .ph-card-img {
+      width: 100%;
+      height: 2rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 0.75rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .phone-home .ph-section-label {
+      padding: 0.5rem 0.75rem 0.25rem;
+      font-size: 0.45rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+      font-weight: 600;
+    }
+    .phone-home .ph-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0 0.75rem;
+    }
+    .phone-home .ph-mini-card {
+      flex: 1;
+      background: var(--surface-lowest);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(26,28,27,0.06);
+    }
+    .phone-home .ph-mini-img {
+      height: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+    .phone-home .ph-mini-body {
+      padding: 0.3rem 0.4rem 0.4rem;
+    }
+    .phone-home .ph-mini-name {
+      font-size: 0.38rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      line-height: 1.3;
+    }
+    .phone-home .ph-mini-tag {
+      font-size: 0.32rem;
+      color: var(--on-surface-variant);
+      margin-top: 0.15rem;
+    }
+
+    /* Phone 2: Recipe Detail */
+    .phone-detail .pd-img {
+      height: 45%;
+      background: linear-gradient(160deg, #e8ede4, #c5d4bc);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .pd-tag-pill {
+      position: absolute;
+      bottom: 0.6rem;
+      left: 0.75rem;
+      background: var(--surface-lowest);
+      color: var(--primary);
+      font-size: 0.38rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+    }
+    .phone-detail .pd-body {
+      flex: 1;
+      padding: 0.75rem;
+      overflow: hidden;
+    }
+    .pd-recipe-title {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--on-surface);
+      margin-bottom: 0.3rem;
+      line-height: 1.2;
+    }
+    .pd-recipe-author {
+      font-size: 0.4rem;
+      color: var(--on-surface-variant);
+      margin-bottom: 0.6rem;
+    }
+    .pd-stats {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .pd-stat {
+      background: var(--surface-low);
+      border-radius: 0.6rem;
+      padding: 0.3rem 0.5rem;
+      text-align: center;
+    }
+    .pd-stat-val {
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .pd-stat-label {
+      font-size: 0.3rem;
+      color: var(--on-surface-variant);
+    }
+    .pd-section {
+      font-size: 0.42rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--on-surface-variant);
+      margin-bottom: 0.4rem;
+    }
+    .pd-ingredient {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.3rem;
+    }
+    .pd-dot {
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 9999px;
+      background: var(--primary);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .pd-ingredient-text {
+      font-size: 0.38rem;
+      color: var(--on-surface);
+    }
+
+    /* Phone 3: Fridge */
+    .phone-fridge .pf-header {
+      padding: 2.5rem 0.75rem 0.75rem;
+      background: var(--surface-low);
+    }
+    .pf-title {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--on-surface);
+    }
+    .pf-sub {
+      font-size: 0.38rem;
+      color: var(--on-surface-variant);
+      margin-top: 0.1rem;
+    }
+    .phone-fridge .pf-chip-row {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0.6rem 0.75rem;
+      overflow: hidden;
+    }
+    .pf-chip {
+      background: var(--surface-high);
+      color: var(--on-surface-variant);
+      font-size: 0.35rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .pf-chip.active {
+      background: var(--primary);
+      color: white;
+    }
+    .phone-fridge .pf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      padding: 0 0.75rem;
+    }
+    .pf-item {
+      background: var(--surface-lowest);
+      border-radius: 1rem;
+      padding: 0.5rem;
+      box-shadow: 0 2px 8px rgba(26,28,27,0.05);
+    }
+    .pf-item-icon {
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    .pf-item-name {
+      font-size: 0.38rem;
+      font-weight: 600;
+      color: var(--on-surface);
+    }
+    .pf-item-tag {
+      font-size: 0.3rem;
+      color: var(--primary);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-top: 0.1rem;
+    }
+
+    /* ─── SECTION BASE ─── */
+    section { padding: 6rem 1.5rem; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--secondary-text);
+      background: var(--secondary-fixed);
+      padding: 0.3rem 0.9rem;
+      border-radius: 9999px;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--on-surface);
+      margin-bottom: 1rem;
+    }
+
+    .section-body {
+      font-size: 1.05rem;
+      color: var(--on-surface-variant);
+      line-height: 1.75;
+      max-width: 520px;
+    }
+
+    /* ─── WHAT IS SEASON ─── */
+    .what {
+      background: var(--surface-low);
+    }
+
+    .what-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .what-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+
+    .what-visual {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .seasonal-card {
+      background: var(--surface-lowest);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(26,28,27,0.05);
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .seasonal-card:nth-child(2) {
+      margin-left: 2rem;
+    }
+    .seasonal-card:nth-child(3) {
+      margin-left: 1rem;
+    }
+
+    .sc-icon {
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: var(--radius-md);
+      background: var(--surface-low);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      flex-shrink: 0;
+    }
+
+    .sc-body {}
+    .sc-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--on-surface);
+      margin-bottom: 0.2rem;
+    }
+    .sc-season {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    /* ─── FEATURES ─── */
+    .features { background: var(--surface); }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
+
+    .feature-card {
+      background: var(--surface-lowest);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: 0 8px 24px rgba(26,28,27,0.04);
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(26,28,27,0.08);
+    }
+
+    .feature-card.accent {
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      color: white;
+    }
+
+    .feature-icon {
+      width: 3rem;
+      height: 3rem;
+      border-radius: var(--radius-sm);
+      background: var(--surface-low);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1.25rem;
+    }
+    .feature-card.accent .feature-icon {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .feature-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.6rem;
+      color: var(--on-surface);
+    }
+    .feature-card.accent .feature-title { color: white; }
+
+    .feature-desc {
+      font-size: 0.9rem;
+      color: var(--on-surface-variant);
+      line-height: 1.65;
+    }
+    .feature-card.accent .feature-desc { color: rgba(255,255,255,0.80); }
+
+    /* ─── HOW IT WORKS ─── */
+    .how { background: var(--surface-low); }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 3.5rem;
+      position: relative;
+    }
+
+    .how-steps::before {
+      content: '';
+      position: absolute;
+      top: 2rem;
+      left: calc(100% / 6);
+      right: calc(100% / 6);
+      height: 1px;
+      background: var(--outline-variant);
+      opacity: 0.4;
+    }
+
+    @media (max-width: 768px) {
+      .how-steps { grid-template-columns: 1fr; }
+      .how-steps::before { display: none; }
+    }
+
+    .how-step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step-number {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 9999px;
+      background: var(--surface-lowest);
+      box-shadow: 0 8px 24px rgba(26,28,27,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0 auto 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--on-surface);
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc {
+      font-size: 0.875rem;
+      color: var(--on-surface-variant);
+      line-height: 1.65;
+    }
+
+    /* ─── SOCIAL IMPORT ─── */
+    .import { background: var(--surface); }
+
+    .import-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .import-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+
+    .import-mockup {
+      background: var(--surface-low);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      position: relative;
+    }
+
+    .caption-bubble {
+      background: var(--surface-lowest);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 8px 24px rgba(26,28,27,0.06);
+      font-size: 0.875rem;
+      color: var(--on-surface-variant);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .caption-bubble strong {
+      color: var(--on-surface);
+      display: block;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .arrow-down {
+      text-align: center;
+      color: var(--outline-variant);
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .recipe-parsed {
+      background: var(--surface-lowest);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 8px 24px rgba(26,28,27,0.06);
+    }
+
+    .parsed-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .parsed-check {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-container));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .parsed-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--on-surface);
+    }
+
+    .parsed-ingredient {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+      color: var(--on-surface-variant);
+    }
+
+    .pi-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 9999px;
+      background: var(--primary);
+      opacity: 0.4;
+      flex-shrink: 0;
+    }
+
+    .confidence-badge {
+      display: inline-block;
+      background: rgba(82,96,72,0.1);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.2rem 0.7rem;
+      border-radius: 9999px;
+      margin-top: 0.75rem;
+    }
+
+    /* ─── CTA / DOWNLOAD ─── */
+    .download {
+      background: var(--on-surface);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .download::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 60%;
+      height: 160%;
+      background: radial-gradient(ellipse at center, rgba(106,121,95,0.15) 0%, transparent 60%);
+      border-radius: 50%;
+    }
+    .download::after {
+      content: '';
+      position: absolute;
+      bottom: -20%;
+      left: -5%;
+      width: 40%;
+      height: 120%;
+      background: radial-gradient(ellipse at center, rgba(255,219,207,0.08) 0%, transparent 60%);
+      border-radius: 50%;
+    }
+
+    .download-inner {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+
+    .download .section-label {
+      background: rgba(255,219,207,0.15);
+      color: var(--secondary-fixed);
+    }
+
+    .download .section-title {
+      color: var(--surface);
+      max-width: 640px;
+      margin: 0 auto 1rem;
+    }
+
+    .download .section-body {
+      color: rgba(249,249,247,0.6);
+      margin: 0 auto 2.5rem;
+      text-align: center;
+    }
+
+    .download-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-store {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      color: var(--surface);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 0.85rem 1.75rem;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+    .btn-store:hover { background: rgba(255,255,255,0.14); }
+
+    .btn-store-icon { font-size: 1.4rem; }
+    .btn-store-label { line-height: 1.1; }
+    .btn-store-pre { font-size: 0.7rem; font-weight: 400; opacity: 0.7; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: var(--surface-low);
+      padding: 3rem 1.5rem;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .footer-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--primary);
+    }
+
+    .footer-tagline {
+      font-size: 0.8rem;
+      color: var(--on-surface-variant);
+      margin-top: 0.2rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--on-surface-variant);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--primary); }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: var(--outline-variant);
+    }
+
+    /* ─── SCROLL REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-logo">Season</span>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#import">Smart import</a></li>
+      <li><a href="#download" class="nav-cta">Get the app</a></li>
+    </ul>
+    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- MOBILE DRAWER -->
+  <div class="nav-drawer" id="drawer">
+    <a href="#features" class="drawer-link">Features</a>
+    <a href="#how" class="drawer-link">How it works</a>
+    <a href="#import" class="drawer-link">Smart import</a>
+    <a href="#download" class="drawer-cta">Get the app</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="hero-inner">
+        <span class="season-tag">🌱 Spring is here</span>
+        <h1>Eat what the<br/><em>earth is giving.</em></h1>
+        <p class="hero-sub">Season discovers what's ripe right now, helps you cook it beautifully, and remembers what's already in your fridge.</p>
+        <div class="hero-actions">
+          <a href="#download" class="btn-primary">
+            <span>Download for iOS</span>
+          </a>
+          <a href="#how" class="btn-secondary">
+            <span>See how it works</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- PHONE MOCKUPS -->
+      <div class="phone-wrap">
+
+        <!-- Phone 1: Home -->
+        <div class="phone reveal reveal-delay-1">
+          <div class="phone-screen phone-home">
+            <div class="ph-header">
+              <div class="ph-greeting">Good morning</div>
+              <div class="ph-title">What's in season?</div>
+            </div>
+            <div class="ph-card">
+              <div class="ph-card-img">🍓</div>
+              <div class="ph-card-label">Pick of the week</div>
+              <div class="ph-card-title">Strawberry & Ricotta Tart</div>
+              <div class="ph-card-meta">Anna · 25 min · Easy</div>
+            </div>
+            <div class="ph-section-label">In season now</div>
+            <div class="ph-row">
+              <div class="ph-mini-card">
+                <div class="ph-mini-img" style="background:linear-gradient(135deg,#fde8e8,#f8c4c4);">🍓</div>
+                <div class="ph-mini-body">
+                  <div class="ph-mini-name">Strawberry</div>
+                  <div class="ph-mini-tag">SPRING</div>
+                </div>
+              </div>
+              <div class="ph-mini-card">
+                <div class="ph-mini-img" style="background:linear-gradient(135deg,#e8f0e8,#c4d8c4);">🥦</div>
+                <div class="ph-mini-body">
+                  <div class="ph-mini-name">Asparagus</div>
+                  <div class="ph-mini-tag">SPRING</div>
+                </div>
+              </div>
+              <div class="ph-mini-card">
+                <div class="ph-mini-img" style="background:linear-gradient(135deg,#f0ede0,#ddd5bc);">🧅</div>
+                <div class="ph-mini-body">
+                  <div class="ph-mini-name">Spring onion</div>
+                  <div class="ph-mini-tag">SPRING</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone 2: Recipe Detail (center, elevated) -->
+        <div class="phone phone--center reveal reveal-delay-2">
+          <div class="phone-screen phone-detail">
+            <div class="pd-img">
+              🥗
+              <div class="pd-tag-pill">SPRING · 91% MATCH</div>
+            </div>
+            <div class="pd-body">
+              <div class="pd-recipe-title">Spring Green Bowl</div>
+              <div class="pd-recipe-author">by Anna · 10 min prep</div>
+              <div class="pd-stats">
+                <div class="pd-stat">
+                  <div class="pd-stat-val">12'</div>
+                  <div class="pd-stat-label">Total</div>
+                </div>
+                <div class="pd-stat">
+                  <div class="pd-stat-val">Easy</div>
+                  <div class="pd-stat-label">Level</div>
+                </div>
+                <div class="pd-stat">
+                  <div class="pd-stat-val">2</div>
+                  <div class="pd-stat-label">Serves</div>
+                </div>
+              </div>
+              <div class="pd-section">Ingredients</div>
+              <div class="pd-ingredient"><div class="pd-dot"></div><div class="pd-ingredient-text">120g Spinach</div></div>
+              <div class="pd-ingredient"><div class="pd-dot"></div><div class="pd-ingredient-text">100g Peas</div></div>
+              <div class="pd-ingredient"><div class="pd-dot"></div><div class="pd-ingredient-text">½ Lemon</div></div>
+              <div class="pd-ingredient"><div class="pd-dot"></div><div class="pd-ingredient-text">10g Olive oil</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone 3: Fridge -->
+        <div class="phone reveal reveal-delay-3">
+          <div class="phone-screen phone-fridge">
+            <div class="pf-header">
+              <div class="pf-title">My Fridge</div>
+              <div class="pf-sub">8 items · 3 expiring soon</div>
+            </div>
+            <div class="pf-chip-row">
+              <div class="pf-chip active">All</div>
+              <div class="pf-chip">Produce</div>
+              <div class="pf-chip">Pantry</div>
+            </div>
+            <div class="pf-grid">
+              <div class="pf-item">
+                <div class="pf-item-icon">🍓</div>
+                <div class="pf-item-name">Strawberries</div>
+                <div class="pf-item-tag">In season</div>
+              </div>
+              <div class="pf-item">
+                <div class="pf-item-icon">🥬</div>
+                <div class="pf-item-name">Spinach</div>
+                <div class="pf-item-tag">In season</div>
+              </div>
+              <div class="pf-item">
+                <div class="pf-item-icon">🧈</div>
+                <div class="pf-item-name">Butter</div>
+                <div class="pf-item-tag">Pantry</div>
+              </div>
+              <div class="pf-item">
+                <div class="pf-item-icon">🧀</div>
+                <div class="pf-item-name">Parmesan</div>
+                <div class="pf-item-tag">Pantry</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IS SEASON -->
+  <section class="what" id="about">
+    <div class="container what-grid">
+      <div>
+        <span class="section-label reveal">About Season</span>
+        <h2 class="section-title reveal">The intelligent kitchen companion.</h2>
+        <p class="section-body reveal">Most recipe apps ignore the calendar. Season is built around it. Every recipe, every ingredient, every suggestion is filtered through a single question: is this what the earth is offering right now?</p>
+        <p class="section-body reveal" style="margin-top:1rem;">We've built a curated ingredient catalog that understands seasonality, locality, and taste — and grows smarter over time.</p>
+      </div>
+      <div class="what-visual">
+        <div class="seasonal-card reveal">
+          <div class="sc-icon">🍓</div>
+          <div class="sc-body">
+            <div class="sc-name">Strawberry</div>
+            <div class="sc-season">Spring · Peak Season</div>
+          </div>
+        </div>
+        <div class="seasonal-card reveal reveal-delay-1">
+          <div class="sc-icon">🥦</div>
+          <div class="sc-body">
+            <div class="sc-name">Asparagus</div>
+            <div class="sc-season">Spring · Just arrived</div>
+          </div>
+        </div>
+        <div class="seasonal-card reveal reveal-delay-2">
+          <div class="sc-icon">🍋</div>
+          <div class="sc-body">
+            <div class="sc-name">Lemon</div>
+            <div class="sc-season">Year-round · Always fresh</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="container">
+      <span class="section-label reveal">Features</span>
+      <h2 class="section-title reveal">Everything you need.<br/>Nothing you don't.</h2>
+      <div class="features-grid">
+        <div class="feature-card accent reveal">
+          <div class="feature-icon">🌱</div>
+          <div class="feature-title">Seasonal intelligence</div>
+          <div class="feature-desc">A curated ingredient catalog updated by season, region, and availability. We tell you not just what to cook, but why now is the right time.</div>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-title">Smart recipe import</div>
+          <div class="feature-desc">Paste a caption from Instagram or TikTok. Season extracts title, ingredients, steps, and prep time in seconds — no manual entry.</div>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon">🧊</div>
+          <div class="feature-title">Fridge & pantry</div>
+          <div class="feature-desc">Track what you have at home. Season suggests recipes that use exactly what's in your fridge before it goes to waste.</div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">🛒</div>
+          <div class="feature-title">Shopping list</div>
+          <div class="feature-desc">Add missing ingredients to your list directly from any recipe. Organized, synced, and always in your pocket.</div>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon">🔥</div>
+          <div class="feature-title">Crispy score</div>
+          <div class="feature-desc">The community's way of saying a recipe is genuinely good. Not likes. Not saves. Crispy means you'd make it again tomorrow.</div>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon">🌍</div>
+          <div class="feature-title">Bilingual by design</div>
+          <div class="feature-desc">Full English and Italian support, baked into the catalog and every ingredient. Built for cooks who think in more than one language.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how" id="how">
+    <div class="container">
+      <div style="text-align:center;">
+        <span class="section-label reveal">How it works</span>
+        <h2 class="section-title reveal">Simple by design.</h2>
+        <p class="section-body reveal" style="margin: 0 auto;">From opening the app to having dinner on the table. Three steps, zero friction.</p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step reveal">
+          <div class="step-number">1</div>
+          <div class="step-title">See what's in season</div>
+          <div class="step-desc">Open Season and discover the ingredients at their freshest right now, wherever you are in the year.</div>
+        </div>
+        <div class="how-step reveal reveal-delay-1">
+          <div class="step-number">2</div>
+          <div class="step-title">Find or import a recipe</div>
+          <div class="step-desc">Browse curated recipes or paste a social caption. Our AI extracts every detail so you can start cooking immediately.</div>
+        </div>
+        <div class="how-step reveal reveal-delay-2">
+          <div class="step-number">3</div>
+          <div class="step-title">Cook, save, repeat</div>
+          <div class="step-desc">Save what you loved. Build your fridge. Let Season remember your pantry so next week starts one step ahead.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SMART IMPORT -->
+  <section class="import" id="import">
+    <div class="container import-inner">
+      <div>
+        <span class="section-label reveal">Smart Import</span>
+        <h2 class="section-title reveal">From social caption<br/>to your kitchen.</h2>
+        <p class="section-body reveal">Saw a recipe on Instagram but don't want to type it all out? Just paste the caption. Season's AI reads it, extracts the ingredients, steps, and timing, and creates a clean recipe card — ready to cook.</p>
+        <p class="section-body reveal" style="margin-top:1rem;">Works with messy captions, mixed languages, and hashtag-heavy posts. If the recipe is in there, Season will find it.</p>
+      </div>
+      <div class="import-mockup reveal">
+        <div class="caption-bubble">
+          <strong>📸 Instagram caption</strong>
+          Pasta al limone 🍋 velocissima<br/>
+          INGREDIENTI: 300g spaghetti, 60g burro, 1 limone, parmigiano q.b., sale.<br/>
+          Cuocete la pasta, fate sciogliere il burro, aggiungete la scorza e il succo di limone…<br/>
+          #pasta #limone #ricetteveloci
+        </div>
+        <div class="arrow-down">↓</div>
+        <div class="recipe-parsed">
+          <div class="parsed-header">
+            <div class="parsed-check">✓</div>
+            <div class="parsed-title">Pasta al limone</div>
+          </div>
+          <div class="parsed-ingredient"><div class="pi-dot"></div>300g · Spaghetti</div>
+          <div class="parsed-ingredient"><div class="pi-dot"></div>60g · Butter</div>
+          <div class="parsed-ingredient"><div class="pi-dot"></div>1 · Lemon</div>
+          <div class="parsed-ingredient"><div class="pi-dot"></div>q.b. · Parmesan</div>
+          <div><span class="confidence-badge">HIGH CONFIDENCE</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD CTA -->
+  <section class="download" id="download">
+    <div class="container download-inner">
+      <span class="section-label reveal">Available now</span>
+      <h2 class="section-title reveal">Start cooking with the season.</h2>
+      <p class="section-body reveal">Free to download. No subscription required to get started. Eat better, waste less, cook with intention.</p>
+      <div class="download-actions reveal">
+        <a href="#" class="btn-store">
+          <span class="btn-store-icon"></span>
+          <div class="btn-store-label">
+            <div class="btn-store-pre">Download on the</div>
+            <div>App Store</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div>
+        <div class="footer-logo">Season</div>
+        <div class="footer-tagline">Eat what the earth is giving.</div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+      <div class="footer-copy">© 2026 Season</div>
+    </div>
+  </footer>
+
+  <script>
+    // Hamburger / mobile drawer
+    const hamburger = document.getElementById('hamburger');
+    const drawer = document.getElementById('drawer');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('open');
+      drawer.classList.toggle('open');
+      document.body.style.overflow = drawer.classList.contains('open') ? 'hidden' : '';
+    });
+    document.querySelectorAll('.drawer-link, .drawer-cta').forEach(link => {
+      link.addEventListener('click', () => {
+        hamburger.classList.remove('open');
+        drawer.classList.remove('open');
+        document.body.style.overflow = '';
+      });
+    });
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.12 });
+    reveals.forEach(el => observer.observe(el));
+
+    // Immediately reveal anything already in view
+    reveals.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,49 @@
 import Foundation
 
+private actor CatalogEnrichmentRemoteMetrics {
+    static let shared = CatalogEnrichmentRemoteMetrics()
+
+    private var totalCalls = 0
+    private var successCalls = 0
+    private var fallbackCalls = 0
+    private var errorByType: [String: Int] = [:]
+
+    func recordSuccess() {
+        totalCalls += 1
+        successCalls += 1
+        logSnapshot(event: "success", errorType: nil)
+    }
+
+    func recordFallback(errorType: String?) {
+        totalCalls += 1
+        fallbackCalls += 1
+        if let errorType {
+            errorByType[errorType, default: 0] += 1
+        }
+        logSnapshot(event: "fallback", errorType: errorType)
+    }
+
+    private func logSnapshot(event: String, errorType: String?) {
+        let successRate = totalCalls > 0 ? Double(successCalls) / Double(totalCalls) : 0
+        let fallbackRate = totalCalls > 0 ? Double(fallbackCalls) / Double(totalCalls) : 0
+        let errorSummary = errorByType
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ",")
+        print(
+            "[SEASON_CATALOG_ENRICH_METRICS] " +
+            "event=\(event) " +
+            "total=\(totalCalls) " +
+            "success=\(successCalls) " +
+            "fallback=\(fallbackCalls) " +
+            "success_rate=\(String(format: "%.3f", successRate)) " +
+            "fallback_rate=\(String(format: "%.3f", fallbackRate)) " +
+            "error_type=\(errorType ?? "none") " +
+            "errors=\(errorSummary.isEmpty ? "none" : errorSummary)"
+        )
+    }
+}
+
 struct CatalogEnrichmentProposal: Sendable {
     let normalizedText: String
     let ingredientType: String
@@ -23,8 +67,11 @@ protocol RemoteCatalogEnrichmentProposalProviding {
     func proposeRemotely(for normalizedText: String) async -> CatalogEnrichmentProposal?
 }
 
-struct ParseRecipeCaptionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmentProposalProviding {
+struct EdgeFunctionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmentProposalProviding {
     private let supabaseService: SupabaseService
+    private let timeoutSeconds: TimeInterval = 6
+    private let maxAttempts = 2
+    private let initialBackoffNanos: UInt64 = 300_000_000
 
     init(supabaseService: SupabaseService = .shared) {
         self.supabaseService = supabaseService
@@ -34,141 +81,143 @@ struct ParseRecipeCaptionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmen
         let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return nil }
 
-        do {
-            let response = try await supabaseService.parseRecipeCaption(
-                caption: enrichmentPrompt(for: normalized),
-                url: nil,
-                languageCode: "en"
-            )
-            guard response.ok, let result = response.result else {
-                print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=invalid_response normalized_text=\(normalized)")
+        var backoffNanos = initialBackoffNanos
+        for attempt in 1...maxAttempts {
+            do {
+                let response = try await withTimeout(seconds: timeoutSeconds) {
+                    try await supabaseService.fetchCatalogEnrichmentProposal(
+                        normalizedText: normalized
+                    )
+                }
+                guard let proposal = mapFromEdgeFunctionResponse(response, normalizedText: normalized) else {
+                    print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=unusable_payload normalized_text=\(normalized) attempt=\(attempt)")
+                    await CatalogEnrichmentRemoteMetrics.shared.recordFallback(errorType: "unusable_payload")
+                    return nil
+                }
+
+                print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_ok source=edge_function normalized_text=\(normalized) attempt=\(attempt)")
+                await CatalogEnrichmentRemoteMetrics.shared.recordSuccess()
+                return proposal
+            } catch {
+                let errorType = classifyErrorType(error)
+                let retryable = isRetryable(error)
+                let isLastAttempt = attempt == maxAttempts
+                print(
+                    "[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed " +
+                    "reason=rpc_error normalized_text=\(normalized) " +
+                    "attempt=\(attempt) retryable=\(retryable) " +
+                    "error_type=\(errorType) error=\(error)"
+                )
+
+                if retryable && !isLastAttempt {
+                    try? await Task.sleep(nanoseconds: backoffNanos)
+                    backoffNanos *= 2
+                    continue
+                }
+
+                await CatalogEnrichmentRemoteMetrics.shared.recordFallback(errorType: errorType)
                 return nil
             }
+        }
 
-            if let inferredDishPayload = result.inferredDish,
-               let proposal = parseProposalJSON(inferredDishPayload, normalizedText: normalized) {
-                print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_ok source=inferred_dish_json normalized_text=\(normalized)")
-                return proposal
+        await CatalogEnrichmentRemoteMetrics.shared.recordFallback(errorType: "unknown")
+        return nil
+    }
+
+    private func isRetryable(_ error: Error) -> Bool {
+        if error is SupabaseServiceError { return true }
+        let description = String(describing: error).lowercased()
+        if description.contains("http error 429") {
+            return false
+        }
+        if description.contains("timed out") ||
+            description.contains("timeout") ||
+            description.contains("network") ||
+            description.contains("connection") ||
+            description.contains("http error 5") ||
+            description.contains("relayerror") {
+            return true
+        }
+        return false
+    }
+
+    private func classifyErrorType(_ error: Error) -> String {
+        if let serviceError = error as? SupabaseServiceError {
+            switch serviceError {
+            case .unauthenticated:
+                return "unauthenticated"
+            case .requestTimedOut:
+                return "timeout"
+            case .missingConfiguration:
+                return "missing_configuration"
+            case .invalidURL:
+                return "invalid_url"
+            }
+        }
+        let description = String(describing: error).lowercased()
+        if description.contains("http error 429") { return "http_429" }
+        if description.contains("502") { return "http_502" }
+        if description.contains("http error 5") { return "http_5xx" }
+        if description.contains("timeout") || description.contains("timed out") { return "timeout" }
+        return "unknown"
+    }
+
+    private func withTimeout<T: Sendable>(
+        seconds: TimeInterval,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw SupabaseServiceError.requestTimedOut("catalog_enrichment_remote_provider", seconds)
             }
 
-            if let fallback = mapFromRecipeImportResult(result, normalizedText: normalized) {
-                print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_ok source=recipe_result_fallback normalized_text=\(normalized)")
-                return fallback
+            let first = try await group.next()
+            group.cancelAll()
+            guard let first else {
+                throw SupabaseServiceError.requestTimedOut("catalog_enrichment_remote_provider", seconds)
             }
-
-            print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=unusable_payload normalized_text=\(normalized)")
-            return nil
-        } catch {
-            print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=rpc_error normalized_text=\(normalized) error=\(error)")
-            return nil
+            return first
         }
     }
 
-    // Fixed remote prompt + structured contract (proposal-only).
-    // The provider asks the server-side parser to encode this JSON in inferredDish.
-    // {
-    //   "ingredient_type":"produce|basic|unknown",
-    //   "canonical_name_it":"...",
-    //   "canonical_name_en":"...",
-    //   "suggested_slug":"...",
-    //   "default_unit":"piece|g|ml|tbsp|tsp",
-    //   "supported_units":["..."],
-    //   "is_seasonal":true|false|null,
-    //   "season_months":[1..12],
-    //   "needs_manual_review":true,
-    //   "reasoning_summary":"...",
-    //   "confidence_score":0.0-1.0
-    // }
-    private func enrichmentPrompt(for normalizedText: String) -> String {
-        """
-        Catalog enrichment task for a single ingredient candidate.
-        Candidate text: "\(normalizedText)"
+    private func mapFromEdgeFunctionResponse(
+        _ result: CatalogEnrichmentProposalFunctionResponse,
+        normalizedText: String
+    ) -> CatalogEnrichmentProposal? {
+        let canonicalIT = cleaned(result.canonical_name_it)
+        let canonicalEN = cleaned(result.canonical_name_en)
+        guard canonicalIT != nil || canonicalEN != nil else { return nil }
 
-        Build an enrichment proposal and encode it as strict JSON in the inferredDish field.
-        This is proposal-only for admin review (never auto-approve).
-
-        Required JSON keys:
-        ingredient_type, canonical_name_it, canonical_name_en, suggested_slug,
-        default_unit, supported_units, is_seasonal, season_months,
-        needs_manual_review, reasoning_summary, confidence_score.
-
-        Rules:
-        - ingredient_type must be one of produce/basic/unknown.
-        - suggested_slug lowercase snake_case.
-        - supported_units must include default_unit.
-        - if produce and seasonal, include season_months.
-        - if uncertain, set ingredient_type=unknown and lower confidence_score.
-        - keep needs_manual_review=true.
-        """
-    }
-
-    private func parseProposalJSON(_ raw: String, normalizedText: String) -> CatalogEnrichmentProposal? {
-        let candidate = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let data = candidate.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
-              let dict = object as? [String: Any] else {
-            return nil
-        }
-
-        let ingredientType = (dict["ingredient_type"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown"
-        let canonicalIT = cleaned(dict["canonical_name_it"] as? String)
-        let canonicalEN = cleaned(dict["canonical_name_en"] as? String)
-        let suggestedSlug = cleaned((dict["suggested_slug"] as? String)?.lowercased()) ?? slugify(normalizedText)
-        let defaultUnit = cleaned((dict["default_unit"] as? String)?.lowercased()) ?? "piece"
-        let supportedUnitsRaw = dict["supported_units"] as? [Any] ?? []
-        var supportedUnits = supportedUnitsRaw
-            .compactMap { $0 as? String }
+        let suggestedSlug = cleaned(result.suggested_slug.lowercased()) ?? slugify(normalizedText)
+        let defaultUnit = cleaned(result.default_unit.lowercased()) ?? "piece"
+        var supportedUnits = result.supported_units
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty }
         if !supportedUnits.contains(defaultUnit) {
             supportedUnits.append(defaultUnit)
         }
-        let isSeasonal = dict["is_seasonal"] as? Bool
-        let seasonMonths = (dict["season_months"] as? [Any] ?? []).compactMap { $0 as? Int }.filter { (1...12).contains($0) }
-        let needsManualReview = (dict["needs_manual_review"] as? Bool) ?? true
-        let reasoningSummary = cleaned(dict["reasoning_summary"] as? String)
-        let confidenceScore = normalizedConfidence(dict["confidence_score"])
 
-        guard canonicalIT != nil || canonicalEN != nil else { return nil }
+        let ingredientType = result.ingredient_type.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedType = ["produce", "basic", "unknown"].contains(ingredientType) ? ingredientType : "unknown"
+        let seasonMonths = (result.season_months ?? []).filter { (1...12).contains($0) }
 
         return CatalogEnrichmentProposal(
             normalizedText: normalizedText,
-            ingredientType: ["produce", "basic", "unknown"].contains(ingredientType) ? ingredientType : "unknown",
+            ingredientType: normalizedType,
             canonicalNameIT: canonicalIT,
             canonicalNameEN: canonicalEN,
             suggestedSlug: suggestedSlug,
             defaultUnit: defaultUnit,
             supportedUnits: supportedUnits.isEmpty ? [defaultUnit] : supportedUnits,
-            isSeasonal: isSeasonal,
-            seasonMonths: seasonMonths,
-            needsManualReview: needsManualReview,
-            reasoningSummary: reasoningSummary,
-            confidenceScore: confidenceScore
-        )
-    }
-
-    private func mapFromRecipeImportResult(
-        _ result: ParseRecipeCaptionFunctionResult,
-        normalizedText: String
-    ) -> CatalogEnrichmentProposal? {
-        let canonicalIT = cleaned(result.title)
-        let canonicalEN = cleaned(result.ingredients.first?.name)
-        guard canonicalIT != nil || canonicalEN != nil else { return nil }
-
-        let defaultUnit = cleaned(result.ingredients.first?.unit)?.lowercased() ?? "piece"
-        return CatalogEnrichmentProposal(
-            normalizedText: normalizedText,
-            ingredientType: "unknown",
-            canonicalNameIT: canonicalIT,
-            canonicalNameEN: canonicalEN,
-            suggestedSlug: slugify(canonicalIT?.lowercased() ?? normalizedText),
-            defaultUnit: defaultUnit,
-            supportedUnits: inferredSupportedUnits(from: defaultUnit),
-            isSeasonal: nil,
-            seasonMonths: [],
-            needsManualReview: true,
-            reasoningSummary: "Remote proposal generated via parse-recipe-caption.",
-            confidenceScore: confidenceScore(from: result.confidence)
+            isSeasonal: normalizedType == "produce" ? result.is_seasonal : nil,
+            seasonMonths: normalizedType == "produce" ? seasonMonths : [],
+            needsManualReview: result.needs_manual_review,
+            reasoningSummary: cleaned(result.reasoning_summary),
+            confidenceScore: normalizedConfidence(result.confidence_score)
         )
     }
 
@@ -183,30 +232,6 @@ struct ParseRecipeCaptionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmen
             return min(max(parsed, 0), 1)
         }
         return nil
-    }
-
-    private func confidenceScore(from label: String) -> Double {
-        switch label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "high": return 0.8
-        case "medium": return 0.6
-        case "low": return 0.4
-        default: return 0.5
-        }
-    }
-
-    private func inferredSupportedUnits(from defaultUnit: String) -> [String] {
-        switch defaultUnit {
-        case "ml":
-            return ["ml", "g", "tbsp", "tsp"]
-        case "g":
-            return ["g", "piece", "ml"]
-        case "tbsp", "tsp":
-            return [defaultUnit, "ml", "g"]
-        case "piece":
-            return ["piece", "g"]
-        default:
-            return [defaultUnit, "piece"]
-        }
     }
 
     private func cleaned(_ value: String?) -> String? {
@@ -343,6 +368,7 @@ struct CatalogEnrichmentProposalProviderPipeline: CatalogEnrichmentProposalProvi
            let remoteProposal = await remoteProvider.proposeRemotely(for: normalizedText) {
             return remoteProposal
         }
+        print("[SEASON_CATALOG_ENRICH] phase=provider_fallback_used normalized_text=\(normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) fallback=deterministic")
         return await fallbackProvider.propose(for: normalizedText)
     }
 }
@@ -351,7 +377,7 @@ enum CatalogEnrichmentProviders {
     static let deterministic: any CatalogEnrichmentProposalProviding = DeterministicCatalogEnrichmentProposalProvider()
 
     static let `default`: any CatalogEnrichmentProposalProviding = CatalogEnrichmentProposalProviderPipeline(
-        remoteProvider: ParseRecipeCaptionRemoteCatalogEnrichmentProvider(),
+        remoteProvider: EdgeFunctionRemoteCatalogEnrichmentProvider(),
         fallbackProvider: DeterministicCatalogEnrichmentProposalProvider()
     )
 }

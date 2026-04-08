@@ -2146,7 +2146,10 @@ struct AccountView: View {
 
         Task {
             do {
-                let result = try await reconciliationDiagnosticsService.runDiagnostics()
+                let result = try await reconciliationDiagnosticsService.runDiagnostics(
+                    shoppingEntries: shoppingListViewModel.items,
+                    fridgeViewModel: fridgeViewModel
+                )
                 let shopping = "Shopping — local_only: \(result.shopping.localOnly), backend_only: \(result.shopping.backendOnly), shared_same: \(result.shopping.sharedSame), shared_different: \(result.shopping.sharedDifferent)"
                 let fridge = "Fridge — local_only: \(result.fridge.localOnly), backend_only: \(result.fridge.backendOnly), shared_same: \(result.fridge.sharedSame), shared_different: \(result.fridge.sharedDifferent)"
                 reconciliationStatus = "\(shopping)\n\(fridge)"
@@ -2164,7 +2167,10 @@ struct AccountView: View {
 
         Task {
             do {
-                let result = try await reconciliationDiagnosticsService.runSoftSyncReadDiagnostics()
+                let result = try await reconciliationDiagnosticsService.runSoftSyncReadDiagnostics(
+                    shoppingEntries: shoppingListViewModel.items,
+                    fridgeViewModel: fridgeViewModel
+                )
                 let shopping = "Soft sync — Shopping: local_only \(result.shopping.localOnly), backend_only \(result.shopping.backendOnly), shared_same \(result.shopping.sharedSame), shared_different \(result.shopping.sharedDifferent)"
                 let fridge = "Soft sync — Fridge: local_only \(result.fridge.localOnly), backend_only \(result.fridge.backendOnly), shared_same \(result.fridge.sharedSame), shared_different \(result.fridge.sharedDifferent)"
                 softSyncReadStatus = "\(shopping)\n\(fridge)"

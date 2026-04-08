@@ -20,21 +20,37 @@ final class ReconciliationDiagnosticsService {
         self.supabaseService = supabaseService
     }
 
-    func runDiagnostics() async throws -> ReconciliationDiagnosticsResult {
+    func runDiagnostics(
+        shoppingEntries: [ShoppingListEntry],
+        fridgeViewModel: FridgeViewModel
+    ) async throws -> ReconciliationDiagnosticsResult {
         guard let userID = supabaseService.currentAuthenticatedUserID() else {
             throw SupabaseServiceError.unauthenticated
         }
 
-        let shopping = try await diagnoseShopping(userID: userID)
-        let fridge = try await diagnoseFridge(userID: userID)
+        let fridgeEntries = mapFridgeEntries(fridgeViewModel)
+        print(
+            "[SEASON_SUPABASE] phase=reconciliation_local_state_counts " +
+            "shopping_local_count=\(shoppingEntries.count) " +
+            "fridge_local_count=\(fridgeEntries.count)"
+        )
+
+        let shopping = try await diagnoseShopping(userID: userID, localEntries: shoppingEntries)
+        let fridge = try await diagnoseFridge(userID: userID, localEntries: fridgeEntries)
         return ReconciliationDiagnosticsResult(shopping: shopping, fridge: fridge)
     }
 
-    func runSoftSyncReadDiagnostics() async throws -> ReconciliationDiagnosticsResult {
+    func runSoftSyncReadDiagnostics(
+        shoppingEntries: [ShoppingListEntry],
+        fridgeViewModel: FridgeViewModel
+    ) async throws -> ReconciliationDiagnosticsResult {
         print("[SEASON_SUPABASE] phase=soft_sync_started domain=shopping_list_items")
         print("[SEASON_SUPABASE] phase=soft_sync_started domain=fridge_items")
 
-        let result = try await runDiagnostics()
+        let result = try await runDiagnostics(
+            shoppingEntries: shoppingEntries,
+            fridgeViewModel: fridgeViewModel
+        )
 
         print(
             "[SEASON_SUPABASE] phase=soft_sync_completed domain=shopping_list_items " +
@@ -50,11 +66,13 @@ final class ReconciliationDiagnosticsService {
         return result
     }
 
-    private func diagnoseShopping(userID: UUID) async throws -> ReconciliationSummary {
+    private func diagnoseShopping(
+        userID: UUID,
+        localEntries: [ShoppingListEntry]
+    ) async throws -> ReconciliationSummary {
         let domain = "shopping_list_items"
         print("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
 
-        let localEntries = ShoppingListViewModel().items
         let backendEntries = try await supabaseService.fetchMyShoppingListItems()
 
         let localMap = Dictionary(uniqueKeysWithValues: localEntries.map { entry in
@@ -76,12 +94,13 @@ final class ReconciliationDiagnosticsService {
         return summary
     }
 
-    private func diagnoseFridge(userID: UUID) async throws -> ReconciliationSummary {
+    private func diagnoseFridge(
+        userID: UUID,
+        localEntries: [FridgeLocalComparable]
+    ) async throws -> ReconciliationSummary {
         let domain = "fridge_items"
         print("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
 
-        let fridgeViewModel = FridgeViewModel()
-        let localEntries = mapFridgeEntries(fridgeViewModel)
         let backendEntries = try await supabaseService.fetchMyFridgeItems()
 
         let localMap = Dictionary(uniqueKeysWithValues: localEntries.map { entry in
