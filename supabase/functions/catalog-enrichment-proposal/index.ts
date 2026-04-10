@@ -196,16 +196,17 @@ function withSafeDefaults(value: CatalogEnrichmentProposal, normalizedText: stri
   const supportedUnits = dedupeUnits(value.supported_units);
   const defaultUnit = value.default_unit.trim() || fallback.default_unit;
   const units = supportedUnits.includes(defaultUnit) ? supportedUnits : dedupeUnits([defaultUnit, ...supportedUnits]);
+  const ingredientType = normalizedIngredientType(value.ingredient_type, normalizedText);
 
   return {
-    ingredient_type: value.ingredient_type,
+    ingredient_type: ingredientType,
     canonical_name_it: cleanNullableString(value.canonical_name_it),
     canonical_name_en: cleanNullableString(value.canonical_name_en),
     suggested_slug: toSnakeCase(value.suggested_slug) || fallback.suggested_slug,
     default_unit: defaultUnit,
     supported_units: units.length > 0 ? units : fallback.supported_units,
-    is_seasonal: value.ingredient_type === "produce" ? value.is_seasonal : null,
-    season_months: value.ingredient_type === "produce" ? value.season_months : null,
+    is_seasonal: ingredientType === "produce" ? value.is_seasonal : null,
+    season_months: ingredientType === "produce" ? value.season_months : null,
     needs_manual_review: true,
     reasoning_summary: value.reasoning_summary?.trim() || fallback.reasoning_summary,
     confidence_score: clamp01(value.confidence_score),
@@ -271,6 +272,27 @@ function safeParseJSON(raw: string): unknown | null {
   } catch {
     return null;
   }
+}
+
+function normalizedIngredientType(
+  proposedType: CatalogEnrichmentProposal["ingredient_type"],
+  normalizedText: string,
+): CatalogEnrichmentProposal["ingredient_type"] {
+  const text = normalizeText(normalizedText).toLowerCase();
+  if (proposedType === "produce" && isSeafoodShellfishTerm(text)) {
+    console.log(
+      `[SEASON_CATALOG_ENRICHMENT] phase=ingredient_type_override reason=seafood_shellfish normalized_text=${text} from=produce to=basic`,
+    );
+    return "basic";
+  }
+  return proposedType;
+}
+
+function isSeafoodShellfishTerm(value: string): boolean {
+  if (!value) return false;
+
+  return /\b(vongol[ae]|cozz[ae]|calamar[io]|scamp[io]|seppi[ae]|gamber[io]|canocchi[ea]|astice|aragosta|frutti di mare|mollusch[io])\b/i
+    .test(value);
 }
 
 function normalizeText(value: unknown): string {

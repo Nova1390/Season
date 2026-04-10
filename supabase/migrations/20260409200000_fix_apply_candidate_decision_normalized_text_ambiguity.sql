@@ -1,0 +1,208 @@
+-- Fix ambiguity on normalized_text in apply_catalog_candidate_decision.
+-- This unblocks execute_catalog_candidate_batch_triage prepare_enrichment_draft branch
+-- without changing business logic or auth behavior.
+
+create or replace function public.apply_catalog_candidate_decision(
+  p_normalized_text text,
+  p_action text,
+  p_ingredient_id uuid default null,
+  p_alias_text text default null,
+  p_language_code text default null,
+  p_confidence_score double precision default null,
+  p_reviewer_note text default null
+)
+returns table (
+  decision_id bigint,
+  normalized_text text,
+  action text,
+  resulting_observation_status text,
+  resulting_alias_status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+  v_user uuid := auth.uid();
+  v_normalized text := lower(trim(coalesce(p_normalized_text, '')));
+  v_action text := lower(trim(coalesce(p_action, '')));
+  v_alias_text text := nullif(trim(coalesce(p_alias_text, '')), '');
+  v_alias_normalized text := case
+    when v_alias_text is null then null
+    else lower(trim(v_alias_text))
+  end;
+  v_observation_status text;
+  v_alias_status text := null;
+  v_decision_id bigint;
+  v_existing_alias_id bigint;
+begin
+  perform public.assert_catalog_admin(v_user);
+
+  if v_normalized = '' then
+    raise exception 'normalized_text is required';
+  end if;
+
+  if v_action not in ('approve_alias', 'reject_alias', 'create_new_ingredient', 'ignore') then
+    raise exception 'unsupported action: %', v_action;
+  end if;
+
+  if not exists (
+    select 1
+    from public.custom_ingredient_observations o
+    where o.normalized_text = v_normalized
+  ) then
+    raise exception 'candidate not found for normalized_text: %', v_normalized;
+  end if;
+
+  if v_action = 'approve_alias' then
+    if p_ingredient_id is null then
+      raise exception 'approve_alias requires ingredient_id';
+    end if;
+    if v_alias_text is null then
+      raise exception 'approve_alias requires alias_text';
+    end if;
+    if not exists (
+      select 1
+      from public.ingredients i
+      where i.id = p_ingredient_id
+    ) then
+      raise exception 'ingredient_id not found: %', p_ingredient_id;
+    end if;
+
+    select a.id
+    into v_existing_alias_id
+    from public.ingredient_aliases_v2 a
+    where a.normalized_alias_text = v_alias_normalized
+    order by coalesce(a.is_active, true) desc, a.id desc
+    limit 1;
+
+    if v_existing_alias_id is null then
+      insert into public.ingredient_aliases_v2 (
+        ingredient_id,
+        alias_text,
+        normalized_alias_text,
+        language_code,
+        source,
+        confidence,
+        confidence_score,
+        is_active,
+        status,
+        approval_source,
+        approved_at,
+        approved_by,
+        review_notes,
+        created_at,
+        updated_at
+      )
+      values (
+        p_ingredient_id,
+        v_alias_text,
+        v_alias_normalized,
+        nullif(trim(coalesce(p_language_code, '')), ''),
+        'manual',
+        p_confidence_score,
+        p_confidence_score,
+        true,
+        'approved',
+        'manual',
+        v_now,
+        v_user,
+        nullif(trim(coalesce(p_reviewer_note, '')), ''),
+        v_now,
+        v_now
+      );
+    else
+      update public.ingredient_aliases_v2 a
+      set
+        ingredient_id = p_ingredient_id,
+        alias_text = v_alias_text,
+        normalized_alias_text = v_alias_normalized,
+        language_code = coalesce(nullif(trim(coalesce(p_language_code, '')), ''), a.language_code),
+        source = 'manual',
+        confidence = coalesce(p_confidence_score, a.confidence),
+        confidence_score = coalesce(p_confidence_score, a.confidence_score, a.confidence),
+        is_active = true,
+        status = 'approved',
+        approval_source = 'manual',
+        approved_at = coalesce(a.approved_at, v_now),
+        approved_by = coalesce(v_user, a.approved_by),
+        review_notes = coalesce(nullif(trim(coalesce(p_reviewer_note, '')), ''), a.review_notes),
+        updated_at = v_now
+      where a.id = v_existing_alias_id;
+    end if;
+
+    v_observation_status := 'resolved_alias';
+    v_alias_status := 'approved';
+  elsif v_action = 'reject_alias' then
+    if v_alias_text is not null then
+      update public.ingredient_aliases_v2 a
+      set
+        status = 'rejected',
+        approval_source = 'manual',
+        review_notes = coalesce(nullif(trim(coalesce(p_reviewer_note, '')), ''), a.review_notes),
+        is_active = false,
+        updated_at = v_now
+      where a.normalized_alias_text = v_alias_normalized;
+      v_alias_status := 'rejected';
+    else
+      v_alias_status := null;
+    end if;
+    v_observation_status := 'rejected';
+  elsif v_action = 'create_new_ingredient' then
+    v_observation_status := 'create_new_candidate';
+    v_alias_status := null;
+  else
+    v_observation_status := 'ignored';
+    v_alias_status := null;
+  end if;
+
+  update public.custom_ingredient_observations o
+  set
+    status = v_observation_status,
+    updated_at = v_now
+  where o.normalized_text = v_normalized;
+
+  insert into public.catalog_candidate_decisions (
+    normalized_text,
+    action,
+    ingredient_id,
+    alias_text,
+    language_code,
+    confidence_score,
+    reviewer_note,
+    reviewer_id,
+    resulting_observation_status,
+    resulting_alias_status,
+    created_at,
+    updated_at
+  )
+  values (
+    v_normalized,
+    v_action,
+    p_ingredient_id,
+    v_alias_text,
+    nullif(trim(coalesce(p_language_code, '')), ''),
+    p_confidence_score,
+    nullif(trim(coalesce(p_reviewer_note, '')), ''),
+    v_user,
+    v_observation_status,
+    v_alias_status,
+    v_now,
+    v_now
+  )
+  returning id into v_decision_id;
+
+  return query
+  select
+    v_decision_id,
+    v_normalized,
+    v_action,
+    v_observation_status,
+    v_alias_status;
+end;
+$$;
+
+revoke all on function public.apply_catalog_candidate_decision(text, text, uuid, text, text, double precision, text) from public;
+grant execute on function public.apply_catalog_candidate_decision(text, text, uuid, text, text, double precision, text) to authenticated;
+grant execute on function public.apply_catalog_candidate_decision(text, text, uuid, text, text, double precision, text) to service_role;

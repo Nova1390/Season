@@ -153,6 +153,18 @@ verify_jwt = false
 [functions.catalog-enrichment-proposal]
 verify_jwt = false
 
+[functions.import-recipe-from-url]
+verify_jwt = false
+
+[functions.run-catalog-enrichment-draft-batch]
+verify_jwt = false
+
+[functions.run-catalog-ingredient-creation-batch]
+verify_jwt = false
+
+[functions.run-catalog-automation-cycle]
+verify_jwt = false
+
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used

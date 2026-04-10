@@ -62,6 +62,7 @@ Rules:
 10) confidence_score must be 0..1.
 11) canonical names should be human-usable; if unknown use null.
 12) Do not hallucinate uncommon nutrition or taxonomy details.
+13) Seafood/shellfish terms (for example vongole, cozze, calamari, scampi, seppie) are not produce: classify them as basic unless genuinely unknown.
 `;
 
 export function validateCatalogEnrichmentProposal(payload: unknown): {
