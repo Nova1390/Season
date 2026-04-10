@@ -1,6 +1,42 @@
 import SwiftUI
 
 struct CatalogCandidatesDebugView: View {
+    private struct MetricCardView: View {
+        let value: String
+        let label: String
+        let icon: String
+        let tint: Color
+        @State private var hasAppeared = false
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(tint)
+                    Text(label)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                }
+
+                Text(value)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .scaleEffect(hasAppeared ? 1 : 0.96)
+            .opacity(hasAppeared ? 1 : 0.7)
+            .onAppear {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                    hasAppeared = true
+                }
+            }
+        }
+    }
+
     private struct ApprovalRoute: Identifiable {
         let candidate: CatalogResolutionCandidateRecord
         var id: String { candidate.id }
@@ -29,6 +65,8 @@ struct CatalogCandidatesDebugView: View {
     @State private var items: [CatalogResolutionCandidateRecord] = []
     @State private var coverageBlockers: [CatalogCoverageBlockerRecord] = []
     @State private var readyEnrichmentDrafts: [ReadyCatalogEnrichmentDraftRecord] = []
+    @State private var observationCoverage: [CatalogObservationCoverageRecord] = []
+    @State private var pendingDraftReviewRows: [PendingCatalogEnrichmentDraftReviewRecord] = []
     @State private var unifiedIngredients: [UnifiedIngredientCatalogSummaryRecord] = []
     @State private var isLoading = false
     @State private var isApproving = false
@@ -53,15 +91,31 @@ struct CatalogCandidatesDebugView: View {
     @State private var localizationLanguageCode = "it"
     @State private var bulkLocalizationText = ""
     @State private var bulkLocalizationLanguageCode = "it"
+    @State private var importURL = ""
+    @State private var isParsingURLImport = false
+    @State private var isSavingImportedRecipe = false
+    @State private var importedRecipePreview: ImportedRecipePreview?
+    @State private var lastSavedImportedRecipe: Recipe?
+    @State private var isRunningCuratedBatch = false
+    @State private var runningBatchName: String?
+    @State private var isRunningObservationRecovery = false
+    @State private var isRunningEnrichmentBatch = false
+    @State private var isRunningIngredientCreationBatch = false
+    @State private var isRunningAutomationCycle = false
+    @State private var isAdvancedDebugExpanded = false
+    @State private var lastAutomationRun: CatalogAutomationCycleRunSummary?
+    @State private var showAutomationSuccessFlash = false
+    @ObservedObject var viewModel: ProduceViewModel
 
     private let supabaseService = SupabaseService.shared
+    private let catalogAdminOpsService = CatalogAdminOpsService.shared
 
     var body: some View {
         List {
             if isLoading {
                 HStack(spacing: 8) {
                     ProgressView()
-                    Text("Loading candidates…")
+                    Text("Loading catalog control panel…")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -72,243 +126,187 @@ struct CatalogCandidatesDebugView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
-
-            if !isLoading && isAdminUser && errorMessage.isEmpty && items.isEmpty {
-                Text("No candidates available.")
-                    .foregroundStyle(.secondary)
-            }
-
-            if !isLoading && isAdminUser && errorMessage.isEmpty && coverageBlockers.isEmpty {
-                Text("No blocked terms available.")
-                    .foregroundStyle(.secondary)
-            }
-
-            if !isLoading && isAdminUser && errorMessage.isEmpty && readyEnrichmentDrafts.isEmpty {
-                Text("No ready enrichment drafts.")
-                    .foregroundStyle(.secondary)
-            }
-
-            if !actionMessage.isEmpty {
-                Text(actionMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            if isSelectionMode {
-                Section("Bulk actions") {
-                    Text("Selected: \(selectedCandidateIDs.count) candidates, \(selectedCoverageBlockerIDs.count) blockers")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Button("Bulk approve alias") {
-                        bulkIngredientSearchQuery = ""
-                        bulkSelectedIngredientID = nil
-                        bulkAliasRoute = BulkAliasRoute(candidates: selectedCandidates)
-                    }
-                    .disabled(selectedCandidates.isEmpty || !isAdminUser || isApproving)
-
-                    Button("Bulk add localization") {
-                        guard let first = selectedLocalizationBlockers.first else { return }
-                        bulkLocalizationText = first.normalizedText
-                        bulkLocalizationLanguageCode = "it"
-                        bulkLocalizationRoute = BulkLocalizationRoute(blockers: selectedLocalizationBlockers)
-                    }
-                    .disabled(!canRunBulkLocalization || !isAdminUser || isAddingLocalization)
-                }
-            }
-
-            if !coverageBlockers.isEmpty {
-                Section("Top blocked terms (coverage)") {
-                    ForEach(coverageBlockers) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            if isSelectionMode {
-                                Button {
-                                    toggleCoverageBlockerSelection(item)
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: selectedCoverageBlockerIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(selectedCoverageBlockerIDs.contains(item.id) ? .green : .secondary)
-                                        Text(item.normalizedText)
-                                            .font(.body.weight(.semibold))
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            } else {
-                            Text(item.normalizedText)
-                                .font(.body.weight(.semibold))
-                            }
-
-                            HStack(spacing: 10) {
-                                Text("fix: \(item.likelyFixType)")
-                                Text("rows: \(item.rowCount)")
-                                Text("recipes: \(item.recipeCount)")
-                                Text("occ: \(item.occurrenceCount)")
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                            if let canonicalName = item.canonicalCandidateName,
-                               let canonicalSlug = item.canonicalCandidateSlug {
-                                Text("candidate: \(canonicalName) (\(canonicalSlug))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Text("blocker: \(item.blockerReason)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            if !isSelectionMode,
-                               item.likelyFixType == "localization",
-                               item.canonicalCandidateIngredientID != nil {
-                                Button {
-                                    localizationText = item.normalizedText
-                                    localizationLanguageCode = "it"
-                                    localizationRoute = LocalizationRoute(blocker: item)
-                                } label: {
-                                    if isAddingLocalization && localizationRoute?.blocker.id == item.id {
-                                        HStack(spacing: 8) {
-                                            ProgressView()
-                                                .controlSize(.small)
-                                            Text("Adding localization…")
-                                        }
-                                        .font(.caption.weight(.semibold))
-                                    } else {
-                                        Text("Add localization")
-                                            .font(.caption.weight(.semibold))
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(!isAdminUser || isAddingLocalization)
-                            }
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-            }
-
-            ForEach(items) { item in
-                VStack(alignment: .leading, spacing: 6) {
-                    if isSelectionMode {
-                        Button {
-                            toggleCandidateSelection(item)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: selectedCandidateIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(selectedCandidateIDs.contains(item.id) ? .green : .secondary)
-                                Text(item.normalizedText)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                    Text(item.normalizedText)
-                        .font(.body.weight(.semibold))
-                    }
-
-                    HStack(spacing: 10) {
-                        Text("count: \(item.occurrenceCount)")
-                        Text("suggested: \(item.suggestedResolutionType)")
-                        Text("alias: \(item.existingAliasStatus)")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                    if !isSelectionMode {
-                        Button {
-                        selectedIngredientID = nil
-                        ingredientSearchQuery = ""
-                        approvalRoute = ApprovalRoute(candidate: item)
-                    } label: {
-                        if isApproving && approvalRoute?.candidate.id == item.id {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text("Approving alias…")
-                            }
-                            .font(.caption.weight(.semibold))
-                        } else {
-                            Text("Approve alias")
-                                .font(.caption.weight(.semibold))
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isApproving || !isAdminUser)
-
-                        Button {
-                        enrichmentRoute = EnrichmentRoute(candidate: item)
-                    } label: {
-                        Text("Prepare ingredient")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!isAdminUser || isApproving || creatingDraftNormalizedText != nil)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-
-            if !readyEnrichmentDrafts.isEmpty {
+            if isAdminUser {
                 Section {
-                    ForEach(sortedReadyEnrichmentDrafts) { draft in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(draft.normalizedText)
-                                .font(.body.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Catalog Control Panel")
+                                .font(.title3.weight(.semibold))
+                            Text("Automated catalog growth")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
 
-                            HStack(spacing: 10) {
-                                Text("type: \(draft.ingredientType)")
-                                Text("slug: \(draft.suggestedSlug ?? "—")")
-                                if let confidence = draft.confidenceScore {
-                                    Text("confidence: \(String(format: "%.2f", confidence))")
-                                }
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)
+                            ],
+                            spacing: 10
+                        ) {
+                            MetricCardView(
+                                value: "\(unifiedIngredients.count)",
+                                label: "Ingredients",
+                                icon: "cube.box",
+                                tint: .primary
+                            )
+                            MetricCardView(
+                                value: "\(pendingDraftReviewRows.count)",
+                                label: "Pending review",
+                                icon: "clock",
+                                tint: pendingDraftReviewRows.isEmpty ? .secondary : .orange
+                            )
+                            MetricCardView(
+                                value: "\(readyEnrichmentDrafts.count)",
+                                label: "Ready drafts",
+                                icon: "checkmark.circle",
+                                tint: readyEnrichmentDrafts.isEmpty ? .secondary : .blue
+                            )
+                            MetricCardView(
+                                value: lastRunStatusValue,
+                                label: "Last run status",
+                                icon: "bolt.fill",
+                                tint: lastRunStatusTint
+                            )
+                        }
+                        .animation(.easeInOut(duration: 0.28), value: unifiedIngredients.count)
+                        .animation(.easeInOut(duration: 0.28), value: pendingDraftReviewRows.count)
+                        .animation(.easeInOut(duration: 0.28), value: readyEnrichmentDrafts.count)
+                        .animation(.easeInOut(duration: 0.28), value: lastRunStatusValue)
 
-                            if let canonical = preferredCanonicalName(for: draft), !canonical.isEmpty {
-                                Text("canonical: \(canonical)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                        Button {
+                            Task { await runCatalogAutomationCycle() }
+                        } label: {
+                            ZStack {
+                                LinearGradient(
+                                    colors: [
+                                        Color.accentColor.opacity(0.95),
+                                        Color.accentColor.opacity(0.75)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-                            Button {
-                                Task {
-                                    await createIngredient(from: draft)
-                                }
-                            } label: {
-                                if creatingDraftNormalizedText == draft.normalizedText {
-                                    HStack(spacing: 8) {
+                                HStack(spacing: 10) {
+                                    if isRunningAutomationCycle {
                                         ProgressView()
                                             .controlSize(.small)
-                                        Text("Creating ingredient…")
+                                    } else if showAutomationSuccessFlash {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .transition(.scale.combined(with: .opacity))
                                     }
-                                    .font(.caption.weight(.semibold))
-                                } else {
-                                    Text("Create ingredient")
-                                        .font(.caption.weight(.semibold))
+
+                                    Text(
+                                        isRunningAutomationCycle
+                                        ? "Running catalog automation cycle…"
+                                        : "Run catalog automation cycle"
+                                    )
+                                    .font(.body.weight(.semibold))
                                 }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .opacity(isRunningAutomationCycle ? 0.9 : 1)
+                                .animation(.easeInOut(duration: 0.2), value: isRunningAutomationCycle)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!isAdminUser || isApproving || creatingDraftNormalizedText != nil)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
                         }
-                        .padding(.vertical, 2)
+                        .buttonStyle(.plain)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .disabled(
+                            isRunningAutomationCycle
+                            || isRunningIngredientCreationBatch
+                            || isRunningEnrichmentBatch
+                            || isRunningCuratedBatch
+                            || isRunningObservationRecovery
+                        )
+                        .opacity(
+                            (isRunningAutomationCycle
+                             || isRunningIngredientCreationBatch
+                             || isRunningEnrichmentBatch
+                             || isRunningCuratedBatch
+                             || isRunningObservationRecovery) ? 0.75 : 1
+                        )
+
+                        if let run = lastAutomationRun {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Last run")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                summaryRow(
+                                    title: "Recovery",
+                                    value: "\(run.recovery.total)",
+                                    isFailed: run.recovery.status.lowercased() == "failed" || run.recovery.failed > 0
+                                )
+                                summaryRow(
+                                    title: "Enrichment",
+                                    value: "\(run.enrichment.total) (\(run.enrichment.failed) failed)",
+                                    isFailed: run.enrichment.status.lowercased() == "failed" || run.enrichment.failed > 0
+                                )
+                                summaryRow(
+                                    title: "Creation",
+                                    value: "\(run.creation.total)",
+                                    isFailed: run.creation.status.lowercased() == "failed" || run.creation.failed > 0
+                                )
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                            .animation(.easeInOut(duration: 0.25), value: run.recovery.total)
+                        } else {
+                            Text("Run the automation cycle to start growing your catalog")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 2)
+                        }
+
+                        if !errorMessage.isEmpty {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        } else if !actionMessage.isEmpty {
+                            Text(actionMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                } header: {
-                    Text("Ready Enrichment Drafts")
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Button(isAdvancedDebugExpanded ? "Hide advanced debug" : "Show advanced debug") {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            isAdvancedDebugExpanded.toggle()
+                        }
+                    }
+                    .font(.body.weight(.semibold))
+                }
+
+                if isAdvancedDebugExpanded {
+                    curatedBatchActionsSection
+                    draftReviewSection
+                    if isSelectionMode { bulkActionsSection }
+                    if !coverageBlockers.isEmpty { coverageBlockersSection }
+                    if !safeAliasSuggestions.isEmpty { safeAliasSuggestionsSection }
+                    if !draftIngredientSuggestionCandidates.isEmpty { draftIngredientSuggestionsSection }
+                    if !ambiguousHoldCandidates.isEmpty { ambiguousHoldSection }
+                    if !observationCoverage.isEmpty { observationCoverageSection }
+                    importFromURLSection
+                } else if !isLoading && hasPrimaryCatalogContent == false {
+                    Section {
+                        Text("No actionable catalog items right now.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
-        .navigationTitle("Catalog Candidates")
+        .navigationTitle("Catalog Control Panel")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if isAdminUser {
+                if isAdminUser && (isAdvancedDebugExpanded || isSelectionMode) {
                     Button(isSelectionMode ? "Done" : "Select") {
                         toggleSelectionMode()
                     }
@@ -547,17 +545,40 @@ struct CatalogCandidatesDebugView: View {
             items = []
             coverageBlockers = []
             readyEnrichmentDrafts = []
+            observationCoverage = []
+            pendingDraftReviewRows = []
             unifiedIngredients = []
             return
         }
 
-        coverageBlockers = await supabaseService.fetchCatalogCoverageBlockers(
-            limit: 30,
+        if let snapshot = await supabaseService.fetchCatalogAdminOpsSnapshot(
+            candidatesLimit: 50,
+            coverageBlockersLimit: 30,
+            readyDraftsLimit: 50,
             focusAliasLocalization: true
-        )
-        let fetched = await supabaseService.fetchCatalogResolutionCandidates(limit: 50)
-        items = fetched
-        readyEnrichmentDrafts = await supabaseService.fetchReadyCatalogEnrichmentDrafts(limit: 50)
+        ) {
+            items = snapshot.candidates
+            coverageBlockers = snapshot.coverageBlockers
+            readyEnrichmentDrafts = snapshot.readyEnrichmentDrafts
+            observationCoverage = snapshot.observationCoverage
+            print(
+                "[SEASON_CATALOG_DEBUG] phase=ops_snapshot_consumed " +
+                "generated_at=\(snapshot.metadata.generatedAt?.description ?? "nil") " +
+                "candidates=\(snapshot.metadata.candidatesCount) " +
+                "coverage_blockers=\(snapshot.metadata.coverageBlockersCount) " +
+                "ready_drafts=\(snapshot.metadata.readyEnrichmentDraftsCount) " +
+                "observation_coverage=\(snapshot.metadata.observationCoverageCount) " +
+                "source=\(snapshot.metadata.source)"
+            )
+        } else {
+            items = []
+            coverageBlockers = []
+            readyEnrichmentDrafts = []
+            observationCoverage = []
+            pendingDraftReviewRows = []
+            errorMessage = "Failed to load catalog admin snapshot."
+        }
+        pendingDraftReviewRows = await supabaseService.fetchPendingCatalogEnrichmentDraftReview(limit: 200)
         unifiedIngredients = await supabaseService.fetchUnifiedIngredientCatalogSummary()
     }
 
@@ -569,7 +590,7 @@ struct CatalogCandidatesDebugView: View {
         defer { isApproving = false }
 
         do {
-            try await supabaseService.approveCatalogAlias(
+            try await catalogAdminOpsService.approveAlias(
                 normalizedText: candidate.normalizedText,
                 ingredientID: ingredientID
             )
@@ -591,7 +612,7 @@ struct CatalogCandidatesDebugView: View {
         defer { creatingDraftNormalizedText = nil }
 
         do {
-            try await supabaseService.createCatalogIngredientFromEnrichmentDraft(
+            try await catalogAdminOpsService.createIngredientFromEnrichmentDraft(
                 normalizedText: draft.normalizedText
             )
             actionMessage = "Ingredient created from draft \(draft.normalizedText)."
@@ -610,7 +631,7 @@ struct CatalogCandidatesDebugView: View {
         defer { isAddingLocalization = false }
 
         do {
-            let status = try await supabaseService.addIngredientLocalization(
+            let status = try await catalogAdminOpsService.addLocalization(
                 ingredientID: ingredientID,
                 text: localizationText,
                 languageCode: localizationLanguageCode
@@ -640,22 +661,11 @@ struct CatalogCandidatesDebugView: View {
         isApproving = true
         defer { isApproving = false }
 
-        var successCount = 0
-        var failureCount = 0
-        for candidate in candidates {
-            do {
-                try await supabaseService.approveCatalogAlias(
-                    normalizedText: candidate.normalizedText,
-                    ingredientID: ingredientID
-                )
-                successCount += 1
-            } catch {
-                failureCount += 1
-                print("[SEASON_CATALOG_ADMIN] phase=bulk_approve_alias_failed normalized_text=\(candidate.normalizedText) error=\(error)")
-            }
-        }
-
-        actionMessage = "Bulk alias: \(successCount) applied, \(failureCount) failed."
+        let summary = await catalogAdminOpsService.approveAliasesBulk(
+            normalizedTexts: candidates.map(\.normalizedText),
+            ingredientID: ingredientID
+        )
+        actionMessage = "Bulk alias: \(summary.successCount) applied, \(summary.failureCount) failed."
         bulkAliasRoute = nil
         clearSelections()
         await loadCandidates()
@@ -667,36 +677,1524 @@ struct CatalogCandidatesDebugView: View {
         isAddingLocalization = true
         defer { isAddingLocalization = false }
 
-        var successCount = 0
-        var failureCount = 0
-
-        for blocker in blockers {
-            guard let ingredientID = blocker.canonicalCandidateIngredientID else {
-                failureCount += 1
-                continue
-            }
-
-            do {
-                let status = try await supabaseService.addIngredientLocalization(
-                    ingredientID: ingredientID,
-                    text: bulkLocalizationText,
-                    languageCode: bulkLocalizationLanguageCode
-                )
-                if status == "inserted" || status == "already_exists" || status == "language_already_present" {
-                    successCount += 1
-                } else {
-                    failureCount += 1
-                }
-            } catch {
-                failureCount += 1
-                print("[SEASON_CATALOG_ADMIN] phase=bulk_add_localization_failed normalized_text=\(blocker.normalizedText) error=\(error)")
-            }
+        let requests = blockers.compactMap { blocker -> (normalizedText: String, ingredientID: String, text: String, languageCode: String)? in
+            guard let ingredientID = blocker.canonicalCandidateIngredientID else { return nil }
+            return (
+                normalizedText: blocker.normalizedText,
+                ingredientID: ingredientID,
+                text: bulkLocalizationText,
+                languageCode: bulkLocalizationLanguageCode
+            )
         }
-
-        actionMessage = "Bulk localization: \(successCount) applied, \(failureCount) failed."
+        let skippedCount = blockers.count - requests.count
+        let summary = await catalogAdminOpsService.addLocalizationsBulk(requests: requests)
+        let totalFailures = summary.failureCount + skippedCount
+        actionMessage = "Bulk localization: \(summary.successCount) applied, \(totalFailures) failed."
         bulkLocalizationRoute = nil
         clearSelections()
         await loadCandidates()
+    }
+
+    private struct CuratedAliasBatchItem {
+        let normalizedText: String
+        let targetSlug: String
+        let occurrenceCount: Int
+    }
+
+    private var safeAliasSuggestions: [CuratedAliasBatchItem] {
+        let readyDraftTexts = Set(
+            readyEnrichmentDrafts.map { $0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
+        let blockerByText: [String: CatalogCoverageBlockerRecord] = Dictionary(
+            uniqueKeysWithValues: coverageBlockers.map {
+                ($0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), $0)
+            }
+        )
+
+        return items.compactMap { candidate in
+            let normalized = candidate.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { return nil }
+            guard !readyDraftTexts.contains(normalized) else { return nil }
+            guard candidate.existingAliasStatus.lowercased() != "approved" else { return nil }
+            guard candidate.suggestedResolutionType.lowercased() == "alias_existing" else { return nil }
+            guard let blocker = blockerByText[normalized] else { return nil }
+            guard blocker.likelyFixType.lowercased() == "alias" else { return nil }
+            guard blocker.recommendedNextAction.lowercased() == "add_alias" else { return nil }
+
+            let slug = blocker.canonicalCandidateSlug?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !slug.isEmpty else { return nil }
+            return CuratedAliasBatchItem(
+                normalizedText: normalized,
+                targetSlug: slug,
+                occurrenceCount: candidate.occurrenceCount
+            )
+        }
+        .sorted {
+            if $0.occurrenceCount != $1.occurrenceCount { return $0.occurrenceCount > $1.occurrenceCount }
+            return $0.normalizedText < $1.normalizedText
+        }
+    }
+
+    private var draftIngredientSuggestionCandidates: [CatalogResolutionCandidateRecord] {
+        let safeAliasTexts = Set(safeAliasSuggestions.map(\.normalizedText))
+        let readyDraftTexts = Set(
+            readyEnrichmentDrafts.map { $0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
+        let blockerByText: [String: CatalogCoverageBlockerRecord] = Dictionary(
+            uniqueKeysWithValues: coverageBlockers.map {
+                ($0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), $0)
+            }
+        )
+
+        return items.filter { candidate in
+            let normalized = candidate.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { return false }
+            guard !safeAliasTexts.contains(normalized) else { return false }
+            guard !readyDraftTexts.contains(normalized) else { return false }
+            guard candidate.existingAliasStatus.lowercased() != "approved" else { return false }
+
+            let blocker = blockerByText[normalized]
+            let hasCanonicalSlug = !(blocker?.canonicalCandidateSlug?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            let likelyFixType = blocker?.likelyFixType.lowercased() ?? ""
+            let recommendedAction = blocker?.recommendedNextAction.lowercased() ?? ""
+
+            // Strong alias-like signal: do not send to enrichment draft prep.
+            if likelyFixType == "alias" || recommendedAction == "add_alias" {
+                return false
+            }
+            if hasCanonicalSlug && (likelyFixType == "alias" || candidate.suggestedResolutionType.lowercased() == "alias_existing") {
+                return false
+            }
+
+            // Exclude obvious quantity-contaminated candidate text.
+            if isQuantityContaminatedCandidateText(normalized) {
+                return false
+            }
+
+            // Exclude low-risk preparation/state qualifiers when likely canonical alias handling exists.
+            if hasLowRiskQualifier(normalized) && hasCanonicalSlug {
+                return false
+            }
+
+            let suggested = candidate.suggestedResolutionType.lowercased()
+            guard suggested == "create_new_ingredient" || suggested == "unknown" else { return false }
+
+            let isPastaShape = isLikelyPastaShapeCandidate(normalized)
+            let strongNewIngredientSignal =
+                isPastaShape ||
+                likelyFixType == "new_ingredient" ||
+                recommendedAction == "create_new_ingredient"
+
+            // Conservative threshold by default; allow lower only on strong evidence.
+            if candidate.occurrenceCount < 2 && !strongNewIngredientSignal {
+                return false
+            }
+
+            return true
+        }
+        .sorted {
+            if $0.occurrenceCount != $1.occurrenceCount { return $0.occurrenceCount > $1.occurrenceCount }
+            return $0.normalizedText < $1.normalizedText
+        }
+    }
+
+    private var ambiguousHoldCandidates: [CatalogResolutionCandidateRecord] {
+        let safeAliasTexts = Set(safeAliasSuggestions.map(\.normalizedText))
+        let draftTexts = Set(draftIngredientSuggestionCandidates.map {
+            $0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        })
+
+        return items.filter { candidate in
+            let normalized = candidate.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !normalized.isEmpty else { return false }
+            return !safeAliasTexts.contains(normalized) && !draftTexts.contains(normalized)
+        }
+        .sorted {
+            if $0.occurrenceCount != $1.occurrenceCount { return $0.occurrenceCount > $1.occurrenceCount }
+            return $0.normalizedText < $1.normalizedText
+        }
+    }
+
+    private var pendingDraftKeepForReview: [PendingCatalogEnrichmentDraftReviewRecord] {
+        pendingDraftReviewRows.filter { $0.reviewBucket.uppercased() == "KEEP_PENDING_FOR_REVIEW" }
+    }
+
+    private var pendingDraftShouldBeAlias: [PendingCatalogEnrichmentDraftReviewRecord] {
+        pendingDraftReviewRows.filter { $0.reviewBucket.uppercased() == "SHOULD_BE_ALIAS_INSTEAD" }
+    }
+
+    private var pendingDraftShouldHoldOrReject: [PendingCatalogEnrichmentDraftReviewRecord] {
+        pendingDraftReviewRows.filter { $0.reviewBucket.uppercased() == "SHOULD_BE_REJECTED_OR_HOLD" }
+    }
+
+    private var hasPrimaryCatalogContent: Bool {
+        !safeAliasSuggestions.isEmpty ||
+        !draftIngredientSuggestionCandidates.isEmpty ||
+        !pendingDraftReviewRows.isEmpty ||
+        !readyEnrichmentDrafts.isEmpty
+    }
+
+    private var lastRunStatusValue: String {
+        guard let run = lastAutomationRun else { return "—" }
+        return isAutomationRunSuccessful(run) ? "Success" : "Failed"
+    }
+
+    private var lastRunStatusTint: Color {
+        guard let run = lastAutomationRun else { return .secondary }
+        return isAutomationRunSuccessful(run) ? .green : .red
+    }
+
+    private func isAutomationRunSuccessful(_ run: CatalogAutomationCycleRunSummary) -> Bool {
+        let failedStatuses = [run.recovery.status, run.enrichment.status, run.creation.status]
+            .map { $0.lowercased() }
+            .contains("failed")
+        return !failedStatuses && run.recovery.failed == 0 && run.enrichment.failed == 0 && run.creation.failed == 0
+    }
+
+    @ViewBuilder
+    private func summaryRow(title: String, value: String, isFailed: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isFailed ? "xmark.circle.fill" : "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(isFailed ? .red : .green)
+            Text(title)
+                .font(.subheadline.weight(.medium))
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func aliasText(from normalized: String) -> String {
+        normalized
+            .split(separator: " ")
+            .map { word in
+                let raw = String(word)
+                guard let first = raw.first else { return raw }
+                return String(first).uppercased() + raw.dropFirst()
+            }
+            .joined(separator: " ")
+    }
+
+    private func isQuantityContaminatedCandidateText(_ text: String) -> Bool {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return false }
+
+        // Keep known canonical flour pattern eligible.
+        if normalized == "farina 00" { return false }
+
+        // Measured quantity patterns like: 400 g, 1 kg, 80 ml, 1 pizzico.
+        let measuredPattern = #"\b\d+(?:[.,]\d+)?\s*(g|kg|gr|ml|l|cl|pizzico|pizzichi|cucchiaio|cucchiai|cucchiaino|cucchiaini|tbsp|tsp|cup)\b"#
+        if normalized.range(of: measuredPattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        // Standalone numeric count at end often indicates contaminated ingredient line fragments.
+        let trailingCountPattern = #"\s\d+$"#
+        if normalized.range(of: trailingCountPattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        return false
+    }
+
+    private func hasLowRiskQualifier(_ text: String) -> Bool {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let qualifiers = [
+            "ammorbidito",
+            "da grattugiare",
+            "in grani",
+            "a temperatura ambiente",
+            "freddo di frigo",
+            "fresco",
+            "fresca",
+            "tritato",
+            "tritata"
+        ]
+        return qualifiers.contains { normalized.contains($0) }
+    }
+
+    private func isLikelyPastaShapeCandidate(_ text: String) -> Bool {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let pastaShapes = [
+            "conchiglioni",
+            "spaghettoni",
+            "tagliatelle",
+            "pappardelle",
+            "rigatoni",
+            "mezze maniche",
+            "penne rigate",
+            "fusilli",
+            "orecchiette",
+            "trofie",
+            "paccheri"
+        ]
+        return pastaShapes.contains { normalized.contains($0) }
+    }
+
+    @MainActor
+    private func runCuratedBatchA() async {
+        guard isAdminUser else { return }
+        isRunningCuratedBatch = true
+        runningBatchName = "A"
+        defer {
+            isRunningCuratedBatch = false
+            runningBatchName = nil
+        }
+
+        let slugToID: [String: String] = Dictionary(
+            uniqueKeysWithValues: unifiedIngredients.map {
+                ($0.slug.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), $0.ingredientID)
+            }
+        )
+
+        var items: [CatalogCandidateBatchTriageItem] = []
+        var preSkipped: [String] = []
+        let aliasSuggestions = safeAliasSuggestions
+        print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_started candidate_count=\(aliasSuggestions.count)")
+        for seed in aliasSuggestions {
+            let slug = seed.targetSlug.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard let ingredientID = slugToID[slug], !ingredientID.isEmpty else {
+                preSkipped.append("\(seed.normalizedText) (missing slug: \(seed.targetSlug))")
+                continue
+            }
+
+            items.append(
+                CatalogCandidateBatchTriageItem(
+                    normalizedText: seed.normalizedText,
+                    action: "approve_alias",
+                    ingredientID: ingredientID,
+                    aliasText: aliasText(from: seed.normalizedText),
+                    languageCode: "it",
+                    confidenceScore: nil,
+                    reviewerNote: "dynamic_safe_alias_suggestions_v1"
+                )
+            )
+        }
+
+        guard !items.isEmpty else {
+            errorMessage = "Batch A aborted: no resolvable canonical targets."
+            actionMessage = preSkipped.isEmpty ? "" : "Batch A pre-skipped: \(preSkipped.joined(separator: ", "))"
+            return
+        }
+
+        do {
+            let result = try await catalogAdminOpsService.executeBatchCandidateTriage(
+                items: items,
+                defaultLanguageCode: "it",
+                reviewerNote: "dynamic_safe_alias_suggestions_v1"
+            )
+            let totalSkipped = result.summary.skipped + preSkipped.count
+            actionMessage = "Safe alias suggestions done. total=\(result.summary.total + preSkipped.count), succeeded=\(result.summary.succeeded), failed=\(result.summary.failed), skipped=\(totalSkipped)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_done " +
+                "submitted=\(items.count) total=\(result.summary.total + preSkipped.count) " +
+                "succeeded=\(result.summary.succeeded) failed=\(result.summary.failed) skipped=\(totalSkipped)"
+            )
+            if !preSkipped.isEmpty {
+                print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_pre_skipped items=\(preSkipped.joined(separator: " | "))")
+            }
+            await loadCandidates()
+        } catch {
+            errorMessage = "Safe alias suggestions failed. Please try again."
+            print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runCuratedBatchB() async {
+        guard isAdminUser else { return }
+        isRunningCuratedBatch = true
+        runningBatchName = "B"
+        defer {
+            isRunningCuratedBatch = false
+            runningBatchName = nil
+        }
+
+        let draftCandidates = draftIngredientSuggestionCandidates
+        print("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_started candidate_count=\(draftCandidates.count)")
+        let items: [CatalogCandidateBatchTriageItem] = draftCandidates.map {
+            CatalogCandidateBatchTriageItem(
+                normalizedText: $0.normalizedText,
+                action: "prepare_enrichment_draft",
+                ingredientID: nil,
+                aliasText: nil,
+                languageCode: "it",
+                confidenceScore: nil,
+                reviewerNote: "dynamic_prepare_draft_suggestions_v1"
+            )
+        }
+
+        guard !items.isEmpty else {
+            actionMessage = "No draft ingredient suggestions available."
+            return
+        }
+
+        do {
+            let result = try await catalogAdminOpsService.executeBatchCandidateTriage(
+                items: items,
+                defaultLanguageCode: "it",
+                reviewerNote: "dynamic_prepare_draft_suggestions_v1"
+            )
+            actionMessage = "Draft ingredient suggestions done. total=\(result.summary.total), succeeded=\(result.summary.succeeded), failed=\(result.summary.failed), skipped=\(result.summary.skipped)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_done " +
+                "submitted=\(items.count) total=\(result.summary.total) " +
+                "succeeded=\(result.summary.succeeded) failed=\(result.summary.failed) skipped=\(result.summary.skipped)"
+            )
+            await loadCandidates()
+        } catch {
+            errorMessage = "Draft ingredient suggestions failed. Please try again."
+            print("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func parseRecipeFromURL() async {
+        guard isAdminUser else { return }
+        let normalizedURL = importURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedURL.isEmpty else { return }
+        isParsingURLImport = true
+        errorMessage = ""
+        defer { isParsingURLImport = false }
+
+        do {
+            importedRecipePreview = try await supabaseService.importRecipeFromURL(url: normalizedURL)
+            actionMessage = "Recipe parsed from URL."
+        } catch {
+            importedRecipePreview = nil
+            errorMessage = (error as NSError).localizedDescription
+            print("[SEASON_URL_IMPORT_UI] phase=parse_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func saveImportedRecipePreview() async {
+        guard isAdminUser else { return }
+        guard let preview = importedRecipePreview else { return }
+        isSavingImportedRecipe = true
+        errorMessage = ""
+        defer { isSavingImportedRecipe = false }
+
+        do {
+            let sourceAttribution = sourceAttributionDisplayName(preview: preview)
+            let ingredients = preview.ingredients
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .map { normalizedImportedIngredient(from: $0) }
+
+            let steps = preview.steps
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            let title = preview.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Imported recipe"
+                : preview.title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let recipe = Recipe(
+                id: UUID().uuidString.lowercased(),
+                title: title,
+                author: sourceAttribution,
+                creatorId: "unknown",
+                creatorDisplayName: sourceAttribution,
+                creatorAvatarURL: nil,
+                ingredients: ingredients.isEmpty ? [
+                    RecipeIngredient(
+                        produceID: nil,
+                        basicIngredientID: nil,
+                        quality: .basic,
+                        name: "Ingredient",
+                        quantityValue: 1,
+                        quantityUnit: .piece,
+                        rawIngredientLine: nil,
+                        mappingConfidence: .unmapped
+                    ),
+                ] : ingredients,
+                preparationSteps: steps.isEmpty ? ["Review instructions from source."] : steps,
+                prepTimeMinutes: nil,
+                cookTimeMinutes: nil,
+                difficulty: nil,
+                servings: 2,
+                crispy: 0,
+                viewCount: 0,
+                dietaryTags: [],
+                seasonalMatchPercent: 50,
+                createdAt: Date(),
+                externalMedia: [],
+                images: [],
+                coverImageID: nil,
+                coverImageName: nil,
+                mediaLinkURL: preview.sourceURL,
+                instagramURL: nil,
+                tiktokURL: nil,
+                sourceURL: preview.sourceURL,
+                sourceName: preview.sourceName,
+                sourcePlatform: .other,
+                sourceCaptionRaw: nil,
+                importedFromSocial: false,
+                sourceType: .curatedImport,
+                isUserGenerated: false,
+                imageURL: nonEmptyTrimmed(preview.imageURL),
+                imageSource: nil,
+                attributionText: nil,
+                publicationStatus: .published,
+                isRemix: false,
+                originalRecipeID: nil,
+                originalRecipeTitle: nil,
+                originalAuthorName: nil
+            )
+
+            try await supabaseService.createRecipe(recipe)
+            viewModel.commitPublishedRecipeLocally(recipe)
+            lastSavedImportedRecipe = recipe
+            actionMessage = "Recipe saved: \(recipe.title)"
+            await loadCandidates()
+        } catch {
+            errorMessage = (error as NSError).localizedDescription
+            print("[SEASON_URL_IMPORT_UI] phase=save_failed error=\(error)")
+        }
+    }
+
+    private func normalizedImportedIngredient(from rawLine: String) -> RecipeIngredient {
+        let parsed = parseImportedIngredientLine(rawLine)
+        let match = matchedIngredientAlias(for: parsed.ingredientName)
+        let localizedLanguage = viewModel.localizer.languageCode
+
+        switch match {
+        case .produce(let produce):
+            return RecipeIngredient(
+                produceID: produce.id,
+                basicIngredientID: nil,
+                quality: .coreSeasonal,
+                name: produce.displayName(languageCode: localizedLanguage),
+                quantityValue: parsed.quantityValue,
+                quantityUnit: parsed.quantityUnit,
+                rawIngredientLine: rawLine,
+                mappingConfidence: .high
+            )
+        case .basic(let basic):
+            return RecipeIngredient(
+                produceID: nil,
+                basicIngredientID: basic.id,
+                quality: .basic,
+                name: basic.displayName(languageCode: localizedLanguage),
+                quantityValue: parsed.quantityValue,
+                quantityUnit: parsed.quantityUnit,
+                rawIngredientLine: rawLine,
+                mappingConfidence: .high
+            )
+        case .none:
+            return RecipeIngredient(
+                produceID: nil,
+                basicIngredientID: nil,
+                quality: .basic,
+                name: parsed.ingredientName,
+                quantityValue: parsed.quantityValue,
+                quantityUnit: parsed.quantityUnit,
+                rawIngredientLine: rawLine,
+                mappingConfidence: .unmapped
+            )
+        }
+    }
+
+    private func matchedIngredientAlias(for rawName: String) -> IngredientAliasMatch? {
+        for query in importedIngredientQueries(from: rawName) {
+            if let match = viewModel.resolveIngredientForImport(query: query) {
+                return match
+            }
+        }
+        return nil
+    }
+
+    private func sourceAttributionDisplayName(preview: ImportedRecipePreview) -> String {
+        let sourceCandidate = preview.sourceName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hostCandidate = URL(string: preview.sourceURL)?.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let bestDomain = [sourceCandidate, hostCandidate]
+            .first(where: { $0.contains(".") && !$0.isEmpty })
+            ?? hostCandidate
+        let resolved = sourceBrandName(from: bestDomain) ?? "Source"
+        return "Via \(resolved)"
+    }
+
+    private func sourceBrandName(from rawDomain: String) -> String? {
+        let lowered = rawDomain.lowercased().replacingOccurrences(of: "www.", with: "")
+        var parts = lowered.split(separator: ".").map(String.init)
+        guard !parts.isEmpty else { return nil }
+
+        if parts.count >= 2 {
+            let weakSecondLevel = Set(["co", "com", "org", "net", "gov", "edu", "ac"])
+            if parts.count >= 3, weakSecondLevel.contains(parts[parts.count - 2]) {
+                parts = [parts[parts.count - 3]]
+            } else {
+                parts = [parts[parts.count - 2]]
+            }
+        }
+
+        let token = parts[0]
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { return nil }
+        return token
+            .split(separator: " ")
+            .map { value in
+                let word = String(value)
+                return word.prefix(1).uppercased() + word.dropFirst().lowercased()
+            }
+            .joined(separator: " ")
+    }
+
+    private func importedIngredientQueries(from raw: String) -> [String] {
+        let normalizedRaw = normalizedIngredientIdentity(raw)
+        guard !normalizedRaw.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var output: [String] = []
+
+        func append(_ value: String) {
+            let normalized = normalizedIngredientIdentity(value)
+            guard !normalized.isEmpty else { return }
+            guard seen.insert(normalized).inserted else { return }
+            output.append(normalized)
+        }
+
+        append(normalizedRaw)
+        append(strippingIngredientDescriptors(normalizedRaw))
+        append(replacingCommonImportedPhrases(normalizedRaw))
+        return output
+    }
+
+    private func normalizedIngredientIdentity(_ raw: String) -> String {
+        strippingParentheticalText(raw)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"[^\p{L}\p{N}\s']"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func strippingParentheticalText(_ raw: String) -> String {
+        raw.replacingOccurrences(
+            of: #"\([^)]*\)"#,
+            with: " ",
+            options: .regularExpression
+        )
+    }
+
+    private func replacingCommonImportedPhrases(_ normalized: String) -> String {
+        var value = normalized
+        let replacements: [(String, String)] = [
+            ("olio extravergine d'oliva", "olive oil"),
+            ("olio evo", "olive oil"),
+            ("cipolle rosse", "cipolla rossa"),
+            ("patate", "patata"),
+            ("cipolle", "cipolla")
+        ]
+        for (source, target) in replacements where value == source {
+            value = target
+            break
+        }
+        return value
+    }
+
+    private func strippingIngredientDescriptors(_ normalized: String) -> String {
+        let tokens = normalized
+            .split(separator: " ")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+        let descriptors = Set([
+            "fresco", "fresca", "freschi", "fresche", "fresh",
+            "rosso", "rossa", "rosse", "red",
+            "intero", "intera", "interi", "intere",
+            "fino", "fina", "fini", "fine",
+            "secco", "secca", "secchi", "secche",
+            "tritato", "tritata", "tritati", "tritate"
+        ])
+        let filtered = tokens.filter { !descriptors.contains($0) }
+        return filtered.isEmpty ? normalized : filtered.joined(separator: " ")
+    }
+
+    private struct ImportedIngredientParseResult {
+        let ingredientName: String
+        let quantityValue: Double
+        let quantityUnit: RecipeQuantityUnit
+    }
+
+    private func parseImportedIngredientLine(_ line: String) -> ImportedIngredientParseResult {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ImportedIngredientParseResult(ingredientName: "Ingredient", quantityValue: 1, quantityUnit: .piece)
+        }
+
+        if let parsed = parseMeasuredIngredientPrefix(trimmed) {
+            return parsed
+        }
+
+        if let parsed = parseMeasuredIngredientSuffix(trimmed) {
+            return parsed
+        }
+
+        return ImportedIngredientParseResult(
+            ingredientName: cleanedIngredientDisplayName(trimmed),
+            quantityValue: 1,
+            quantityUnit: .piece
+        )
+    }
+
+    private func parseMeasuredIngredientPrefix(_ line: String) -> ImportedIngredientParseResult? {
+        let pattern = #"^\s*(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|pezzo|pezzi|piece|pieces)\s+(.+?)\s*$"#
+        return parseMeasuredIngredient(line, pattern: pattern, ingredientGroup: 3, quantityGroup: 1, unitGroup: 2)
+    }
+
+    private func parseMeasuredIngredientSuffix(_ line: String) -> ImportedIngredientParseResult? {
+        let pattern = #"^\s*(.+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|pezzo|pezzi|piece|pieces)\s*$"#
+        return parseMeasuredIngredient(line, pattern: pattern, ingredientGroup: 1, quantityGroup: 2, unitGroup: 3)
+    }
+
+    private func parseMeasuredIngredient(
+        _ line: String,
+        pattern: String,
+        ingredientGroup: Int,
+        quantityGroup: Int,
+        unitGroup: Int
+    ) -> ImportedIngredientParseResult? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+        let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+        guard let match = regex.firstMatch(in: line, options: [], range: nsRange) else {
+            return nil
+        }
+
+        guard let ingredientRange = Range(match.range(at: ingredientGroup), in: line),
+              let quantityRange = Range(match.range(at: quantityGroup), in: line),
+              let unitRange = Range(match.range(at: unitGroup), in: line) else {
+            return nil
+        }
+
+        let rawIngredient = String(line[ingredientRange])
+        let rawQuantity = String(line[quantityRange]).replacingOccurrences(of: ",", with: ".")
+        let rawUnit = String(line[unitRange]).lowercased()
+        guard let quantity = Double(rawQuantity),
+              let mappedUnit = mappedQuantityUnit(rawUnit) else {
+            return nil
+        }
+
+        let normalized = normalizeQuantity(value: quantity, rawUnit: rawUnit, mappedUnit: mappedUnit)
+        return ImportedIngredientParseResult(
+            ingredientName: cleanedIngredientDisplayName(rawIngredient),
+            quantityValue: normalized.value,
+            quantityUnit: normalized.unit
+        )
+    }
+
+    private func mappedQuantityUnit(_ raw: String) -> RecipeQuantityUnit? {
+        switch raw {
+        case "g":
+            return .g
+        case "kg":
+            return .g
+        case "ml":
+            return .ml
+        case "l":
+            return .ml
+        case "tbsp", "cucchiaio", "cucchiai":
+            return .tbsp
+        case "tsp", "cucchiaino", "cucchiaini":
+            return .tsp
+        case "cup", "cups":
+            return .cup
+        case "spicchio", "spicchi", "clove", "cloves":
+            return .clove
+        case "pezzo", "pezzi", "piece", "pieces":
+            return .piece
+        default:
+            return nil
+        }
+    }
+
+    private func normalizeQuantity(value: Double, rawUnit: String, mappedUnit: RecipeQuantityUnit) -> (value: Double, unit: RecipeQuantityUnit) {
+        switch rawUnit {
+        case "kg":
+            return (value * 1000, .g)
+        case "l":
+            return (value * 1000, .ml)
+        default:
+            return (value, mappedUnit)
+        }
+    }
+
+    private func cleanedIngredientDisplayName(_ raw: String) -> String {
+        let cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+[\.,;:]+$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Ingredient" : cleaned
+    }
+
+    private func nonEmptyTrimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    @ViewBuilder
+    private var draftReviewSection: some View {
+        if !pendingDraftReviewRows.isEmpty || !readyEnrichmentDrafts.isEmpty {
+            Section("Draft review") {
+                if !pendingDraftReviewRows.isEmpty {
+                    Text("Pending enrichment draft cleanup review")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    if !pendingDraftKeepForReview.isEmpty {
+                        Text("KEEP_PENDING_FOR_REVIEW (\(pendingDraftKeepForReview.count))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(pendingDraftKeepForReview) { item in
+                            pendingDraftReviewRow(item)
+                        }
+                    }
+
+                    if !pendingDraftShouldBeAlias.isEmpty {
+                        Text("SHOULD_BE_ALIAS_INSTEAD (\(pendingDraftShouldBeAlias.count))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(pendingDraftShouldBeAlias) { item in
+                            pendingDraftReviewRow(item)
+                        }
+                    }
+
+                    if !pendingDraftShouldHoldOrReject.isEmpty {
+                        Text("SHOULD_BE_REJECTED_OR_HOLD (\(pendingDraftShouldHoldOrReject.count))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(pendingDraftShouldHoldOrReject) { item in
+                            pendingDraftReviewRow(item)
+                        }
+                    }
+                }
+
+                if !readyEnrichmentDrafts.isEmpty {
+                    if !pendingDraftReviewRows.isEmpty {
+                        Divider()
+                    }
+                    Text("Ready enrichment drafts")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(sortedReadyEnrichmentDrafts) { draft in
+                        readyEnrichmentDraftRow(draft)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var curatedBatchActionsSection: some View {
+        Section("Catalog actions") {
+            Text("Primary operator actions from live candidate data.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                Task { await runCuratedBatchA() }
+            } label: {
+                if isRunningCuratedBatch && runningBatchName == "A" {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Applying safe alias suggestions…")
+                    }
+                } else {
+                    Text("Apply safe alias suggestions (\(safeAliasSuggestions.count))")
+                }
+            }
+            .disabled(isRunningCuratedBatch || safeAliasSuggestions.isEmpty)
+
+            Button {
+                Task { await runCuratedBatchB() }
+            } label: {
+                if isRunningCuratedBatch && runningBatchName == "B" {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Preparing draft ingredients…")
+                    }
+                } else {
+                    Text("Prepare draft ingredients (\(draftIngredientSuggestionCandidates.count))")
+                }
+            }
+            .disabled(isRunningCuratedBatch || draftIngredientSuggestionCandidates.isEmpty)
+
+            Button {
+                Task { await runPendingDraftEnrichmentBatch() }
+            } label: {
+                if isRunningEnrichmentBatch {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Enriching pending drafts…")
+                    }
+                } else {
+                    Text("Auto-enrich pending drafts (20)")
+                }
+            }
+            .disabled(isRunningEnrichmentBatch || isRunningCuratedBatch || isRunningObservationRecovery || isRunningIngredientCreationBatch)
+
+            Button {
+                Task { await runCatalogIngredientCreationBatch() }
+            } label: {
+                if isRunningIngredientCreationBatch {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Creating ingredients from ready drafts…")
+                    }
+                } else {
+                    Text("Create ingredients from ready drafts (10)")
+                }
+            }
+            .disabled(isRunningIngredientCreationBatch || isRunningEnrichmentBatch || isRunningCuratedBatch || isRunningObservationRecovery)
+
+            Button {
+                Task { await runCatalogAutomationCycle() }
+            } label: {
+                if isRunningAutomationCycle {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Running catalog automation cycle…")
+                    }
+                } else {
+                    Text("Run catalog automation cycle")
+                }
+            }
+            .disabled(
+                isRunningAutomationCycle
+                || isRunningIngredientCreationBatch
+                || isRunningEnrichmentBatch
+                || isRunningCuratedBatch
+                || isRunningObservationRecovery
+            )
+
+            Divider()
+
+            Text("Recover unresolved ingredient observations from already-saved recipes.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button {
+                Task { await runObservationRecovery() }
+            } label: {
+                if isRunningObservationRecovery {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Running observation recovery…")
+                    }
+                } else {
+                    Text("Run unresolved observation recovery (1000)")
+                }
+            }
+            .disabled(isRunningObservationRecovery || isRunningCuratedBatch)
+        }
+    }
+
+    @ViewBuilder
+    private var advancedDebugSection: some View {
+        Section {
+            Toggle(isOn: $isAdvancedDebugExpanded) {
+                Text("Advanced debug")
+                    .font(.body.weight(.semibold))
+            }
+            .toggleStyle(.switch)
+        }
+    }
+
+    @MainActor
+    private func runObservationRecovery() async {
+        guard isAdminUser else { return }
+        isRunningObservationRecovery = true
+        defer { isRunningObservationRecovery = false }
+
+        do {
+            let summary = try await catalogAdminOpsService.runUnresolvedObservationRecovery(
+                limit: 1000,
+                source: "import_recovery"
+            )
+            actionMessage =
+                "Observation recovery done. total=\(summary.totalProcessed), " +
+                "observed=\(summary.observedCount), skipped=\(summary.skippedCount), failed=\(summary.failedCount)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_done " +
+                "total=\(summary.totalProcessed) observed=\(summary.observedCount) " +
+                "skipped=\(summary.skippedCount) failed=\(summary.failedCount)"
+            )
+            await loadCandidates()
+        } catch {
+            errorMessage = "Observation recovery failed."
+            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runPendingDraftEnrichmentBatch() async {
+        guard isAdminUser else { return }
+        isRunningEnrichmentBatch = true
+        defer { isRunningEnrichmentBatch = false }
+
+        do {
+            let summary = try await catalogAdminOpsService.runCatalogEnrichmentDraftBatch(limit: 20)
+            actionMessage =
+                "Draft enrichment batch done. total=\(summary.total), " +
+                "succeeded=\(summary.succeeded), failed=\(summary.failed), skipped=\(summary.skipped), " +
+                "ready=\(summary.ready), pending=\(summary.pending)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_done " +
+                "total=\(summary.total) succeeded=\(summary.succeeded) " +
+                "failed=\(summary.failed) skipped=\(summary.skipped) ready=\(summary.ready)"
+            )
+            await loadCandidates()
+        } catch {
+            errorMessage = "Pending draft enrichment batch failed."
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runCatalogIngredientCreationBatch() async {
+        guard isAdminUser else { return }
+        isRunningIngredientCreationBatch = true
+        defer { isRunningIngredientCreationBatch = false }
+
+        do {
+            let result = try await supabaseService.runCatalogIngredientCreationBatch(limit: 10)
+            let summary = result.summary
+            actionMessage =
+                "Ingredient creation batch done. total=\(summary.total), " +
+                "created=\(summary.created), skipped_existing=\(summary.skippedExisting), " +
+                "skipped_invalid=\(summary.skippedInvalid), failed=\(summary.failed)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_ui_done " +
+                "total=\(summary.total) created=\(summary.created) " +
+                "skipped_existing=\(summary.skippedExisting) skipped_invalid=\(summary.skippedInvalid) failed=\(summary.failed)"
+            )
+            await loadCandidates()
+        } catch {
+            errorMessage = "Ingredient creation batch failed."
+            print("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runCatalogAutomationCycle() async {
+        guard isAdminUser else { return }
+        isRunningAutomationCycle = true
+        showAutomationSuccessFlash = false
+        defer { isRunningAutomationCycle = false }
+
+        do {
+            let result = try await catalogAdminOpsService.runCatalogAutomationCycle(
+                recoveryLimit: 1000,
+                enrichLimit: 20,
+                createLimit: 10
+            )
+            lastAutomationRun = result
+            actionMessage =
+                "Automation cycle done. " +
+                "Recovery: total=\(result.recovery.total), observed=\(result.recovery.observed), skipped=\(result.recovery.skipped), failed=\(result.recovery.failed). " +
+                "Enrichment: total=\(result.enrichment.total), succeeded=\(result.enrichment.succeeded), failed=\(result.enrichment.failed), skipped=\(result.enrichment.skipped), ready=\(result.enrichment.ready). " +
+                "Creation: total=\(result.creation.total), created=\(result.creation.created), skipped_existing=\(result.creation.skippedExisting), skipped_invalid=\(result.creation.skippedInvalid), failed=\(result.creation.failed)."
+
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_done " +
+                "recovery_total=\(result.recovery.total) recovery_failed=\(result.recovery.failed) " +
+                "enrichment_total=\(result.enrichment.total) enrichment_failed=\(result.enrichment.failed) " +
+                "creation_total=\(result.creation.total) creation_failed=\(result.creation.failed)"
+            )
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showAutomationSuccessFlash = true
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showAutomationSuccessFlash = false
+                    }
+                }
+            }
+
+            await loadCandidates()
+        } catch {
+            errorMessage = "Catalog automation cycle failed."
+            showAutomationSuccessFlash = false
+            print("[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_failed error=\(error)")
+        }
+    }
+
+    @ViewBuilder
+    private var importFromURLSection: some View {
+        Section("Import from URL") {
+            TextField("https://example.com/recipe", text: $importURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            Button {
+                Task { await parseRecipeFromURL() }
+            } label: {
+                if isParsingURLImport {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Parsing…")
+                    }
+                } else {
+                    Text("Parse")
+                }
+            }
+            .disabled(isParsingURLImport || importURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if let importedRecipePreview {
+                importedRecipePreviewSection(importedRecipePreview)
+            }
+
+            if let lastSavedImportedRecipe {
+                lastSavedRecipeSection(lastSavedImportedRecipe)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func importedRecipePreviewSection(_ preview: ImportedRecipePreview) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(preview.title)
+                .font(.headline)
+
+            Text("Source: \(preview.sourceName)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if !preview.ingredients.isEmpty {
+                Text("Ingredients")
+                    .font(.subheadline.weight(.semibold))
+                ForEach(preview.ingredients, id: \.self) { ingredient in
+                    Text("• \(ingredient)")
+                        .font(.caption)
+                }
+            }
+
+            if !preview.steps.isEmpty {
+                Text("Steps")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.top, 2)
+                ForEach(Array(preview.steps.enumerated()), id: \.offset) { index, step in
+                    Text("\(index + 1). \(step)")
+                        .font(.caption)
+                }
+            }
+
+            Button {
+                Task { await saveImportedRecipePreview() }
+            } label: {
+                if isSavingImportedRecipe {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Saving recipe…")
+                    }
+                } else {
+                    Text("Save recipe")
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isSavingImportedRecipe)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func lastSavedRecipeSection(_ recipe: Recipe) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Saved recipe")
+                .font(.subheadline.weight(.semibold))
+            Text(recipe.title)
+                .font(.body.weight(.semibold))
+            if let source = recipe.sourceName ?? recipe.sourceURL {
+                Text("Source: \(source)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text("Recipe ID: \(recipe.id)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private var bulkActionsSection: some View {
+        Section("Bulk actions") {
+            Text("Selected: \(selectedCandidateIDs.count) candidates, \(selectedCoverageBlockerIDs.count) blockers")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Button("Bulk approve alias") {
+                bulkIngredientSearchQuery = ""
+                bulkSelectedIngredientID = nil
+                bulkAliasRoute = BulkAliasRoute(candidates: selectedCandidates)
+            }
+            .disabled(selectedCandidates.isEmpty || !isAdminUser || isApproving)
+
+            Button("Bulk add localization") {
+                guard let first = selectedLocalizationBlockers.first else { return }
+                bulkLocalizationText = first.normalizedText
+                bulkLocalizationLanguageCode = "it"
+                bulkLocalizationRoute = BulkLocalizationRoute(blockers: selectedLocalizationBlockers)
+            }
+            .disabled(!canRunBulkLocalization || !isAdminUser || isAddingLocalization)
+        }
+    }
+
+    @ViewBuilder
+    private var coverageBlockersSection: some View {
+        Section("Top blocked terms (coverage)") {
+            ForEach(coverageBlockers) { item in
+                coverageBlockerRow(item)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func coverageBlockerRow(_ item: CatalogCoverageBlockerRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if isSelectionMode {
+                Button {
+                    toggleCoverageBlockerSelection(item)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: selectedCoverageBlockerIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(selectedCoverageBlockerIDs.contains(item.id) ? .green : .secondary)
+                        Text(item.normalizedText)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text(item.normalizedText)
+                    .font(.body.weight(.semibold))
+            }
+
+            HStack(spacing: 10) {
+                Text("fix: \(item.likelyFixType)")
+                Text("rows: \(item.rowCount)")
+                Text("recipes: \(item.recipeCount)")
+                Text("occ: \(item.occurrenceCount)")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            if let canonicalName = item.canonicalCandidateName,
+               let canonicalSlug = item.canonicalCandidateSlug {
+                Text("candidate: \(canonicalName) (\(canonicalSlug))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("blocker: \(item.blockerReason)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if !isSelectionMode,
+               item.likelyFixType == "localization",
+               item.canonicalCandidateIngredientID != nil {
+                Button {
+                    localizationText = item.normalizedText
+                    localizationLanguageCode = "it"
+                    localizationRoute = LocalizationRoute(blocker: item)
+                } label: {
+                    if isAddingLocalization && localizationRoute?.blocker.id == item.id {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Adding localization…")
+                        }
+                        .font(.caption.weight(.semibold))
+                    } else {
+                        Text("Add localization")
+                            .font(.caption.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(!isAdminUser || isAddingLocalization)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var safeAliasSuggestionsSection: some View {
+        Section("Safe alias suggestions (\(safeAliasSuggestions.count))") {
+            ForEach(safeAliasSuggestions, id: \.normalizedText) { item in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.normalizedText)
+                        .font(.body.weight(.semibold))
+                    Text("target: \(item.targetSlug)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var draftIngredientSuggestionsSection: some View {
+        Section("New ingredient draft suggestions (\(draftIngredientSuggestionCandidates.count))") {
+            ForEach(draftIngredientSuggestionCandidates) { item in
+                candidateRow(item)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ambiguousHoldSection: some View {
+        Section("Ambiguous / hold (\(ambiguousHoldCandidates.count))") {
+            ForEach(ambiguousHoldCandidates) { item in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.normalizedText)
+                        .font(.body.weight(.semibold))
+                    HStack(spacing: 10) {
+                        Text("occurrences: \(item.occurrenceCount)")
+                        Text("suggested: \(item.suggestedResolutionType)")
+                        Text("alias_status: \(item.existingAliasStatus)")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var observationCoverageSection: some View {
+        Section("Observed term coverage state") {
+            ForEach(observationCoverage) { item in
+                observationCoverageRow(item)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func observationCoverageRow(_ item: CatalogObservationCoverageRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.normalizedText)
+                .font(.body.weight(.semibold))
+
+            HStack(spacing: 10) {
+                Text("state: \(item.coverageState)")
+                Text("obs: \(item.observationStatus)")
+                Text("count: \(item.occurrenceCount)")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            Text("reason: \(item.coverageReason)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let aliasName = item.aliasTargetName ?? item.aliasTargetSlug {
+                Text("alias target: \(aliasName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let canonicalName = item.canonicalTargetName ?? item.canonicalTargetSlug {
+                Text("canonical target: \(canonicalName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var pendingDraftReviewSection: some View {
+        Section("Pending enrichment draft cleanup review") {
+            if !pendingDraftKeepForReview.isEmpty {
+                Text("KEEP_PENDING_FOR_REVIEW (\(pendingDraftKeepForReview.count))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(pendingDraftKeepForReview) { item in
+                    pendingDraftReviewRow(item)
+                }
+            }
+
+            if !pendingDraftShouldBeAlias.isEmpty {
+                Text("SHOULD_BE_ALIAS_INSTEAD (\(pendingDraftShouldBeAlias.count))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(pendingDraftShouldBeAlias) { item in
+                    pendingDraftReviewRow(item)
+                }
+            }
+
+            if !pendingDraftShouldHoldOrReject.isEmpty {
+                Text("SHOULD_BE_REJECTED_OR_HOLD (\(pendingDraftShouldHoldOrReject.count))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(pendingDraftShouldHoldOrReject) { item in
+                    pendingDraftReviewRow(item)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pendingDraftReviewRow(_ item: PendingCatalogEnrichmentDraftReviewRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.normalizedText)
+                .font(.body.weight(.semibold))
+
+            HStack(spacing: 10) {
+                Text("bucket: \(item.reviewBucket)")
+                Text("count: \(item.occurrenceCount)")
+                Text("matches: \(item.canonicalMatchCount)")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            Text("reason: \(item.classificationReason)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("next: \(item.recommendedOperatorAction)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private func candidateRow(_ item: CatalogResolutionCandidateRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if isSelectionMode {
+                Button {
+                    toggleCandidateSelection(item)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: selectedCandidateIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(selectedCandidateIDs.contains(item.id) ? .green : .secondary)
+                        Text(item.normalizedText)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text(item.normalizedText)
+                    .font(.body.weight(.semibold))
+            }
+
+            HStack(spacing: 10) {
+                Text("count: \(item.occurrenceCount)")
+                Text("suggested: \(item.suggestedResolutionType)")
+                Text("alias: \(item.existingAliasStatus)")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            if !isSelectionMode {
+                Button {
+                    selectedIngredientID = nil
+                    ingredientSearchQuery = ""
+                    approvalRoute = ApprovalRoute(candidate: item)
+                } label: {
+                    if isApproving && approvalRoute?.candidate.id == item.id {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Approving alias…")
+                        }
+                        .font(.caption.weight(.semibold))
+                    } else {
+                        Text("Approve alias")
+                            .font(.caption.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isApproving || !isAdminUser)
+
+                Button {
+                    enrichmentRoute = EnrichmentRoute(candidate: item)
+                } label: {
+                    Text("Prepare ingredient")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .disabled(!isAdminUser || isApproving || creatingDraftNormalizedText != nil)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var readyEnrichmentDraftsSection: some View {
+        Section {
+            ForEach(sortedReadyEnrichmentDrafts) { draft in
+                readyEnrichmentDraftRow(draft)
+            }
+        } header: {
+            Text("Ready Enrichment Drafts")
+        }
+    }
+
+    @ViewBuilder
+    private func readyEnrichmentDraftRow(_ draft: ReadyCatalogEnrichmentDraftRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(draft.normalizedText)
+                .font(.body.weight(.semibold))
+
+            HStack(spacing: 10) {
+                Text("type: \(draft.ingredientType)")
+                Text("slug: \(draft.suggestedSlug ?? "—")")
+                if let confidence = draft.confidenceScore {
+                    Text("confidence: \(String(format: "%.2f", confidence))")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            if let canonical = preferredCanonicalName(for: draft), !canonical.isEmpty {
+                Text("canonical: \(canonical)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                Task {
+                    await createIngredient(from: draft)
+                }
+            } label: {
+                if creatingDraftNormalizedText == draft.normalizedText {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Creating ingredient…")
+                    }
+                    .font(.caption.weight(.semibold))
+                } else {
+                    Text("Create ingredient")
+                        .font(.caption.weight(.semibold))
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!isAdminUser || isApproving || creatingDraftNormalizedText != nil)
+        }
+        .padding(.vertical, 2)
     }
 
     private func toggleSelectionMode() {
@@ -857,7 +2355,7 @@ private struct CatalogEnrichmentDraftEditorView: View {
     @State private var currentStatus = "pending"
     @State private var isPrefilledSuggestion = false
 
-    private let supabaseService = SupabaseService.shared
+    private let catalogAdminOpsService = CatalogAdminOpsService.shared
     private let enrichmentProvider: any CatalogEnrichmentProposalProviding = CatalogEnrichmentProviders.default
 
     var body: some View {
@@ -1090,7 +2588,7 @@ private struct CatalogEnrichmentDraftEditorView: View {
         isLoading = true
         defer { isLoading = false }
 
-        if let draft = await supabaseService.fetchCatalogEnrichmentDraft(normalizedText: candidate.normalizedText) {
+        if let draft = await catalogAdminOpsService.fetchEnrichmentDraft(normalizedText: candidate.normalizedText) {
             form.ingredientType = draft.ingredientType
             form.canonicalNameIT = draft.canonicalNameIT ?? ""
             form.canonicalNameEN = draft.canonicalNameEN ?? ""
@@ -1131,7 +2629,7 @@ private struct CatalogEnrichmentDraftEditorView: View {
         }
 
         do {
-            let result = try await supabaseService.upsertCatalogEnrichmentDraft(
+            let result = try await catalogAdminOpsService.upsertEnrichmentDraft(
                 normalizedText: candidate.normalizedText,
                 status: markReady ? "ready" : "pending",
                 ingredientType: form.ingredientType,
@@ -1165,7 +2663,7 @@ private struct CatalogEnrichmentDraftEditorView: View {
 
         do {
             // Ensure the latest local edits are persisted before validation.
-            _ = try await supabaseService.upsertCatalogEnrichmentDraft(
+            _ = try await catalogAdminOpsService.upsertEnrichmentDraft(
                 normalizedText: candidate.normalizedText,
                 status: currentStatus == "ready" ? "ready" : "pending",
                 ingredientType: form.ingredientType,
@@ -1181,7 +2679,7 @@ private struct CatalogEnrichmentDraftEditorView: View {
                 reasoningSummary: normalizedOptional(form.reasoningSummary)
             )
 
-            let result = try await supabaseService.validateCatalogEnrichmentDraft(
+            let result = try await catalogAdminOpsService.validateEnrichmentDraft(
                 normalizedText: candidate.normalizedText
             )
             validationPassed = result.validatedReady

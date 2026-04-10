@@ -35,12 +35,13 @@ struct RecipeDetailView: View {
                         .padding(.bottom, 8)
                     CreatorBarView(
                         creatorName: displayedCreatorName,
-                        creatorSubtitle: canShowFollowButton ? "Creator" : "You",
+                        creatorSubtitle: creatorSubtitleText,
                         avatarURL: rankedRecipe.recipe.creatorAvatarURL,
                         creatorID: validRecipeCreatorID,
                         isFollowing: isFollowingAuthor,
                         canShowFollowButton: canShowFollowButton,
                         onCreatorTap: {
+                            guard showsUserAuthorshipMetadata else { return }
                             print("[SEASON_FOLLOW_IDENTITY] phase=push_profile recipe_id=\(rankedRecipe.recipe.id) creator_id=\(validRecipeCreatorID ?? "nil") creator_name=\(displayedCreatorName)")
                             showingCreatorProfile = true
                         },
@@ -56,7 +57,9 @@ struct RecipeDetailView: View {
 
                     RecipeIntelligenceCard(
                         fridgeMatchText: "\(availableIngredientCount)/\(ingredientRows.count) ingredients",
-                        fridgeDetailText: untreatedMissingIngredientCount == 0 ? "All missing items handled" : "\(untreatedMissingIngredientCount) still missing",
+                        fridgeDetailText: untreatedMissingIngredientCount == 0
+                            ? viewModel.localizer.text(.recipeDetailAllMissingHandled)
+                            : String(format: viewModel.localizer.text(.recipeDetailStillMissingItemsFormat), untreatedMissingIngredientCount),
                         seasonalTitle: viewModel.recipeTimingTitle(for: rankedRecipe),
                         seasonalDetail: "\(viewModel.localizer.text(.seasonalMatch)): \(rankedRecipe.seasonalMatchPercent)%",
                         readinessTitle: readinessTitle,
@@ -204,6 +207,28 @@ struct RecipeDetailView: View {
                                 }
                             }
                         }
+                    }
+
+                    if let sourceURL = originalSourceURL {
+                        Button {
+                            openURL(sourceURL)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(viewModel.localizer.text(.openOriginalRecipe))
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                            }
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(SeasonColors.secondarySurface)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     HStack {
@@ -575,6 +600,17 @@ struct RecipeDetailView: View {
         rankedRecipe.recipe.isUserGenerated || rankedRecipe.recipe.sourceType == .userGenerated
     }
 
+    private var isCuratedImportedRecipe: Bool {
+        rankedRecipe.recipe.sourceType == .curatedImport
+    }
+
+    private var creatorSubtitleText: String {
+        if isCuratedImportedRecipe {
+            return viewModel.localizer.text(.sourceAttributionLabel)
+        }
+        return canShowFollowButton ? "Creator" : "You"
+    }
+
     private var trimmedAuthorName: String? {
         guard showsUserAuthorshipMetadata else { return nil }
         let trimmed = rankedRecipe.recipe.displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -586,7 +622,55 @@ struct RecipeDetailView: View {
     }
 
     private var displayedCreatorName: String {
-        rankedRecipe.recipe.displayCreatorName
+        if let sourceName = curatedSourceDisplayName {
+            return "Via \(sourceName)"
+        }
+        return rankedRecipe.recipe.displayCreatorName
+    }
+
+    private var originalSourceURL: URL? {
+        guard isCuratedImportedRecipe else { return nil }
+        guard let raw = rankedRecipe.recipe.sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else {
+            return nil
+        }
+        return URL(string: raw)
+    }
+
+    private var curatedSourceDisplayName: String? {
+        guard isCuratedImportedRecipe else { return nil }
+        let sourceCandidate = rankedRecipe.recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hostCandidate = originalSourceURL?.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        let bestDomain = [sourceCandidate, hostCandidate]
+            .first(where: { $0.contains(".") && !$0.isEmpty })
+            ?? hostCandidate
+        guard !bestDomain.isEmpty else { return nil }
+
+        let lowered = bestDomain.lowercased().replacingOccurrences(of: "www.", with: "")
+        var parts = lowered.split(separator: ".").map(String.init)
+        guard !parts.isEmpty else { return nil }
+        if parts.count >= 2 {
+            let weakSecondLevel = Set(["co", "com", "org", "net", "gov", "edu", "ac"])
+            if parts.count >= 3, weakSecondLevel.contains(parts[parts.count - 2]) {
+                parts = [parts[parts.count - 3]]
+            } else {
+                parts = [parts[parts.count - 2]]
+            }
+        }
+
+        let token = parts[0]
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { return nil }
+        return token
+            .split(separator: " ")
+            .map { word in
+                let value = String(word)
+                return value.prefix(1).uppercased() + value.dropFirst().lowercased()
+            }
+            .joined(separator: " ")
     }
 
     private var authorIdentityBlock: some View {
@@ -1173,32 +1257,32 @@ struct RecipeDetailView: View {
 
     private var readinessTitle: String {
         if isReadyToCook {
-            return "Ready to cook"
+            return viewModel.localizer.text(.readyNow)
         }
         if untreatedMissingIngredientCount == 0 && inListIngredientCount > 0 {
-            return "Almost ready"
+            return viewModel.localizer.text(.almostReady)
         }
-        return "Missing ingredients"
+        return viewModel.localizer.text(.missingIngredients)
     }
 
     private var readinessDetail: String {
         if isReadyToCook {
-            return "You can cook this now"
+            return viewModel.localizer.text(.quickActionYouHaveEverything)
         }
         if untreatedMissingIngredientCount == 0 && inListIngredientCount > 0 {
-            return "Everything else is already in your shopping list"
+            return viewModel.localizer.text(.recipeDetailEverythingElseInList)
         }
-        return "\(untreatedMissingIngredientCount) item\(untreatedMissingIngredientCount == 1 ? "" : "s") still missing"
+        return String(format: viewModel.localizer.text(.recipeDetailStillMissingItemsFormat), untreatedMissingIngredientCount)
     }
 
     private var primaryCTATitle: String {
         switch primaryCTAState {
         case .readyToCook:
-            return "Cook now"
+            return viewModel.localizer.text(.cookNowAction)
         case .coveredByShoppingList:
-            return "Ingredients in your list"
+            return viewModel.localizer.text(.recipeDetailIngredientsInList)
         case .missingIngredients:
-            return "Add missing ingredients"
+            return viewModel.localizer.text(.addMissingAction)
         }
     }
 

@@ -183,6 +183,186 @@ struct ReadyCatalogEnrichmentDraftRecord: Sendable, Identifiable {
     var id: String { normalizedText }
 }
 
+struct CatalogObservationCoverageRecord: Sendable, Identifiable {
+    let normalizedText: String
+    let observationStatus: String
+    let occurrenceCount: Int
+    let lastSeenAt: Date?
+    let coverageState: String
+    let coverageReason: String
+    let canonicalTargetIngredientID: String?
+    let canonicalTargetSlug: String?
+    let canonicalTargetName: String?
+    let aliasTargetIngredientID: String?
+    let aliasTargetSlug: String?
+    let aliasTargetName: String?
+
+    var id: String { normalizedText }
+}
+
+struct PendingCatalogEnrichmentDraftReviewRecord: Sendable, Identifiable {
+    let normalizedText: String
+    let occurrenceCount: Int
+    let draftUpdatedAt: Date?
+    let reviewBucket: String
+    let classificationReason: String
+    let hasApprovedAlias: Bool
+    let hasAnyAliasMatch: Bool
+    let canonicalMatchCount: Int
+    let quantityContaminated: Bool
+    let lowRiskQualifier: Bool
+    let descriptorAliasLike: Bool
+    let isPastaShape: Bool
+    let recommendedOperatorAction: String
+
+    var id: String { normalizedText }
+}
+
+struct CatalogAdminOpsSnapshotMetadata: Sendable {
+    let generatedAt: Date?
+    let candidatesCount: Int
+    let coverageBlockersCount: Int
+    let readyEnrichmentDraftsCount: Int
+    let observationCoverageCount: Int
+    let source: String
+}
+
+struct CatalogAdminOpsSnapshot: Sendable {
+    let candidates: [CatalogResolutionCandidateRecord]
+    let coverageBlockers: [CatalogCoverageBlockerRecord]
+    let readyEnrichmentDrafts: [ReadyCatalogEnrichmentDraftRecord]
+    let observationCoverage: [CatalogObservationCoverageRecord]
+    let metadata: CatalogAdminOpsSnapshotMetadata
+}
+
+struct CatalogCandidateBatchTriageItem: Sendable {
+    let normalizedText: String
+    let action: String
+    let ingredientID: String?
+    let aliasText: String?
+    let languageCode: String?
+    let confidenceScore: Double?
+    let reviewerNote: String?
+}
+
+struct CatalogCandidateBatchTriageItemResult: Sendable {
+    let normalizedText: String
+    let intendedAction: String
+    let resultStatus: String
+    let detail: String?
+    let errorMessage: String?
+    let ingredientID: String?
+    let aliasText: String?
+    let draftStatus: String?
+    let draftValidatedReady: Bool?
+}
+
+struct CatalogCandidateBatchTriageSummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let failed: Int
+    let skipped: Int
+}
+
+struct CatalogCandidateBatchTriageResult: Sendable {
+    let summary: CatalogCandidateBatchTriageSummary
+    let items: [CatalogCandidateBatchTriageItemResult]
+    let source: String
+}
+
+struct CatalogEnrichmentDraftBatchItemResult: Sendable {
+    let normalizedText: String
+    let resultStatus: String
+    let detail: String
+    let errorMessage: String?
+    let validationErrors: [String]
+    let validationPassed: Bool
+    let finalStatus: String
+}
+
+struct CatalogEnrichmentDraftBatchSummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let failed: Int
+    let skipped: Int
+    let ready: Int
+    let pending: Int
+}
+
+struct CatalogEnrichmentDraftBatchResult: Sendable {
+    let summary: CatalogEnrichmentDraftBatchSummary
+    let items: [CatalogEnrichmentDraftBatchItemResult]
+    let mode: String
+}
+
+struct CatalogIngredientCreationBatchItemResult: Sendable {
+    let normalizedText: String
+    let slug: String?
+    let resultStatus: String
+    let detail: String
+    let ingredientID: String?
+    let errorMessage: String?
+}
+
+struct CatalogIngredientCreationBatchSummary: Sendable {
+    let total: Int
+    let created: Int
+    let skippedExisting: Int
+    let skippedInvalid: Int
+    let failed: Int
+}
+
+struct CatalogIngredientCreationBatchResult: Sendable {
+    let summary: CatalogIngredientCreationBatchSummary
+    let items: [CatalogIngredientCreationBatchItemResult]
+    let mode: String
+}
+
+struct CatalogAutomationCycleRecoverySummary: Sendable {
+    let total: Int
+    let observed: Int
+    let skipped: Int
+    let failed: Int
+    let status: String
+    let error: String?
+}
+
+struct CatalogAutomationCycleEnrichmentSummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let failed: Int
+    let skipped: Int
+    let ready: Int
+    let status: String
+    let error: String?
+}
+
+struct CatalogAutomationCycleCreationSummary: Sendable {
+    let total: Int
+    let created: Int
+    let skippedExisting: Int
+    let skippedInvalid: Int
+    let failed: Int
+    let status: String
+    let error: String?
+}
+
+struct CatalogAutomationCycleResult: Sendable {
+    let recovery: CatalogAutomationCycleRecoverySummary
+    let enrichment: CatalogAutomationCycleEnrichmentSummary
+    let creation: CatalogAutomationCycleCreationSummary
+    let mode: String
+}
+
+struct RecipeObservationRecoveryRow: Sendable {
+    let recipeID: String
+    let ingredientIndex: Int
+    let normalizedText: String
+    let rawExample: String?
+    let resultStatus: String
+    let detail: String?
+}
+
 struct CatalogEnrichmentDraftRecord: Sendable, Identifiable {
     let normalizedText: String
     let status: String
@@ -265,6 +445,204 @@ private struct CloudReadyCatalogEnrichmentDraftRow: Codable {
     let confidence_score: Double?
     let needs_manual_review: Bool?
     let updated_at: String?
+}
+
+private struct CloudCatalogObservationCoverageRow: Codable {
+    let normalized_text: String?
+    let observation_status: String?
+    let occurrence_count: Int?
+    let last_seen_at: String?
+    let coverage_state: String?
+    let coverage_reason: String?
+    let canonical_target_ingredient_id: String?
+    let canonical_target_slug: String?
+    let canonical_target_name: String?
+    let alias_target_ingredient_id: String?
+    let alias_target_slug: String?
+    let alias_target_name: String?
+}
+
+private struct CloudPendingCatalogEnrichmentDraftReviewRow: Codable {
+    let normalized_text: String?
+    let occurrence_count: Int?
+    let draft_updated_at: String?
+    let review_bucket: String?
+    let classification_reason: String?
+    let has_approved_alias: Bool?
+    let has_any_alias_match: Bool?
+    let canonical_match_count: Int?
+    let quantity_contaminated: Bool?
+    let low_risk_qualifier: Bool?
+    let descriptor_alias_like: Bool?
+    let is_pasta_shape: Bool?
+    let recommended_operator_action: String?
+}
+
+private struct CloudCatalogAdminOpsSnapshotMetadataCounts: Codable {
+    let candidates: Int?
+    let coverage_blockers: Int?
+    let ready_enrichment_drafts: Int?
+    let observation_coverage: Int?
+}
+
+private struct CloudCatalogAdminOpsSnapshotMetadata: Codable {
+    let generated_at: String?
+    let counts: CloudCatalogAdminOpsSnapshotMetadataCounts?
+    let source: String?
+}
+
+private struct CloudCatalogAdminOpsSnapshot: Codable {
+    let candidates: [CloudCatalogResolutionCandidateRow]?
+    let coverage_blockers: [CloudCatalogCoverageBlockerRow]?
+    let ready_enrichment_drafts: [CloudReadyCatalogEnrichmentDraftRow]?
+    let observation_coverage: [CloudCatalogObservationCoverageRow]?
+    let metadata: CloudCatalogAdminOpsSnapshotMetadata?
+}
+
+private struct CloudCatalogCandidateBatchTriageSummary: Codable {
+    let total: Int?
+    let succeeded: Int?
+    let failed: Int?
+    let skipped: Int?
+}
+
+private struct CloudCatalogCandidateBatchTriageItemResult: Codable {
+    let normalized_text: String?
+    let action: String?
+    let intended_action: String?
+    let result_status: String?
+    let error_message: String?
+    let detail: String?
+    let ingredient_id: String?
+    let alias_text: String?
+    let draft_status: String?
+    let draft_validated_ready: Bool?
+}
+
+private struct CloudCatalogCandidateBatchTriageMetadata: Codable {
+    let source: String?
+}
+
+private struct CloudCatalogCandidateBatchTriageResult: Codable {
+    let summary: CloudCatalogCandidateBatchTriageSummary?
+    let items: [CloudCatalogCandidateBatchTriageItemResult]?
+    let metadata: CloudCatalogCandidateBatchTriageMetadata?
+}
+
+private struct CloudRecipeObservationRecoveryRow: Codable {
+    let recipe_id: String?
+    let ingredient_index: Int?
+    let normalized_text: String?
+    let raw_example: String?
+    let result_status: String?
+    let detail: String?
+}
+
+private struct CloudCatalogEnrichmentDraftBatchSummary: Codable {
+    let total: Int?
+    let succeeded: Int?
+    let failed: Int?
+    let skipped: Int?
+    let ready: Int?
+    let pending: Int?
+}
+
+private struct CloudCatalogEnrichmentDraftBatchItemRow: Codable {
+    let normalized_text: String?
+    let result_status: String?
+    let detail: String?
+    let error_message: String?
+    let validation_errors: [String]?
+    let validation_passed: Bool?
+    let final_status: String?
+}
+
+private struct CloudCatalogEnrichmentDraftBatchMetadata: Codable {
+    let mode: String?
+}
+
+private struct CloudCatalogEnrichmentDraftBatchResponse: Codable {
+    let summary: CloudCatalogEnrichmentDraftBatchSummary?
+    let items: [CloudCatalogEnrichmentDraftBatchItemRow]?
+    let metadata: CloudCatalogEnrichmentDraftBatchMetadata?
+}
+
+private struct CloudCatalogIngredientCreationBatchSummary: Codable {
+    let total: Int?
+    let created: Int?
+    let skipped_existing: Int?
+    let skipped_invalid: Int?
+    let failed: Int?
+}
+
+private struct CloudCatalogIngredientCreationBatchItemRow: Codable {
+    let normalized_text: String?
+    let slug: String?
+    let result_status: String?
+    let detail: String?
+    let ingredient_id: String?
+    let error_message: String?
+}
+
+private struct CloudCatalogIngredientCreationBatchMetadata: Codable {
+    let mode: String?
+}
+
+private struct CloudCatalogIngredientCreationBatchResponse: Codable {
+    let summary: CloudCatalogIngredientCreationBatchSummary?
+    let items: [CloudCatalogIngredientCreationBatchItemRow]?
+    let metadata: CloudCatalogIngredientCreationBatchMetadata?
+}
+
+private struct CloudCatalogAutomationCycleRecoverySummary: Codable {
+    let total: Int?
+    let observed: Int?
+    let skipped: Int?
+    let failed: Int?
+    let status: String?
+    let error: String?
+}
+
+private struct CloudCatalogAutomationCycleEnrichmentSummary: Codable {
+    let total: Int?
+    let succeeded: Int?
+    let failed: Int?
+    let skipped: Int?
+    let ready: Int?
+    let status: String?
+    let error: String?
+}
+
+private struct CloudCatalogAutomationCycleCreationSummary: Codable {
+    let total: Int?
+    let created: Int?
+    let skipped_existing: Int?
+    let skipped_invalid: Int?
+    let failed: Int?
+    let status: String?
+    let error: String?
+}
+
+private struct CloudCatalogAutomationCycleSummary: Codable {
+    let recovery: CloudCatalogAutomationCycleRecoverySummary?
+    let enrichment: CloudCatalogAutomationCycleEnrichmentSummary?
+    let creation: CloudCatalogAutomationCycleCreationSummary?
+}
+
+private struct CloudCatalogAutomationCycleMetadataLimits: Codable {
+    let recovery_limit: Int?
+    let enrich_limit: Int?
+    let create_limit: Int?
+}
+
+private struct CloudCatalogAutomationCycleMetadata: Codable {
+    let mode: String?
+    let limits: CloudCatalogAutomationCycleMetadataLimits?
+}
+
+private struct CloudCatalogAutomationCycleResponse: Codable {
+    let summary: CloudCatalogAutomationCycleSummary?
+    let metadata: CloudCatalogAutomationCycleMetadata?
 }
 
 private struct CloudCatalogEnrichmentDraftRow: Codable {
@@ -376,6 +754,28 @@ private struct ParseRecipeCaptionFunctionRequest: Encodable {
     let languageCode: String
 }
 
+struct ImportedRecipePreview: Codable, Sendable {
+    let title: String
+    let ingredients: [String]
+    let steps: [String]
+    let imageURL: String?
+    let sourceURL: String
+    let sourceName: String
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case ingredients
+        case steps
+        case imageURL = "image_url"
+        case sourceURL = "source_url"
+        case sourceName = "source_name"
+    }
+}
+
+private struct ImportRecipeFromURLFunctionRequest: Encodable {
+    let url: String
+}
+
 private struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
     struct ErrorBody: Decodable {
         let code: String
@@ -389,6 +789,16 @@ private struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
     let ok: Bool
     let error: ErrorBody?
     let meta: MetaBody?
+}
+
+private struct ImportRecipeFromURLErrorEnvelope: Decodable {
+    struct ErrorBody: Decodable {
+        let code: String
+        let message: String
+    }
+
+    let ok: Bool?
+    let error: ErrorBody?
 }
 
 private struct CloudFollowRow: Codable {
@@ -426,6 +836,9 @@ private struct CloudRecipeRow: Codable {
     let image_url: String?
     let instagram_url: String?
     let tiktok_url: String?
+    let source_url: String?
+    let source_name: String?
+    let source_type: String?
     let created_at: String?
 }
 
@@ -507,10 +920,28 @@ private struct RecipeInsertPayload: Encodable {
     let image_url: String?
     let instagram_url: String?
     let tiktok_url: String?
+    let source_url: String?
+    let source_name: String?
+    let source_type: String?
     let created_at: String
 }
 
 private struct RecipeInsertPayloadWithoutImageURL: Encodable {
+    let id: String
+    let user_id: String
+    let title: String
+    let ingredients: [RecipeIngredientInsertPayload]
+    let steps: [String]
+    let servings: Int
+    let instagram_url: String?
+    let tiktok_url: String?
+    let source_url: String?
+    let source_name: String?
+    let source_type: String?
+    let created_at: String
+}
+
+private struct RecipeInsertPayloadLegacyColumnsOnly: Encodable {
     let id: String
     let user_id: String
     let title: String
@@ -1121,6 +1552,70 @@ final class SupabaseService {
         }
     }
 
+    func importRecipeFromURL(url: String) async throws -> ImportedRecipePreview {
+        try await instrumentedRequest(name: "importRecipeFromURL") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            guard let authenticatedUser = supabaseClient.auth.currentUser else {
+                print("[SEASON_URL_IMPORT_AUTH] phase=missing_current_user has_session=false")
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let accessToken: String
+            do {
+                accessToken = try await supabaseClient.auth.session.accessToken
+            } catch {
+                print("[SEASON_URL_IMPORT_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)")
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            guard let anonKey = self.configuration?.anonKey,
+                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
+            }
+
+            let normalizedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedURL.isEmpty else {
+                throw SupabaseServiceError.invalidURL
+            }
+
+            supabaseClient.functions.setAuth(token: accessToken)
+            print("[SEASON_URL_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased())")
+
+            do {
+                return try await supabaseClient.functions.invoke(
+                    "import-recipe-from-url",
+                    options: FunctionInvokeOptions(
+                        method: .post,
+                        headers: [
+                            "Authorization": "Bearer \(accessToken)",
+                            "apikey": anonKey
+                        ],
+                        body: ImportRecipeFromURLFunctionRequest(url: normalizedURL)
+                    )
+                )
+            } catch let functionsError as FunctionsError {
+                switch functionsError {
+                case .httpError(_, let data):
+                    if let parsed = try? JSONDecoder().decode(ImportRecipeFromURLErrorEnvelope.self, from: data),
+                       let message = parsed.error?.message,
+                       !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        throw NSError(
+                            domain: "Season.ImportRecipeFromURL",
+                            code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: message]
+                        )
+                    }
+                    throw functionsError
+                case .relayError:
+                    throw functionsError
+                }
+            }
+        }
+    }
+
     func fetchCatalogEnrichmentProposal(
         normalizedText: String
     ) async throws -> CatalogEnrichmentProposalFunctionResponse {
@@ -1434,6 +1929,533 @@ final class SupabaseService {
         }
     }
 
+    private func normalizedCustomIngredientObservationText(_ raw: String) -> String {
+        raw
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+    }
+
+    private func unresolvedCustomIngredientObservationsForRecipe(_ recipe: Recipe) -> [CustomIngredientObservation] {
+        var seen = Set<String>()
+        var observations: [CustomIngredientObservation] = []
+
+        for ingredient in recipe.ingredients {
+            if ingredient.produceID != nil || ingredient.basicIngredientID != nil {
+                continue
+            }
+
+            let rawName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !rawName.isEmpty else { continue }
+
+            let normalized = normalizedCustomIngredientObservationText(rawName)
+            guard !normalized.isEmpty else { continue }
+            guard seen.insert(normalized).inserted else { continue }
+
+            observations.append(
+                CustomIngredientObservation(
+                    normalizedText: normalized,
+                    rawExample: rawName,
+                    languageCode: nil,
+                    source: recipe.sourceType == .curatedImport ? "import" : "manual",
+                    latestRecipeID: recipe.id
+                )
+            )
+        }
+
+        return observations
+    }
+
+    private func observeUnresolvedCustomIngredientsForRecipeIfNeeded(_ recipe: Recipe) {
+        let observations = unresolvedCustomIngredientObservationsForRecipe(recipe)
+        guard !observations.isEmpty else {
+            print("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_skipped reason=no_unresolved recipe_id=\(recipe.id)")
+            return
+        }
+
+        print("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_started recipe_id=\(recipe.id) count=\(observations.count)")
+        Task {
+            await observeCustomIngredientObservations(observations)
+        }
+    }
+
+    func fetchCatalogAdminOpsSnapshot(
+        candidatesLimit: Int = 50,
+        coverageBlockersLimit: Int = 30,
+        readyDraftsLimit: Int = 50,
+        focusAliasLocalization: Bool = true
+    ) async -> CatalogAdminOpsSnapshot? {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed reason=missing_configuration")
+            return nil
+        }
+
+        do {
+            let params: [String: AnyJSON] = [
+                "p_candidates_limit": .integer(max(1, candidatesLimit)),
+                "p_coverage_blockers_limit": .integer(max(1, coverageBlockersLimit)),
+                "p_ready_drafts_limit": .integer(max(1, readyDraftsLimit)),
+                "p_focus_alias_localization": .bool(focusAliasLocalization)
+            ]
+
+            let response = try await supabaseClient
+                .rpc("get_catalog_admin_ops_snapshot", params: params)
+                .execute()
+
+            let payload = try JSONDecoder().decode(CloudCatalogAdminOpsSnapshot.self, from: response.data)
+            let candidates = mapCatalogResolutionCandidates(payload.candidates ?? [])
+            let coverageBlockers = mapCatalogCoverageBlockers(payload.coverage_blockers ?? [])
+            let readyDrafts = mapReadyCatalogEnrichmentDrafts(payload.ready_enrichment_drafts ?? [])
+            let observationCoverage = mapCatalogObservationCoverage(payload.observation_coverage ?? [])
+            let iso8601 = ISO8601DateFormatter()
+            let generatedAt = payload.metadata?.generated_at.flatMap { iso8601.date(from: $0) }
+            let counts = payload.metadata?.counts
+            let metadata = CatalogAdminOpsSnapshotMetadata(
+                generatedAt: generatedAt,
+                candidatesCount: counts?.candidates ?? candidates.count,
+                coverageBlockersCount: counts?.coverage_blockers ?? coverageBlockers.count,
+                readyEnrichmentDraftsCount: counts?.ready_enrichment_drafts ?? readyDrafts.count,
+                observationCoverageCount: counts?.observation_coverage ?? observationCoverage.count,
+                source: cleanedOptional(payload.metadata?.source) ?? "catalog_admin_ops_snapshot_v2"
+            )
+
+            print(
+                "[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_ok " +
+                "candidates=\(candidates.count) " +
+                "coverage_blockers=\(coverageBlockers.count) " +
+                "ready_drafts=\(readyDrafts.count) " +
+                "observation_coverage=\(observationCoverage.count)"
+            )
+
+            return CatalogAdminOpsSnapshot(
+                candidates: candidates,
+                coverageBlockers: coverageBlockers,
+                readyEnrichmentDrafts: readyDrafts,
+                observationCoverage: observationCoverage,
+                metadata: metadata
+            )
+        } catch {
+            print("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed error=\(error)")
+            return nil
+        }
+    }
+
+    func executeCatalogCandidateBatchTriage(
+        items: [CatalogCandidateBatchTriageItem],
+        defaultLanguageCode: String? = nil,
+        reviewerNote: String? = nil
+    ) async throws -> CatalogCandidateBatchTriageResult {
+        try await instrumentedRequest(name: "executeCatalogCandidateBatchTriage", metadata: "items=\(items.count)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let payloadItems: [AnyJSON] = items.map { item in
+                var payload: [String: AnyJSON] = [
+                    "normalized_text": .string(item.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()),
+                    "action": .string(item.action.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+                ]
+                if let ingredientID = cleanedOptional(item.ingredientID) {
+                    payload["ingredient_id"] = .string(ingredientID.lowercased())
+                }
+                if let aliasText = cleanedOptional(item.aliasText) {
+                    payload["alias_text"] = .string(aliasText)
+                }
+                if let languageCode = cleanedOptional(item.languageCode) {
+                    payload["language_code"] = .string(languageCode.lowercased())
+                }
+                if let confidenceScore = item.confidenceScore {
+                    payload["confidence_score"] = .double(confidenceScore)
+                }
+                if let reviewerNote = cleanedOptional(item.reviewerNote) {
+                    payload["reviewer_note"] = .string(reviewerNote)
+                }
+                return .object(payload)
+            }
+
+            let params: [String: AnyJSON] = [
+                "p_items": .array(payloadItems),
+                "p_default_language_code": cleanedOptional(defaultLanguageCode).map { .string($0.lowercased()) } ?? .null,
+                "p_reviewer_note": cleanedOptional(reviewerNote).map { .string($0) } ?? .null
+            ]
+
+            let response = try await supabaseClient
+                .rpc("execute_catalog_candidate_batch_triage", params: params)
+                .execute()
+
+            let payload = try JSONDecoder().decode(CloudCatalogCandidateBatchTriageResult.self, from: response.data)
+            let summary = CatalogCandidateBatchTriageSummary(
+                total: payload.summary?.total ?? items.count,
+                succeeded: payload.summary?.succeeded ?? 0,
+                failed: payload.summary?.failed ?? 0,
+                skipped: payload.summary?.skipped ?? 0
+            )
+            let mappedItems: [CatalogCandidateBatchTriageItemResult] = (payload.items ?? []).map { row in
+                let action = cleanedOptional(row.intended_action) ?? cleanedOptional(row.action) ?? ""
+                let errorMessage = cleanedOptional(row.error_message)
+                return CatalogCandidateBatchTriageItemResult(
+                    normalizedText: cleanedOptional(row.normalized_text) ?? "",
+                    intendedAction: action,
+                    resultStatus: cleanedOptional(row.result_status) ?? "failed",
+                    detail: cleanedOptional(row.detail) ?? errorMessage,
+                    errorMessage: errorMessage,
+                    ingredientID: cleanedOptional(row.ingredient_id)?.lowercased(),
+                    aliasText: cleanedOptional(row.alias_text),
+                    draftStatus: cleanedOptional(row.draft_status),
+                    draftValidatedReady: row.draft_validated_ready
+                )
+            }
+
+            let result = CatalogCandidateBatchTriageResult(
+                summary: summary,
+                items: mappedItems,
+                source: cleanedOptional(payload.metadata?.source) ?? "catalog_candidate_batch_triage_v1"
+            )
+
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=batch_triage_ok " +
+                "total=\(result.summary.total) " +
+                "succeeded=\(result.summary.succeeded) " +
+                "failed=\(result.summary.failed) " +
+                "skipped=\(result.summary.skipped)"
+            )
+            if result.summary.failed > 0 {
+                for item in result.items where item.resultStatus == "failed" {
+                    print(
+                        "[SEASON_CATALOG_ADMIN] phase=batch_triage_item_failed " +
+                        "action=\(item.intendedAction) normalized_text=\(item.normalizedText) " +
+                        "error=\(item.errorMessage ?? item.detail ?? "unknown_error")"
+                    )
+                }
+            }
+
+            return result
+        }
+    }
+
+    func recoverUnresolvedRecipeIngredientObservations(
+        limit: Int = 1000,
+        recipeIDs: [String]? = nil,
+        source: String = "import_recovery"
+    ) async throws -> [RecipeObservationRecoveryRow] {
+        try await instrumentedRequest(
+            name: "recoverUnresolvedRecipeIngredientObservations",
+            metadata: "limit=\(limit)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let cleanedRecipeIDs = (recipeIDs ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(max(1, limit)),
+                "p_recipe_ids": cleanedRecipeIDs.isEmpty ? .null : .array(cleanedRecipeIDs.map { .string($0) }),
+                "p_source": .string(source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "import_recovery" : source.trimmingCharacters(in: .whitespacesAndNewlines))
+            ]
+
+            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_started limit=\(max(1, limit)) recipe_ids=\(cleanedRecipeIDs.count)")
+            let response = try await supabaseClient
+                .rpc("recover_unresolved_recipe_ingredient_observations", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudRecipeObservationRecoveryRow].self, from: response.data)
+            let mapped = rows.map { row in
+                RecipeObservationRecoveryRow(
+                    recipeID: cleanedOptional(row.recipe_id) ?? "",
+                    ingredientIndex: row.ingredient_index ?? 0,
+                    normalizedText: cleanedOptional(row.normalized_text) ?? "",
+                    rawExample: cleanedOptional(row.raw_example),
+                    resultStatus: cleanedOptional(row.result_status) ?? "failed",
+                    detail: cleanedOptional(row.detail)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
+    func runCatalogEnrichmentDraftBatch(limit: Int = 20) async throws -> CatalogEnrichmentDraftBatchResult {
+        try await instrumentedRequest(name: "runCatalogEnrichmentDraftBatch", metadata: "limit=\(limit)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard let authenticatedUser = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let accessToken: String
+            do {
+                accessToken = try await supabaseClient.auth.session.accessToken
+            } catch {
+                print(
+                    "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_missing_access_token " +
+                    "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
+                )
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            guard let anonKey = self.configuration?.anonKey,
+                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
+            }
+
+            let safeLimit = max(1, min(100, limit))
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_started limit=\(safeLimit)")
+
+            supabaseClient.functions.setAuth(token: accessToken)
+            let response: CloudCatalogEnrichmentDraftBatchResponse = try await supabaseClient.functions.invoke(
+                "run-catalog-enrichment-draft-batch",
+                options: FunctionInvokeOptions(
+                    method: .post,
+                    headers: [
+                        "Authorization": "Bearer \(accessToken)",
+                        "apikey": anonKey
+                    ],
+                    body: ["limit": safeLimit]
+                )
+            )
+
+            let summary = CatalogEnrichmentDraftBatchSummary(
+                total: response.summary?.total ?? 0,
+                succeeded: response.summary?.succeeded ?? 0,
+                failed: response.summary?.failed ?? 0,
+                skipped: response.summary?.skipped ?? 0,
+                ready: response.summary?.ready ?? 0,
+                pending: response.summary?.pending ?? 0
+            )
+            let items: [CatalogEnrichmentDraftBatchItemResult] = (response.items ?? []).map { row in
+                CatalogEnrichmentDraftBatchItemResult(
+                    normalizedText: cleanedOptional(row.normalized_text) ?? "",
+                    resultStatus: cleanedOrUnknown(row.result_status),
+                    detail: cleanedOptional(row.detail) ?? "",
+                    errorMessage: cleanedOptional(row.error_message),
+                    validationErrors: row.validation_errors ?? [],
+                    validationPassed: row.validation_passed ?? false,
+                    finalStatus: cleanedOrUnknown(row.final_status)
+                )
+            }
+
+            let result = CatalogEnrichmentDraftBatchResult(
+                summary: summary,
+                items: items,
+                mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
+            )
+
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_ok " +
+                "total=\(summary.total) succeeded=\(summary.succeeded) " +
+                "failed=\(summary.failed) skipped=\(summary.skipped) ready=\(summary.ready)"
+            )
+            if summary.failed > 0 {
+                for item in items where item.resultStatus == "failed" {
+                    print(
+                        "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_item_failed " +
+                        "normalized_text=\(item.normalizedText) error=\(item.errorMessage ?? "unknown_error")"
+                    )
+                }
+            }
+
+            return result
+        }
+    }
+
+    func runCatalogIngredientCreationBatch(limit: Int = 20) async throws -> CatalogIngredientCreationBatchResult {
+        try await instrumentedRequest(name: "runCatalogIngredientCreationBatch", metadata: "limit=\(limit)") {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard let authenticatedUser = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let accessToken: String
+            do {
+                accessToken = try await supabaseClient.auth.session.accessToken
+            } catch {
+                print(
+                    "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_missing_access_token " +
+                    "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
+                )
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            guard let anonKey = self.configuration?.anonKey,
+                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
+            }
+
+            let safeLimit = max(1, min(100, limit))
+            print("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_invoke_started limit=\(safeLimit)")
+
+            supabaseClient.functions.setAuth(token: accessToken)
+            let response: CloudCatalogIngredientCreationBatchResponse = try await supabaseClient.functions.invoke(
+                "run-catalog-ingredient-creation-batch",
+                options: FunctionInvokeOptions(
+                    method: .post,
+                    headers: [
+                        "Authorization": "Bearer \(accessToken)",
+                        "apikey": anonKey
+                    ],
+                    body: ["limit": safeLimit]
+                )
+            )
+
+            let summary = CatalogIngredientCreationBatchSummary(
+                total: response.summary?.total ?? 0,
+                created: response.summary?.created ?? 0,
+                skippedExisting: response.summary?.skipped_existing ?? 0,
+                skippedInvalid: response.summary?.skipped_invalid ?? 0,
+                failed: response.summary?.failed ?? 0
+            )
+
+            let items: [CatalogIngredientCreationBatchItemResult] = (response.items ?? []).map { row in
+                CatalogIngredientCreationBatchItemResult(
+                    normalizedText: cleanedOptional(row.normalized_text) ?? "",
+                    slug: cleanedOptional(row.slug),
+                    resultStatus: cleanedOrUnknown(row.result_status),
+                    detail: cleanedOptional(row.detail) ?? "",
+                    ingredientID: cleanedOptional(row.ingredient_id)?.lowercased(),
+                    errorMessage: cleanedOptional(row.error_message)
+                )
+            }
+
+            let result = CatalogIngredientCreationBatchResult(
+                summary: summary,
+                items: items,
+                mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
+            )
+
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_invoke_ok " +
+                "total=\(summary.total) created=\(summary.created) " +
+                "skipped_existing=\(summary.skippedExisting) skipped_invalid=\(summary.skippedInvalid) failed=\(summary.failed)"
+            )
+
+            if summary.failed > 0 {
+                for item in items where item.resultStatus == "failed" {
+                    print(
+                        "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_item_failed " +
+                        "normalized_text=\(item.normalizedText) error=\(item.errorMessage ?? "unknown_error")"
+                    )
+                }
+            }
+
+            return result
+        }
+    }
+
+    func runCatalogAutomationCycle(
+        recoveryLimit: Int = 1000,
+        enrichLimit: Int = 20,
+        createLimit: Int = 20
+    ) async throws -> CatalogAutomationCycleResult {
+        try await instrumentedRequest(
+            name: "runCatalogAutomationCycle",
+            metadata: "recovery=\(recoveryLimit),enrich=\(enrichLimit),create=\(createLimit)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard let authenticatedUser = supabaseClient.auth.currentUser else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let accessToken: String
+            do {
+                accessToken = try await supabaseClient.auth.session.accessToken
+            } catch {
+                print(
+                    "[SEASON_CATALOG_ADMIN] phase=automation_cycle_missing_access_token " +
+                    "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
+                )
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            guard let anonKey = self.configuration?.anonKey,
+                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
+            }
+
+            let safeRecoveryLimit = max(1, min(5000, recoveryLimit))
+            let safeEnrichLimit = max(1, min(100, enrichLimit))
+            let safeCreateLimit = max(1, min(100, createLimit))
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_started " +
+                "recovery_limit=\(safeRecoveryLimit) enrich_limit=\(safeEnrichLimit) create_limit=\(safeCreateLimit)"
+            )
+
+            supabaseClient.functions.setAuth(token: accessToken)
+            let response: CloudCatalogAutomationCycleResponse = try await supabaseClient.functions.invoke(
+                "run-catalog-automation-cycle",
+                options: FunctionInvokeOptions(
+                    method: .post,
+                    headers: [
+                        "Authorization": "Bearer \(accessToken)",
+                        "apikey": anonKey
+                    ],
+                    body: [
+                        "recovery_limit": safeRecoveryLimit,
+                        "enrich_limit": safeEnrichLimit,
+                        "create_limit": safeCreateLimit
+                    ]
+                )
+            )
+
+            let recovery = CatalogAutomationCycleRecoverySummary(
+                total: response.summary?.recovery?.total ?? 0,
+                observed: response.summary?.recovery?.observed ?? 0,
+                skipped: response.summary?.recovery?.skipped ?? 0,
+                failed: response.summary?.recovery?.failed ?? 0,
+                status: cleanedOptional(response.summary?.recovery?.status) ?? "failed",
+                error: cleanedOptional(response.summary?.recovery?.error)
+            )
+            let enrichment = CatalogAutomationCycleEnrichmentSummary(
+                total: response.summary?.enrichment?.total ?? 0,
+                succeeded: response.summary?.enrichment?.succeeded ?? 0,
+                failed: response.summary?.enrichment?.failed ?? 0,
+                skipped: response.summary?.enrichment?.skipped ?? 0,
+                ready: response.summary?.enrichment?.ready ?? 0,
+                status: cleanedOptional(response.summary?.enrichment?.status) ?? "failed",
+                error: cleanedOptional(response.summary?.enrichment?.error)
+            )
+            let creation = CatalogAutomationCycleCreationSummary(
+                total: response.summary?.creation?.total ?? 0,
+                created: response.summary?.creation?.created ?? 0,
+                skippedExisting: response.summary?.creation?.skipped_existing ?? 0,
+                skippedInvalid: response.summary?.creation?.skipped_invalid ?? 0,
+                failed: response.summary?.creation?.failed ?? 0,
+                status: cleanedOptional(response.summary?.creation?.status) ?? "failed",
+                error: cleanedOptional(response.summary?.creation?.error)
+            )
+
+            let result = CatalogAutomationCycleResult(
+                recovery: recovery,
+                enrichment: enrichment,
+                creation: creation,
+                mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
+            )
+
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_ok " +
+                "recovery_total=\(recovery.total) recovery_failed=\(recovery.failed) " +
+                "enrichment_total=\(enrichment.total) enrichment_failed=\(enrichment.failed) " +
+                "creation_total=\(creation.total) creation_failed=\(creation.failed)"
+            )
+
+            return result
+        }
+    }
+
     func fetchCatalogResolutionCandidates(limit: Int = 50) async -> [CatalogResolutionCandidateRecord] {
         guard let supabaseClient = self.client else {
             print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed reason=missing_configuration")
@@ -1451,21 +2473,7 @@ final class SupabaseService {
                 .execute()
 
             let rows = try JSONDecoder().decode([CloudCatalogResolutionCandidateRow].self, from: response.data)
-            let mapped = rows.compactMap { row -> CatalogResolutionCandidateRecord? in
-                let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                guard !normalizedText.isEmpty else { return nil }
-                return CatalogResolutionCandidateRecord(
-                    normalizedText: normalizedText,
-                    occurrenceCount: max(0, row.occurrence_count ?? 0),
-                    suggestedResolutionType: (row.suggested_resolution_type?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
-                        ? row.suggested_resolution_type!.trimmingCharacters(in: .whitespacesAndNewlines)
-                        : "unknown",
-                    existingAliasStatus: (row.existing_alias_status?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
-                        ? row.existing_alias_status!.trimmingCharacters(in: .whitespacesAndNewlines)
-                        : "none",
-                    priorityScore: row.priority_score
-                )
-            }
+            let mapped = mapCatalogResolutionCandidates(rows)
 
             print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_ok count=\(mapped.count)")
             return mapped
@@ -1497,29 +2505,35 @@ final class SupabaseService {
                 .execute()
 
             let rows = try JSONDecoder().decode([CloudCatalogCoverageBlockerRow].self, from: response.data)
-            let mapped = rows.compactMap { row -> CatalogCoverageBlockerRecord? in
-                let normalizedText = row.normalized_text?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
-                guard !normalizedText.isEmpty else { return nil }
-                return CatalogCoverageBlockerRecord(
-                    normalizedText: normalizedText,
-                    rowCount: max(0, row.row_count ?? 0),
-                    recipeCount: max(0, row.recipe_count ?? 0),
-                    occurrenceCount: max(0, row.occurrence_count ?? 0),
-                    priorityScore: row.priority_score,
-                    likelyFixType: cleanedOrUnknown(row.likely_fix_type),
-                    canonicalCandidateIngredientID: cleanedOptional(row.canonical_candidate_ingredient_id),
-                    canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
-                    canonicalCandidateName: cleanedOptional(row.canonical_candidate_name),
-                    suggestedResolutionType: cleanedOrUnknown(row.suggested_resolution_type),
-                    blockerReason: cleanedOrUnknown(row.blocker_reason),
-                    recommendedNextAction: cleanedOrUnknown(row.recommended_next_action)
-                )
-            }
+            let mapped = mapCatalogCoverageBlockers(rows)
 
             print("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_ok count=\(mapped.count)")
             return mapped
         } catch {
             print("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func fetchPendingCatalogEnrichmentDraftReview(
+        limit: Int = 200
+    ) async -> [PendingCatalogEnrichmentDraftReviewRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await supabaseClient
+                .rpc("review_pending_catalog_enrichment_drafts", params: ["p_limit": max(1, limit)])
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudPendingCatalogEnrichmentDraftReviewRow].self, from: response.data)
+            let mapped = mapPendingCatalogEnrichmentDraftReview(rows)
+            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_ok count=\(mapped.count)")
+            return mapped
+        } catch {
+            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed error=\(error)")
             return []
         }
     }
@@ -1601,22 +2615,7 @@ final class SupabaseService {
                 .execute()
 
             let rows = try JSONDecoder().decode([CloudReadyCatalogEnrichmentDraftRow].self, from: response.data)
-            let iso8601 = ISO8601DateFormatter()
-            let mapped = rows.compactMap { row -> ReadyCatalogEnrichmentDraftRecord? in
-                let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-                guard !normalizedText.isEmpty else { return nil }
-                let ingredientType = row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown"
-                return ReadyCatalogEnrichmentDraftRecord(
-                    normalizedText: normalizedText,
-                    ingredientType: ingredientType,
-                    canonicalNameIT: row.canonical_name_it?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    canonicalNameEN: row.canonical_name_en?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    suggestedSlug: row.suggested_slug?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    confidenceScore: row.confidence_score,
-                    needsManualReview: row.needs_manual_review ?? true,
-                    updatedAt: row.updated_at.flatMap { iso8601.date(from: $0) }
-                )
-            }
+            let mapped = mapReadyCatalogEnrichmentDrafts(rows)
 
             let sorted = mapped.sorted { lhs, rhs in
                 switch (lhs.updatedAt, rhs.updatedAt) {
@@ -1829,6 +2828,7 @@ final class SupabaseService {
             let publishUserID = user.id.uuidString.lowercased()
             let payloadHasUserID = !publishUserID.isEmpty
             print("[SEASON_SUPABASE] phase=create_recipe_payload_check recipe_id=\(recipe.id) payload_includes_user_id=\(payloadHasUserID) user_id=\(payloadHasUserID ? publishUserID : "nil")")
+            var didPersistRecipe = false
 
             let payload = RecipeInsertPayload(
                 id: recipe.id,
@@ -1848,6 +2848,9 @@ final class SupabaseService {
                 image_url: recipe.imageURL,
                 instagram_url: recipe.instagramURL,
                 tiktok_url: recipe.tiktokURL,
+                source_url: recipe.sourceURL,
+                source_name: recipe.sourceName,
+                source_type: recipe.sourceType?.rawValue,
                 created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
             )
 
@@ -1858,6 +2861,7 @@ final class SupabaseService {
                     .upsert(payload, onConflict: "id")
                     .execute()
                 print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=primary")
+                didPersistRecipe = true
             } catch {
                 if self.isMissingColumnError(error, column: "image_url") {
                     print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_optional_column")
@@ -1878,17 +2882,88 @@ final class SupabaseService {
                         servings: recipe.servings,
                         instagram_url: recipe.instagramURL,
                         tiktok_url: recipe.tiktokURL,
+                        source_url: recipe.sourceURL,
+                        source_name: recipe.sourceName,
+                        source_type: recipe.sourceType?.rawValue,
+                        created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
+                    )
+                    do {
+                        _ = try await supabaseClient
+                            .from("recipes")
+                            .upsert(fallbackPayload, onConflict: "id")
+                            .execute()
+                        print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=fallback")
+                        didPersistRecipe = true
+                    } catch {
+                        if self.isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
+                            print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
+                            let legacyPayload = RecipeInsertPayloadLegacyColumnsOnly(
+                                id: recipe.id,
+                                user_id: publishUserID,
+                                title: recipe.title,
+                                ingredients: recipe.ingredients.map {
+                                    RecipeIngredientInsertPayload(
+                                        produce_id: $0.produceID,
+                                        basic_ingredient_id: $0.basicIngredientID,
+                                        name: $0.name,
+                                        quantity_value: $0.quantityValue,
+                                        quantity_unit: $0.quantityUnit.rawValue
+                                    )
+                                },
+                                steps: recipe.preparationSteps,
+                                servings: recipe.servings,
+                                instagram_url: recipe.instagramURL,
+                                tiktok_url: recipe.tiktokURL,
+                                created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
+                            )
+                            _ = try await supabaseClient
+                                .from("recipes")
+                                .upsert(legacyPayload, onConflict: "id")
+                                .execute()
+                            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
+                            didPersistRecipe = true
+                        } else {
+                            throw error
+                        }
+                    }
+                } else if self.isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
+                    print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
+                    let fallbackPayload = RecipeInsertPayloadWithoutImageURL(
+                        id: recipe.id,
+                        user_id: publishUserID,
+                        title: recipe.title,
+                        ingredients: recipe.ingredients.map {
+                            RecipeIngredientInsertPayload(
+                                produce_id: $0.produceID,
+                                basic_ingredient_id: $0.basicIngredientID,
+                                name: $0.name,
+                                quantity_value: $0.quantityValue,
+                                quantity_unit: $0.quantityUnit.rawValue
+                            )
+                        },
+                        steps: recipe.preparationSteps,
+                        servings: recipe.servings,
+                        instagram_url: recipe.instagramURL,
+                        tiktok_url: recipe.tiktokURL,
+                        source_url: nil,
+                        source_name: nil,
+                        source_type: nil,
                         created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
                     )
                     _ = try await supabaseClient
                         .from("recipes")
                         .upsert(fallbackPayload, onConflict: "id")
                         .execute()
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=fallback")
+                    print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
+                    didPersistRecipe = true
                 } else {
                     print("[SEASON_SUPABASE] phase=create_recipe_write_failed recipe_id=\(recipe.id) reason=\(error)")
                     throw error
                 }
+            }
+
+            if didPersistRecipe {
+                observeUnresolvedCustomIngredientsForRecipeIfNeeded(recipe)
             }
         }
     }
@@ -1966,12 +3041,13 @@ final class SupabaseService {
                     mediaLinkURL: nil,
                     instagramURL: row.instagram_url?.trimmingCharacters(in: .whitespacesAndNewlines),
                     tiktokURL: row.tiktok_url?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    sourceURL: nil,
+                    sourceURL: row.source_url?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    sourceName: row.source_name?.trimmingCharacters(in: .whitespacesAndNewlines),
                     sourcePlatform: nil,
                     sourceCaptionRaw: nil,
                     importedFromSocial: false,
-                    sourceType: .userGenerated,
-                    isUserGenerated: true,
+                    sourceType: RecipeSourceType(rawValue: row.source_type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""),
+                    isUserGenerated: (RecipeSourceType(rawValue: row.source_type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "") ?? .userGenerated) == .userGenerated,
                     publicationStatus: .published,
                     isRemix: false,
                     originalRecipeID: nil,
@@ -2549,6 +3625,10 @@ final class SupabaseService {
         return message.contains("pgrst204") || (message.contains(column.lowercased()) && message.contains("column"))
     }
 
+    private func isMissingAnyColumnError(_ error: Error, columns: [String]) -> Bool {
+        columns.contains { isMissingColumnError(error, column: $0) }
+    }
+
     private func isMissingFollowsTableError(_ error: Error) -> Bool {
         let message = String(describing: error).lowercased()
         return message.contains("relation") &&
@@ -2605,6 +3685,119 @@ final class SupabaseService {
 
     private func notifyAuthStateDidChange() {
         NotificationCenter.default.post(name: .seasonAuthStateDidChange, object: nil)
+    }
+
+    private func mapCatalogResolutionCandidates(
+        _ rows: [CloudCatalogResolutionCandidateRow]
+    ) -> [CatalogResolutionCandidateRecord] {
+        rows.compactMap { row -> CatalogResolutionCandidateRecord? in
+            let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !normalizedText.isEmpty else { return nil }
+            return CatalogResolutionCandidateRecord(
+                normalizedText: normalizedText,
+                occurrenceCount: max(0, row.occurrence_count ?? 0),
+                suggestedResolutionType: (row.suggested_resolution_type?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                    ? row.suggested_resolution_type!.trimmingCharacters(in: .whitespacesAndNewlines)
+                    : "unknown",
+                existingAliasStatus: (row.existing_alias_status?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                    ? row.existing_alias_status!.trimmingCharacters(in: .whitespacesAndNewlines)
+                    : "none",
+                priorityScore: row.priority_score
+            )
+        }
+    }
+
+    private func mapCatalogCoverageBlockers(
+        _ rows: [CloudCatalogCoverageBlockerRow]
+    ) -> [CatalogCoverageBlockerRecord] {
+        rows.compactMap { row -> CatalogCoverageBlockerRecord? in
+            let normalizedText = row.normalized_text?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) ?? ""
+            guard !normalizedText.isEmpty else { return nil }
+            return CatalogCoverageBlockerRecord(
+                normalizedText: normalizedText,
+                rowCount: max(0, row.row_count ?? 0),
+                recipeCount: max(0, row.recipe_count ?? 0),
+                occurrenceCount: max(0, row.occurrence_count ?? 0),
+                priorityScore: row.priority_score,
+                likelyFixType: cleanedOrUnknown(row.likely_fix_type),
+                canonicalCandidateIngredientID: cleanedOptional(row.canonical_candidate_ingredient_id),
+                canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
+                canonicalCandidateName: cleanedOptional(row.canonical_candidate_name),
+                suggestedResolutionType: cleanedOrUnknown(row.suggested_resolution_type),
+                blockerReason: cleanedOrUnknown(row.blocker_reason),
+                recommendedNextAction: cleanedOrUnknown(row.recommended_next_action)
+            )
+        }
+    }
+
+    private func mapReadyCatalogEnrichmentDrafts(
+        _ rows: [CloudReadyCatalogEnrichmentDraftRow]
+    ) -> [ReadyCatalogEnrichmentDraftRecord] {
+        let iso8601 = ISO8601DateFormatter()
+        return rows.compactMap { row -> ReadyCatalogEnrichmentDraftRecord? in
+            let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !normalizedText.isEmpty else { return nil }
+            let ingredientType = row.ingredient_type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown"
+            return ReadyCatalogEnrichmentDraftRecord(
+                normalizedText: normalizedText,
+                ingredientType: ingredientType,
+                canonicalNameIT: row.canonical_name_it?.trimmingCharacters(in: .whitespacesAndNewlines),
+                canonicalNameEN: row.canonical_name_en?.trimmingCharacters(in: .whitespacesAndNewlines),
+                suggestedSlug: row.suggested_slug?.trimmingCharacters(in: .whitespacesAndNewlines),
+                confidenceScore: row.confidence_score,
+                needsManualReview: row.needs_manual_review ?? true,
+                updatedAt: row.updated_at.flatMap { iso8601.date(from: $0) }
+            )
+        }
+    }
+
+    private func mapCatalogObservationCoverage(
+        _ rows: [CloudCatalogObservationCoverageRow]
+    ) -> [CatalogObservationCoverageRecord] {
+        let iso8601 = ISO8601DateFormatter()
+        return rows.compactMap { row -> CatalogObservationCoverageRecord? in
+            let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !normalizedText.isEmpty else { return nil }
+            return CatalogObservationCoverageRecord(
+                normalizedText: normalizedText,
+                observationStatus: cleanedOrUnknown(row.observation_status),
+                occurrenceCount: max(0, row.occurrence_count ?? 0),
+                lastSeenAt: row.last_seen_at.flatMap { iso8601.date(from: $0) },
+                coverageState: cleanedOrUnknown(row.coverage_state),
+                coverageReason: cleanedOrUnknown(row.coverage_reason),
+                canonicalTargetIngredientID: cleanedOptional(row.canonical_target_ingredient_id),
+                canonicalTargetSlug: cleanedOptional(row.canonical_target_slug),
+                canonicalTargetName: cleanedOptional(row.canonical_target_name),
+                aliasTargetIngredientID: cleanedOptional(row.alias_target_ingredient_id),
+                aliasTargetSlug: cleanedOptional(row.alias_target_slug),
+                aliasTargetName: cleanedOptional(row.alias_target_name)
+            )
+        }
+    }
+
+    private func mapPendingCatalogEnrichmentDraftReview(
+        _ rows: [CloudPendingCatalogEnrichmentDraftReviewRow]
+    ) -> [PendingCatalogEnrichmentDraftReviewRecord] {
+        let iso8601 = ISO8601DateFormatter()
+        return rows.compactMap { row -> PendingCatalogEnrichmentDraftReviewRecord? in
+            let normalizedText = row.normalized_text?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !normalizedText.isEmpty else { return nil }
+            return PendingCatalogEnrichmentDraftReviewRecord(
+                normalizedText: normalizedText,
+                occurrenceCount: max(0, row.occurrence_count ?? 0),
+                draftUpdatedAt: row.draft_updated_at.flatMap { iso8601.date(from: $0) },
+                reviewBucket: cleanedOrUnknown(row.review_bucket),
+                classificationReason: cleanedOrUnknown(row.classification_reason),
+                hasApprovedAlias: row.has_approved_alias ?? false,
+                hasAnyAliasMatch: row.has_any_alias_match ?? false,
+                canonicalMatchCount: max(0, row.canonical_match_count ?? 0),
+                quantityContaminated: row.quantity_contaminated ?? false,
+                lowRiskQualifier: row.low_risk_qualifier ?? false,
+                descriptorAliasLike: row.descriptor_alias_like ?? false,
+                isPastaShape: row.is_pasta_shape ?? false,
+                recommendedOperatorAction: cleanedOrUnknown(row.recommended_operator_action)
+            )
+        }
     }
 
     private func decodeRPCBoolean(_ data: Data, key: String) -> Bool {

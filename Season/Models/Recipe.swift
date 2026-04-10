@@ -91,6 +91,7 @@ struct RecipeIngredient: Identifiable, Codable, Hashable {
 enum RecipeSourceType: String, Codable, Hashable {
     case userGenerated = "user_generated"
     case seedWeb = "seed_web"
+    case curatedImport = "curated_import"
 }
 
 enum RecipePublicationStatus: String, Codable, Hashable {
@@ -141,7 +142,7 @@ struct Recipe: Identifiable, Codable, Hashable {
     let sourcePlatform: SocialSourcePlatform?
     let sourceCaptionRaw: String?
     let importedFromSocial: Bool
-    var sourceType: RecipeSourceType = .userGenerated
+    var sourceType: RecipeSourceType? = nil
     var isUserGenerated: Bool = true
     var imageURL: String? = nil
     var imageSource: String? = nil

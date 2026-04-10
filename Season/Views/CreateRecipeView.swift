@@ -2829,9 +2829,11 @@ struct CreateRecipeView: View {
         let descriptorTokens = Set([
             "bianca", "bianco", "rosse", "rossa", "rosso", "verde",
             "intero", "intera", "interi", "intere",
+            "fino", "fina", "fini", "fine",
             "secco", "secca", "secchi", "secche",
+            "tritato", "tritata", "tritati", "tritate",
             "grattugiato", "grattugiata",
-            "fresco", "fresca", "fresh",
+            "fresco", "fresca", "freschi", "fresche", "fresh",
             "whole", "dry", "grated",
             "tipo", "quality"
         ])
@@ -2844,6 +2846,14 @@ struct CreateRecipeView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         return stripped.isEmpty ? normalized : stripped
+    }
+
+    private func strippedParentheticalText(_ raw: String) -> String {
+        raw.replacingOccurrences(
+            of: #"\([^)]*\)"#,
+            with: " ",
+            options: .regularExpression
+        )
     }
 
     private func expandedIngredientQueryAliases(for normalizedQuery: String) -> [String] {
@@ -2895,7 +2905,7 @@ struct CreateRecipeView: View {
     }
 
     private func normalizedIngredientMatchText(_ raw: String) -> String {
-        raw
+        strippedParentheticalText(raw)
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             .lowercased()
             .replacingOccurrences(of: "_", with: " ")

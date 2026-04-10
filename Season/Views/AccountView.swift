@@ -683,7 +683,7 @@ struct AccountView: View {
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 NavigationLink {
-                    CatalogCandidatesDebugView()
+                    CatalogCandidatesDebugView(viewModel: viewModel)
                 } label: {
                     Label("Catalog Candidates (Debug)", systemImage: "list.bullet.rectangle")
                         .font(.subheadline.weight(.semibold))

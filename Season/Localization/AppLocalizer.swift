@@ -296,6 +296,8 @@ enum AppTextKey: String {
     case watchVideo
     case openOnInstagram
     case openOnTikTok
+    case openOriginalRecipe
+    case sourceAttributionLabel
     case detectedPlatformFormat
     case fromRecipeFormat
     case recipeTimingPerfectNow
@@ -313,6 +315,10 @@ enum AppTextKey: String {
     case noMatchingRecipesYetTitle
     case noMatchingRecipesYetSubtitle
     case missingIngredients
+    case recipeDetailAllMissingHandled
+    case recipeDetailStillMissingItemsFormat
+    case recipeDetailEverythingElseInList
+    case recipeDetailIngredientsInList
     case noMissingIngredients
     case cookAction
     case viewRecipeAction
@@ -839,6 +845,8 @@ struct AppLocalizer {
             .watchVideo: "Watch video",
             .openOnInstagram: "Open on Instagram",
             .openOnTikTok: "Open on TikTok",
+            .openOriginalRecipe: "Open original recipe",
+            .sourceAttributionLabel: "Source",
             .detectedPlatformFormat: "Detected: %@",
             .fromRecipeFormat: "From %@",
             .recipeTimingPerfectNow: "Perfect now",
@@ -856,6 +864,10 @@ struct AppLocalizer {
             .noMatchingRecipesYetTitle: "No matching recipes yet",
             .noMatchingRecipesYetSubtitle: "Add more ingredients to unlock recipes",
             .missingIngredients: "Missing",
+            .recipeDetailAllMissingHandled: "All missing items handled",
+            .recipeDetailStillMissingItemsFormat: "%d still missing",
+            .recipeDetailEverythingElseInList: "Everything else is already in your shopping list",
+            .recipeDetailIngredientsInList: "Ingredients in your list",
             .noMissingIngredients: "No missing ingredients",
             .cookAction: "Cook",
             .viewRecipeAction: "View recipe",
@@ -1184,6 +1196,8 @@ struct AppLocalizer {
             .watchVideo: "Guarda video",
             .openOnInstagram: "Apri su Instagram",
             .openOnTikTok: "Apri su TikTok",
+            .openOriginalRecipe: "Apri ricetta originale",
+            .sourceAttributionLabel: "Fonte",
             .detectedPlatformFormat: "Rilevato: %@",
             .fromRecipeFormat: "Da %@",
             .recipeTimingPerfectNow: "Perfetta ora",
@@ -1201,6 +1215,10 @@ struct AppLocalizer {
             .noMatchingRecipesYetTitle: "Nessuna ricetta compatibile",
             .noMatchingRecipesYetSubtitle: "Aggiungi piu ingredienti per sbloccare ricette",
             .missingIngredients: "Mancano",
+            .recipeDetailAllMissingHandled: "Tutti gli ingredienti mancanti sono gestiti",
+            .recipeDetailStillMissingItemsFormat: "%d ancora mancanti",
+            .recipeDetailEverythingElseInList: "Tutto il resto e gia nella tua lista della spesa",
+            .recipeDetailIngredientsInList: "Ingredienti nella tua lista",
             .noMissingIngredients: "Nessun ingrediente mancante",
             .cookAction: "Cucina",
             .viewRecipeAction: "Vedi ricetta",
