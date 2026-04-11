@@ -881,12 +881,16 @@ struct HomeView: View {
                 }
 
                 VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { _, item in
+                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { index, item in
                         switch item {
                         case .recipe(let card, let style):
                             homeRecipeItem(card: card, style: style)
                                 .padding(.top, style == .large ? SeasonSpacing.xs : 0)
                                 .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
+                                .onAppear {
+                                    let nearEndThreshold = max(0, activeFilteredFeedItems.count - 3)
+                                    viewModel.loadNextRecipePageIfNeeded(isNearEnd: index >= nearEndThreshold)
+                                }
                         case .followingFallbackSeparator:
                             followingFallbackSeparatorLabel
                                 .padding(.top, SeasonSpacing.xs)
@@ -918,12 +922,16 @@ struct HomeView: View {
                     }
                 }
 
-                ForEach(remainingFeedItems) { item in
+                ForEach(Array(remainingFeedItems.enumerated()), id: \.element.id) { index, item in
                     switch item {
                     case .recipe(let card, let style):
                         homeRecipeItem(card: card, style: style)
                             .padding(.top, style == .large ? SeasonSpacing.sm : 0)
                             .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
+                            .onAppear {
+                                let nearEndThreshold = max(0, remainingFeedItems.count - 3)
+                                viewModel.loadNextRecipePageIfNeeded(isNearEnd: index >= nearEndThreshold)
+                            }
                     case .followingFallbackSeparator:
                         EmptyView()
                     case .fridge(let match):
@@ -1146,7 +1154,8 @@ struct HomeView: View {
     private var cacheSignature: String {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
         let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
-        return "\(viewModel.languageCode)|\(viewModel.recipes.count)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(followingIDs)"
+        // Rebuild feed only on semantic data/version changes, not raw recipe count churn.
+        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)"
     }
 
     private func refreshHomeFeedCache() {

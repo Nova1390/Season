@@ -4,6 +4,7 @@ This document defines the conservative `safe_to_apply` policy used by:
 
 - `recipe_ingredient_reconciliation_safety_preview`
 - `preview_recipe_ingredient_reconciliation_safety(...)`
+- `preview_safe_recipe_ingredient_reconciliation(...)` (operator-focused preview with recipe title + proposed target context)
 - `apply_recipe_ingredient_reconciliation(...)` (phase-1 apply, gated by preview safety)
 
 ## What `safe_to_apply` Means
@@ -22,7 +23,7 @@ Only exact normalized matches are allowed:
 
 A row is safe only when all are true:
 
-1. not already resolved in the recipe row (`produce_id` / `basic_ingredient_id` absent)
+1. not already resolved in the recipe row (`produce_id` / `basic_ingredient_id` / `ingredient_id` absent)
 2. exactly one canonical target (`canonical_target_count = 1`)
 3. match source is exact and high-confidence (approved alias or localization exact match)
 4. source text is not likely noise
@@ -77,6 +78,35 @@ What it does not do:
 - no updates for non-safe/ambiguous rows
 - no recipe-wide rewrite
 - no batch reconciliation expansion beyond the provided apply limit/filter
+
+### Idempotency
+
+Re-running `apply_recipe_ingredient_reconciliation(...)` is safe:
+
+- it only selects rows still `safe_to_apply = true`
+- rows already mapped (`produce_id`, `basic_ingredient_id`, or `ingredient_id` present) are skipped as `already_resolved`
+- already-updated rows therefore do not keep mutating on repeated runs
+
+## Operator Preview Surface
+
+Use:
+
+- `preview_safe_recipe_ingredient_reconciliation(...)`
+
+This preview is read-only and includes:
+
+- `recipe_id`
+- `recipe_title`
+- `recipe_ingredient_row_id`
+- `ingredient_index`
+- `ingredient_raw_name`
+- `current_mapping_state`
+- `proposed_ingredient_id`
+- `proposed_ingredient_slug`
+- `proposed_ingredient_name`
+- `confidence_source`
+- `safe_to_apply`
+- `safety_reason`
 
 ## Audit and Rollback Approach
 
@@ -141,6 +171,33 @@ Prioritize in this order:
 2. missing `legacy_ingredient_mapping` bridge entries for safe rows
 3. candidate review backlog cleanup for recurring unresolved terms
 4. phase-2 reconciliation scope planning (still deferred)
+
+## Legacy Bridge Gap Visibility + Backfill
+
+When safe preview count is much higher than applied count, use:
+
+- `preview_reconciliation_legacy_bridge_gaps(...)`
+
+This read-only report shows canonical targets currently blocked only by missing `legacy_ingredient_mapping`, including:
+
+- matched ingredient id/slug/name
+- blocked safe row/recipe counts
+- sample recipe/title/raw ingredient text
+- whether `legacy_produce_id` or `legacy_basic_id` is missing for that ingredient type
+
+For controlled mapping write-back, use:
+
+- `backfill_reconciliation_legacy_mappings(...)`
+
+This helper is admin-guarded and requires explicit mapping inputs per ingredient (no fuzzy inference).  
+It reuses `upsert_legacy_ingredient_mapping(...)` for conflict safety and idempotent writes.
+
+Recommended operator sequence:
+
+1. preview safe reconciliation (`preview_safe_recipe_ingredient_reconciliation(...)`)
+2. inspect bridge blockers (`preview_reconciliation_legacy_bridge_gaps(...)`)
+3. backfill explicit mappings (`backfill_reconciliation_legacy_mappings(...)`)
+4. re-run apply (`apply_recipe_ingredient_reconciliation(...)`)
 
 ## Blocker Analysis Layer
 

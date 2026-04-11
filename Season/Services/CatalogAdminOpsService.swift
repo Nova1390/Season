@@ -27,6 +27,14 @@ struct CatalogAutomationCycleRunSummary: Sendable {
     let creation: CatalogAutomationCycleCreationSummary
 }
 
+struct CatalogSafeRecipeReconciliationApplySummary: Sendable {
+    let total: Int
+    let applied: Int
+    let skipped: Int
+    let failed: Int
+    let rows: [RecipeIngredientReconciliationApplyRow]
+}
+
 final class CatalogAdminOpsService {
     static let shared = CatalogAdminOpsService()
 
@@ -239,5 +247,42 @@ final class CatalogAdminOpsService {
             enrichment: result.enrichment,
             creation: result.creation
         )
+    }
+
+    func previewSafeRecipeReconciliation(
+        limit: Int = 20
+    ) async throws -> [RecipeIngredientReconciliationPreviewRow] {
+        try await supabaseService.previewSafeRecipeIngredientReconciliation(
+            limit: limit,
+            onlySafe: true
+        )
+    }
+
+    func applySafeRecipeReconciliation(
+        limit: Int = 20,
+        recipeIDs: [String]? = nil
+    ) async throws -> CatalogSafeRecipeReconciliationApplySummary {
+        let rows = try await supabaseService.applySafeRecipeIngredientReconciliation(
+            limit: limit,
+            recipeIDs: recipeIDs
+        )
+        let appliedCount = rows.filter { $0.applied && $0.applyStatus == "applied" }.count
+        let failedCount = rows.filter { !$0.applied && !isSkipStatus($0.applyStatus) }.count
+        let skippedCount = max(0, rows.count - appliedCount - failedCount)
+        return CatalogSafeRecipeReconciliationApplySummary(
+            total: rows.count,
+            applied: appliedCount,
+            skipped: skippedCount,
+            failed: failedCount,
+            rows: rows
+        )
+    }
+
+    private func isSkipStatus(_ status: String) -> Bool {
+        let normalized = status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "already_resolved" ||
+            normalized == "recipe_not_found_or_no_ingredients" ||
+            normalized == "ingredient_index_not_found" ||
+            normalized == "no_mapping"
     }
 }

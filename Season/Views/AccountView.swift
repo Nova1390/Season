@@ -693,6 +693,7 @@ struct AccountView: View {
 
                 DisclosureGroup(isExpanded: $showSupabaseAuthTest) {
                     VStack(alignment: .leading, spacing: 10) {
+                        #if DEBUG
                         Text(viewModel.localizer.text(.supabaseTestDescription))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -864,6 +865,7 @@ struct AccountView: View {
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                        #endif
 
                         if supabaseProfileFetchRunning {
                             Text("Fetching profile...")
@@ -1794,6 +1796,7 @@ struct AccountView: View {
         }
     }
 
+    #if DEBUG
     private func runSupabaseAuthTest() {
         let email = supabaseTestEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         let password = supabaseTestPassword
@@ -1839,6 +1842,7 @@ struct AccountView: View {
             }
         }
     }
+    #endif
 
     private func loadCloudProfileForReadOnlyDisplayIfNeeded() {
         guard !hasAttemptedCloudProfileLoad else { return }

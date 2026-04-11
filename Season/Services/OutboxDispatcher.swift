@@ -3,6 +3,9 @@ import Foundation
 final class OutboxDispatcher {
     private static let processingQueue = DispatchQueue(label: "season.outbox.dispatcher.processing")
     private static var isProcessing = false
+    private let maximumRetryCount = 3
+    private let baseRetryDelaySeconds: TimeInterval = 5
+    private let completedRetentionWindow: TimeInterval = 24 * 60 * 60
     private let outboxStore: OutboxStore
     private let supabaseService: SupabaseService
     private let decoder = JSONDecoder()
@@ -35,6 +38,8 @@ final class OutboxDispatcher {
             }
         }
 
+        outboxStore.cleanupCompletedMutations(olderThan: completedRetentionWindow)
+
         let pending = outboxStore
             .pendingMutations()
             .sorted { lhs, rhs in
@@ -53,8 +58,9 @@ final class OutboxDispatcher {
 
     private func process(_ mutation: OutboxMutationRecord) async {
         var inProgress = mutation
-        inProgress.status = "in_progress"
+        inProgress.status = .inProgress
         inProgress.attemptCount += 1
+        inProgress.nextRetryAt = nil
         inProgress.updatedAt = Date()
         outboxStore.update(inProgress)
 
@@ -67,8 +73,9 @@ final class OutboxDispatcher {
             try await replay(inProgress)
 
             var completed = inProgress
-            completed.status = "completed"
+            completed.status = .completed
             completed.lastError = nil
+            completed.nextRetryAt = nil
             completed.updatedAt = Date()
             outboxStore.update(completed)
 
@@ -77,16 +84,37 @@ final class OutboxDispatcher {
                 "entity_type=\(completed.entityType) operation_type=\(completed.operationType)"
             )
         } catch {
-            var failed = inProgress
-            failed.status = "failed"
-            failed.lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            failed.updatedAt = Date()
-            outboxStore.update(failed)
+            let errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            if inProgress.attemptCount <= maximumRetryCount {
+                let exponent = max(0, inProgress.attemptCount - 1)
+                let backoffSeconds = baseRetryDelaySeconds * pow(2, Double(exponent))
 
-            print(
-                "[SEASON_SUPABASE] phase=mutation_failed mutation_id=\(failed.mutationID) " +
-                "entity_type=\(failed.entityType) operation_type=\(failed.operationType) error=\(error)"
-            )
+                var retried = inProgress
+                retried.status = .pending
+                retried.lastError = errorMessage
+                retried.nextRetryAt = Date().addingTimeInterval(backoffSeconds)
+                retried.updatedAt = Date()
+                outboxStore.update(retried)
+
+                print(
+                    "[SEASON_SUPABASE] phase=mutation_retry_scheduled mutation_id=\(retried.mutationID) " +
+                    "entity_type=\(retried.entityType) operation_type=\(retried.operationType) " +
+                    "attempt=\(retried.attemptCount) next_retry_in_seconds=\(Int(backoffSeconds)) error=\(error)"
+                )
+            } else {
+                var failed = inProgress
+                failed.status = .failed
+                failed.lastError = errorMessage
+                failed.nextRetryAt = nil
+                failed.updatedAt = Date()
+                outboxStore.update(failed)
+
+                print(
+                    "[SEASON_SUPABASE] phase=mutation_failed mutation_id=\(failed.mutationID) " +
+                    "entity_type=\(failed.entityType) operation_type=\(failed.operationType) " +
+                    "attempt=\(failed.attemptCount) error=\(error)"
+                )
+            }
         }
     }
 

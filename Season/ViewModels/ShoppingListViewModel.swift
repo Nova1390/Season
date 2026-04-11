@@ -610,8 +610,9 @@ final class ShoppingListViewModel: ObservableObject {
             entityType: entityType,
             operationType: operationType,
             payload: payloadData,
-            status: "pending",
+            status: .pending,
             attemptCount: 0,
+            nextRetryAt: nil,
             lastError: nil,
             createdAt: now,
             updatedAt: now

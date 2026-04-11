@@ -363,6 +363,36 @@ struct RecipeObservationRecoveryRow: Sendable {
     let detail: String?
 }
 
+struct RecipeIngredientReconciliationPreviewRow: Sendable, Identifiable {
+    let recipeID: String
+    let recipeTitle: String
+    let recipeIngredientRowID: String
+    let ingredientIndex: Int
+    let ingredientRawName: String
+    let currentMappingState: String
+    let proposedIngredientID: String?
+    let proposedIngredientSlug: String?
+    let proposedIngredientName: String?
+    let confidenceSource: String
+    let safeToApply: Bool
+    let safetyReason: String
+
+    var id: String { recipeIngredientRowID }
+}
+
+struct RecipeIngredientReconciliationApplyRow: Sendable, Identifiable {
+    let batchID: String?
+    let recipeID: String
+    let recipeIngredientRowID: String
+    let ingredientIndex: Int
+    let matchedIngredientID: String?
+    let matchSource: String
+    let applied: Bool
+    let applyStatus: String
+
+    var id: String { recipeIngredientRowID }
+}
+
 struct CatalogEnrichmentDraftRecord: Sendable, Identifiable {
     let normalizedText: String
     let status: String
@@ -536,6 +566,32 @@ private struct CloudRecipeObservationRecoveryRow: Codable {
     let raw_example: String?
     let result_status: String?
     let detail: String?
+}
+
+private struct CloudRecipeIngredientReconciliationPreviewRow: Codable {
+    let recipe_id: String?
+    let recipe_title: String?
+    let recipe_ingredient_row_id: String?
+    let ingredient_index: Int?
+    let ingredient_raw_name: String?
+    let current_mapping_state: String?
+    let proposed_ingredient_id: String?
+    let proposed_ingredient_slug: String?
+    let proposed_ingredient_name: String?
+    let confidence_source: String?
+    let safe_to_apply: Bool?
+    let safety_reason: String?
+}
+
+private struct CloudRecipeIngredientReconciliationApplyRow: Codable {
+    let batch_id: String?
+    let recipe_id: String?
+    let recipe_ingredient_row_id: String?
+    let ingredient_index: Int?
+    let matched_ingredient_id: String?
+    let match_source: String?
+    let applied: Bool?
+    let apply_status: String?
 }
 
 private struct CloudCatalogEnrichmentDraftBatchSummary: Codable {
@@ -814,48 +870,6 @@ private struct FollowInsertPayload: Encodable {
     let created_at: String
 }
 
-private struct CloudRecipeIngredient: Codable {
-    let produce_id: String?
-    let basic_ingredient_id: String?
-    let name: String?
-    let quantity_value: Double?
-    let quantity_unit: String?
-}
-
-private struct CloudRecipeRow: Codable {
-    let id: String
-    let user_id: String?
-    let creator_id: String?
-    let creator_display_name: String?
-    let creator_avatar_url: String?
-    let avatar_url: String?
-    let title: String?
-    let ingredients: [CloudRecipeIngredient]?
-    let steps: [String]?
-    let servings: Int?
-    let image_url: String?
-    let instagram_url: String?
-    let tiktok_url: String?
-    let source_url: String?
-    let source_name: String?
-    let source_type: String?
-    let created_at: String?
-}
-
-private struct UserRecipeSavedStateUpsert: Encodable {
-    let user_id: String
-    let recipe_id: String
-    let is_saved: Bool
-    let updated_at: String
-}
-
-private struct UserRecipeCrispiedStateUpsert: Encodable {
-    let user_id: String
-    let recipe_id: String
-    let is_crispied: Bool
-    let updated_at: String
-}
-
 private struct ShoppingListItemInsertPayload: Encodable {
     let id: String
     let user_id: String
@@ -902,57 +916,6 @@ private struct FridgeItemUpdatePayload: Encodable {
     let updated_at: String
 }
 
-private struct RecipeIngredientInsertPayload: Encodable {
-    let produce_id: String?
-    let basic_ingredient_id: String?
-    let name: String
-    let quantity_value: Double
-    let quantity_unit: String
-}
-
-private struct RecipeInsertPayload: Encodable {
-    let id: String
-    let user_id: String
-    let title: String
-    let ingredients: [RecipeIngredientInsertPayload]
-    let steps: [String]
-    let servings: Int
-    let image_url: String?
-    let instagram_url: String?
-    let tiktok_url: String?
-    let source_url: String?
-    let source_name: String?
-    let source_type: String?
-    let created_at: String
-}
-
-private struct RecipeInsertPayloadWithoutImageURL: Encodable {
-    let id: String
-    let user_id: String
-    let title: String
-    let ingredients: [RecipeIngredientInsertPayload]
-    let steps: [String]
-    let servings: Int
-    let instagram_url: String?
-    let tiktok_url: String?
-    let source_url: String?
-    let source_name: String?
-    let source_type: String?
-    let created_at: String
-}
-
-private struct RecipeInsertPayloadLegacyColumnsOnly: Encodable {
-    let id: String
-    let user_id: String
-    let title: String
-    let ingredients: [RecipeIngredientInsertPayload]
-    let steps: [String]
-    let servings: Int
-    let instagram_url: String?
-    let tiktok_url: String?
-    let created_at: String
-}
-
 private struct ProfileSocialLinksUpdatePayload: Encodable {
     let instagram_url: String?
     let tiktok_url: String?
@@ -974,6 +937,8 @@ final class SupabaseService {
     let configuration: SupabaseConfiguration?
     let configurationIssue: String?
     private let client: SupabaseClient?
+    private let authRepository: AuthRepository
+    private let recipeRepository: RecipeRepository
 
     init(bundle: Bundle = .main) {
         do {
@@ -989,15 +954,23 @@ final class SupabaseService {
             self.configurationIssue = (error as? LocalizedError)?.errorDescription ?? "Supabase configuration is invalid."
             self.client = nil
         }
+
+        self.authRepository = AuthRepository(
+            client: self.client,
+            configurationIssue: self.configurationIssue
+        )
+        self.recipeRepository = RecipeRepository(
+            client: self.client,
+            configurationIssue: self.configurationIssue
+        )
     }
 
     func currentAuthenticatedUserID() -> UUID? {
-        client?.auth.currentUser?.id
+        authRepository.currentAuthenticatedUserID()
     }
 
     func currentAuthenticatedEmail() -> String? {
-        let value = client?.auth.currentUser?.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return value.isEmpty ? nil : value
+        authRepository.currentAuthenticatedEmail()
     }
 
     func isCurrentUserCatalogAdmin() async -> Bool {
@@ -1037,26 +1010,7 @@ final class SupabaseService {
 
     func isUsernameAvailable(_ username: String, excludingUserID: UUID? = nil) async throws -> Bool {
         try await instrumentedRequest(name: "isUsernameAvailable") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            guard !normalized.isEmpty else { return false }
-
-            let response = try await supabaseClient
-                .from("profiles")
-                .select("id")
-                .eq("season_username", value: normalized)
-                .limit(1)
-                .execute()
-
-            let rows = try JSONDecoder().decode([SupabaseProfileProbe].self, from: response.data)
-            guard let foundID = rows.first?.id else { return true }
-            if let excludingUserID, foundID == excludingUserID {
-                return true
-            }
-            return false
+            try await authRepository.isUsernameAvailable(username, excludingUserID: excludingUserID)
         }
     }
 
@@ -1172,20 +1126,7 @@ final class SupabaseService {
 
     func signInWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithEmail") {
-            guard let client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !normalizedEmail.isEmpty, !normalizedPassword.isEmpty else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
-            guard let userID = client.auth.currentUser?.id else {
-                throw SupabaseServiceError.unauthenticated
-            }
+            let userID = try await authRepository.signInWithEmail(email: email, password: password)
             notifyAuthStateDidChange()
             return userID
         }
@@ -1193,23 +1134,7 @@ final class SupabaseService {
 
     func signUpWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signUpWithEmail") {
-            guard let client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !normalizedEmail.isEmpty, !normalizedPassword.isEmpty else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            _ = try await client.auth.signUp(email: normalizedEmail, password: normalizedPassword)
-            if client.auth.currentUser == nil {
-                _ = try await client.auth.signIn(email: normalizedEmail, password: normalizedPassword)
-            }
-            guard let userID = client.auth.currentUser?.id else {
-                throw SupabaseServiceError.unauthenticated
-            }
+            let userID = try await authRepository.signUpWithEmail(email: email, password: password)
             notifyAuthStateDidChange()
             return userID
         }
@@ -1217,44 +1142,20 @@ final class SupabaseService {
 
     func signOut() async throws {
         try await instrumentedRequest(name: "signOut") {
-            guard let client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-            try await client.auth.signOut()
+            try await authRepository.signOut()
             notifyAuthStateDidChange()
         }
     }
 
     func signInWithAppleIDToken(_ idToken: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithAppleIDToken") {
-            guard let client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let trimmedToken = idToken.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedToken.isEmpty else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            print("[SEASON_AUTH] phase=apple_supabase_exchange_started")
-            _ = try await client.auth.signInWithIdToken(
-                credentials: OpenIDConnectCredentials(
-                    provider: .apple,
-                    idToken: trimmedToken
-                )
-            )
-
-            guard let userID = client.auth.currentUser?.id else {
-                print("[SEASON_AUTH] phase=apple_supabase_exchange_failed reason=missing_current_user_after_exchange")
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            print("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
+            let userID = try await authRepository.signInWithAppleIDToken(idToken)
             notifyAuthStateDidChange()
             return userID
         }
     }
 
+    #if DEBUG
     func authenticateWithEmailPasswordForTesting(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "authenticateWithEmailPasswordForTesting") {
             let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1284,133 +1185,33 @@ final class SupabaseService {
             return userID
         }
     }
+    #endif
 
     func validateProfilePipeline(for userID: UUID) async throws -> Bool {
-        guard let client else {
-            throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-        }
-        
-        let response = try await client
-            .from("profiles")
-            .select("id")
-            .eq("id", value: userID.uuidString)
-            .limit(1)
-            .execute()
-        
-        let rows = try JSONDecoder().decode([SupabaseProfileProbe].self, from: response.data)
-        return !rows.isEmpty
+        try await authRepository.validateProfilePipeline(for: userID)
     }
 
     func fetchMyProfile() async throws -> Profile? {
         try await instrumentedRequest(name: "fetchMyProfile") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                return nil
-            }
-
-            let response = try await supabaseClient
-                .from("profiles")
-                .select()
-                .eq("id", value: user.id.uuidString)
-                .single()
-                .execute()
-
-            return try JSONDecoder().decode(Profile.self, from: response.data)
+            try await authRepository.fetchMyProfile()
         }
     }
 
     func updateMyProfileSocialLinks(instagramURL: String?, tiktokURL: String?) async throws {
         try await instrumentedRequest(name: "updateProfileSocialLinks") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            let payload = ProfileSocialLinksUpdatePayload(
-                instagram_url: instagramURL,
-                tiktok_url: tiktokURL
-            )
-
-            _ = try await supabaseClient
-                .from("profiles")
-                .update(payload)
-                .eq("id", value: user.id.uuidString)
-                .execute()
+            try await authRepository.updateMyProfileSocialLinks(instagramURL: instagramURL, tiktokURL: tiktokURL)
         }
     }
 
     func upsertMyProfileIdentity(username: String, displayName: String?) async throws {
         try await instrumentedRequest(name: "upsertMyProfileIdentity") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            let normalizedUsername = username
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            guard !normalizedUsername.isEmpty else {
-                throw SupabaseServiceError.unauthenticated
-            }
-            let normalizedDisplayName = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let payload = ProfileIdentityUpsertPayload(
-                id: user.id.uuidString,
-                display_name: normalizedDisplayName?.isEmpty == false ? normalizedDisplayName : nil,
-                season_username: normalizedUsername
-            )
-
-            _ = try await supabaseClient
-                .from("profiles")
-                .upsert(payload, onConflict: "id")
-                .execute()
+            try await authRepository.upsertMyProfileIdentity(username: username, displayName: displayName)
         }
     }
 
     func uploadMyProfileAvatar(imageData: Data) async throws -> String {
         try await instrumentedRequest(name: "uploadMyProfileAvatar") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            let path = "avatars/\(user.id.uuidString.lowercased()).jpg"
-            _ = try await supabaseClient.storage
-                .from("avatars")
-                .upload(
-                    path,
-                    data: imageData,
-                    options: FileOptions(
-                        contentType: "image/jpeg",
-                        upsert: true
-                    )
-                )
-
-            let publicURL = try supabaseClient.storage
-                .from("avatars")
-                .getPublicURL(path: path)
-                .absoluteString
-
-            let payload = ProfileAvatarUpdatePayload(avatar_url: publicURL)
-            _ = try await supabaseClient
-                .from("profiles")
-                .update(payload)
-                .eq("id", value: user.id.uuidString)
-                .execute()
-
-            return publicURL
+            try await authRepository.uploadMyProfileAvatar(imageData: imageData)
         }
     }
 
@@ -1666,60 +1467,19 @@ final class SupabaseService {
 
     func fetchMyLinkedSocialAccounts() async throws -> [CloudLinkedSocialAccount] {
         try await instrumentedRequest(name: "fetchMyLinkedSocialAccounts") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                return []
-            }
-
-            let response = try await supabaseClient
-                .from("linked_social_accounts")
-                .select()
-                .eq("user_id", value: user.id.uuidString)
-                .execute()
-
-            return try JSONDecoder().decode([CloudLinkedSocialAccount].self, from: response.data)
+            try await authRepository.fetchMyLinkedSocialAccounts()
         }
     }
 
     func deleteMyLinkedSocialAccount(provider: String) async throws {
         try await instrumentedRequest(name: "deleteMyLinkedSocialAccount", metadata: "provider=\(provider)") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            _ = try await supabaseClient
-                .from("linked_social_accounts")
-                .delete()
-                .eq("user_id", value: user.id.uuidString)
-                .eq("provider", value: provider)
-                .execute()
+            try await authRepository.deleteMyLinkedSocialAccount(provider: provider)
         }
     }
 
     func fetchMyUserRecipeStates() async throws -> [CloudUserRecipeState] {
         try await instrumentedRequest(name: "fetchMyUserRecipeStates") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                return []
-            }
-
-            let response = try await supabaseClient
-                .from("user_recipe_states")
-                .select()
-                .eq("user_id", value: user.id.uuidString)
-                .execute()
-
-            return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
+            try await recipeRepository.fetchMyUserRecipeStates()
         }
     }
 
@@ -2180,6 +1940,98 @@ final class SupabaseService {
                 )
             }
             print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
+    func previewSafeRecipeIngredientReconciliation(
+        limit: Int = 20,
+        onlySafe: Bool = true
+    ) async throws -> [RecipeIngredientReconciliationPreviewRow] {
+        try await instrumentedRequest(
+            name: "previewSafeRecipeIngredientReconciliation",
+            metadata: "limit=\(limit) only_safe=\(onlySafe)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(max(1, min(limit, 200))),
+                "p_only_safe": .bool(onlySafe)
+            ]
+
+            let response = try await supabaseClient
+                .rpc("preview_safe_recipe_ingredient_reconciliation", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudRecipeIngredientReconciliationPreviewRow].self, from: response.data)
+            let mapped = rows.map { row in
+                RecipeIngredientReconciliationPreviewRow(
+                    recipeID: cleanedOptional(row.recipe_id) ?? "",
+                    recipeTitle: cleanedOptional(row.recipe_title) ?? "Untitled recipe",
+                    recipeIngredientRowID: cleanedOptional(row.recipe_ingredient_row_id) ?? "",
+                    ingredientIndex: row.ingredient_index ?? 0,
+                    ingredientRawName: cleanedOptional(row.ingredient_raw_name) ?? "—",
+                    currentMappingState: cleanedOrUnknown(row.current_mapping_state),
+                    proposedIngredientID: cleanedOptional(row.proposed_ingredient_id)?.lowercased(),
+                    proposedIngredientSlug: cleanedOptional(row.proposed_ingredient_slug),
+                    proposedIngredientName: cleanedOptional(row.proposed_ingredient_name),
+                    confidenceSource: cleanedOrUnknown(row.confidence_source),
+                    safeToApply: row.safe_to_apply ?? false,
+                    safetyReason: cleanedOrUnknown(row.safety_reason)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
+    func applySafeRecipeIngredientReconciliation(
+        limit: Int = 20,
+        recipeIDs: [String]? = nil
+    ) async throws -> [RecipeIngredientReconciliationApplyRow] {
+        try await instrumentedRequest(
+            name: "applySafeRecipeIngredientReconciliation",
+            metadata: "limit=\(limit)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let cleanedRecipeIDs = (recipeIDs ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(max(1, min(limit, 200))),
+                "p_recipe_ids": cleanedRecipeIDs.isEmpty ? .null : .array(cleanedRecipeIDs.map { .string($0) })
+            ]
+
+            let response = try await supabaseClient
+                .rpc("apply_recipe_ingredient_reconciliation", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudRecipeIngredientReconciliationApplyRow].self, from: response.data)
+            let mapped = rows.map { row in
+                RecipeIngredientReconciliationApplyRow(
+                    batchID: cleanedOptional(row.batch_id)?.lowercased(),
+                    recipeID: cleanedOptional(row.recipe_id) ?? "",
+                    recipeIngredientRowID: cleanedOptional(row.recipe_ingredient_row_id) ?? "",
+                    ingredientIndex: row.ingredient_index ?? 0,
+                    matchedIngredientID: cleanedOptional(row.matched_ingredient_id)?.lowercased(),
+                    matchSource: cleanedOrUnknown(row.match_source),
+                    applied: row.applied ?? false,
+                    applyStatus: cleanedOrUnknown(row.apply_status)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2815,251 +2667,17 @@ final class SupabaseService {
 
     func createRecipe(_ recipe: Recipe) async throws {
         try await instrumentedRequest(name: "createRecipe", metadata: "recipe_id=\(recipe.id)") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let currentAuthUserID = supabaseClient.auth.currentUser?.id.uuidString.lowercased() ?? "nil"
-            print("[SEASON_SUPABASE] phase=create_recipe_auth_context recipe_id=\(recipe.id) current_auth_user_id=\(currentAuthUserID)")
-            guard let user = supabaseClient.auth.currentUser else {
-                print("[SEASON_SUPABASE] phase=create_recipe_blocked recipe_id=\(recipe.id) reason=unauthenticated")
-                throw SupabaseServiceError.unauthenticated
-            }
-            let publishUserID = user.id.uuidString.lowercased()
-            let payloadHasUserID = !publishUserID.isEmpty
-            print("[SEASON_SUPABASE] phase=create_recipe_payload_check recipe_id=\(recipe.id) payload_includes_user_id=\(payloadHasUserID) user_id=\(payloadHasUserID ? publishUserID : "nil")")
-            var didPersistRecipe = false
-
-            let payload = RecipeInsertPayload(
-                id: recipe.id,
-                user_id: publishUserID,
-                title: recipe.title,
-                ingredients: recipe.ingredients.map {
-                    RecipeIngredientInsertPayload(
-                        produce_id: $0.produceID,
-                        basic_ingredient_id: $0.basicIngredientID,
-                        name: $0.name,
-                        quantity_value: $0.quantityValue,
-                        quantity_unit: $0.quantityUnit.rawValue
-                    )
-                },
-                steps: recipe.preparationSteps,
-                servings: recipe.servings,
-                image_url: recipe.imageURL,
-                instagram_url: recipe.instagramURL,
-                tiktok_url: recipe.tiktokURL,
-                source_url: recipe.sourceURL,
-                source_name: recipe.sourceName,
-                source_type: recipe.sourceType?.rawValue,
-                created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
-            )
-
-            do {
-                print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=primary")
-                _ = try await supabaseClient
-                    .from("recipes")
-                    .upsert(payload, onConflict: "id")
-                    .execute()
-                print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=primary")
-                didPersistRecipe = true
-            } catch {
-                if self.isMissingColumnError(error, column: "image_url") {
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_optional_column")
-                    let fallbackPayload = RecipeInsertPayloadWithoutImageURL(
-                        id: recipe.id,
-                        user_id: publishUserID,
-                        title: recipe.title,
-                        ingredients: recipe.ingredients.map {
-                            RecipeIngredientInsertPayload(
-                                produce_id: $0.produceID,
-                                basic_ingredient_id: $0.basicIngredientID,
-                                name: $0.name,
-                                quantity_value: $0.quantityValue,
-                                quantity_unit: $0.quantityUnit.rawValue
-                            )
-                        },
-                        steps: recipe.preparationSteps,
-                        servings: recipe.servings,
-                        instagram_url: recipe.instagramURL,
-                        tiktok_url: recipe.tiktokURL,
-                        source_url: recipe.sourceURL,
-                        source_name: recipe.sourceName,
-                        source_type: recipe.sourceType?.rawValue,
-                        created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
-                    )
-                    do {
-                        _ = try await supabaseClient
-                            .from("recipes")
-                            .upsert(fallbackPayload, onConflict: "id")
-                            .execute()
-                        print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=fallback")
-                        didPersistRecipe = true
-                    } catch {
-                        if self.isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
-                            print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
-                            let legacyPayload = RecipeInsertPayloadLegacyColumnsOnly(
-                                id: recipe.id,
-                                user_id: publishUserID,
-                                title: recipe.title,
-                                ingredients: recipe.ingredients.map {
-                                    RecipeIngredientInsertPayload(
-                                        produce_id: $0.produceID,
-                                        basic_ingredient_id: $0.basicIngredientID,
-                                        name: $0.name,
-                                        quantity_value: $0.quantityValue,
-                                        quantity_unit: $0.quantityUnit.rawValue
-                                    )
-                                },
-                                steps: recipe.preparationSteps,
-                                servings: recipe.servings,
-                                instagram_url: recipe.instagramURL,
-                                tiktok_url: recipe.tiktokURL,
-                                created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
-                            )
-                            _ = try await supabaseClient
-                                .from("recipes")
-                                .upsert(legacyPayload, onConflict: "id")
-                                .execute()
-                            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
-                            didPersistRecipe = true
-                        } else {
-                            throw error
-                        }
-                    }
-                } else if self.isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
-                    let fallbackPayload = RecipeInsertPayloadWithoutImageURL(
-                        id: recipe.id,
-                        user_id: publishUserID,
-                        title: recipe.title,
-                        ingredients: recipe.ingredients.map {
-                            RecipeIngredientInsertPayload(
-                                produce_id: $0.produceID,
-                                basic_ingredient_id: $0.basicIngredientID,
-                                name: $0.name,
-                                quantity_value: $0.quantityValue,
-                                quantity_unit: $0.quantityUnit.rawValue
-                            )
-                        },
-                        steps: recipe.preparationSteps,
-                        servings: recipe.servings,
-                        instagram_url: recipe.instagramURL,
-                        tiktok_url: recipe.tiktokURL,
-                        source_url: nil,
-                        source_name: nil,
-                        source_type: nil,
-                        created_at: ISO8601DateFormatter().string(from: recipe.createdAt)
-                    )
-                    _ = try await supabaseClient
-                        .from("recipes")
-                        .upsert(fallbackPayload, onConflict: "id")
-                        .execute()
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
-                    didPersistRecipe = true
-                } else {
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_failed recipe_id=\(recipe.id) reason=\(error)")
-                    throw error
-                }
-            }
-
-            if didPersistRecipe {
-                observeUnresolvedCustomIngredientsForRecipeIfNeeded(recipe)
-            }
+            try await recipeRepository.createRecipe(recipe)
+            observeUnresolvedCustomIngredientsForRecipeIfNeeded(recipe)
         }
     }
 
-    func fetchRecipes() async throws -> [Recipe] {
-        try await instrumentedRequest(name: "fetchRecipes") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            let response = try await supabaseClient
-                .from("recipes")
-                .select()
-                .execute()
-
-            let rows = try JSONDecoder().decode([CloudRecipeRow].self, from: response.data)
-            let iso8601 = ISO8601DateFormatter()
-
-            return rows.map { row in
-                let mappedIngredients: [RecipeIngredient] = (row.ingredients ?? []).map { ingredient in
-                    let unit = RecipeQuantityUnit(rawValue: ingredient.quantity_unit ?? "") ?? .g
-                    let produceID = ingredient.produce_id?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let basicID = ingredient.basic_ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let fallbackName = ingredient.name?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let resolvedName = (fallbackName?.isEmpty == false)
-                        ? fallbackName!
-                        : (produceID?.isEmpty == false ? produceID! : (basicID?.isEmpty == false ? basicID! : "Ingredient"))
-                    let quality: RecipeIngredientQuality = (produceID?.isEmpty == false) ? .coreSeasonal : .basic
-
-                    return RecipeIngredient(
-                        produceID: (produceID?.isEmpty == false) ? produceID : nil,
-                        basicIngredientID: (basicID?.isEmpty == false) ? basicID : nil,
-                        quality: quality,
-                        name: resolvedName,
-                        quantityValue: max(0.1, ingredient.quantity_value ?? 1),
-                        quantityUnit: unit
-                    )
-                }
-
-                let createdAt = row.created_at.flatMap { iso8601.date(from: $0) } ?? Date()
-                let trimmedTitle = row.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let safeTitle = (trimmedTitle?.isEmpty == false) ? trimmedTitle! : "Untitled recipe"
-                let trimmedCreatorDisplayName = row.creator_display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                let trimmedCreatorAvatarURL = row.creator_avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                let legacyAvatarURL = row.avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                // Canonical identity is creator_id + creator_display_name.
-                // Keep author populated only as a legacy compatibility fallback for older author-based screens.
-                let safeAuthorName = trimmedCreatorDisplayName.isEmpty ? "Unknown" : trimmedCreatorDisplayName
-
-                var recipe = Recipe(
-                    id: row.id,
-                    title: safeTitle,
-                    author: safeAuthorName,
-                    creatorId: row.creator_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "unknown",
-                    creatorDisplayName: trimmedCreatorDisplayName.isEmpty ? nil : trimmedCreatorDisplayName,
-                    creatorAvatarURL: {
-                        if !trimmedCreatorAvatarURL.isEmpty { return trimmedCreatorAvatarURL }
-                        if !legacyAvatarURL.isEmpty { return legacyAvatarURL }
-                        return nil
-                    }(),
-                    ingredients: mappedIngredients,
-                    preparationSteps: (row.steps ?? []).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty },
-                    prepTimeMinutes: nil,
-                    cookTimeMinutes: nil,
-                    difficulty: nil,
-                    servings: max(1, row.servings ?? 2),
-                    crispy: 0,
-                    dietaryTags: [],
-                    seasonalMatchPercent: 0,
-                    createdAt: createdAt,
-                    externalMedia: [],
-                    images: [],
-                    coverImageID: nil,
-                    coverImageName: nil,
-                    mediaLinkURL: nil,
-                    instagramURL: row.instagram_url?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    tiktokURL: row.tiktok_url?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    sourceURL: row.source_url?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    sourceName: row.source_name?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    sourcePlatform: nil,
-                    sourceCaptionRaw: nil,
-                    importedFromSocial: false,
-                    sourceType: RecipeSourceType(rawValue: row.source_type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""),
-                    isUserGenerated: (RecipeSourceType(rawValue: row.source_type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "") ?? .userGenerated) == .userGenerated,
-                    publicationStatus: .published,
-                    isRemix: false,
-                    originalRecipeID: nil,
-                    originalRecipeTitle: nil,
-                    originalAuthorName: nil
-                )
-                recipe.imageURL = row.image_url?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
-                let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-                print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=supabase_fetch recipe_id=\(recipe.id) title=\(recipe.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
-                return recipe
-            }
+    func fetchRecipes(limit: Int = 40, offset: Int = 0) async throws -> [Recipe] {
+        try await instrumentedRequest(
+            name: "fetchRecipes",
+            metadata: "limit=\(limit) offset=\(offset)"
+        ) {
+            try await recipeRepository.fetchRecipes(limit: limit, offset: offset)
         }
     }
 
@@ -3070,27 +2688,9 @@ final class SupabaseService {
             traceID: traceID,
             metadata: "action=saved recipe=\(recipeID) target=\(isSaved)"
         ) {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                return
-            }
-
-            let payload = UserRecipeSavedStateUpsert(
-                user_id: user.id.uuidString,
-                recipe_id: recipeID,
-                is_saved: isSaved,
-                updated_at: ISO8601DateFormatter().string(from: Date())
-            )
-
             do {
                 try await performWithRetry {
-                    _ = try await supabaseClient
-                        .from("user_recipe_states")
-                        .upsert(payload, onConflict: "user_id,recipe_id")
-                        .execute()
+                    try await recipeRepository.upsertRecipeSavedState(recipeID: recipeID, isSaved: isSaved)
                 }
                 print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
             } catch {
@@ -3108,27 +2708,9 @@ final class SupabaseService {
             traceID: traceID,
             metadata: "action=crispied recipe=\(recipeID) target=\(isCrispied)"
         ) {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let user = supabaseClient.auth.currentUser else {
-                return
-            }
-
-            let payload = UserRecipeCrispiedStateUpsert(
-                user_id: user.id.uuidString,
-                recipe_id: recipeID,
-                is_crispied: isCrispied,
-                updated_at: ISO8601DateFormatter().string(from: Date())
-            )
-
             do {
                 try await performWithRetry {
-                    _ = try await supabaseClient
-                        .from("user_recipe_states")
-                        .upsert(payload, onConflict: "user_id,recipe_id")
-                        .execute()
+                    try await recipeRepository.upsertRecipeCrispiedState(recipeID: recipeID, isCrispied: isCrispied)
                 }
                 print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
             } catch {

@@ -22,7 +22,23 @@ final class OutboxStore {
     }
 
     func pendingMutations() -> [OutboxMutationRecord] {
-        allMutations().filter { $0.status == "pending" }
+        let now = Date()
+        return allMutations().filter {
+            guard $0.status == .pending else { return false }
+            guard let nextRetryAt = $0.nextRetryAt else { return true }
+            return nextRetryAt <= now
+        }
+    }
+
+    func cleanupCompletedMutations(olderThan retentionInterval: TimeInterval) {
+        let cutoff = Date().addingTimeInterval(-retentionInterval)
+        queue.sync {
+            var current = loadAll()
+            current.removeAll { mutation in
+                mutation.status == .completed && mutation.updatedAt < cutoff
+            }
+            persist(current)
+        }
     }
 
     func saveAll(_ mutations: [OutboxMutationRecord]) {

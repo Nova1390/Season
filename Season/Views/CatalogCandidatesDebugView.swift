@@ -102,8 +102,12 @@ struct CatalogCandidatesDebugView: View {
     @State private var isRunningEnrichmentBatch = false
     @State private var isRunningIngredientCreationBatch = false
     @State private var isRunningAutomationCycle = false
+    @State private var isRunningReconciliationPreview = false
+    @State private var isRunningReconciliationApply = false
     @State private var isAdvancedDebugExpanded = false
     @State private var lastAutomationRun: CatalogAutomationCycleRunSummary?
+    @State private var reconciliationPreviewRows: [RecipeIngredientReconciliationPreviewRow] = []
+    @State private var lastReconciliationApplySummary: CatalogSafeRecipeReconciliationApplySummary?
     @State private var showAutomationSuccessFlash = false
     @ObservedObject var viewModel: ProduceViewModel
 
@@ -1597,6 +1601,85 @@ struct CatalogCandidatesDebugView: View {
                 }
             }
             .disabled(isRunningObservationRecovery || isRunningCuratedBatch)
+
+            Divider()
+
+            Text("Safe recipe ingredient reconciliation (existing imported recipes).")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            Text("Preview shows safe candidates. Apply only processes rows that also have a legacy bridge mapping, so applied count may be lower.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            Button {
+                Task { await runSafeRecipeReconciliationPreview() }
+            } label: {
+                if isRunningReconciliationPreview {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Loading reconciliation preview…")
+                    }
+                } else {
+                    Text("Preview safe recipe reconciliation")
+                }
+            }
+            .disabled(
+                isRunningReconciliationPreview ||
+                isRunningReconciliationApply ||
+                isRunningObservationRecovery ||
+                isRunningCuratedBatch
+            )
+
+            Button {
+                Task { await runSafeRecipeReconciliationApply() }
+            } label: {
+                if isRunningReconciliationApply {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Applying safe recipe reconciliation…")
+                    }
+                } else {
+                    Text("Apply safe recipe reconciliation (20)")
+                }
+            }
+            .disabled(
+                isRunningReconciliationApply ||
+                isRunningReconciliationPreview ||
+                isRunningObservationRecovery ||
+                isRunningCuratedBatch
+            )
+
+            if let summary = lastReconciliationApplySummary {
+                Text("Reconciliation apply summary: total=\(summary.total), applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !reconciliationPreviewRows.isEmpty {
+                Text("Safe reconciliation preview (\(reconciliationPreviewRows.count))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(reconciliationPreviewRows) { row in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(row.recipeTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+
+                        Text("\(row.ingredientRawName) → \(row.proposedIngredientName ?? row.proposedIngredientSlug ?? "—")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+
+                        Text("source: \(row.confidenceSource) · reason: \(row.safetyReason)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
         }
     }
 
@@ -1634,6 +1717,55 @@ struct CatalogCandidatesDebugView: View {
         } catch {
             errorMessage = "Observation recovery failed."
             print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runSafeRecipeReconciliationPreview() async {
+        guard isAdminUser else { return }
+        isRunningReconciliationPreview = true
+        defer { isRunningReconciliationPreview = false }
+
+        do {
+            let rows = try await catalogAdminOpsService.previewSafeRecipeReconciliation(limit: 20)
+            reconciliationPreviewRows = rows
+            actionMessage = "Safe reconciliation preview loaded: \(rows.count) rows."
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_done rows=\(rows.count)")
+        } catch {
+            errorMessage = "Safe reconciliation preview failed."
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runSafeRecipeReconciliationApply() async {
+        guard isAdminUser else { return }
+        isRunningReconciliationApply = true
+        defer { isRunningReconciliationApply = false }
+
+        do {
+            let summary = try await catalogAdminOpsService.applySafeRecipeReconciliation(limit: 20)
+            lastReconciliationApplySummary = summary
+            let previewCount = reconciliationPreviewRows.count
+            let eligibilityNote: String
+            if previewCount > 0, summary.total < previewCount {
+                eligibilityNote = " (preview=\(previewCount), apply-eligible=\(summary.total); missing legacy mapping likely)"
+            } else {
+                eligibilityNote = ""
+            }
+            actionMessage =
+                "Safe reconciliation apply done. total=\(summary.total), " +
+                "applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)\(eligibilityNote)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_done " +
+                "total=\(summary.total) applied=\(summary.applied) skipped=\(summary.skipped) failed=\(summary.failed) preview_count=\(previewCount)"
+            )
+            let refreshedPreview = try await catalogAdminOpsService.previewSafeRecipeReconciliation(limit: 20)
+            reconciliationPreviewRows = refreshedPreview
+            await loadCandidates()
+        } catch {
+            errorMessage = "Safe reconciliation apply failed."
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_failed error=\(error)")
         }
     }
 

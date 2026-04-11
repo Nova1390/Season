@@ -81,6 +81,8 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var deletedRecipeIDs: Set<String> = []
     @Published private(set) var recipeViewCounts: [String: Int] = [:]
     @Published private(set) var homeFeedRefreshID: Int = 0
+    @Published private(set) var homeFeedDataVersion: Int = 0
+    @Published private(set) var didCompleteInitialRemoteRecipeHydration: Bool = false
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
     @Published private(set) var nutritionPriorities: [NutritionPriorityDimension: Double] = NutritionService.defaultNutritionPriorities
@@ -101,6 +103,10 @@ final class ProduceViewModel: ObservableObject {
     private var unifiedNameLookup: [String: IngredientAliasMatch] = [:]
     private let nutritionService = NutritionService()
     private let supabaseService = SupabaseService.shared
+    private let remoteRecipePageSize = 40
+    private var nextRemoteRecipeOffset = 0
+    private var hasMoreRemoteRecipePages = true
+    private var isFetchingRemoteRecipePage = false
     private let fallbackUnitProfile = IngredientUnitProfile(
         defaultUnit: .g,
         supportedUnits: [.g, .piece],
@@ -195,6 +201,10 @@ final class ProduceViewModel: ObservableObject {
         unifiedIngredientByID = [:]
         unifiedAliasLookup = [:]
         unifiedNameLookup = [:]
+        nextRemoteRecipeOffset = 0
+        hasMoreRemoteRecipePages = true
+        isFetchingRemoteRecipePage = false
+        didCompleteInitialRemoteRecipeHydration = false
         invalidateRecipeCaches()
         loadBootstrapContent()
     }
@@ -208,10 +218,11 @@ final class ProduceViewModel: ObservableObject {
                 guard let self else { return }
                 self.recipes = self.reconciledRecipesOnRead(loadedRecipes)
                 self.userProfiles = loadedProfiles
+                self.didCompleteInitialRemoteRecipeHydration = false
                 self.invalidateRecipeCaches()
                 let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000.0).rounded())
                 self.debugLoadTimingIfNeeded(label: "bootstrap recipes", count: loadedRecipes.count, elapsedMs: elapsedMs)
-                self.fetchRemoteRecipesAndMerge()
+                self.fetchRemoteRecipesAndMerge(resetPagination: true)
                 self.fetchRemoteIngredientAliases()
                 self.fetchUnifiedIngredientParityData()
             }
@@ -487,20 +498,61 @@ final class ProduceViewModel: ObservableObject {
         return nil
     }
 
-    private func fetchRemoteRecipesAndMerge() {
+    func loadNextRecipePageIfNeeded(isNearEnd: Bool) {
+        guard isNearEnd else { return }
+        fetchRemoteRecipesAndMerge()
+    }
+
+    private func fetchRemoteRecipesAndMerge(resetPagination: Bool = false) {
+        if resetPagination {
+            nextRemoteRecipeOffset = 0
+            hasMoreRemoteRecipePages = true
+        }
+
+        guard hasMoreRemoteRecipePages else { return }
+        guard !isFetchingRemoteRecipePage else { return }
+
+        let limit = remoteRecipePageSize
+        let offset = nextRemoteRecipeOffset
+        isFetchingRemoteRecipePage = true
+
         Task { [weak self] in
             guard let self else { return }
             do {
-                let remoteRecipes = try await supabaseService.fetchRecipes()
+                let remoteRecipes = try await supabaseService.fetchRecipes(limit: limit, offset: offset)
                 await MainActor.run {
+                    let previousRecipeCount = self.recipes.count
+                    let wasInitialHydrationComplete = self.didCompleteInitialRemoteRecipeHydration
+
+                    self.isFetchingRemoteRecipePage = false
+                    self.nextRemoteRecipeOffset += remoteRecipes.count
+                    if remoteRecipes.count < limit {
+                        self.hasMoreRemoteRecipePages = false
+                    }
+
                     let mergedRecipes = self.mergedRecipes(local: self.recipes, remote: remoteRecipes)
                     self.recipes = self.reconciledRecipesOnRead(mergedRecipes)
                     self.invalidateRecipeCaches()
+
+                    if resetPagination && !wasInitialHydrationComplete {
+                        self.didCompleteInitialRemoteRecipeHydration = true
+                        self.bumpHomeFeedDataVersion(reason: "initial_remote_hydration")
+                    } else if self.recipes.count != previousRecipeCount {
+                        self.bumpHomeFeedDataVersion(reason: "remote_recipe_page_merge")
+                    }
                 }
             } catch {
+                await MainActor.run {
+                    self.isFetchingRemoteRecipePage = false
+                }
                 print("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
             }
         }
+    }
+
+    private func bumpHomeFeedDataVersion(reason: String) {
+        homeFeedDataVersion &+= 1
+        print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
     }
 
     private func mergedRecipes(local: [Recipe], remote: [Recipe]) -> [Recipe] {
