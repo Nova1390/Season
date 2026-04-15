@@ -30,6 +30,9 @@ interface ReadyDraftRow {
   is_seasonal: boolean | null;
   season_months: number[] | null;
   confidence_score: number | null;
+  parent_candidate_slug: string | null;
+  variant_kind: string | null;
+  specificity_rank_suggestion: number | null;
   updated_at: string | null;
 }
 
@@ -231,7 +234,7 @@ async function fetchReadyDrafts(client: ReturnType<typeof createClient>, limit: 
   const { data, error } = await client
     .from("catalog_ingredient_enrichment_drafts")
     .select(
-      "normalized_text,status,ingredient_type,canonical_name_it,canonical_name_en,suggested_slug,default_unit,supported_units,is_seasonal,season_months,confidence_score,updated_at",
+      "normalized_text,status,ingredient_type,canonical_name_it,canonical_name_en,suggested_slug,default_unit,supported_units,is_seasonal,season_months,confidence_score,parent_candidate_slug,variant_kind,specificity_rank_suggestion,updated_at",
     )
     .eq("status", "ready")
     .order("updated_at", { ascending: false })
@@ -311,6 +314,7 @@ async function createIngredient(
     draft.ingredient_type === "produce" && draft.is_seasonal
       ? normalizeSeasonMonths(draft.season_months)
       : [];
+  const hierarchy = await resolveHierarchyInsert(client, draft, slug);
 
   const { data, error } = await client
     .from("ingredients")
@@ -321,6 +325,9 @@ async function createIngredient(
       supported_units: supportedUnits,
       is_seasonal: isSeasonal,
       season_months: seasonMonths,
+      parent_ingredient_id: hierarchy.parentIngredientID,
+      specificity_rank: hierarchy.specificityRank,
+      variant_kind: hierarchy.variantKind,
     })
     .select("id,slug")
     .single();
@@ -330,6 +337,56 @@ async function createIngredient(
   }
 
   return data as IngredientInsertRow;
+}
+
+async function resolveHierarchyInsert(
+  client: ReturnType<typeof createClient>,
+  draft: ReadyDraftRow,
+  slug: string,
+): Promise<{ parentIngredientID: string | null; specificityRank: number; variantKind: string }> {
+  const fallback = {
+    parentIngredientID: null,
+    specificityRank: 0,
+    variantKind: "base",
+  };
+
+  const parentCandidateSlug = toSlug(draft.parent_candidate_slug);
+  const variantKind = normalizeVariantKind(draft.variant_kind);
+  const specificityRankSuggestion = normalizeSpecificityRankSuggestion(draft.specificity_rank_suggestion);
+  const selfSlug = toSlug(slug);
+
+  if (!parentCandidateSlug || !variantKind || !specificityRankSuggestion) {
+    return fallback;
+  }
+
+  if (selfSlug && parentCandidateSlug === selfSlug) {
+    return fallback;
+  }
+
+  const { data, error } = await client
+    .from("ingredients")
+    .select("id")
+    .eq("slug", parentCandidateSlug)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.log(
+      `[SEASON_INGREDIENT_CREATE_BATCH] phase=hierarchy_parent_lookup_failed parent_slug=${parentCandidateSlug} error=${error.message}`,
+    );
+    return fallback;
+  }
+
+  const parentIngredientID = typeof data?.id === "string" ? data.id : null;
+  if (!parentIngredientID) {
+    return fallback;
+  }
+
+  return {
+    parentIngredientID,
+    specificityRank: specificityRankSuggestion,
+    variantKind,
+  };
 }
 
 async function upsertIngredientLocalizations(
@@ -495,6 +552,18 @@ function normalizeSeasonMonths(value: unknown): number[] {
     .map((month) => Number(month))
     .filter((month) => Number.isInteger(month) && month >= 1 && month <= 12) as number[];
   return Array.from(new Set(months)).sort((a, b) => a - b);
+}
+
+function normalizeVariantKind(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeSpecificityRankSuggestion(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return null;
+  return parsed;
 }
 
 function clampLimit(value: unknown): number {

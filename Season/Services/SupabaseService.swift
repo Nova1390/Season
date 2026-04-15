@@ -149,6 +149,12 @@ struct CatalogResolutionCandidateRecord: Sendable, Identifiable {
     let suggestedResolutionType: String
     let existingAliasStatus: String
     let priorityScore: Double?
+    let canonicalParentExists: Bool
+    let closeCanonicalChildExists: Bool
+    let possibleActions: [String]
+    let confidence: String
+    let suggestedParentSlug: String?
+    let reasoningHint: String?
 
     var id: String { normalizedText }
 }
@@ -163,6 +169,10 @@ struct CatalogCoverageBlockerRecord: Sendable, Identifiable {
     let canonicalCandidateIngredientID: String?
     let canonicalCandidateSlug: String?
     let canonicalCandidateName: String?
+    let canonicalCandidateParentSlug: String?
+    let canonicalCandidateIsChild: Bool
+    let canonicalCandidateIsRoot: Bool
+    let genericParentExists: Bool
     let suggestedResolutionType: String
     let blockerReason: String
     let recommendedNextAction: String
@@ -216,6 +226,18 @@ struct PendingCatalogEnrichmentDraftReviewRecord: Sendable, Identifiable {
     let recommendedOperatorAction: String
 
     var id: String { normalizedText }
+}
+
+struct CatalogIngredientHierarchyRecord: Sendable, Identifiable {
+    let ingredientID: String
+    let ingredientSlug: String
+    let parentIngredientID: String?
+    let parentSlug: String?
+    let ingredientType: String
+    let specificityRank: Int
+    let variantKind: String
+
+    var id: String { ingredientID }
 }
 
 struct CatalogAdminOpsSnapshotMetadata: Sendable {
@@ -354,6 +376,33 @@ struct CatalogAutomationCycleResult: Sendable {
     let mode: String
 }
 
+struct CatalogAutoLocalizationItemResult: Sendable, Identifiable {
+    let normalizedText: String
+    let canonicalCandidateIngredientID: String?
+    let canonicalCandidateSlug: String?
+    let languageCode: String
+    let attemptedDisplayName: String?
+    let resultStatus: String
+    let detail: String
+    let errorMessage: String?
+
+    var id: String { "\(normalizedText)|\(canonicalCandidateIngredientID ?? "none")|\(languageCode)" }
+}
+
+struct CatalogAutoAliasItemResult: Sendable, Identifiable {
+    let normalizedText: String
+    let canonicalCandidateIngredientID: String?
+    let canonicalCandidateSlug: String?
+    let languageCode: String
+    let attemptedAliasText: String?
+    let matchMethod: String?
+    let resultStatus: String
+    let detail: String
+    let errorMessage: String?
+
+    var id: String { "\(normalizedText)|\(canonicalCandidateIngredientID ?? "none")|\(languageCode)" }
+}
+
 struct RecipeObservationRecoveryRow: Sendable {
     let recipeID: String
     let ingredientIndex: Int
@@ -441,6 +490,12 @@ private struct CloudCatalogResolutionCandidateRow: Codable {
     let suggested_resolution_type: String?
     let existing_alias_status: String?
     let priority_score: Double?
+    let canonical_parent_exists: Bool?
+    let close_canonical_child_exists: Bool?
+    let possible_actions: [String]?
+    let confidence: String?
+    let suggested_parent_slug: String?
+    let reasoning_hint: String?
 }
 
 private struct CloudCatalogCoverageBlockerRow: Codable {
@@ -453,6 +508,10 @@ private struct CloudCatalogCoverageBlockerRow: Codable {
     let canonical_candidate_ingredient_id: String?
     let canonical_candidate_slug: String?
     let canonical_candidate_name: String?
+    let canonical_candidate_parent_slug: String?
+    let canonical_candidate_is_child: Bool?
+    let canonical_candidate_is_root: Bool?
+    let generic_parent_exists: Bool?
     let suggested_resolution_type: String?
     let blocker_reason: String?
     let recommended_next_action: String?
@@ -506,6 +565,16 @@ private struct CloudPendingCatalogEnrichmentDraftReviewRow: Codable {
     let descriptor_alias_like: Bool?
     let is_pasta_shape: Bool?
     let recommended_operator_action: String?
+}
+
+private struct CloudCatalogIngredientHierarchyRow: Codable {
+    let ingredient_id: String?
+    let ingredient_slug: String?
+    let parent_ingredient_id: String?
+    let parent_slug: String?
+    let ingredient_type: String?
+    let specificity_rank: Int?
+    let variant_kind: String?
 }
 
 private struct CloudCatalogAdminOpsSnapshotMetadataCounts: Codable {
@@ -566,6 +635,29 @@ private struct CloudRecipeObservationRecoveryRow: Codable {
     let raw_example: String?
     let result_status: String?
     let detail: String?
+}
+
+private struct CloudCatalogAutoLocalizationRow: Codable {
+    let normalized_text: String?
+    let canonical_candidate_ingredient_id: String?
+    let canonical_candidate_slug: String?
+    let language_code: String?
+    let attempted_display_name: String?
+    let result_status: String?
+    let detail: String?
+    let error_message: String?
+}
+
+private struct CloudCatalogAutoAliasRow: Codable {
+    let normalized_text: String?
+    let canonical_candidate_ingredient_id: String?
+    let canonical_candidate_slug: String?
+    let language_code: String?
+    let attempted_alias_text: String?
+    let match_method: String?
+    let result_status: String?
+    let detail: String?
+    let error_message: String?
 }
 
 private struct CloudRecipeIngredientReconciliationPreviewRow: Codable {
@@ -782,11 +874,28 @@ struct CatalogEnrichmentProposalFunctionRequest: Encodable {
     let normalized_text: String
 }
 
+private struct CatalogEnrichmentBatchRequest: Encodable {
+    let limit: Int
+    let debug: Bool
+}
+
+private struct CatalogAutomationCycleRequest: Encodable {
+    let recovery_limit: Int
+    let enrich_limit: Int
+    let create_limit: Int
+    let debug: Bool
+}
+
 struct CatalogEnrichmentProposalFunctionResponse: Codable {
     let ingredient_type: String
     let canonical_name_it: String?
     let canonical_name_en: String?
     let suggested_slug: String
+    let semantic_category: String?
+    let parent_candidate_slug: String?
+    let parent_candidate_reason: String?
+    let variant_kind: String?
+    let specificity_rank_suggestion: Int?
     let default_unit: String
     let supported_units: [String]
     let is_seasonal: Bool?
@@ -1944,6 +2053,107 @@ final class SupabaseService {
         }
     }
 
+    func autoApplySafeLocalizations(
+        limit: Int = 50,
+        languageCode: String = "it"
+    ) async throws -> [CatalogAutoLocalizationItemResult] {
+        try await instrumentedRequest(
+            name: "autoApplySafeLocalizations",
+            metadata: "limit=\(limit) language_code=\(languageCode)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let safeLimit = max(1, min(limit, 500))
+            let safeLanguage = languageCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "it"
+                : languageCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(safeLimit),
+                "p_language_code": .string(safeLanguage)
+            ]
+
+            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
+            let response = try await supabaseClient
+                .rpc("auto_apply_safe_localizations", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudCatalogAutoLocalizationRow].self, from: response.data)
+            let mapped = rows.compactMap { row -> CatalogAutoLocalizationItemResult? in
+                let normalized = cleanedOptional(row.normalized_text) ?? ""
+                guard !normalized.isEmpty else { return nil }
+                return CatalogAutoLocalizationItemResult(
+                    normalizedText: normalized,
+                    canonicalCandidateIngredientID: cleanedOptional(row.canonical_candidate_ingredient_id)?.lowercased(),
+                    canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
+                    languageCode: cleanedOptional(row.language_code) ?? safeLanguage,
+                    attemptedDisplayName: cleanedOptional(row.attempted_display_name),
+                    resultStatus: cleanedOptional(row.result_status) ?? "failed",
+                    detail: cleanedOptional(row.detail) ?? "unknown",
+                    errorMessage: cleanedOptional(row.error_message)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
+    func autoApplySafeAliases(
+        limit: Int = 50,
+        languageCode: String = "it"
+    ) async throws -> [CatalogAutoAliasItemResult] {
+        try await instrumentedRequest(
+            name: "autoApplySafeAliases",
+            metadata: "limit=\(limit) language_code=\(languageCode)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let safeLimit = max(1, min(limit, 500))
+            let safeLanguage = languageCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "it"
+                : languageCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(safeLimit),
+                "p_language_code": .string(safeLanguage)
+            ]
+
+            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
+            let response = try await supabaseClient
+                .rpc("auto_apply_safe_aliases", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudCatalogAutoAliasRow].self, from: response.data)
+            let mapped = rows.compactMap { row -> CatalogAutoAliasItemResult? in
+                let normalized = cleanedOptional(row.normalized_text) ?? ""
+                guard !normalized.isEmpty else { return nil }
+                return CatalogAutoAliasItemResult(
+                    normalizedText: normalized,
+                    canonicalCandidateIngredientID: cleanedOptional(row.canonical_candidate_ingredient_id)?.lowercased(),
+                    canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
+                    languageCode: cleanedOptional(row.language_code) ?? safeLanguage,
+                    attemptedAliasText: cleanedOptional(row.attempted_alias_text),
+                    matchMethod: cleanedOptional(row.match_method),
+                    resultStatus: cleanedOptional(row.result_status) ?? "failed",
+                    detail: cleanedOptional(row.detail) ?? "unknown",
+                    errorMessage: cleanedOptional(row.error_message)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
     func previewSafeRecipeIngredientReconciliation(
         limit: Int = 20,
         onlySafe: Bool = true
@@ -2036,8 +2246,14 @@ final class SupabaseService {
         }
     }
 
-    func runCatalogEnrichmentDraftBatch(limit: Int = 20) async throws -> CatalogEnrichmentDraftBatchResult {
-        try await instrumentedRequest(name: "runCatalogEnrichmentDraftBatch", metadata: "limit=\(limit)") {
+    func runCatalogEnrichmentDraftBatch(
+        limit: Int = 20,
+        debug: Bool = false
+    ) async throws -> CatalogEnrichmentDraftBatchResult {
+        try await instrumentedRequest(
+            name: "runCatalogEnrichmentDraftBatch",
+            metadata: "limit=\(limit),debug=\(debug)"
+        ) {
             guard let supabaseClient = self.client else {
                 throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
             }
@@ -2062,7 +2278,7 @@ final class SupabaseService {
             }
 
             let safeLimit = max(1, min(100, limit))
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_started limit=\(safeLimit)")
+            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_started limit=\(safeLimit) debug=\(debug)")
 
             supabaseClient.functions.setAuth(token: accessToken)
             let response: CloudCatalogEnrichmentDraftBatchResponse = try await supabaseClient.functions.invoke(
@@ -2073,7 +2289,10 @@ final class SupabaseService {
                         "Authorization": "Bearer \(accessToken)",
                         "apikey": anonKey
                     ],
-                    body: ["limit": safeLimit]
+                    body: CatalogEnrichmentBatchRequest(
+                        limit: safeLimit,
+                        debug: debug
+                    )
                 )
             )
 
@@ -2209,11 +2428,12 @@ final class SupabaseService {
     func runCatalogAutomationCycle(
         recoveryLimit: Int = 1000,
         enrichLimit: Int = 20,
-        createLimit: Int = 20
+        createLimit: Int = 20,
+        debug: Bool = false
     ) async throws -> CatalogAutomationCycleResult {
         try await instrumentedRequest(
             name: "runCatalogAutomationCycle",
-            metadata: "recovery=\(recoveryLimit),enrich=\(enrichLimit),create=\(createLimit)"
+            metadata: "recovery=\(recoveryLimit),enrich=\(enrichLimit),create=\(createLimit),debug=\(debug)"
         ) {
             guard let supabaseClient = self.client else {
                 throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
@@ -2243,7 +2463,7 @@ final class SupabaseService {
             let safeCreateLimit = max(1, min(100, createLimit))
             print(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_started " +
-                "recovery_limit=\(safeRecoveryLimit) enrich_limit=\(safeEnrichLimit) create_limit=\(safeCreateLimit)"
+                "recovery_limit=\(safeRecoveryLimit) enrich_limit=\(safeEnrichLimit) create_limit=\(safeCreateLimit) debug=\(debug)"
             )
 
             supabaseClient.functions.setAuth(token: accessToken)
@@ -2255,11 +2475,12 @@ final class SupabaseService {
                         "Authorization": "Bearer \(accessToken)",
                         "apikey": anonKey
                     ],
-                    body: [
-                        "recovery_limit": safeRecoveryLimit,
-                        "enrich_limit": safeEnrichLimit,
-                        "create_limit": safeCreateLimit
-                    ]
+                    body: CatalogAutomationCycleRequest(
+                        recovery_limit: safeRecoveryLimit,
+                        enrich_limit: safeEnrichLimit,
+                        create_limit: safeCreateLimit,
+                        debug: debug
+                    )
                 )
             )
 
@@ -2386,6 +2607,32 @@ final class SupabaseService {
             return mapped
         } catch {
             print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed error=\(error)")
+            return []
+        }
+    }
+
+    func fetchCatalogIngredientHierarchy(
+        limit: Int = 200
+    ) async -> [CatalogIngredientHierarchyRecord] {
+        guard let supabaseClient = self.client else {
+            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(max(1, min(limit, 500)))
+            ]
+            let response = try await supabaseClient
+                .rpc("list_catalog_ingredient_hierarchy", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudCatalogIngredientHierarchyRow].self, from: response.data)
+            let mapped = mapCatalogIngredientHierarchy(rows)
+            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_ok count=\(mapped.count)")
+            return mapped
+        } catch {
+            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3284,7 +3531,15 @@ final class SupabaseService {
                 existingAliasStatus: (row.existing_alias_status?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
                     ? row.existing_alias_status!.trimmingCharacters(in: .whitespacesAndNewlines)
                     : "none",
-                priorityScore: row.priority_score
+                priorityScore: row.priority_score,
+                canonicalParentExists: row.canonical_parent_exists ?? false,
+                closeCanonicalChildExists: row.close_canonical_child_exists ?? false,
+                possibleActions: (row.possible_actions ?? []).map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                }.filter { !$0.isEmpty },
+                confidence: cleanedOptional(row.confidence)?.lowercased() ?? "low",
+                suggestedParentSlug: cleanedOptional(row.suggested_parent_slug),
+                reasoningHint: cleanedOptional(row.reasoning_hint)
             )
         }
     }
@@ -3305,6 +3560,10 @@ final class SupabaseService {
                 canonicalCandidateIngredientID: cleanedOptional(row.canonical_candidate_ingredient_id),
                 canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
                 canonicalCandidateName: cleanedOptional(row.canonical_candidate_name),
+                canonicalCandidateParentSlug: cleanedOptional(row.canonical_candidate_parent_slug),
+                canonicalCandidateIsChild: row.canonical_candidate_is_child ?? false,
+                canonicalCandidateIsRoot: row.canonical_candidate_is_root ?? false,
+                genericParentExists: row.generic_parent_exists ?? false,
                 suggestedResolutionType: cleanedOrUnknown(row.suggested_resolution_type),
                 blockerReason: cleanedOrUnknown(row.blocker_reason),
                 recommendedNextAction: cleanedOrUnknown(row.recommended_next_action)
@@ -3378,6 +3637,25 @@ final class SupabaseService {
                 descriptorAliasLike: row.descriptor_alias_like ?? false,
                 isPastaShape: row.is_pasta_shape ?? false,
                 recommendedOperatorAction: cleanedOrUnknown(row.recommended_operator_action)
+            )
+        }
+    }
+
+    private func mapCatalogIngredientHierarchy(
+        _ rows: [CloudCatalogIngredientHierarchyRow]
+    ) -> [CatalogIngredientHierarchyRecord] {
+        rows.compactMap { row -> CatalogIngredientHierarchyRecord? in
+            let ingredientID = row.ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            let ingredientSlug = row.ingredient_slug?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+            guard !ingredientID.isEmpty, !ingredientSlug.isEmpty else { return nil }
+            return CatalogIngredientHierarchyRecord(
+                ingredientID: ingredientID,
+                ingredientSlug: ingredientSlug,
+                parentIngredientID: cleanedOptional(row.parent_ingredient_id)?.lowercased(),
+                parentSlug: cleanedOptional(row.parent_slug)?.lowercased(),
+                ingredientType: cleanedOrUnknown(row.ingredient_type),
+                specificityRank: max(0, row.specificity_rank ?? 0),
+                variantKind: cleanedOrUnknown(row.variant_kind)
             )
         }
     }

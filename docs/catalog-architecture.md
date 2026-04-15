@@ -27,6 +27,19 @@ All catalog-related features, migrations, RPCs, enrichment flows, and admin work
   - MUST be governance-controlled (approval state, activation state).
   - MUST NOT be used as a substitute for creating a canonical ingredient when identity is genuinely new.
 
+### 2.1 Canonical Identity Definition
+- Canonical ingredient identity is a distinct culinary identity, not a text label.
+- Two ingredients MUST be separate canonical nodes when one or more apply:
+  - They imply materially different culinary behavior/use (taste, texture, substitution, cooking outcome).
+  - They represent distinct recognized ingredient forms/varieties used intentionally in recipes.
+  - They require distinct product-level semantics in catalog operations (enrichment, recommendation, mapping).
+- Two texts SHOULD remain within the same canonical node (alias/localization variation) when:
+  - Difference is only linguistic surface form, formatting, quantity contamination, or preparation qualifier.
+  - Meaning does not change ingredient identity.
+- Examples:
+  - `farina_00` vs `farina_integrale`: separate canonical nodes.
+  - `sale fino 1 pizzico` vs `sale_fino`: same canonical node; surface/quantity variation only.
+
 ## 3) Hierarchy Model
 - Model: Adjacency list (`parent_ingredient_id`) on `ingredients`.
 - Rationale: Simple, scalable, migration-safe, and sufficient for current scope.
@@ -45,6 +58,33 @@ Classification rules:
   - Ingredient does not semantically belong as a specialization of an existing root.
   - Ingredient family is independent and not just a refinement of another node.
 
+### 3.1 Parent Assignment Rules (Strict)
+- Parent-child relation means only: **child is a more specific form of parent**.
+- Valid examples:
+  - `farina_00` -> `farina`
+  - `cipolla_rossa` -> `cipolla`
+  - `riso_carnaroli` -> `riso`
+- Invalid parent-child assignments:
+  - Co-usage relation (ingredients often used together).
+  - Convenience grouping (marketing/category buckets without identity refinement).
+  - Preparation-state relation when identity is unchanged (`burro_ammorbidito` is not a child identity of `burro`; it is alias-level variation).
+- Parent assignment MUST be blocked when specificity/refinement cannot be justified explicitly.
+
+### 3.2 Specificity Rank
+- `specificity_rank` is support metadata, not identity truth.
+- Meaning:
+  - Lower rank = more generic node.
+  - Higher rank = more specific descendant within a hierarchy.
+- Example scale:
+  - `farina` = `0`
+  - `farina_00` = `1`
+  - more specialized descendant (if defined) = `2`
+- Intended uses:
+  - fallback matching heuristics,
+  - suggestion ranking,
+  - UI prioritization.
+- Hierarchy (`parent_ingredient_id`) remains the source of truth; `specificity_rank` MUST NOT replace structural parent-child logic.
+
 ## 4) Localization Strategy
 - Canonical identity is language-neutral and lives in `ingredients` (`id`, `slug`, hierarchy).
 - All translated names live in `ingredient_localizations`.
@@ -59,6 +99,16 @@ Why this is required:
 - Enables multi-language expansion without changing ingredient IDs.
 - Keeps matching and enrichment pipelines stable across locales.
 
+### 4.1 Canonical vs Display Separation
+- `ingredients.slug` is canonical technical identity.
+- Display names MUST come from `ingredient_localizations`.
+- UI MUST NOT depend on slug formatting except technical fallback when localization is missing.
+- Operational fallback:
+  - localized display name if present,
+  - default locale display name,
+  - slug as last-resort fallback.
+- This separation is required to avoid identity drift during multilingual expansion and to keep matching/indexing deterministic.
+
 ## 5) Alias & Matching Strategy
 - Aliases map normalized free text to canonical ingredient nodes.
 - Alias targeting rule:
@@ -72,6 +122,21 @@ Why this is required:
   - MUST NOT bypass admin review/governance.
 - User input flow:
   - User text is normalized and matched against governed aliases/localizations.
+
+### 5.1 Matching Decision Flow
+Operational flow for normalized free text:
+
+1. Try exact match on canonical localizations (`ingredient_localizations`) in active locale set.
+2. If no canonical localization match, try exact match on approved+active aliases (`ingredient_aliases_v2`).
+3. If exactly one high-confidence canonical target is found, map input to that node.
+4. If multiple candidate nodes match:
+  - fallback to parent only when parent fallback is explicitly safe and policy-allowed,
+  - otherwise mark as ambiguous (no automatic canonical assignment).
+5. If no safe unique match exists, log unresolved observation and route to candidate/enrichment workflow.
+
+Constraints:
+- No fuzzy auto-overwrite in this flow.
+- No LLM-only auto-mapping without governance approval.
 
 ## 6) Legacy Mapping Policy (Critical)
 - `legacy_ingredient_mapping` is temporary compatibility infrastructure.
@@ -115,6 +180,17 @@ Policy examples:
   - Requiring explicit review for parent assignment.
   - Blocking bulk/unreviewed parent rewrites.
   - Recording decisions and rationale in auditable workflow artifacts.
+
+### 8.1 Governance Enforcement
+- All canonical catalog mutations MUST go through:
+  - admin-reviewed workflows,
+  - auditable RPC/function paths,
+  - explicit decision logging artifacts.
+- Direct uncontrolled writes to canonical catalog tables are forbidden outside controlled processes.
+- Enforcement policy:
+  - app/UI-level gating alone is insufficient,
+  - backend authorization and auditable mutation paths are mandatory.
+- Any mutation path that bypasses review/audit is out of contract and MUST be treated as non-compliant.
 
 ## 9) Anti-Patterns (Must Never Happen)
 - Never collapse specific ingredients into generic ones for convenience.

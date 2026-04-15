@@ -27,6 +27,22 @@ struct CatalogAutomationCycleRunSummary: Sendable {
     let creation: CatalogAutomationCycleCreationSummary
 }
 
+struct CatalogAutoLocalizationRunSummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let skipped: Int
+    let failed: Int
+    let anomalyItems: [CatalogAutoLocalizationItemResult]
+}
+
+struct CatalogAutoAliasRunSummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let skipped: Int
+    let failed: Int
+    let anomalyItems: [CatalogAutoAliasItemResult]
+}
+
 struct CatalogSafeRecipeReconciliationApplySummary: Sendable {
     let total: Int
     let applied: Int
@@ -219,9 +235,10 @@ final class CatalogAdminOpsService {
     }
 
     func runCatalogEnrichmentDraftBatch(
-        limit: Int = 20
+        limit: Int = 20,
+        debug: Bool = false
     ) async throws -> CatalogEnrichmentBatchRunSummary {
-        let result = try await supabaseService.runCatalogEnrichmentDraftBatch(limit: limit)
+        let result = try await supabaseService.runCatalogEnrichmentDraftBatch(limit: limit, debug: debug)
         return CatalogEnrichmentBatchRunSummary(
             total: result.summary.total,
             succeeded: result.summary.succeeded,
@@ -235,12 +252,14 @@ final class CatalogAdminOpsService {
     func runCatalogAutomationCycle(
         recoveryLimit: Int = 1000,
         enrichLimit: Int = 20,
-        createLimit: Int = 20
+        createLimit: Int = 20,
+        debug: Bool = false
     ) async throws -> CatalogAutomationCycleRunSummary {
         let result = try await supabaseService.runCatalogAutomationCycle(
             recoveryLimit: recoveryLimit,
             enrichLimit: enrichLimit,
-            createLimit: createLimit
+            createLimit: createLimit,
+            debug: debug
         )
         return CatalogAutomationCycleRunSummary(
             recovery: result.recovery,
@@ -255,6 +274,54 @@ final class CatalogAdminOpsService {
         try await supabaseService.previewSafeRecipeIngredientReconciliation(
             limit: limit,
             onlySafe: true
+        )
+    }
+
+    func fetchIngredientHierarchy(
+        limit: Int = 200
+    ) async -> [CatalogIngredientHierarchyRecord] {
+        await supabaseService.fetchCatalogIngredientHierarchy(limit: limit)
+    }
+
+    func autoApplySafeLocalizations(
+        limit: Int = 50,
+        languageCode: String = "it"
+    ) async throws -> CatalogAutoLocalizationRunSummary {
+        let rows = try await supabaseService.autoApplySafeLocalizations(
+            limit: limit,
+            languageCode: languageCode
+        )
+        let succeeded = rows.filter { $0.resultStatus == "succeeded" }.count
+        let anomalyItems = rows.filter { $0.resultStatus != "succeeded" }
+        let failed = rows.filter { $0.resultStatus == "failed" }.count
+        let skipped = max(0, rows.count - succeeded - failed)
+        return CatalogAutoLocalizationRunSummary(
+            total: rows.count,
+            succeeded: succeeded,
+            skipped: skipped,
+            failed: failed,
+            anomalyItems: anomalyItems
+        )
+    }
+
+    func autoApplySafeAliases(
+        limit: Int = 50,
+        languageCode: String = "it"
+    ) async throws -> CatalogAutoAliasRunSummary {
+        let rows = try await supabaseService.autoApplySafeAliases(
+            limit: limit,
+            languageCode: languageCode
+        )
+        let succeeded = rows.filter { $0.resultStatus == "succeeded" }.count
+        let anomalyItems = rows.filter { $0.resultStatus != "succeeded" }
+        let failed = rows.filter { $0.resultStatus == "failed" }.count
+        let skipped = max(0, rows.count - succeeded - failed)
+        return CatalogAutoAliasRunSummary(
+            total: rows.count,
+            succeeded: succeeded,
+            skipped: skipped,
+            failed: failed,
+            anomalyItems: anomalyItems
         )
     }
 

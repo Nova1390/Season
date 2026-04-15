@@ -50,6 +50,11 @@ struct CatalogEnrichmentProposal: Sendable {
     let canonicalNameIT: String?
     let canonicalNameEN: String?
     let suggestedSlug: String
+    let semanticCategory: String?
+    let parentCandidateSlug: String?
+    let parentCandidateReason: String?
+    let variantKind: String?
+    let specificityRankSuggestion: Int?
     let defaultUnit: String
     let supportedUnits: [String]
     let isSeasonal: Bool?
@@ -211,6 +216,11 @@ struct EdgeFunctionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmentPropo
             canonicalNameIT: canonicalIT,
             canonicalNameEN: canonicalEN,
             suggestedSlug: suggestedSlug,
+            semanticCategory: cleaned(result.semantic_category),
+            parentCandidateSlug: cleaned(result.parent_candidate_slug),
+            parentCandidateReason: cleaned(result.parent_candidate_reason),
+            variantKind: cleaned(result.variant_kind),
+            specificityRankSuggestion: result.specificity_rank_suggestion.map { max(0, $0) },
             defaultUnit: defaultUnit,
             supportedUnits: supportedUnits.isEmpty ? [defaultUnit] : supportedUnits,
             isSeasonal: normalizedType == "produce" ? result.is_seasonal : nil,
@@ -261,6 +271,7 @@ struct DeterministicCatalogEnrichmentProposalProvider: CatalogEnrichmentProposal
         let inferredType = inferIngredientType(from: normalized)
         let inferredSeasonality = inferSeasonality(from: normalized, ingredientType: inferredType)
         let inferredUnits = inferUnitSuggestion(from: normalized, ingredientType: inferredType)
+        let semantic = inferSemanticHints(from: normalized)
 
         return CatalogEnrichmentProposal(
             normalizedText: normalized,
@@ -268,6 +279,11 @@ struct DeterministicCatalogEnrichmentProposalProvider: CatalogEnrichmentProposal
             canonicalNameIT: titleCaseIT(normalized),
             canonicalNameEN: nil,
             suggestedSlug: slugify(normalized),
+            semanticCategory: semantic.semanticCategory,
+            parentCandidateSlug: semantic.parentCandidateSlug,
+            parentCandidateReason: semantic.parentCandidateReason,
+            variantKind: semantic.variantKind,
+            specificityRankSuggestion: semantic.specificityRankSuggestion,
             defaultUnit: inferredUnits.defaultUnit,
             supportedUnits: inferredUnits.supportedUnits,
             isSeasonal: inferredSeasonality.isSeasonal,
@@ -356,6 +372,30 @@ struct DeterministicCatalogEnrichmentProposalProvider: CatalogEnrichmentProposal
             return (true, months)
         }
         return (false, [])
+    }
+
+    private func inferSemanticHints(from normalized: String) -> (
+        semanticCategory: String?,
+        parentCandidateSlug: String?,
+        parentCandidateReason: String?,
+        variantKind: String?,
+        specificityRankSuggestion: Int?
+    ) {
+        if normalized.range(
+            of: #"\b(fusilli|penne(\s+rigate)?|pappardelle(\s+all'?uovo)?|rigatoni|spaghett(i|oni)|conchiglioni|orecchiette|trofie|paccheri|tagliatelle)\b"#,
+            options: .regularExpression
+        ) != nil {
+            return ("pasta", "pasta", "shape_or_style_under_pasta_family", "shape", 1)
+        }
+
+        if normalized.range(
+            of: #"\bcipolla\s+(rossa|dorata|bianca)\b"#,
+            options: .regularExpression
+        ) != nil {
+            return ("vegetable", "cipolla", "color_variant_under_cipolla_family", "variety", 1)
+        }
+
+        return (nil, nil, nil, nil, nil)
     }
 }
 

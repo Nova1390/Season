@@ -12,6 +12,11 @@ export interface CatalogEnrichmentProposal {
   canonical_name_it: string | null;
   canonical_name_en: string | null;
   suggested_slug: string;
+  semantic_category: string | null;
+  parent_candidate_slug: string | null;
+  parent_candidate_reason: string | null;
+  variant_kind: string | null;
+  specificity_rank_suggestion: number | null;
   default_unit: string;
   supported_units: string[];
   is_seasonal: boolean | null;
@@ -36,6 +41,11 @@ You MUST return exactly this object shape:
   "canonical_name_it": string | null,
   "canonical_name_en": string | null,
   "suggested_slug": string,
+  "semantic_category": string | null,
+  "parent_candidate_slug": string | null,
+  "parent_candidate_reason": string | null,
+  "variant_kind": string | null,
+  "specificity_rank_suggestion": number | null,
   "default_unit": string,
   "supported_units": string[],
   "is_seasonal": boolean | null,
@@ -63,6 +73,10 @@ Rules:
 11) canonical names should be human-usable; if unknown use null.
 12) Do not hallucinate uncommon nutrition or taxonomy details.
 13) Seafood/shellfish terms (for example vongole, cozze, calamari, scampi, seppie) are not produce: classify them as basic unless genuinely unknown.
+14) semantic_category should be a compact domain hint if clear (for example pasta, cheese, vegetable), otherwise null.
+15) parent_candidate_slug should be set only when a plausible parent family is clear.
+16) specificity_rank_suggestion should be non-negative integer when parent_candidate_slug is set; otherwise null.
+17) variant_kind should be set when proposing a child variant (for example shape, variety, designation); otherwise null.
 `;
 
 export function validateCatalogEnrichmentProposal(payload: unknown): {
@@ -81,6 +95,11 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
     "canonical_name_it",
     "canonical_name_en",
     "suggested_slug",
+    "semantic_category",
+    "parent_candidate_slug",
+    "parent_candidate_reason",
+    "variant_kind",
+    "specificity_rank_suggestion",
     "default_unit",
     "supported_units",
     "is_seasonal",
@@ -117,6 +136,26 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
 
   if (typeof payload.suggested_slug !== "string" || payload.suggested_slug.trim().length === 0) {
     errors.push("suggested_slug must be non-empty string");
+  }
+
+  if (!isNullableString(payload.semantic_category)) {
+    errors.push("semantic_category must be string or null");
+  }
+
+  if (!isNullableString(payload.parent_candidate_slug)) {
+    errors.push("parent_candidate_slug must be string or null");
+  }
+
+  if (!isNullableString(payload.parent_candidate_reason)) {
+    errors.push("parent_candidate_reason must be string or null");
+  }
+
+  if (!isNullableString(payload.variant_kind)) {
+    errors.push("variant_kind must be string or null");
+  }
+
+  if (!(payload.specificity_rank_suggestion === null || (Number.isInteger(payload.specificity_rank_suggestion) && payload.specificity_rank_suggestion >= 0))) {
+    errors.push("specificity_rank_suggestion must be null or non-negative integer");
   }
 
   if (typeof payload.default_unit !== "string" || payload.default_unit.trim().length === 0) {
@@ -170,6 +209,23 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
     }
     if (payload.is_seasonal !== true && payload.season_months !== null) {
       errors.push("season_months must be null when produce is not seasonal");
+    }
+  }
+
+  const parentSlug = typeof payload.parent_candidate_slug === "string" ? payload.parent_candidate_slug.trim() : "";
+  if (parentSlug.length > 0) {
+    if (typeof payload.variant_kind !== "string" || payload.variant_kind.trim().length === 0) {
+      errors.push("variant_kind required when parent_candidate_slug is provided");
+    }
+    if (!Number.isInteger(payload.specificity_rank_suggestion) || (payload.specificity_rank_suggestion as number) < 1) {
+      errors.push("specificity_rank_suggestion must be >= 1 when parent_candidate_slug is provided");
+    }
+  } else {
+    if (payload.variant_kind !== null) {
+      errors.push("variant_kind must be null when parent_candidate_slug is null");
+    }
+    if (payload.specificity_rank_suggestion !== null) {
+      errors.push("specificity_rank_suggestion must be null when parent_candidate_slug is null");
     }
   }
 

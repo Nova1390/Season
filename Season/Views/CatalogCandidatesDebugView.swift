@@ -47,30 +47,27 @@ struct CatalogCandidatesDebugView: View {
         var id: String { candidate.id }
     }
 
-    private struct LocalizationRoute: Identifiable {
-        let blocker: CatalogCoverageBlockerRecord
-        var id: String { blocker.id }
-    }
-
     private struct BulkAliasRoute: Identifiable {
         let candidates: [CatalogResolutionCandidateRecord]
         var id: String { candidates.map(\.id).sorted().joined(separator: ",") }
     }
 
-    private struct BulkLocalizationRoute: Identifiable {
-        let blockers: [CatalogCoverageBlockerRecord]
-        var id: String { blockers.map(\.id).sorted().joined(separator: ",") }
+    private struct SemanticAutomationAnomaly: Identifiable {
+        let id: String
+        let normalizedText: String
+        let title: String
+        let message: String
     }
 
     @State private var items: [CatalogResolutionCandidateRecord] = []
     @State private var coverageBlockers: [CatalogCoverageBlockerRecord] = []
     @State private var readyEnrichmentDrafts: [ReadyCatalogEnrichmentDraftRecord] = []
     @State private var observationCoverage: [CatalogObservationCoverageRecord] = []
+    @State private var ingredientHierarchyRows: [CatalogIngredientHierarchyRecord] = []
     @State private var pendingDraftReviewRows: [PendingCatalogEnrichmentDraftReviewRecord] = []
     @State private var unifiedIngredients: [UnifiedIngredientCatalogSummaryRecord] = []
     @State private var isLoading = false
     @State private var isApproving = false
-    @State private var isAddingLocalization = false
     @State private var isSelectionMode = false
     @State private var creatingDraftNormalizedText: String?
     @State private var isAdminUser = false
@@ -84,13 +81,7 @@ struct CatalogCandidatesDebugView: View {
     @State private var bulkIngredientSearchQuery = ""
     @State private var approvalRoute: ApprovalRoute?
     @State private var enrichmentRoute: EnrichmentRoute?
-    @State private var localizationRoute: LocalizationRoute?
     @State private var bulkAliasRoute: BulkAliasRoute?
-    @State private var bulkLocalizationRoute: BulkLocalizationRoute?
-    @State private var localizationText = ""
-    @State private var localizationLanguageCode = "it"
-    @State private var bulkLocalizationText = ""
-    @State private var bulkLocalizationLanguageCode = "it"
     @State private var importURL = ""
     @State private var isParsingURLImport = false
     @State private var isSavingImportedRecipe = false
@@ -101,6 +92,8 @@ struct CatalogCandidatesDebugView: View {
     @State private var isRunningObservationRecovery = false
     @State private var isRunningEnrichmentBatch = false
     @State private var isRunningIngredientCreationBatch = false
+    @State private var isRunningAutoAlias = false
+    @State private var isRunningAutoLocalization = false
     @State private var isRunningAutomationCycle = false
     @State private var isRunningReconciliationPreview = false
     @State private var isRunningReconciliationApply = false
@@ -108,11 +101,34 @@ struct CatalogCandidatesDebugView: View {
     @State private var lastAutomationRun: CatalogAutomationCycleRunSummary?
     @State private var reconciliationPreviewRows: [RecipeIngredientReconciliationPreviewRow] = []
     @State private var lastReconciliationApplySummary: CatalogSafeRecipeReconciliationApplySummary?
+    @State private var lastAutoAliasSummary: CatalogAutoAliasRunSummary?
+    @State private var lastAutoLocalizationSummary: CatalogAutoLocalizationRunSummary?
     @State private var showAutomationSuccessFlash = false
+    @State private var enableDebugInstrumentation = false
+    @State private var recoveryLimitInput = "1000"
+    @State private var enrichmentLimitInput = "20"
+    @State private var creationLimitInput = "10"
+    @State private var enrichmentOnlyLimitInput = "20"
     @ObservedObject var viewModel: ProduceViewModel
 
     private let supabaseService = SupabaseService.shared
     private let catalogAdminOpsService = CatalogAdminOpsService.shared
+
+    private var configuredRecoveryLimit: Int {
+        max(1, min(5000, Int(recoveryLimitInput.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 1000))
+    }
+
+    private var configuredEnrichmentLimit: Int {
+        max(1, min(100, Int(enrichmentLimitInput.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 20))
+    }
+
+    private var configuredCreationLimit: Int {
+        max(1, min(100, Int(creationLimitInput.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 10))
+    }
+
+    private var configuredEnrichmentOnlyLimit: Int {
+        max(1, min(100, Int(enrichmentOnlyLimitInput.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 20))
+    }
 
     var body: some View {
         List {
@@ -133,91 +149,35 @@ struct CatalogCandidatesDebugView: View {
             if isAdminUser {
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Catalog Control Panel")
-                                .font(.title3.weight(.semibold))
-                            Text("Automated catalog growth")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text("Catalog Autopilot")
+                            .font(.title3.weight(.semibold))
 
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 10),
-                                GridItem(.flexible(), spacing: 10)
-                            ],
-                            spacing: 10
-                        ) {
-                            MetricCardView(
-                                value: "\(unifiedIngredients.count)",
-                                label: "Ingredients",
-                                icon: "cube.box",
-                                tint: .primary
-                            )
-                            MetricCardView(
-                                value: "\(pendingDraftReviewRows.count)",
-                                label: "Pending review",
-                                icon: "clock",
-                                tint: pendingDraftReviewRows.isEmpty ? .secondary : .orange
-                            )
-                            MetricCardView(
-                                value: "\(readyEnrichmentDrafts.count)",
-                                label: "Ready drafts",
-                                icon: "checkmark.circle",
-                                tint: readyEnrichmentDrafts.isEmpty ? .secondary : .blue
-                            )
-                            MetricCardView(
-                                value: lastRunStatusValue,
-                                label: "Last run status",
-                                icon: "bolt.fill",
-                                tint: lastRunStatusTint
-                            )
-                        }
-                        .animation(.easeInOut(duration: 0.28), value: unifiedIngredients.count)
-                        .animation(.easeInOut(duration: 0.28), value: pendingDraftReviewRows.count)
-                        .animation(.easeInOut(duration: 0.28), value: readyEnrichmentDrafts.count)
-                        .animation(.easeInOut(duration: 0.28), value: lastRunStatusValue)
+                        Text("Runs recovery, draft enrichment, and ingredient creation in one safe cycle.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
 
                         Button {
                             Task { await runCatalogAutomationCycle() }
                         } label: {
-                            ZStack {
-                                LinearGradient(
-                                    colors: [
-                                        Color.accentColor.opacity(0.95),
-                                        Color.accentColor.opacity(0.75)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                                HStack(spacing: 10) {
-                                    if isRunningAutomationCycle {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                    } else if showAutomationSuccessFlash {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .transition(.scale.combined(with: .opacity))
-                                    }
-
-                                    Text(
-                                        isRunningAutomationCycle
-                                        ? "Running catalog automation cycle…"
-                                        : "Run catalog automation cycle"
-                                    )
-                                    .font(.body.weight(.semibold))
+                            HStack(spacing: 10) {
+                                if isRunningAutomationCycle {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else if showAutomationSuccessFlash {
+                                    Image(systemName: "checkmark.circle.fill")
                                 }
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 14)
-                                .opacity(isRunningAutomationCycle ? 0.9 : 1)
-                                .animation(.easeInOut(duration: 0.2), value: isRunningAutomationCycle)
+
+                                Text(
+                                    isRunningAutomationCycle
+                                    ? "Running catalog autopilot…"
+                                    : "Run catalog autopilot"
+                                )
+                                .font(.body.weight(.semibold))
                             }
                             .frame(maxWidth: .infinity)
-                            .frame(height: 52)
+                            .frame(height: 48)
                         }
-                        .buttonStyle(.plain)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .buttonStyle(.borderedProminent)
                         .disabled(
                             isRunningAutomationCycle
                             || isRunningIngredientCreationBatch
@@ -233,37 +193,14 @@ struct CatalogCandidatesDebugView: View {
                              || isRunningObservationRecovery) ? 0.75 : 1
                         )
 
-                        if let run = lastAutomationRun {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Last run")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                summaryRow(
-                                    title: "Recovery",
-                                    value: "\(run.recovery.total)",
-                                    isFailed: run.recovery.status.lowercased() == "failed" || run.recovery.failed > 0
-                                )
-                                summaryRow(
-                                    title: "Enrichment",
-                                    value: "\(run.enrichment.total) (\(run.enrichment.failed) failed)",
-                                    isFailed: run.enrichment.status.lowercased() == "failed" || run.enrichment.failed > 0
-                                )
-                                summaryRow(
-                                    title: "Creation",
-                                    value: "\(run.creation.total)",
-                                    isFailed: run.creation.status.lowercased() == "failed" || run.creation.failed > 0
-                                )
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                            .animation(.easeInOut(duration: 0.25), value: run.recovery.total)
-                        } else {
-                            Text("Run the automation cycle to start growing your catalog")
+                        if let run = lastAutomationRun, let compactSummary = compactAutopilotSummary(from: run) {
+                            Text(compactSummary)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
-                                .padding(.top, 2)
+                        } else {
+                            Text("No autopilot run yet.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
 
                         if !errorMessage.isEmpty {
@@ -279,8 +216,18 @@ struct CatalogCandidatesDebugView: View {
                     .padding(.vertical, 4)
                 }
 
+                exceptionInboxSection
+
+                if !isLoading && hasPrimaryCatalogContent == false {
+                    Section {
+                        Text("No exceptions require human judgment right now.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section {
-                    Button(isAdvancedDebugExpanded ? "Hide advanced debug" : "Show advanced debug") {
+                    Button(isAdvancedDebugExpanded ? "Hide technical tools" : "Show technical tools") {
                         withAnimation(.easeInOut(duration: 0.22)) {
                             isAdvancedDebugExpanded.toggle()
                         }
@@ -289,21 +236,15 @@ struct CatalogCandidatesDebugView: View {
                 }
 
                 if isAdvancedDebugExpanded {
-                    curatedBatchActionsSection
+                    technicalToolsActionsSection
                     draftReviewSection
                     if isSelectionMode { bulkActionsSection }
                     if !coverageBlockers.isEmpty { coverageBlockersSection }
-                    if !safeAliasSuggestions.isEmpty { safeAliasSuggestionsSection }
                     if !draftIngredientSuggestionCandidates.isEmpty { draftIngredientSuggestionsSection }
                     if !ambiguousHoldCandidates.isEmpty { ambiguousHoldSection }
+                    if !ingredientHierarchyRows.isEmpty { ingredientHierarchySection }
                     if !observationCoverage.isEmpty { observationCoverageSection }
                     importFromURLSection
-                } else if !isLoading && hasPrimaryCatalogContent == false {
-                    Section {
-                        Text("No actionable catalog items right now.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
                 }
             }
         }
@@ -394,48 +335,6 @@ struct CatalogCandidatesDebugView: View {
                 )
             }
         }
-        .sheet(item: $localizationRoute) { route in
-            NavigationStack {
-                Form {
-                    Section("Blocked term") {
-                        Text(route.blocker.normalizedText)
-                            .font(.body.weight(.semibold))
-                    }
-
-                    Section("Canonical ingredient") {
-                        Text(route.blocker.canonicalCandidateName ?? route.blocker.canonicalCandidateSlug ?? "—")
-                            .font(.body)
-                        Text(route.blocker.canonicalCandidateSlug ?? "—")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Section("Localization") {
-                        TextField("Localization text", text: $localizationText)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        Picker("Language", selection: $localizationLanguageCode) {
-                            Text("Italiano (it)").tag("it")
-                            Text("English (en)").tag("en")
-                        }
-                    }
-                }
-                .navigationTitle("Add localization")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            localizationRoute = nil
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Confirm") {
-                            Task { await addLocalization(for: route.blocker) }
-                        }
-                        .disabled(localizationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingLocalization)
-                    }
-                }
-            }
-        }
         .sheet(item: $bulkAliasRoute) { route in
             NavigationStack {
                 List {
@@ -490,49 +389,6 @@ struct CatalogCandidatesDebugView: View {
                 }
             }
         }
-        .sheet(item: $bulkLocalizationRoute) { route in
-            NavigationStack {
-                Form {
-                    Section("Selection") {
-                        Text("\(route.blockers.count) blockers selected")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Section("Canonical ingredient") {
-                        Text(route.blockers.first?.canonicalCandidateName ?? route.blockers.first?.canonicalCandidateSlug ?? "—")
-                            .font(.body)
-                        Text(route.blockers.first?.canonicalCandidateSlug ?? "—")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Section("Localization") {
-                        TextField("Localization text", text: $bulkLocalizationText)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        Picker("Language", selection: $bulkLocalizationLanguageCode) {
-                            Text("Italiano (it)").tag("it")
-                            Text("English (en)").tag("en")
-                        }
-                    }
-                }
-                .navigationTitle("Bulk add localization")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            bulkLocalizationRoute = nil
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Confirm") {
-                            Task { await addLocalizationBulk(for: route.blockers) }
-                        }
-                        .disabled(bulkLocalizationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAddingLocalization)
-                    }
-                }
-            }
-        }
     }
 
     @MainActor
@@ -550,6 +406,7 @@ struct CatalogCandidatesDebugView: View {
             coverageBlockers = []
             readyEnrichmentDrafts = []
             observationCoverage = []
+            ingredientHierarchyRows = []
             pendingDraftReviewRows = []
             unifiedIngredients = []
             return
@@ -584,6 +441,7 @@ struct CatalogCandidatesDebugView: View {
         }
         pendingDraftReviewRows = await supabaseService.fetchPendingCatalogEnrichmentDraftReview(limit: 200)
         unifiedIngredients = await supabaseService.fetchUnifiedIngredientCatalogSummary()
+        ingredientHierarchyRows = await catalogAdminOpsService.fetchIngredientHierarchy(limit: 200)
     }
 
     @MainActor
@@ -627,36 +485,6 @@ struct CatalogCandidatesDebugView: View {
         }
     }
 
-    @MainActor
-    private func addLocalization(for blocker: CatalogCoverageBlockerRecord) async {
-        guard isAdminUser else { return }
-        guard let ingredientID = blocker.canonicalCandidateIngredientID else { return }
-        isAddingLocalization = true
-        defer { isAddingLocalization = false }
-
-        do {
-            let status = try await catalogAdminOpsService.addLocalization(
-                ingredientID: ingredientID,
-                text: localizationText,
-                languageCode: localizationLanguageCode
-            )
-
-            switch status {
-            case "inserted":
-                actionMessage = "Localization added for \(blocker.normalizedText)."
-            case "already_exists", "language_already_present":
-                actionMessage = "Localization already present for \(blocker.normalizedText)."
-            default:
-                actionMessage = "Localization request completed (\(status))."
-            }
-
-            localizationRoute = nil
-            await loadCandidates()
-        } catch {
-            errorMessage = "Failed to add localization."
-            print("[SEASON_CATALOG_ADMIN] phase=add_localization_failed normalized_text=\(blocker.normalizedText) error=\(error)")
-        }
-    }
 
     @MainActor
     private func approveAliasBulk(for candidates: [CatalogResolutionCandidateRecord]) async {
@@ -671,30 +499,6 @@ struct CatalogCandidatesDebugView: View {
         )
         actionMessage = "Bulk alias: \(summary.successCount) applied, \(summary.failureCount) failed."
         bulkAliasRoute = nil
-        clearSelections()
-        await loadCandidates()
-    }
-
-    @MainActor
-    private func addLocalizationBulk(for blockers: [CatalogCoverageBlockerRecord]) async {
-        guard isAdminUser else { return }
-        isAddingLocalization = true
-        defer { isAddingLocalization = false }
-
-        let requests = blockers.compactMap { blocker -> (normalizedText: String, ingredientID: String, text: String, languageCode: String)? in
-            guard let ingredientID = blocker.canonicalCandidateIngredientID else { return nil }
-            return (
-                normalizedText: blocker.normalizedText,
-                ingredientID: ingredientID,
-                text: bulkLocalizationText,
-                languageCode: bulkLocalizationLanguageCode
-            )
-        }
-        let skippedCount = blockers.count - requests.count
-        let summary = await catalogAdminOpsService.addLocalizationsBulk(requests: requests)
-        let totalFailures = summary.failureCount + skippedCount
-        actionMessage = "Bulk localization: \(summary.successCount) applied, \(totalFailures) failed."
-        bulkLocalizationRoute = nil
         clearSelections()
         await loadCandidates()
     }
@@ -831,11 +635,77 @@ struct CatalogCandidatesDebugView: View {
         pendingDraftReviewRows.filter { $0.reviewBucket.uppercased() == "SHOULD_BE_REJECTED_OR_HOLD" }
     }
 
+    private var newIngredientQueue: [CatalogResolutionCandidateRecord] {
+        draftIngredientSuggestionCandidates
+    }
+
+    private var reviewLaterQueue: [CatalogResolutionCandidateRecord] {
+        ambiguousHoldCandidates
+    }
+
+    private var needsNewVariantDecision: [CatalogResolutionCandidateRecord] {
+        newIngredientQueue.filter { candidate in
+            candidate.possibleActions.contains("new_variant") &&
+            !candidate.possibleActions.contains("new_root") &&
+            candidate.confidence != "high"
+        }
+    }
+
+    private var needsNewRootDecision: [CatalogResolutionCandidateRecord] {
+        newIngredientQueue.filter { candidate in
+            candidate.possibleActions.contains("new_root") &&
+            !candidate.possibleActions.contains("new_variant")
+        }
+    }
+
+    private var needsHumanReviewCandidates: [CatalogResolutionCandidateRecord] {
+        let variantIDs = Set(needsNewVariantDecision.map(\.id))
+        let rootIDs = Set(needsNewRootDecision.map(\.id))
+        return (newIngredientQueue + reviewLaterQueue).filter { candidate in
+            !variantIDs.contains(candidate.id) && !rootIDs.contains(candidate.id)
+        }
+    }
+
+    private var hasSemanticAutomationAnomalies: Bool {
+        !(lastAutoAliasSummary?.anomalyItems.filter(semanticAnomaly).isEmpty ?? true) ||
+        !(lastAutoLocalizationSummary?.anomalyItems.filter(semanticAnomaly).isEmpty ?? true)
+    }
+
+    private var semanticAutomationAnomalyItems: [SemanticAutomationAnomaly] {
+        let aliasItems = (lastAutoAliasSummary?.anomalyItems ?? [])
+            .filter(semanticAnomaly)
+            .map { item in
+                SemanticAutomationAnomaly(
+                    id: "alias|\(item.id)",
+                    normalizedText: item.normalizedText,
+                    title: "Alias automation needs review",
+                    message: item.errorMessage ?? item.detail
+                )
+            }
+
+        let localizationItems = (lastAutoLocalizationSummary?.anomalyItems ?? [])
+            .filter(semanticAnomaly)
+            .map { item in
+                SemanticAutomationAnomaly(
+                    id: "localization|\(item.id)",
+                    normalizedText: item.normalizedText,
+                    title: "Localization automation needs review",
+                    message: item.errorMessage ?? item.detail
+                )
+            }
+
+        return aliasItems + localizationItems
+    }
+
+    private var semanticAutomationAnomalyCount: Int {
+        semanticAutomationAnomalyItems.count
+    }
+
     private var hasPrimaryCatalogContent: Bool {
-        !safeAliasSuggestions.isEmpty ||
-        !draftIngredientSuggestionCandidates.isEmpty ||
-        !pendingDraftReviewRows.isEmpty ||
-        !readyEnrichmentDrafts.isEmpty
+        !needsNewVariantDecision.isEmpty ||
+        !needsNewRootDecision.isEmpty ||
+        !needsHumanReviewCandidates.isEmpty ||
+        hasSemanticAutomationAnomalies
     }
 
     private var lastRunStatusValue: String {
@@ -855,6 +725,11 @@ struct CatalogCandidatesDebugView: View {
         return !failedStatuses && run.recovery.failed == 0 && run.enrichment.failed == 0 && run.creation.failed == 0
     }
 
+    private func compactAutopilotSummary(from run: CatalogAutomationCycleRunSummary) -> String? {
+        let failedTotal = run.recovery.failed + run.enrichment.failed + run.creation.failed
+        return "Last run · recovered: \(run.recovery.observed) · enriched: \(run.enrichment.succeeded) · created: \(run.creation.created) · failed: \(failedTotal)"
+    }
+
     @ViewBuilder
     private func summaryRow(title: String, value: String, isFailed: Bool) -> some View {
         HStack(spacing: 8) {
@@ -868,17 +743,6 @@ struct CatalogCandidatesDebugView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func aliasText(from normalized: String) -> String {
-        normalized
-            .split(separator: " ")
-            .map { word in
-                let raw = String(word)
-                guard let first = raw.first else { return raw }
-                return String(first).uppercased() + raw.dropFirst()
-            }
-            .joined(separator: " ")
     }
 
     private func isQuantityContaminatedCandidateText(_ text: String) -> Bool {
@@ -938,71 +802,29 @@ struct CatalogCandidatesDebugView: View {
     }
 
     @MainActor
-    private func runCuratedBatchA() async {
+    private func runAutoAliasSweep() async {
         guard isAdminUser else { return }
-        isRunningCuratedBatch = true
-        runningBatchName = "A"
-        defer {
-            isRunningCuratedBatch = false
-            runningBatchName = nil
-        }
-
-        let slugToID: [String: String] = Dictionary(
-            uniqueKeysWithValues: unifiedIngredients.map {
-                ($0.slug.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), $0.ingredientID)
-            }
-        )
-
-        var items: [CatalogCandidateBatchTriageItem] = []
-        var preSkipped: [String] = []
-        let aliasSuggestions = safeAliasSuggestions
-        print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_started candidate_count=\(aliasSuggestions.count)")
-        for seed in aliasSuggestions {
-            let slug = seed.targetSlug.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            guard let ingredientID = slugToID[slug], !ingredientID.isEmpty else {
-                preSkipped.append("\(seed.normalizedText) (missing slug: \(seed.targetSlug))")
-                continue
-            }
-
-            items.append(
-                CatalogCandidateBatchTriageItem(
-                    normalizedText: seed.normalizedText,
-                    action: "approve_alias",
-                    ingredientID: ingredientID,
-                    aliasText: aliasText(from: seed.normalizedText),
-                    languageCode: "it",
-                    confidenceScore: nil,
-                    reviewerNote: "dynamic_safe_alias_suggestions_v1"
-                )
-            )
-        }
-
-        guard !items.isEmpty else {
-            errorMessage = "Batch A aborted: no resolvable canonical targets."
-            actionMessage = preSkipped.isEmpty ? "" : "Batch A pre-skipped: \(preSkipped.joined(separator: ", "))"
-            return
-        }
+        isRunningAutoAlias = true
+        defer { isRunningAutoAlias = false }
 
         do {
-            let result = try await catalogAdminOpsService.executeBatchCandidateTriage(
-                items: items,
-                defaultLanguageCode: "it",
-                reviewerNote: "dynamic_safe_alias_suggestions_v1"
+            let summary = try await catalogAdminOpsService.autoApplySafeAliases(
+                limit: 50,
+                languageCode: "it"
             )
-            let totalSkipped = result.summary.skipped + preSkipped.count
-            actionMessage = "Safe alias suggestions done. total=\(result.summary.total + preSkipped.count), succeeded=\(result.summary.succeeded), failed=\(result.summary.failed), skipped=\(totalSkipped)"
+            lastAutoAliasSummary = summary
+            actionMessage =
+                "Auto-alias done. total=\(summary.total), " +
+                "succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)"
             print(
-                "[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_done " +
-                "submitted=\(items.count) total=\(result.summary.total + preSkipped.count) " +
-                "succeeded=\(result.summary.succeeded) failed=\(result.summary.failed) skipped=\(totalSkipped)"
+                "[SEASON_CATALOG_ADMIN] phase=auto_alias_ui_done " +
+                "total=\(summary.total) succeeded=\(summary.succeeded) " +
+                "skipped=\(summary.skipped) failed=\(summary.failed)"
             )
-            if !preSkipped.isEmpty {
-                print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_pre_skipped items=\(preSkipped.joined(separator: " | "))")
-            }
             await loadCandidates()
         } catch {
-            errorMessage = "Safe alias suggestions failed. Please try again."
-            print("[SEASON_CATALOG_ADMIN] phase=run_safe_alias_suggestions_failed error=\(error)")
+            errorMessage = "Auto-alias run failed."
+            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_ui_failed error=\(error)")
         }
     }
 
@@ -1450,7 +1272,7 @@ struct CatalogCandidatesDebugView: View {
     @ViewBuilder
     private var draftReviewSection: some View {
         if !pendingDraftReviewRows.isEmpty || !readyEnrichmentDrafts.isEmpty {
-            Section("Draft review") {
+            Section("Draft review (technical)") {
                 if !pendingDraftReviewRows.isEmpty {
                     Text("Pending enrichment draft cleanup review")
                         .font(.footnote.weight(.semibold))
@@ -1500,25 +1322,93 @@ struct CatalogCandidatesDebugView: View {
     }
 
     @ViewBuilder
-    private var curatedBatchActionsSection: some View {
-        Section("Catalog actions") {
-            Text("Primary operator actions from live candidate data.")
+    private var technicalToolsActionsSection: some View {
+        Section("Technical tools") {
+            Text("Secondary diagnostics and maintenance actions. Use work queues above for day-to-day triage.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Button {
-                Task { await runCuratedBatchA() }
-            } label: {
-                if isRunningCuratedBatch && runningBatchName == "A" {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text("Applying safe alias suggestions…")
-                    }
-                } else {
-                    Text("Apply safe alias suggestions (\(safeAliasSuggestions.count))")
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Advanced Run Controls")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Toggle("Enable debug instrumentation", isOn: $enableDebugInstrumentation)
+                    .font(.caption)
+
+                HStack(spacing: 8) {
+                    Text("Recovery")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    TextField("1000", text: $recoveryLimitInput)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+
+                    Text("Enrichment")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    TextField("20", text: $enrichmentLimitInput)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                }
+
+                HStack(spacing: 8) {
+                    Text("Creation")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    TextField("10", text: $creationLimitInput)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+
+                    Text("Enrichment-only")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    TextField("20", text: $enrichmentOnlyLimitInput)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
                 }
             }
-            .disabled(isRunningCuratedBatch || safeAliasSuggestions.isEmpty)
+
+            Button {
+                Task { await runAutoAliasSweep() }
+            } label: {
+                if isRunningAutoAlias {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Auto-approving safe aliases…")
+                    }
+                } else {
+                    Text("Auto-approve safe aliases (50)")
+                }
+            }
+            .disabled(
+                isRunningAutoAlias ||
+                isRunningCuratedBatch ||
+                isRunningObservationRecovery ||
+                isRunningEnrichmentBatch ||
+                isRunningIngredientCreationBatch
+            )
+
+            if let summary = lastAutoAliasSummary {
+                Text("Auto-alias summary: total=\(summary.total), succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !summary.anomalyItems.isEmpty {
+                    Text("Alias anomalies")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(summary.anomalyItems.prefix(10)) { item in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.normalizedText)
+                                .font(.caption.weight(.semibold))
+                            Text("\(item.resultStatus): \(item.errorMessage ?? item.detail)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
 
             Button {
                 Task { await runCuratedBatchB() }
@@ -1529,13 +1419,62 @@ struct CatalogCandidatesDebugView: View {
                         Text("Preparing draft ingredients…")
                     }
                 } else {
-                    Text("Prepare draft ingredients (\(draftIngredientSuggestionCandidates.count))")
+                    Text("Run bulk draft preparation (\(draftIngredientSuggestionCandidates.count))")
                 }
             }
             .disabled(isRunningCuratedBatch || draftIngredientSuggestionCandidates.isEmpty)
 
+            Divider()
+
+            Text("Localization is auto-handled for high-confidence localization-only cases. Manual localization is not part of daily workflow.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
             Button {
-                Task { await runPendingDraftEnrichmentBatch() }
+                Task { await runAutoLocalizationSweep() }
+            } label: {
+                if isRunningAutoLocalization {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Auto-applying safe localizations…")
+                    }
+                } else {
+                    Text("Auto-apply safe localizations (50)")
+                }
+            }
+            .disabled(
+                isRunningAutoLocalization ||
+                isRunningCuratedBatch ||
+                isRunningObservationRecovery ||
+                isRunningEnrichmentBatch ||
+                isRunningIngredientCreationBatch
+            )
+
+            if let summary = lastAutoLocalizationSummary {
+                Text("Auto-localization summary: total=\(summary.total), succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !summary.anomalyItems.isEmpty {
+                    Text("Localization anomalies")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(summary.anomalyItems.prefix(10)) { item in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.normalizedText)
+                                .font(.caption.weight(.semibold))
+                            Text("\(item.resultStatus): \(item.errorMessage ?? item.detail)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            Button {
+                Task { await runPendingDraftEnrichmentBatch(limit: configuredEnrichmentOnlyLimit) }
             } label: {
                 if isRunningEnrichmentBatch {
                     HStack(spacing: 8) {
@@ -1543,7 +1482,7 @@ struct CatalogCandidatesDebugView: View {
                         Text("Enriching pending drafts…")
                     }
                 } else {
-                    Text("Auto-enrich pending drafts (20)")
+                    Text("Run enrichment only (\(configuredEnrichmentOnlyLimit))")
                 }
             }
             .disabled(isRunningEnrichmentBatch || isRunningCuratedBatch || isRunningObservationRecovery || isRunningIngredientCreationBatch)
@@ -1561,26 +1500,6 @@ struct CatalogCandidatesDebugView: View {
                 }
             }
             .disabled(isRunningIngredientCreationBatch || isRunningEnrichmentBatch || isRunningCuratedBatch || isRunningObservationRecovery)
-
-            Button {
-                Task { await runCatalogAutomationCycle() }
-            } label: {
-                if isRunningAutomationCycle {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text("Running catalog automation cycle…")
-                    }
-                } else {
-                    Text("Run catalog automation cycle")
-                }
-            }
-            .disabled(
-                isRunningAutomationCycle
-                || isRunningIngredientCreationBatch
-                || isRunningEnrichmentBatch
-                || isRunningCuratedBatch
-                || isRunningObservationRecovery
-            )
 
             Divider()
 
@@ -1684,6 +1603,65 @@ struct CatalogCandidatesDebugView: View {
     }
 
     @ViewBuilder
+    private var exceptionInboxSection: some View {
+        Section("Needs your decision") {
+            Text("Only exceptions that require human judgment are shown here.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if !needsNewVariantDecision.isEmpty {
+                Text("Needs new variant decision")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(needsNewVariantDecision) { item in
+                    exceptionCard(item, actionLabel: "Review as variant")
+                }
+            }
+
+            if !needsNewRootDecision.isEmpty {
+                Text("Needs new root decision")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(needsNewRootDecision) { item in
+                    exceptionCard(item, actionLabel: "Review as new root")
+                }
+            }
+
+            if !needsHumanReviewCandidates.isEmpty || hasSemanticAutomationAnomalies {
+                Text("Needs human review")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                ForEach(needsHumanReviewCandidates) { item in
+                    exceptionCard(item, actionLabel: "Review")
+                }
+
+                ForEach(semanticAutomationAnomalyItems, id: \.id) { anomaly in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(anomaly.normalizedText)
+                            .font(.body.weight(.semibold))
+                        Text("Automation anomaly")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(anomaly.message)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+
+                        Button("Review") {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isAdvancedDebugExpanded = true
+                            }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var advancedDebugSection: some View {
         Section {
             Toggle(isOn: $isAdvancedDebugExpanded) {
@@ -1692,6 +1670,98 @@ struct CatalogCandidatesDebugView: View {
             }
             .toggleStyle(.switch)
         }
+    }
+
+    @ViewBuilder
+    private func exceptionCard(_ item: CatalogResolutionCandidateRecord, actionLabel: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.normalizedText)
+                .font(.body.weight(.semibold))
+
+            Text(exceptionDecisionLabel(for: item))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if let canonicalCandidate = canonicalCandidateLabel(for: item.normalizedText) {
+                Text("Canonical candidate: \(canonicalCandidate)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let parentSlug = item.suggestedParentSlug, !parentSlug.isEmpty {
+                Text("Suggested parent: \(parentSlug)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(exceptionPlainExplanation(for: item))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            if !isSelectionMode {
+                Button {
+                    enrichmentRoute = EnrichmentRoute(candidate: item)
+                } label: {
+                    Text(actionLabel)
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!isAdminUser || isApproving || creatingDraftNormalizedText != nil)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func exceptionDecisionLabel(for item: CatalogResolutionCandidateRecord) -> String {
+        if needsNewVariantDecision.contains(where: { $0.id == item.id }) {
+            return "Likely new variant"
+        }
+        if needsNewRootDecision.contains(where: { $0.id == item.id }) {
+            return "Likely new root"
+        }
+        return "Needs semantic review"
+    }
+
+    private func exceptionPlainExplanation(for item: CatalogResolutionCandidateRecord) -> String {
+        if let hint = item.reasoningHint?.trimmingCharacters(in: .whitespacesAndNewlines), !hint.isEmpty {
+            return hint
+        }
+        if needsNewVariantDecision.contains(where: { $0.id == item.id }) {
+            return "A related ingredient family exists, but this term still needs a human variant decision."
+        }
+        if needsNewRootDecision.contains(where: { $0.id == item.id }) {
+            return "No safe parent path was identified; this may be a new canonical root ingredient."
+        }
+        return "No safe canonical decision was made automatically."
+    }
+
+    private func semanticAnomaly(_ item: CatalogAutoAliasItemResult) -> Bool {
+        if item.resultStatus == "failed" { return true }
+        let detail = item.detail.lowercased()
+        return detail.contains("conflict") || detail.contains("no_unambiguous") || detail.contains("low_confidence")
+    }
+
+    private func semanticAnomaly(_ item: CatalogAutoLocalizationItemResult) -> Bool {
+        if item.resultStatus == "failed" { return true }
+        let detail = item.detail.lowercased()
+        return detail.contains("conflict") || detail.contains("low_confidence")
+    }
+
+    private func canonicalCandidateLabel(for normalizedText: String) -> String? {
+        let key = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !key.isEmpty else { return nil }
+        guard let blocker = coverageBlockers.first(where: {
+            $0.normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == key
+        }) else {
+            return nil
+        }
+        if let canonicalName = blocker.canonicalCandidateName, !canonicalName.isEmpty {
+            return canonicalName
+        }
+        if let canonicalSlug = blocker.canonicalCandidateSlug, !canonicalSlug.isEmpty {
+            return canonicalSlug
+        }
+        return nil
     }
 
     @MainActor
@@ -1717,6 +1787,33 @@ struct CatalogCandidatesDebugView: View {
         } catch {
             errorMessage = "Observation recovery failed."
             print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runAutoLocalizationSweep() async {
+        guard isAdminUser else { return }
+        isRunningAutoLocalization = true
+        defer { isRunningAutoLocalization = false }
+
+        do {
+            let summary = try await catalogAdminOpsService.autoApplySafeLocalizations(
+                limit: 50,
+                languageCode: "it"
+            )
+            lastAutoLocalizationSummary = summary
+            actionMessage =
+                "Auto-localization done. total=\(summary.total), " +
+                "succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=auto_localization_ui_done " +
+                "total=\(summary.total) succeeded=\(summary.succeeded) " +
+                "skipped=\(summary.skipped) failed=\(summary.failed)"
+            )
+            await loadCandidates()
+        } catch {
+            errorMessage = "Auto-localization run failed."
+            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_ui_failed error=\(error)")
         }
     }
 
@@ -1770,19 +1867,25 @@ struct CatalogCandidatesDebugView: View {
     }
 
     @MainActor
-    private func runPendingDraftEnrichmentBatch() async {
+    private func runPendingDraftEnrichmentBatch(limit: Int) async {
         guard isAdminUser else { return }
         isRunningEnrichmentBatch = true
         defer { isRunningEnrichmentBatch = false }
 
         do {
-            let summary = try await catalogAdminOpsService.runCatalogEnrichmentDraftBatch(limit: 20)
+            let safeLimit = max(1, min(100, limit))
+            let summary = try await catalogAdminOpsService.runCatalogEnrichmentDraftBatch(
+                limit: safeLimit,
+                debug: enableDebugInstrumentation
+            )
             actionMessage =
-                "Draft enrichment batch done. total=\(summary.total), " +
+                "Enrichment-only run (\(safeLimit)) done. total=\(summary.total), " +
                 "succeeded=\(summary.succeeded), failed=\(summary.failed), skipped=\(summary.skipped), " +
                 "ready=\(summary.ready), pending=\(summary.pending)"
             print(
                 "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_done " +
+                "limit=\(safeLimit) " +
+                "debug=\(enableDebugInstrumentation) " +
                 "total=\(summary.total) succeeded=\(summary.succeeded) " +
                 "failed=\(summary.failed) skipped=\(summary.skipped) ready=\(summary.ready)"
             )
@@ -1827,9 +1930,10 @@ struct CatalogCandidatesDebugView: View {
 
         do {
             let result = try await catalogAdminOpsService.runCatalogAutomationCycle(
-                recoveryLimit: 1000,
-                enrichLimit: 20,
-                createLimit: 10
+                recoveryLimit: configuredRecoveryLimit,
+                enrichLimit: configuredEnrichmentLimit,
+                createLimit: configuredCreationLimit,
+                debug: enableDebugInstrumentation
             )
             lastAutomationRun = result
             actionMessage =
@@ -1840,6 +1944,7 @@ struct CatalogCandidatesDebugView: View {
 
             print(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_done " +
+                "debug=\(enableDebugInstrumentation) " +
                 "recovery_total=\(result.recovery.total) recovery_failed=\(result.recovery.failed) " +
                 "enrichment_total=\(result.enrichment.total) enrichment_failed=\(result.enrichment.failed) " +
                 "creation_total=\(result.creation.total) creation_failed=\(result.creation.failed)"
@@ -1978,14 +2083,6 @@ struct CatalogCandidatesDebugView: View {
                 bulkAliasRoute = BulkAliasRoute(candidates: selectedCandidates)
             }
             .disabled(selectedCandidates.isEmpty || !isAdminUser || isApproving)
-
-            Button("Bulk add localization") {
-                guard let first = selectedLocalizationBlockers.first else { return }
-                bulkLocalizationText = first.normalizedText
-                bulkLocalizationLanguageCode = "it"
-                bulkLocalizationRoute = BulkLocalizationRoute(blockers: selectedLocalizationBlockers)
-            }
-            .disabled(!canRunBulkLocalization || !isAdminUser || isAddingLocalization)
         }
     }
 
@@ -2033,53 +2130,28 @@ struct CatalogCandidatesDebugView: View {
                 Text("candidate: \(canonicalName) (\(canonicalSlug))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if item.canonicalCandidateIsChild, let parentSlug = item.canonicalCandidateParentSlug {
+                    Text("hierarchy: child of \(parentSlug)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if item.canonicalCandidateIsRoot {
+                    Text("hierarchy: root node")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("generic parent exists: \(item.genericParentExists ? "yes" : "no")")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
 
             Text("blocker: \(item.blockerReason)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            if !isSelectionMode,
-               item.likelyFixType == "localization",
-               item.canonicalCandidateIngredientID != nil {
-                Button {
-                    localizationText = item.normalizedText
-                    localizationLanguageCode = "it"
-                    localizationRoute = LocalizationRoute(blocker: item)
-                } label: {
-                    if isAddingLocalization && localizationRoute?.blocker.id == item.id {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Adding localization…")
-                        }
-                        .font(.caption.weight(.semibold))
-                    } else {
-                        Text("Add localization")
-                            .font(.caption.weight(.semibold))
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(!isAdminUser || isAddingLocalization)
-            }
         }
         .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var safeAliasSuggestionsSection: some View {
-        Section("Safe alias suggestions (\(safeAliasSuggestions.count))") {
-            ForEach(safeAliasSuggestions, id: \.normalizedText) { item in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.normalizedText)
-                        .font(.body.weight(.semibold))
-                    Text("target: \(item.targetSlug)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 2)
-            }
-        }
     }
 
     @ViewBuilder
@@ -2102,6 +2174,41 @@ struct CatalogCandidatesDebugView: View {
                         Text("occurrences: \(item.occurrenceCount)")
                         Text("suggested: \(item.suggestedResolutionType)")
                         Text("alias_status: \(item.existingAliasStatus)")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ingredientHierarchySection: some View {
+        Section("Ingredient hierarchy (admin)") {
+            ForEach(ingredientHierarchyRows) { row in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(row.ingredientSlug)
+                            .font(.body.weight(.semibold))
+                        if let parentSlug = row.parentSlug, !parentSlug.isEmpty {
+                            Image(systemName: "arrow.turn.down.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(parentSlug)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("root")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        Text("type: \(row.ingredientType)")
+                        Text("rank: \(row.specificityRank)")
+                        Text("kind: \(row.variantKind)")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -2239,6 +2346,27 @@ struct CatalogCandidatesDebugView: View {
             .font(.caption)
             .foregroundStyle(.secondary)
 
+            if !item.possibleActions.isEmpty {
+                HStack(spacing: 10) {
+                    Text("options: \(item.possibleActions.joined(separator: " / "))")
+                    Text("confidence: \(item.confidence)")
+                    if let parentSlug = item.suggestedParentSlug, !parentSlug.isEmpty {
+                        Text("parent: \(parentSlug)")
+                    }
+                    if item.closeCanonicalChildExists {
+                        Text("close child exists")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            if let reasoningHint = item.reasoningHint, !reasoningHint.isEmpty {
+                Text("reasoning: \(reasoningHint)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
             if !isSelectionMode {
                 Button {
                     selectedIngredientID = nil
@@ -2363,18 +2491,6 @@ struct CatalogCandidatesDebugView: View {
 
     private var selectedCoverageBlockers: [CatalogCoverageBlockerRecord] {
         coverageBlockers.filter { selectedCoverageBlockerIDs.contains($0.id) }
-    }
-
-    private var selectedLocalizationBlockers: [CatalogCoverageBlockerRecord] {
-        selectedCoverageBlockers.filter {
-            $0.likelyFixType == "localization" && $0.canonicalCandidateIngredientID != nil
-        }
-    }
-
-    private var canRunBulkLocalization: Bool {
-        guard !selectedLocalizationBlockers.isEmpty else { return false }
-        let ids = Set(selectedLocalizationBlockers.compactMap { $0.canonicalCandidateIngredientID })
-        return ids.count == 1
     }
 
     private var sortedReadyEnrichmentDrafts: [ReadyCatalogEnrichmentDraftRecord] {
