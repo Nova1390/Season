@@ -562,9 +562,7 @@ enum SocialImportParser {
     ) -> SocialImportConfidence {
         let ingredientCount = suggestedIngredients.count
         let stepCount = suggestedSteps.count
-        let mappedIngredientCount = suggestedIngredients.filter {
-            $0.produceID != nil || $0.basicIngredientID != nil
-        }.count
+        let mappedIngredientCount = suggestedIngredients.filter(\.hasCatalogIdentity).count
         let hasMeaningfulTitle: Bool = {
             guard let title = suggestedTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !title.isEmpty else { return false }

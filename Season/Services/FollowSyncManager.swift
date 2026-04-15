@@ -12,34 +12,9 @@ final class FollowSyncManager {
         self.supabaseService = supabaseService
     }
 
-    func enqueueCreate(_ relation: FollowRelation) {
-        guard areValidUUIDs(followerId: relation.followerId, followingId: relation.followingId) else {
-            print("[SEASON_FOLLOW_IDENTITY] phase=backend_sync_skipped_invalid_uuid follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
-            return
-        }
-        guard shouldSyncToBackend(followerId: relation.followerId, followingId: relation.followingId) else {
-            return
-        }
-        print("[SEASON_FOLLOW_SYNC] phase=backend_sync_allowed follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
-        Task {
-            await supabaseService.createFollow(relation)
-        }
-    }
-
-    func enqueueDelete(followerId: String, followingId: String) {
-        guard areValidUUIDs(followerId: followerId, followingId: followingId) else {
-            print("[SEASON_FOLLOW_IDENTITY] phase=backend_sync_skipped_invalid_uuid follower_id=\(normalized(followerId)) following_id=\(normalized(followingId))")
-            return
-        }
-        guard shouldSyncToBackend(followerId: followerId, followingId: followingId) else {
-            return
-        }
-        print("[SEASON_FOLLOW_SYNC] phase=backend_sync_allowed follower_id=\(normalized(followerId)) following_id=\(normalized(followingId))")
-        Task {
-            await supabaseService.deleteFollow(
-                followerId: followerId,
-                followingId: followingId
-            )
+    func requestSync() {
+        Task { @MainActor in
+            await syncToBackend()
         }
     }
 
@@ -70,25 +45,57 @@ final class FollowSyncManager {
         isSyncingToBackend = true
         defer { isSyncingToBackend = false }
 
-        let localRelations = await MainActor.run {
-            FollowStore.shared.currentFollowRelations()
+        let pendingRelations = await MainActor.run {
+            FollowStore.shared.pendingFollowSyncRelations()
         }
-        guard !localRelations.isEmpty else { return }
+        guard !pendingRelations.isEmpty else { return }
 
-        for relation in localRelations {
+        var processedCount = 0
+        for relation in pendingRelations {
             guard areValidUUIDs(followerId: relation.followerId, followingId: relation.followingId) else {
                 print("[SEASON_FOLLOW_IDENTITY] phase=backend_sync_skipped_invalid_uuid follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
+                FollowStore.shared.markPendingFollowOperationCompleted(
+                    followerId: relation.followerId,
+                    followingId: relation.followingId,
+                    syncedAt: nil
+                )
                 continue
             }
             guard shouldSyncToBackend(followerId: relation.followerId, followingId: relation.followingId) else {
+                FollowStore.shared.markPendingFollowOperationCompleted(
+                    followerId: relation.followerId,
+                    followingId: relation.followingId,
+                    syncedAt: nil
+                )
                 continue
             }
-            print("[SEASON_FOLLOW_SYNC] phase=backend_sync_allowed follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
-            await supabaseService.createFollow(relation)
+
+            let didSync: Bool
+            switch relation.pendingSyncOperation {
+            case .create:
+                print("[SEASON_FOLLOW_SYNC] phase=backend_sync_allowed operation=create follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
+                didSync = await supabaseService.createFollow(relation)
+            case .delete:
+                print("[SEASON_FOLLOW_SYNC] phase=backend_sync_allowed operation=delete follower_id=\(normalized(relation.followerId)) following_id=\(normalized(relation.followingId))")
+                didSync = await supabaseService.deleteFollow(
+                    followerId: relation.followerId,
+                    followingId: relation.followingId
+                )
+            case .none:
+                didSync = true
+            }
+
+            guard didSync else { continue }
+            FollowStore.shared.markPendingFollowOperationCompleted(
+                followerId: relation.followerId,
+                followingId: relation.followingId,
+                syncedAt: Date()
+            )
+            processedCount += 1
         }
 
         let followerID = normalized(CurrentUser.shared.creator.id)
-        print("[SEASON_SUPABASE] request=syncFollowToBackend phase=request_ok follower_id=\(followerID) pushed=\(localRelations.count)")
+        print("[SEASON_SUPABASE] request=syncFollowToBackend phase=request_ok follower_id=\(followerID) pending=\(pendingRelations.count) processed=\(processedCount)")
     }
 
     private func normalized(_ id: String) -> String {

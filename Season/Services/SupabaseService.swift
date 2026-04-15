@@ -1163,16 +1163,16 @@ final class SupabaseService {
         }
     }
 
-    func createFollow(_ relation: FollowRelation) async {
+    func createFollow(_ relation: FollowRelation) async -> Bool {
         let followerID = normalizeFollowID(relation.followerId)
         let followingID = normalizeFollowID(relation.followingId)
-        guard !followerID.isEmpty, !followingID.isEmpty, followingID != "unknown" else { return }
+        guard !followerID.isEmpty, !followingID.isEmpty, followingID != "unknown" else { return false }
 
         print("[SEASON_SUPABASE] request=createFollow phase=request_started follower_id=\(followerID) following_id=\(followingID)")
 
         guard let client else {
             print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=missing_configuration")
-            return
+            return false
         }
 
         let payload = FollowInsertPayload(
@@ -1187,25 +1187,27 @@ final class SupabaseService {
                 .upsert(payload, onConflict: "follower_id,following_id")
                 .execute()
             print("[SEASON_SUPABASE] request=createFollow phase=request_ok follower_id=\(followerID) following_id=\(followingID)")
+            return true
         } catch {
             if isMissingFollowsTableError(error) {
                 print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=table_missing follower_id=\(followerID) following_id=\(followingID) error=\(error)")
-                return
+                return false
             }
             print("[SEASON_SUPABASE] request=createFollow phase=request_failed follower_id=\(followerID) following_id=\(followingID) error=\(error)")
+            return false
         }
     }
 
-    func deleteFollow(followerId: String, followingId: String) async {
+    func deleteFollow(followerId: String, followingId: String) async -> Bool {
         let normalizedFollowerID = normalizeFollowID(followerId)
         let normalizedFollowingID = normalizeFollowID(followingId)
-        guard !normalizedFollowerID.isEmpty, !normalizedFollowingID.isEmpty else { return }
+        guard !normalizedFollowerID.isEmpty, !normalizedFollowingID.isEmpty else { return false }
 
         print("[SEASON_SUPABASE] request=deleteFollow phase=request_started follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
 
         guard let client else {
             print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=missing_configuration")
-            return
+            return false
         }
 
         do {
@@ -1216,12 +1218,14 @@ final class SupabaseService {
                 .eq("following_id", value: normalizedFollowingID)
                 .execute()
             print("[SEASON_SUPABASE] request=deleteFollow phase=request_ok follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
+            return true
         } catch {
             if isMissingFollowsTableError(error) {
                 print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
-                return
+                return false
             }
             print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
+            return false
         }
     }
 
@@ -3061,6 +3065,37 @@ final class SupabaseService {
                     .execute()
                 print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_ok")
             } catch {
+                if self.isDuplicateKeyPostgresError(error) {
+                    print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_detected error=\(error)")
+                    print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update")
+
+                    let fallbackPayload = ShoppingListItemUpdatePayload(
+                        ingredient_type: ingredientType,
+                        ingredient_id: ingredientID,
+                        custom_name: customName,
+                        quantity: quantity,
+                        unit: unit,
+                        source_recipe_id: sourceRecipeID,
+                        is_checked: isChecked,
+                        updated_at: now
+                    )
+
+                    do {
+                        _ = try await supabaseClient
+                            .from("shopping_list_items")
+                            .update(fallbackPayload)
+                            .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
+                            .eq("user_id", value: user.id.uuidString)
+                            .execute()
+                        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_ok")
+                        return
+                    } catch {
+                        let fallbackCategory = self.classifyNetworkError(error)
+                        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_failed category=\(fallbackCategory.rawValue) error=\(error)")
+                        throw error
+                    }
+                }
+
                 let category = self.classifyNetworkError(error)
                 print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error

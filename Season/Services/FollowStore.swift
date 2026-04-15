@@ -31,8 +31,18 @@ final class FollowStore: ObservableObject {
         let followerID = currentFollowerID()
         guard !followerID.isEmpty, followerID != canonicalFollowingID else { return }
 
-        if relations.contains(where: { $0.followerId == followerID && $0.followingId == canonicalFollowingID }) {
+        if let index = relations.firstIndex(where: { $0.followerId == followerID && $0.followingId == canonicalFollowingID }) {
+            if relations[index].isActive {
+                refreshFollowingIDs()
+                return
+            }
+
+            relations[index].isActive = true
+            relations[index].pendingSyncOperation = .create
+            relations[index].lastSyncedAt = nil
+            persist()
             refreshFollowingIDs()
+            FollowSyncManager.shared.requestSync()
             return
         }
 
@@ -40,15 +50,15 @@ final class FollowStore: ObservableObject {
             FollowRelation(
                 followerId: followerID,
                 followingId: canonicalFollowingID,
-                createdAt: Date()
+                createdAt: Date(),
+                isActive: true,
+                pendingSyncOperation: .create,
+                lastSyncedAt: nil
             )
         )
         persist()
         refreshFollowingIDs()
-
-        if let relation = relations.first(where: { $0.followerId == followerID && $0.followingId == canonicalFollowingID }) {
-            FollowSyncManager.shared.enqueueCreate(relation)
-        }
+        FollowSyncManager.shared.requestSync()
     }
 
     func unfollow(_ creatorId: String) {
@@ -58,10 +68,26 @@ final class FollowStore: ObservableObject {
         let followerID = currentFollowerID()
         guard !followerID.isEmpty else { return }
 
-        relations.removeAll { $0.followerId == followerID && $0.followingId == canonicalFollowingID }
+        if let index = relations.firstIndex(where: { $0.followerId == followerID && $0.followingId == canonicalFollowingID }) {
+            relations[index].isActive = false
+            relations[index].pendingSyncOperation = .delete
+            relations[index].lastSyncedAt = nil
+        } else {
+            // Keep a tombstone so delete intent survives until sync.
+            relations.append(
+                FollowRelation(
+                    followerId: followerID,
+                    followingId: canonicalFollowingID,
+                    createdAt: Date(),
+                    isActive: false,
+                    pendingSyncOperation: .delete,
+                    lastSyncedAt: nil
+                )
+            )
+        }
         persist()
         refreshFollowingIDs()
-        FollowSyncManager.shared.enqueueDelete(followerId: followerID, followingId: canonicalFollowingID)
+        FollowSyncManager.shared.requestSync()
     }
 
     func toggleFollow(_ creatorId: String) {
@@ -95,8 +121,49 @@ final class FollowStore: ObservableObject {
         let followerID = currentFollowerID()
         guard !followerID.isEmpty else { return [] }
         return relations.filter {
-            $0.followerId == followerID && isValidUUID($0.followingId)
+            $0.followerId == followerID && $0.isActive && isValidUUID($0.followingId)
         }
+    }
+
+    func pendingFollowSyncRelations() -> [FollowRelation] {
+        refreshFollowingIDsIfNeeded()
+        let followerID = currentFollowerID()
+        guard !followerID.isEmpty else { return [] }
+        return relations.filter {
+            $0.followerId == followerID &&
+                isValidUUID($0.followingId) &&
+                $0.pendingSyncOperation != .none
+        }
+    }
+
+    func markPendingFollowOperationCompleted(
+        followerId: String,
+        followingId: String,
+        syncedAt: Date?
+    ) {
+        let normalizedFollower = normalizeID(followerId)
+        let normalizedFollowing = normalizeID(followingId)
+        guard let index = relations.firstIndex(where: {
+            $0.followerId == normalizedFollower && $0.followingId == normalizedFollowing
+        }) else {
+            return
+        }
+
+        let operation = relations[index].pendingSyncOperation
+        switch operation {
+        case .create:
+            relations[index].pendingSyncOperation = .none
+            if let syncedAt {
+                relations[index].lastSyncedAt = syncedAt
+            }
+        case .delete:
+            relations.remove(at: index)
+        case .none:
+            return
+        }
+
+        persist()
+        refreshFollowingIDs()
     }
 
     @discardableResult
@@ -126,7 +193,10 @@ final class FollowStore: ObservableObject {
                 FollowRelation(
                     followerId: followerID,
                     followingId: normalizedFollowing,
-                    createdAt: relation.createdAt
+                    createdAt: relation.createdAt,
+                    isActive: true,
+                    pendingSyncOperation: .none,
+                    lastSyncedAt: relation.createdAt
                 )
             )
             added += 1
@@ -144,7 +214,7 @@ final class FollowStore: ObservableObject {
         cachedFollowerID = followerID
         followingIds = Set(
             relations
-                .filter { $0.followerId == followerID }
+                .filter { $0.followerId == followerID && $0.isActive }
                 .map { $0.followingId }
         )
     }
@@ -221,7 +291,10 @@ final class FollowStore: ObservableObject {
                 FollowRelation(
                     followerId: followerID,
                     followingId: followingID,
-                    createdAt: relation.createdAt
+                    createdAt: relation.createdAt,
+                    isActive: relation.isActive,
+                    pendingSyncOperation: relation.pendingSyncOperation,
+                    lastSyncedAt: relation.lastSyncedAt
                 )
             )
         }

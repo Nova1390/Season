@@ -4,6 +4,7 @@ import Supabase
 final class RecipeRepository {
     private let client: SupabaseClient?
     private let configurationIssue: String?
+    private var cachedRecipeColumnCapabilities: RecipeOptionalColumnCapabilities?
 
     init(
         client: SupabaseClient?,
@@ -31,6 +32,7 @@ final class RecipeRepository {
 
         let ingredientPayloads = recipe.ingredients.map {
             RecipeIngredientInsertPayload(
+                ingredient_id: $0.ingredientID,
                 produce_id: $0.produceID,
                 basic_ingredient_id: $0.basicIngredientID,
                 name: $0.name,
@@ -39,108 +41,104 @@ final class RecipeRepository {
             )
         }
         let createdAt = ISO8601DateFormatter().string(from: recipe.createdAt)
+        let capabilities = try await resolveRecipeOptionalColumnCapabilities(using: supabaseClient)
 
-        let payload = RecipeInsertPayload(
-            id: recipe.id,
-            user_id: publishUserID,
-            title: recipe.title,
-            ingredients: ingredientPayloads,
-            steps: recipe.preparationSteps,
-            servings: recipe.servings,
-            image_url: recipe.imageURL,
-            instagram_url: recipe.instagramURL,
-            tiktok_url: recipe.tiktokURL,
-            source_url: recipe.sourceURL,
-            source_name: recipe.sourceName,
-            source_type: recipe.sourceType?.rawValue,
-            created_at: createdAt
-        )
-
-        do {
-            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=primary")
+        if capabilities.supportsImageURL && capabilities.supportsSourceColumns {
+            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=full_schema")
             _ = try await supabaseClient
                 .from("recipes")
-                .upsert(payload, onConflict: "id")
+                .upsert(
+                    RecipeInsertPayload(
+                        id: recipe.id,
+                        user_id: publishUserID,
+                        title: recipe.title,
+                        ingredients: ingredientPayloads,
+                        steps: recipe.preparationSteps,
+                        servings: recipe.servings,
+                        image_url: recipe.imageURL,
+                        instagram_url: recipe.instagramURL,
+                        tiktok_url: recipe.tiktokURL,
+                        source_url: recipe.sourceURL,
+                        source_name: recipe.sourceName,
+                        source_type: recipe.sourceType?.rawValue,
+                        created_at: createdAt
+                    ),
+                    onConflict: "id"
+                )
                 .execute()
-            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=primary")
-        } catch {
-            if isMissingColumnError(error, column: "image_url") {
-                print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_optional_column")
-                do {
-                    _ = try await supabaseClient
-                        .from("recipes")
-                        .upsert(
-                            RecipeInsertPayloadWithoutImageURL(
-                                id: recipe.id,
-                                user_id: publishUserID,
-                                title: recipe.title,
-                                ingredients: ingredientPayloads,
-                                steps: recipe.preparationSteps,
-                                servings: recipe.servings,
-                                instagram_url: recipe.instagramURL,
-                                tiktok_url: recipe.tiktokURL,
-                                source_url: recipe.sourceURL,
-                                source_name: recipe.sourceName,
-                                source_type: recipe.sourceType?.rawValue,
-                                created_at: createdAt
-                            ),
-                            onConflict: "id"
-                        )
-                        .execute()
-                    print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=fallback")
-                } catch {
-                    if isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
-                        print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
-                        _ = try await supabaseClient
-                            .from("recipes")
-                            .upsert(
-                                RecipeInsertPayloadLegacyColumnsOnly(
-                                    id: recipe.id,
-                                    user_id: publishUserID,
-                                    title: recipe.title,
-                                    ingredients: ingredientPayloads,
-                                    steps: recipe.preparationSteps,
-                                    servings: recipe.servings,
-                                    instagram_url: recipe.instagramURL,
-                                    tiktok_url: recipe.tiktokURL,
-                                    created_at: createdAt
-                                ),
-                                onConflict: "id"
-                            )
-                            .execute()
-                        print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
-                    } else {
-                        throw error
-                    }
-                }
-            } else if isMissingAnyColumnError(error, columns: ["source_url", "source_name", "source_type"]) {
-                print("[SEASON_SUPABASE] phase=create_recipe_write_retry recipe_id=\(recipe.id) reason=missing_source_columns")
-                _ = try await supabaseClient
-                    .from("recipes")
-                    .upsert(
-                        RecipeInsertPayloadWithoutImageURL(
-                            id: recipe.id,
-                            user_id: publishUserID,
-                            title: recipe.title,
-                            ingredients: ingredientPayloads,
-                            steps: recipe.preparationSteps,
-                            servings: recipe.servings,
-                            instagram_url: recipe.instagramURL,
-                            tiktok_url: recipe.tiktokURL,
-                            source_url: nil,
-                            source_name: nil,
-                            source_type: nil,
-                            created_at: createdAt
-                        ),
-                        onConflict: "id"
-                    )
-                    .execute()
-                print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
-            } else {
-                print("[SEASON_SUPABASE] phase=create_recipe_write_failed recipe_id=\(recipe.id) reason=\(error)")
-                throw error
-            }
+            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=full_schema")
+            return
         }
+
+        if !capabilities.supportsImageURL && capabilities.supportsSourceColumns {
+            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_image_column")
+            _ = try await supabaseClient
+                .from("recipes")
+                .upsert(
+                    RecipeInsertPayloadWithoutImageURL(
+                        id: recipe.id,
+                        user_id: publishUserID,
+                        title: recipe.title,
+                        ingredients: ingredientPayloads,
+                        steps: recipe.preparationSteps,
+                        servings: recipe.servings,
+                        instagram_url: recipe.instagramURL,
+                        tiktok_url: recipe.tiktokURL,
+                        source_url: recipe.sourceURL,
+                        source_name: recipe.sourceName,
+                        source_type: recipe.sourceType?.rawValue,
+                        created_at: createdAt
+                    ),
+                    onConflict: "id"
+                )
+                .execute()
+            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_image_column")
+            return
+        }
+
+        if capabilities.supportsImageURL && !capabilities.supportsSourceColumns {
+            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_source_columns")
+            _ = try await supabaseClient
+                .from("recipes")
+                .upsert(
+                    RecipeInsertPayloadWithoutSourceColumns(
+                        id: recipe.id,
+                        user_id: publishUserID,
+                        title: recipe.title,
+                        ingredients: ingredientPayloads,
+                        steps: recipe.preparationSteps,
+                        servings: recipe.servings,
+                        image_url: recipe.imageURL,
+                        instagram_url: recipe.instagramURL,
+                        tiktok_url: recipe.tiktokURL,
+                        created_at: createdAt
+                    ),
+                    onConflict: "id"
+                )
+                .execute()
+            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
+            return
+        }
+
+        print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=legacy_columns_only")
+        _ = try await supabaseClient
+            .from("recipes")
+            .upsert(
+                RecipeInsertPayloadLegacyColumnsOnly(
+                    id: recipe.id,
+                    user_id: publishUserID,
+                    title: recipe.title,
+                    ingredients: ingredientPayloads,
+                    steps: recipe.preparationSteps,
+                    servings: recipe.servings,
+                    instagram_url: recipe.instagramURL,
+                    tiktok_url: recipe.tiktokURL,
+                    created_at: createdAt
+                ),
+                onConflict: "id"
+            )
+            .execute()
+        print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
     }
 
     func fetchRecipes(limit: Int = 40, offset: Int = 0) async throws -> [Recipe] {
@@ -166,15 +164,19 @@ final class RecipeRepository {
         return rows.map { row in
             let mappedIngredients: [RecipeIngredient] = (row.ingredients ?? []).map { ingredient in
                 let unit = RecipeQuantityUnit(rawValue: ingredient.quantity_unit ?? "") ?? .g
+                let ingredientID = ingredient.ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let produceID = ingredient.produce_id?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let basicID = ingredient.basic_ingredient_id?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let fallbackName = ingredient.name?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let resolvedName = (fallbackName?.isEmpty == false)
                     ? fallbackName!
-                    : (produceID?.isEmpty == false ? produceID! : (basicID?.isEmpty == false ? basicID! : "Ingredient"))
+                    : (ingredientID?.isEmpty == false
+                        ? ingredientID!
+                        : (produceID?.isEmpty == false ? produceID! : (basicID?.isEmpty == false ? basicID! : "Ingredient")))
                 let quality: RecipeIngredientQuality = (produceID?.isEmpty == false) ? .coreSeasonal : .basic
 
                 return RecipeIngredient(
+                    ingredientID: (ingredientID?.isEmpty == false) ? ingredientID?.lowercased() : nil,
                     produceID: (produceID?.isEmpty == false) ? produceID : nil,
                     basicIngredientID: (basicID?.isEmpty == false) ? basicID : nil,
                     quality: quality,
@@ -303,17 +305,85 @@ final class RecipeRepository {
         return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
     }
 
-    private func isMissingColumnError(_ error: Error, column: String) -> Bool {
-        let normalized = String(describing: error).lowercased()
-        return normalized.contains("could not find the '\(column.lowercased())' column")
+    private func resolveRecipeOptionalColumnCapabilities(
+        using supabaseClient: SupabaseClient
+    ) async throws -> RecipeOptionalColumnCapabilities {
+        if let cachedRecipeColumnCapabilities {
+            return cachedRecipeColumnCapabilities
+        }
+
+        async let imageSupported = supportsRecipeColumn("image_url", using: supabaseClient)
+        async let sourceURLSupported = supportsRecipeColumn("source_url", using: supabaseClient)
+        async let sourceNameSupported = supportsRecipeColumn("source_name", using: supabaseClient)
+        async let sourceTypeSupported = supportsRecipeColumn("source_type", using: supabaseClient)
+
+        let capabilities = try await RecipeOptionalColumnCapabilities(
+            supportsImageURL: imageSupported,
+            supportsSourceURL: sourceURLSupported,
+            supportsSourceName: sourceNameSupported,
+            supportsSourceType: sourceTypeSupported
+        )
+
+        cachedRecipeColumnCapabilities = capabilities
+        return capabilities
     }
 
-    private func isMissingAnyColumnError(_ error: Error, columns: [String]) -> Bool {
-        columns.contains(where: { isMissingColumnError(error, column: $0) })
+    private func supportsRecipeColumn(
+        _ column: String,
+        using supabaseClient: SupabaseClient
+    ) async throws -> Bool {
+        do {
+            _ = try await supabaseClient
+                .from("recipes")
+                .select("id,\(column)")
+                .limit(1)
+                .execute()
+            return true
+        } catch {
+            if isMissingColumnProbeError(error) {
+                return false
+            }
+            throw error
+        }
+    }
+
+    private func isMissingColumnProbeError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if let code = postgrestErrorCode(from: nsError) {
+            return code.uppercased() == "PGRST204"
+        }
+        return false
+    }
+
+    private func postgrestErrorCode(from error: NSError) -> String? {
+        let keys = ["code", "Code", "postgrestCode", "postgrest_code"]
+        for key in keys {
+            if let value = error.userInfo[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return postgrestErrorCode(from: underlying)
+        }
+
+        return nil
+    }
+}
+
+private struct RecipeOptionalColumnCapabilities {
+    let supportsImageURL: Bool
+    let supportsSourceURL: Bool
+    let supportsSourceName: Bool
+    let supportsSourceType: Bool
+
+    var supportsSourceColumns: Bool {
+        supportsSourceURL && supportsSourceName && supportsSourceType
     }
 }
 
 private struct CloudRecipeIngredient: Codable {
+    let ingredient_id: String?
     let produce_id: String?
     let basic_ingredient_id: String?
     let name: String?
@@ -356,6 +426,7 @@ private struct UserRecipeCrispiedStateUpsert: Encodable {
 }
 
 private struct RecipeIngredientInsertPayload: Encodable {
+    let ingredient_id: String?
     let produce_id: String?
     let basic_ingredient_id: String?
     let name: String
@@ -391,6 +462,19 @@ private struct RecipeInsertPayloadWithoutImageURL: Encodable {
     let source_url: String?
     let source_name: String?
     let source_type: String?
+    let created_at: String
+}
+
+private struct RecipeInsertPayloadWithoutSourceColumns: Encodable {
+    let id: String
+    let user_id: String
+    let title: String
+    let ingredients: [RecipeIngredientInsertPayload]
+    let steps: [String]
+    let servings: Int
+    let image_url: String?
+    let instagram_url: String?
+    let tiktok_url: String?
     let created_at: String
 }
 

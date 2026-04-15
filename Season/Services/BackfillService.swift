@@ -8,9 +8,17 @@ struct BackfillResult {
 
 final class BackfillService {
     private let supabaseService: SupabaseService
+    private let outboxEnqueuer: OutboxMutationEnqueuer
+    private let outboxDispatcher: OutboxDispatcher
 
-    init(supabaseService: SupabaseService = .shared) {
+    init(
+        supabaseService: SupabaseService = .shared,
+        outboxEnqueuer: OutboxMutationEnqueuer = OutboxMutationEnqueuer(),
+        outboxDispatcher: OutboxDispatcher = OutboxDispatcher()
+    ) {
         self.supabaseService = supabaseService
+        self.outboxEnqueuer = outboxEnqueuer
+        self.outboxDispatcher = outboxDispatcher
     }
 
     func runManualBackfill() async throws -> BackfillResult {
@@ -20,6 +28,7 @@ final class BackfillService {
 
         let shoppingInserted = try await backfillShoppingList(userID: userID)
         let fridgeInserted = try await backfillFridge(userID: userID)
+        await outboxDispatcher.processPendingMutations()
 
         return BackfillResult(
             shoppingInserted: shoppingInserted,
@@ -44,28 +53,28 @@ final class BackfillService {
 
         print("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
 
-        var inserted = 0
+        var enqueued = 0
         for mapped in missing {
-            do {
-                try await supabaseService.createShoppingListItem(
-                    localItemID: mapped.localItemID,
-                    ingredientType: mapped.ingredientType,
-                    ingredientID: mapped.ingredientID,
-                    customName: mapped.customName,
-                    quantity: mapped.quantity,
-                    unit: mapped.unit,
-                    sourceRecipeID: mapped.sourceRecipeID,
-                    isChecked: false,
-                    traceID: "backfill-shopping-\(String(mapped.localItemID.prefix(8)))"
-                )
-                inserted += 1
-            } catch {
-                print("[SEASON_SUPABASE] phase=backfill_insert_failed domain=\(domain) item=\(mapped.localItemID) error=\(error)")
+            let didEnqueue = outboxEnqueuer.enqueueShoppingListCreate(
+                userID: userID,
+                localItemID: mapped.localItemID,
+                ingredientType: mapped.ingredientType,
+                ingredientID: mapped.ingredientID,
+                customName: mapped.customName,
+                quantity: mapped.quantity,
+                unit: mapped.unit,
+                sourceRecipeID: mapped.sourceRecipeID,
+                isChecked: false
+            )
+            if didEnqueue {
+                enqueued += 1
+            } else {
+                print("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
             }
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) inserted=\(inserted)")
-        return inserted
+        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
+        return enqueued
     }
 
     private func backfillFridge(userID: UUID) async throws -> Int {
@@ -84,26 +93,26 @@ final class BackfillService {
 
         print("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
 
-        var inserted = 0
+        var enqueued = 0
         for mapped in missing {
-            do {
-                try await supabaseService.createFridgeItem(
-                    localItemID: mapped.localItemID,
-                    ingredientType: mapped.ingredientType,
-                    ingredientID: mapped.ingredientID,
-                    customName: mapped.customName,
-                    quantity: mapped.quantity,
-                    unit: mapped.unit,
-                    traceID: "backfill-fridge-\(String(mapped.localItemID.prefix(8)))"
-                )
-                inserted += 1
-            } catch {
-                print("[SEASON_SUPABASE] phase=backfill_insert_failed domain=\(domain) item=\(mapped.localItemID) error=\(error)")
+            let didEnqueue = outboxEnqueuer.enqueueFridgeCreate(
+                userID: userID,
+                localItemID: mapped.localItemID,
+                ingredientType: mapped.ingredientType,
+                ingredientID: mapped.ingredientID,
+                customName: mapped.customName,
+                quantity: mapped.quantity,
+                unit: mapped.unit
+            )
+            if didEnqueue {
+                enqueued += 1
+            } else {
+                print("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
             }
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) inserted=\(inserted)")
-        return inserted
+        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
+        return enqueued
     }
 
     private func mapShoppingEntry(_ entry: ShoppingListEntry) -> ShoppingBackfillMappedEntry {

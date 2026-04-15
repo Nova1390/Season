@@ -64,9 +64,10 @@ enum RecipeIngredientMappingConfidence: String, Codable, Hashable {
 
 struct RecipeIngredient: Identifiable, Codable, Hashable {
     var id: String {
-        let base = produceID ?? basicIngredientID ?? name.lowercased()
+        let base = ingredientID ?? produceID ?? basicIngredientID ?? name.lowercased()
         return "\(quality.rawValue)-\(base)-\(quantityValue)-\(quantityUnit.rawValue)"
     }
+    let ingredientID: String?
     let produceID: String?
     let basicIngredientID: String?
     let quality: RecipeIngredientQuality
@@ -75,6 +76,32 @@ struct RecipeIngredient: Identifiable, Codable, Hashable {
     let quantityUnit: RecipeQuantityUnit
     var rawIngredientLine: String? = nil
     var mappingConfidence: RecipeIngredientMappingConfidence = .high
+
+    var hasCatalogIdentity: Bool {
+        ingredientID != nil || produceID != nil || basicIngredientID != nil
+    }
+
+    init(
+        ingredientID: String? = nil,
+        produceID: String?,
+        basicIngredientID: String?,
+        quality: RecipeIngredientQuality,
+        name: String,
+        quantityValue: Double,
+        quantityUnit: RecipeQuantityUnit,
+        rawIngredientLine: String? = nil,
+        mappingConfidence: RecipeIngredientMappingConfidence = .high
+    ) {
+        self.ingredientID = ingredientID
+        self.produceID = produceID
+        self.basicIngredientID = basicIngredientID
+        self.quality = quality
+        self.name = name
+        self.quantityValue = quantityValue
+        self.quantityUnit = quantityUnit
+        self.rawIngredientLine = rawIngredientLine
+        self.mappingConfidence = mappingConfidence
+    }
 
     var quantity: String {
         let rounded = quantityValue.rounded()

@@ -368,7 +368,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func reconcileRecipeOnRead(_ recipe: Recipe) -> Recipe {
-        let unresolvedCount = recipe.ingredients.filter { $0.produceID == nil && $0.basicIngredientID == nil }.count
+        let unresolvedCount = recipe.ingredients.filter { !$0.hasCatalogIdentity }.count
         guard unresolvedCount > 0 else {
             print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
             return recipe
@@ -378,7 +378,7 @@ final class ProduceViewModel: ObservableObject {
 
         var successCount = 0
         let reconciledIngredients = recipe.ingredients.map { ingredient -> RecipeIngredient in
-            guard ingredient.produceID == nil, ingredient.basicIngredientID == nil else { return ingredient }
+            guard !ingredient.hasCatalogIdentity else { return ingredient }
 
             let sourceText = ingredient.rawIngredientLine?
                 .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
@@ -1408,6 +1408,16 @@ final class ProduceViewModel: ObservableObject {
                 displayName: basic.displayName(languageCode: localizer.languageCode),
                 produceItem: nil,
                 basicIngredient: basic,
+                isReconciled: false
+            )
+        }
+
+        if ingredient.ingredientID != nil {
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: ingredient.name,
+                produceItem: nil,
+                basicIngredient: nil,
                 isReconciled: false
             )
         }

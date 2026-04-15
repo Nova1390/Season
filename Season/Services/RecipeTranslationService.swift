@@ -107,7 +107,7 @@ actor RecipeTranslationService {
             }
         }
 
-        for ingredient in recipe.ingredients where ingredient.produceID == nil && ingredient.basicIngredientID == nil {
+        for ingredient in recipe.ingredients where !ingredient.hasCatalogIdentity {
             let trimmed = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
                 segments.append(("ingredient_\(trimmed.lowercased())", .ingredient(name: ingredient.name), trimmed))
