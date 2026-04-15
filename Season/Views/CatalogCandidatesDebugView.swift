@@ -97,10 +97,12 @@ struct CatalogCandidatesDebugView: View {
     @State private var isRunningAutomationCycle = false
     @State private var isRunningReconciliationPreview = false
     @State private var isRunningReconciliationApply = false
+    @State private var isRunningModernReconciliationApply = false
     @State private var isAdvancedDebugExpanded = false
     @State private var lastAutomationRun: CatalogAutomationCycleRunSummary?
     @State private var reconciliationPreviewRows: [RecipeIngredientReconciliationPreviewRow] = []
     @State private var lastReconciliationApplySummary: CatalogSafeRecipeReconciliationApplySummary?
+    @State private var lastModernReconciliationApplySummary: CatalogSafeRecipeReconciliationApplySummary?
     @State private var lastAutoAliasSummary: CatalogAutoAliasRunSummary?
     @State private var lastAutoLocalizationSummary: CatalogAutoLocalizationRunSummary?
     @State private var showAutomationSuccessFlash = false
@@ -1527,7 +1529,7 @@ struct CatalogCandidatesDebugView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Text("Preview shows safe candidates. Apply only processes rows that also have a legacy bridge mapping, so applied count may be lower.")
+            Text("Preview shows safe candidates. Legacy apply still requires legacy bridge mapping; modern apply writes ingredient_id directly from safe modern matches.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
@@ -1546,6 +1548,7 @@ struct CatalogCandidatesDebugView: View {
             .disabled(
                 isRunningReconciliationPreview ||
                 isRunningReconciliationApply ||
+                isRunningModernReconciliationApply ||
                 isRunningObservationRecovery ||
                 isRunningCuratedBatch
             )
@@ -1564,6 +1567,7 @@ struct CatalogCandidatesDebugView: View {
             }
             .disabled(
                 isRunningReconciliationApply ||
+                isRunningModernReconciliationApply ||
                 isRunningReconciliationPreview ||
                 isRunningObservationRecovery ||
                 isRunningCuratedBatch
@@ -1571,6 +1575,32 @@ struct CatalogCandidatesDebugView: View {
 
             if let summary = lastReconciliationApplySummary {
                 Text("Reconciliation apply summary: total=\(summary.total), applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                Task { await runModernSafeRecipeReconciliationApply() }
+            } label: {
+                if isRunningModernReconciliationApply {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Applying modern safe recipe reconciliation…")
+                    }
+                } else {
+                    Text("Apply modern safe recipe reconciliation (20)")
+                }
+            }
+            .disabled(
+                isRunningModernReconciliationApply ||
+                isRunningReconciliationApply ||
+                isRunningReconciliationPreview ||
+                isRunningObservationRecovery ||
+                isRunningCuratedBatch
+            )
+
+            if let summary = lastModernReconciliationApplySummary {
+                Text("Modern reconciliation apply summary: total=\(summary.total), applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1863,6 +1893,31 @@ struct CatalogCandidatesDebugView: View {
         } catch {
             errorMessage = "Safe reconciliation apply failed."
             print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_failed error=\(error)")
+        }
+    }
+
+    @MainActor
+    private func runModernSafeRecipeReconciliationApply() async {
+        guard isAdminUser else { return }
+        isRunningModernReconciliationApply = true
+        defer { isRunningModernReconciliationApply = false }
+
+        do {
+            let summary = try await catalogAdminOpsService.applyModernSafeRecipeReconciliation(limit: 20)
+            lastModernReconciliationApplySummary = summary
+            actionMessage =
+                "Modern safe reconciliation apply done. total=\(summary.total), " +
+                "applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)"
+            print(
+                "[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ui_done " +
+                "total=\(summary.total) applied=\(summary.applied) skipped=\(summary.skipped) failed=\(summary.failed)"
+            )
+            let refreshedPreview = try await catalogAdminOpsService.previewSafeRecipeReconciliation(limit: 20)
+            reconciliationPreviewRows = refreshedPreview
+            await loadCandidates()
+        } catch {
+            errorMessage = "Modern safe reconciliation apply failed."
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ui_failed error=\(error)")
         }
     }
 

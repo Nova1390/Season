@@ -345,6 +345,26 @@ final class CatalogAdminOpsService {
         )
     }
 
+    func applyModernSafeRecipeReconciliation(
+        limit: Int = 20,
+        recipeIDs: [String]? = nil
+    ) async throws -> CatalogSafeRecipeReconciliationApplySummary {
+        let rows = try await supabaseService.applyModernSafeRecipeIngredientReconciliation(
+            limit: limit,
+            recipeIDs: recipeIDs
+        )
+        let appliedCount = rows.filter { $0.applied && $0.applyStatus == "applied" }.count
+        let failedCount = rows.filter { !$0.applied && !isSkipStatus($0.applyStatus) }.count
+        let skippedCount = max(0, rows.count - appliedCount - failedCount)
+        return CatalogSafeRecipeReconciliationApplySummary(
+            total: rows.count,
+            applied: appliedCount,
+            skipped: skippedCount,
+            failed: failedCount,
+            rows: rows
+        )
+    }
+
     private func isSkipStatus(_ status: String) -> Bool {
         let normalized = status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return normalized == "already_resolved" ||

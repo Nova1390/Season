@@ -2246,6 +2246,52 @@ final class SupabaseService {
         }
     }
 
+    func applyModernSafeRecipeIngredientReconciliation(
+        limit: Int = 20,
+        recipeIDs: [String]? = nil
+    ) async throws -> [RecipeIngredientReconciliationApplyRow] {
+        try await instrumentedRequest(
+            name: "applyModernSafeRecipeIngredientReconciliation",
+            metadata: "limit=\(limit)"
+        ) {
+            guard let supabaseClient = self.client else {
+                throw SupabaseServiceError.missingConfiguration(self.configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+            guard supabaseClient.auth.currentUser != nil else {
+                throw SupabaseServiceError.unauthenticated
+            }
+
+            let cleanedRecipeIDs = (recipeIDs ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+
+            let params: [String: AnyJSON] = [
+                "p_limit": .integer(max(1, min(limit, 200))),
+                "p_recipe_ids": cleanedRecipeIDs.isEmpty ? .null : .array(cleanedRecipeIDs.map { .string($0) })
+            ]
+
+            let response = try await supabaseClient
+                .rpc("apply_recipe_ingredient_reconciliation_modern", params: params)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudRecipeIngredientReconciliationApplyRow].self, from: response.data)
+            let mapped = rows.map { row in
+                RecipeIngredientReconciliationApplyRow(
+                    batchID: cleanedOptional(row.batch_id)?.lowercased(),
+                    recipeID: cleanedOptional(row.recipe_id) ?? "",
+                    recipeIngredientRowID: cleanedOptional(row.recipe_ingredient_row_id) ?? "",
+                    ingredientIndex: row.ingredient_index ?? 0,
+                    matchedIngredientID: cleanedOptional(row.matched_ingredient_id)?.lowercased(),
+                    matchSource: cleanedOrUnknown(row.match_source),
+                    applied: row.applied ?? false,
+                    applyStatus: cleanedOrUnknown(row.apply_status)
+                )
+            }
+            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ok rows=\(mapped.count)")
+            return mapped
+        }
+    }
+
     func runCatalogEnrichmentDraftBatch(
         limit: Int = 20,
         debug: Bool = false
