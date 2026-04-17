@@ -317,8 +317,8 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow selecting photos for your recipes.";
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5dWVkeHljYm5xbGpyeWVuYXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTM2NTQsImV4cCI6MjA4OTU4OTY1NH0.6K9PSrie94ypXB8hoo1grGxl8vaf9S-sii3g3upljug";
 				INFOPLIST_KEY_SUPABASE_URL = "https://gyuedxycbnqljryenapx.supabase.co";
-				INFOPLIST_KEY_SupabaseAnonKey = "$(INFOPLIST_KEY_SUPABASE_ANON_KEY)";
-				INFOPLIST_KEY_SupabaseURL = "$(INFOPLIST_KEY_SUPABASE_URL)";
+				INFOPLIST_KEY_SupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6ZHNubnNpenlobGRpdXJsbXhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTA3NjAsImV4cCI6MjA5MTg2Njc2MH0.P-OxvMGD454BW8RUVBuf3hJPQxc1DCF7qGmcCeNMBnk";
+				INFOPLIST_KEY_SupabaseURL = "https://czdsnnsizyhldiurlmxd.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
