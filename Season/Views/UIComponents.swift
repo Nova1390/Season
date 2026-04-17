@@ -1046,45 +1046,63 @@ struct RecipeThumbnailView: View {
         let legacyImageName = imageName ?? recipe?.coverImageName
         let trimmedName = legacyImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let hasImage = !trimmedName.isEmpty && hasAsset(named: trimmedName)
+        let recipeRemoteURL = recipe?.imageURL?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let recipeRemote = recipeRemoteURL.flatMap(URL.init(string:))
+        let coverRemoteURL = recipe?.coverImage?.remoteURL?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let coverRemote = coverRemoteURL.flatMap(URL.init(string:))
 
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color(.tertiarySystemGroupedBackground))
 
-            if let recipe, let cover = resolvedRecipeCoverImage(for: recipe), let image = recipeUIImage(from: cover) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .clipped()
-            } else if hasImage {
-                Image(trimmedName)
-                    .resizable()
-                    .scaledToFill()
-                    .clipped()
-            } else if let recipe,
-                      let cover = resolvedRecipeCoverImage(for: recipe),
-                      let remoteURLString = cover.remoteURL,
-                      let remoteURL = URL(string: remoteURLString) {
-                AsyncImage(url: remoteURL) { phase in
+            if let recipeRemote {
+                AsyncImage(url: recipeRemote) { phase in
                     switch phase {
                     case .success(let image):
                         image
                             .resizable()
                             .scaledToFill()
                     default:
-                        Image(systemName: "fork.knife.circle.fill")
-                            .font(.system(size: size * 0.45, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        fallbackContent
                     }
                 }
+            } else if let recipe,
+                      let cover = resolvedRecipeCoverImage(for: recipe),
+                      let image = recipeUIImage(from: cover) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else if let coverRemote {
+                AsyncImage(url: coverRemote) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        fallbackContent
+                    }
+                }
+            } else if hasImage {
+                Image(trimmedName)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
             } else {
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: size * 0.45, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                fallbackContent
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var fallbackContent: some View {
+        Image(systemName: "fork.knife.circle.fill")
+            .font(.system(size: size * 0.45, weight: .semibold))
+            .foregroundStyle(.secondary)
     }
 }
 

@@ -25,11 +25,25 @@ struct ShoppingListView: View {
     var body: some View {
         List {
             if shoppingListViewModel.items.isEmpty {
-                EmptyStateCard(
-                    symbol: "cart",
-                    title: produceViewModel.localizer.text(.shoppingListEmptyTitle),
-                    subtitle: produceViewModel.localizer.text(.shoppingListEmptySubtitle)
-                )
+                VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+                    EmptyStateCard(
+                        symbol: "cart",
+                        title: produceViewModel.localizer.text(.shoppingListEmptyTitle),
+                        subtitle: produceViewModel.localizer.text(.shoppingListEmptySubtitle)
+                    )
+
+                    NavigationLink {
+                        SearchView(
+                            viewModel: produceViewModel,
+                            shoppingListViewModel: shoppingListViewModel
+                        )
+                    } label: {
+                        Text(produceViewModel.localizer.text(.addIngredients))
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(SeasonPrimaryButtonStyle())
+                }
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(
@@ -152,19 +166,22 @@ struct ShoppingListView: View {
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
         .navigationTitle(produceViewModel.localizer.text(.listTab))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(isSelectionMode ? produceViewModel.localizer.text(.done) : produceViewModel.localizer.text(.select)) {
-                    if isSelectionMode {
-                        selectedIngredientIDs.removeAll()
+            if !shoppingListViewModel.items.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(isSelectionMode ? produceViewModel.localizer.text(.done) : produceViewModel.localizer.text(.select)) {
+                        if isSelectionMode {
+                            selectedIngredientIDs.removeAll()
+                        }
+                        isSelectionMode.toggle()
                     }
-                    isSelectionMode.toggle()
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isSelectionMode ? Color.accentColor : .primary)
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 1)
+                    .buttonStyle(.plain)
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelectionMode ? Color.accentColor : .primary)
-                .padding(.horizontal, 2)
-                .padding(.vertical, 1)
-                .buttonStyle(.plain)
             }
         }
         .onAppear {
@@ -182,10 +199,10 @@ struct ShoppingListView: View {
 
     private var shoppingHeaderSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Shopping List")
+            Text(produceViewModel.localizer.localized("shopping.header.title"))
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .tracking(-0.4)
-                .foregroundStyle(Color(red: 0.30, green: 0.38, blue: 0.27))
+                .foregroundStyle(SeasonColors.seasonGreen)
 
             Text(shoppingHeaderSummary)
                 .font(.subheadline.weight(.medium))
@@ -198,14 +215,14 @@ struct ShoppingListView: View {
             content: {
                 HStack(spacing: SeasonSpacing.sm) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Total Items")
+                        Text(produceViewModel.localizer.localized("shopping.summary.total_items"))
                             .font(.caption2.weight(.bold))
                             .textCase(.uppercase)
                             .tracking(0.8)
-                            .foregroundStyle(Color(red: 0.30, green: 0.38, blue: 0.27).opacity(0.72))
-                        Text(String(format: "%02d", totalItemCount))
+                            .foregroundStyle(SeasonColors.seasonGreen.opacity(0.72))
+                        Text(String(totalItemCount))
                             .font(.system(size: 38, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.30, green: 0.38, blue: 0.27))
+                            .foregroundStyle(SeasonColors.seasonGreen)
                         Text(produceViewModel.localizer.itemsInSeasonText(inSeasonCount: inSeasonCount, totalCount: seasonalEligibleCount))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
@@ -214,12 +231,18 @@ struct ShoppingListView: View {
                     Spacer(minLength: SeasonSpacing.sm)
 
                     VStack(alignment: .trailing, spacing: 12) {
-                        summaryMetricColumn(title: "Recipes", value: "\(recipeGroupCount)")
-                        summaryMetricColumn(title: "Manual", value: "\(manualItemCount)")
+                        summaryMetricColumn(
+                            title: produceViewModel.localizer.localized("shopping.summary.recipes"),
+                            value: "\(recipeGroupCount)"
+                        )
+                        summaryMetricColumn(
+                            title: produceViewModel.localizer.localized("shopping.summary.manual"),
+                            value: "\(manualItemCount)"
+                        )
                         HStack(spacing: 5) {
                             Image(systemName: "leaf.fill")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.green.opacity(0.82))
+                                .foregroundStyle(SeasonColors.seasonGreen.opacity(0.82))
                             Text("\(seasonalScore)%")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
@@ -298,7 +321,7 @@ struct ShoppingListView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             HStack(alignment: .top, spacing: SeasonSpacing.sm) {
                 Rectangle()
-                    .fill(Color(red: 0.32, green: 0.39, blue: 0.28).opacity(0.88))
+                    .fill(SeasonColors.seasonGreen.opacity(0.88))
                     .frame(width: 3, height: 42)
                     .clipShape(Capsule(style: .continuous))
                     .padding(.top, 2)
@@ -344,6 +367,13 @@ struct ShoppingListView: View {
                 .buttonStyle(.plain)
 
                 HStack(alignment: .center, spacing: 6) {
+                    if !isSelectionMode {
+                        inlineDeleteButton {
+                            removeRecipeGroup(group)
+                        }
+                        .frame(minWidth: 44, minHeight: 44)
+                    }
+
                     Button {
                         toggleGroup(group.id)
                     } label: {
@@ -352,7 +382,8 @@ struct ShoppingListView: View {
                             .foregroundStyle(.secondary.opacity(0.62))
                     }
                     .buttonStyle(.plain)
-                    .frame(width: 26, height: 26)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
 
                     if let ranked = group.rankedRecipe {
                         NavigationLink {
@@ -367,7 +398,8 @@ struct ShoppingListView: View {
                                 .foregroundStyle(.secondary.opacity(0.58))
                         }
                         .buttonStyle(.plain)
-                        .frame(width: 26, height: 26)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                 }
                 .padding(.top, 2)
@@ -407,6 +439,8 @@ struct ShoppingListView: View {
                             .font(.title3)
                             .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? Color.accentColor : .secondary)
                     }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .buttonStyle(.plain)
                 }
 
@@ -418,7 +452,7 @@ struct ShoppingListView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 34, height: 34)
                         .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
                                 .fill(SeasonColors.subtleSurface.opacity(0.7))
                         )
                 } else {
@@ -427,7 +461,7 @@ struct ShoppingListView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 34, height: 34)
                         .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
                                 .fill(SeasonColors.subtleSurface.opacity(0.7))
                         )
                 }
@@ -465,6 +499,12 @@ struct ShoppingListView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 statusBadge(for: visualState)
+
+                if !isSelectionMode {
+                    inlineDeleteButton {
+                        shoppingListViewModel.remove(entry)
+                    }
+                }
             }
             .padding(.vertical, SeasonSpacing.sm + 2)
             .padding(.horizontal, SeasonSpacing.sm)
@@ -502,6 +542,8 @@ struct ShoppingListView: View {
                         .font(.title3)
                         .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? Color.accentColor : .secondary)
                 }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
                 .buttonStyle(.plain)
             }
 
@@ -513,7 +555,7 @@ struct ShoppingListView: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
                     .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
                             .fill(SeasonColors.subtleSurface.opacity(0.7))
                     )
             } else {
@@ -522,7 +564,7 @@ struct ShoppingListView: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
                     .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
                             .fill(SeasonColors.subtleSurface.opacity(0.7))
                     )
             }
@@ -554,6 +596,12 @@ struct ShoppingListView: View {
                     .opacity(visualState == .inFridge ? 0.62 : 0.86)
                 }
                 statusBadge(for: visualState)
+
+                if !isSelectionMode {
+                    inlineDeleteButton {
+                        shoppingListViewModel.remove(entry)
+                    }
+                }
             }
         }
         .padding(.horizontal, SeasonSpacing.sm)
@@ -586,9 +634,9 @@ struct ShoppingListView: View {
     private func recipeGroupThumbnail(for group: RecipeGroup) -> some View {
         if let recipe = group.rankedRecipe?.recipe {
             RecipeThumbnailView(recipe: recipe, size: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous))
         } else {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                 .fill(SeasonColors.subtleSurface.opacity(0.9))
                 .frame(width: 52, height: 52)
                 .overlay(
@@ -600,11 +648,11 @@ struct ShoppingListView: View {
     }
 
     private var shoppingHeaderSummary: String {
-        let isItalian = produceViewModel.languageCode.hasPrefix("it")
-        if isItalian {
-            return "\(totalItemCount) ingredienti in \(recipeGroupCount) ricette"
-        }
-        return "\(totalItemCount) items across \(recipeGroupCount) recipes"
+        String(
+            format: produceViewModel.localizer.localized("shopping.header.summary_format"),
+            totalItemCount,
+            recipeGroupCount
+        )
     }
 
     private var totalItemCount: Int {
@@ -620,7 +668,7 @@ struct ShoppingListView: View {
     }
 
     private var forRecipeLabel: String {
-        produceViewModel.languageCode.hasPrefix("it") ? "Per" : "For"
+        produceViewModel.localizer.localized("shopping.recipe_prefix")
     }
 
     private func summaryMetricColumn(title: String, value: String) -> some View {
@@ -629,11 +677,24 @@ struct ShoppingListView: View {
                 .font(.caption2.weight(.bold))
                 .textCase(.uppercase)
                 .tracking(0.7)
-                .foregroundStyle(Color(red: 0.30, green: 0.38, blue: 0.27).opacity(0.72))
+                .foregroundStyle(SeasonColors.seasonGreen.opacity(0.72))
             Text(value)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(Color(red: 0.30, green: 0.38, blue: 0.27))
+                .foregroundStyle(SeasonColors.seasonGreen)
         }
+    }
+
+    private func inlineDeleteButton(action: @escaping () -> Void) -> some View {
+        Button(role: .destructive, action: action) {
+            Image(systemName: "trash.circle")
+                .font(.title3)
+                .frame(width: 28, height: 28)
+        }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .accessibilityLabel(produceViewModel.localizer.text(.remove))
     }
 
     private func visualState(for entry: ShoppingListEntry) -> ShoppingItemVisualState {
@@ -660,15 +721,10 @@ struct ShoppingListView: View {
         Group {
             switch state {
             case .missing:
-                SeasonBadge(
-                    text: produceViewModel.languageCode.hasPrefix("it") ? "Manca" : "Missing",
-                    semantic: .warning,
-                    horizontalPadding: 8,
-                    verticalPadding: 4
-                )
+                EmptyView()
             case .inFridge:
                 SeasonBadge(
-                    text: produceViewModel.languageCode.hasPrefix("it") ? "In frigo" : "In fridge",
+                    text: produceViewModel.localizer.localized("shopping.badge.in_fridge"),
                     icon: "snowflake",
                     semantic: .positive,
                     horizontalPadding: 8,

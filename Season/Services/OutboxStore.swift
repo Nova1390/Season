@@ -6,6 +6,7 @@ final class OutboxStore {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let queue = DispatchQueue(label: "season.outbox.store")
+    private var cachedMutations: [OutboxMutationRecord]?
 
     init(
         storage: UserDefaults = .standard,
@@ -17,7 +18,7 @@ final class OutboxStore {
 
     func allMutations() -> [OutboxMutationRecord] {
         queue.sync {
-            loadAll()
+            loadCachedMutations()
         }
     }
 
@@ -33,7 +34,7 @@ final class OutboxStore {
     func cleanupCompletedMutations(olderThan retentionInterval: TimeInterval) {
         let cutoff = Date().addingTimeInterval(-retentionInterval)
         queue.sync {
-            var current = loadAll()
+            var current = loadCachedMutations()
             current.removeAll { mutation in
                 mutation.status == .completed && mutation.updatedAt < cutoff
             }
@@ -49,15 +50,23 @@ final class OutboxStore {
 
     func append(_ mutation: OutboxMutationRecord) {
         queue.sync {
-            var current = loadAll()
+            var current = loadCachedMutations()
             current.append(mutation)
             persist(current)
         }
     }
 
+    func appendAsync(_ mutation: OutboxMutationRecord) {
+        queue.async {
+            var current = self.loadCachedMutations()
+            current.append(mutation)
+            self.persist(current)
+        }
+    }
+
     func update(_ mutation: OutboxMutationRecord) {
         queue.sync {
-            var current = loadAll()
+            var current = loadCachedMutations()
             guard let index = current.firstIndex(where: { $0.id == mutation.id }) else { return }
             current[index] = mutation
             persist(current)
@@ -66,7 +75,7 @@ final class OutboxStore {
 
     func remove(id: UUID) {
         queue.sync {
-            var current = loadAll()
+            var current = loadCachedMutations()
             current.removeAll { $0.id == id }
             persist(current)
         }
@@ -75,10 +84,21 @@ final class OutboxStore {
     func clearAll() {
         queue.sync {
             storage.removeObject(forKey: storageKey)
+            cachedMutations = []
         }
     }
 
-    private func loadAll() -> [OutboxMutationRecord] {
+    private func loadCachedMutations() -> [OutboxMutationRecord] {
+        if let cachedMutations {
+            return cachedMutations
+        }
+
+        let loaded = loadAllFromStorage()
+        cachedMutations = loaded
+        return loaded
+    }
+
+    private func loadAllFromStorage() -> [OutboxMutationRecord] {
         guard let data = storage.data(forKey: storageKey) else {
             return []
         }
@@ -89,6 +109,7 @@ final class OutboxStore {
     }
 
     private func persist(_ mutations: [OutboxMutationRecord]) {
+        cachedMutations = mutations
         guard let data = try? encoder.encode(mutations) else { return }
         storage.set(data, forKey: storageKey)
     }

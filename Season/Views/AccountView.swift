@@ -72,8 +72,8 @@ struct AccountView: View {
     private let backfillService = BackfillService()
     private let reconciliationDiagnosticsService = ReconciliationDiagnosticsService()
     private let authLogger = Logger(subsystem: "Season", category: "SocialAuthUI")
-    private let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
-    private let seasonGreenSoft = Color(red: 0.84, green: 0.90, blue: 0.79)
+    private let seasonGreen = SeasonColors.seasonGreen
+    private let seasonGreenSoft = SeasonColors.seasonGreenSoft
 
     var body: some View {
         ScrollView {
@@ -86,12 +86,13 @@ struct AccountView: View {
                 }
                 Color.clear.frame(height: 8)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, SeasonSpacing.md)
             .padding(.top, 12)
             .padding(.bottom, 12)
         }
         .background(SeasonColors.primarySurface)
         .navigationTitle(viewModel.localizer.text(.accountTab))
+        .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
@@ -109,26 +110,26 @@ struct AccountView: View {
         } message: {
             Text(authErrorMessage)
         }
-        .alert("Delete this draft?", isPresented: $showingDraftDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(viewModel.localizer.localized("account.alert.delete_draft.title"), isPresented: $showingDraftDeleteConfirmation) {
+            Button(viewModel.localizer.localized("common.cancel"), role: .cancel) {
                 pendingDraftDeleteRecipe = nil
             }
-            Button("Delete", role: .destructive) {
+            Button(viewModel.localizer.localized("common.delete"), role: .destructive) {
                 if let recipe = pendingDraftDeleteRecipe {
                     viewModel.deleteRecipe(recipe)
                 }
                 pendingDraftDeleteRecipe = nil
             }
         } message: {
-            Text("This action cannot be undone.")
+            Text(viewModel.localizer.localized("account.alert.delete_draft.message"))
         }
-        .alert("Log out?", isPresented: $showingLogoutConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Log out", role: .destructive) {
+        .alert(viewModel.localizer.localized("account.alert.logout.title"), isPresented: $showingLogoutConfirmation) {
+            Button(viewModel.localizer.localized("common.cancel"), role: .cancel) {}
+            Button(viewModel.localizer.localized("account.auth.log_out"), role: .destructive) {
                 logout()
             }
         } message: {
-            Text("You will need to sign in again to access Season.")
+            Text(viewModel.localizer.localized("account.alert.logout.message"))
         }
         .onAppear {
             migrateLegacyAccessTokensIfNeeded()
@@ -298,18 +299,18 @@ struct AccountView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                         .fill(seasonGreen.opacity(0.11))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                         .stroke(seasonGreen.opacity(0.16), lineWidth: 0.8)
                 )
             }
             .buttonStyle(SoftPressButtonStyle())
         }
         .frame(maxWidth: .infinity)
-        .padding(16)
+        .padding(SeasonSpacing.md)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(Color(.systemBackground).opacity(0.95))
@@ -337,7 +338,7 @@ struct AccountView: View {
 
     private var librarySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("My Library")
+            sectionHeader(viewModel.localizer.localized("account.section.library"))
 
             VStack(alignment: .leading, spacing: 14) {
             librarySubheader(title: viewModel.localizer.text(.savedRecipes), count: savedRecipes.count)
@@ -405,7 +406,7 @@ struct AccountView: View {
                 }
             }
         }
-            .padding(16)
+            .padding(SeasonSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(
@@ -425,16 +426,16 @@ struct AccountView: View {
 
     private var preferencesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Account & Preferences")
+            sectionHeader(viewModel.localizer.localized("account.section.preferences"))
 
             VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
-                Label("Authentication", systemImage: "person.badge.key")
+                Label(viewModel.localizer.localized("account.auth.title"), systemImage: "person.badge.key")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
 
                 if let authenticatedUserID = currentAuthenticatedUserID {
-                    Text("Signed in • \(authenticatedUserID)")
+                    Text(String(format: viewModel.localizer.localized("account.auth.signed_in_format"), authenticatedUserID))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -443,13 +444,13 @@ struct AccountView: View {
                     let visibleUsername = cloudProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines)
                         ?? accountUsername.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !visibleUsername.isEmpty {
-                        Text("Username: @\(visibleUsername)")
+                        Text(String(format: viewModel.localizer.localized("account.auth.username_format"), visibleUsername))
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.primary)
                     }
 
                     if let email = currentAuthenticatedEmail, !email.isEmpty {
-                        Text("Email: \(email)")
+                        Text(String(format: viewModel.localizer.localized("account.auth.email_format"), email))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -463,7 +464,7 @@ struct AccountView: View {
                     }
 
                     if shouldRequireUsernameOnboarding {
-                        TextField("Choose username", text: $authUsernameInput)
+                        TextField(viewModel.localizer.localized("account.auth.choose_username"), text: $authUsernameInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .textFieldStyle(.roundedBorder)
@@ -471,7 +472,7 @@ struct AccountView: View {
                         Button {
                             saveUsername()
                         } label: {
-                            Text("Save username")
+                            Text(viewModel.localizer.localized("account.auth.save_username"))
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(SeasonPrimaryButtonStyle())
@@ -481,7 +482,7 @@ struct AccountView: View {
                     Button(role: .destructive) {
                         showingLogoutConfirmation = true
                     } label: {
-                        Text("Log out")
+                        Text(viewModel.localizer.localized("account.auth.log_out"))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SeasonDestructiveButtonStyle())
@@ -490,29 +491,29 @@ struct AccountView: View {
                     Button {
                         link(provider: .apple)
                     } label: {
-                        Label("Sign in with Apple", systemImage: "applelogo")
+                        Label(viewModel.localizer.localized("account.auth.sign_in_with_apple"), systemImage: "applelogo")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SeasonPrimaryButtonStyle())
                     .disabled(linkingInProgressProvider != nil)
 
                     if linkingInProgressProvider == .apple {
-                        Text("Signing in…")
+                        Text(viewModel.localizer.localized("account.auth.signing_in"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
-                    TextField("Email", text: $authEmail)
+                    TextField(viewModel.localizer.localized("account.auth.email_placeholder"), text: $authEmail)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .textFieldStyle(.roundedBorder)
 
-                    SecureField("Password", text: $authPassword)
+                    SecureField(viewModel.localizer.localized("account.auth.password_placeholder"), text: $authPassword)
                         .textFieldStyle(.roundedBorder)
 
                     if authModeIsSignUp {
-                        TextField("Username", text: $authUsernameInput)
+                        TextField(viewModel.localizer.localized("account.auth.username_placeholder"), text: $authUsernameInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .textFieldStyle(.roundedBorder)
@@ -521,7 +522,7 @@ struct AccountView: View {
                     Button {
                         submitEmailAuth()
                     } label: {
-                        Text(authModeIsSignUp ? "Sign up" : "Sign in")
+                        Text(authModeIsSignUp ? viewModel.localizer.localized("account.auth.sign_up") : viewModel.localizer.localized("account.auth.sign_in"))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SeasonSecondaryButtonStyle())
@@ -530,7 +531,7 @@ struct AccountView: View {
                     Button {
                         authModeIsSignUp.toggle()
                     } label: {
-                        Text(authModeIsSignUp ? "Have an account? Sign in" : "Need an account? Sign up")
+                        Text(authModeIsSignUp ? viewModel.localizer.localized("account.auth.have_account_sign_in") : viewModel.localizer.localized("account.auth.need_account_sign_up"))
                             .font(.footnote.weight(.semibold))
                     }
                     .buttonStyle(.plain)
@@ -538,7 +539,7 @@ struct AccountView: View {
                 }
 
                 if authActionRunning {
-                    Text("Processing authentication…")
+                    Text(viewModel.localizer.localized("account.auth.processing"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if !authStatusMessage.isEmpty {
@@ -548,13 +549,13 @@ struct AccountView: View {
                 }
             }
             .padding(.vertical, 2)
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
             )
 
@@ -595,13 +596,13 @@ struct AccountView: View {
                 }
             }
             .padding(.vertical, 2)
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
             )
 
@@ -620,13 +621,13 @@ struct AccountView: View {
                 .pickerStyle(.segmented)
             }
             .padding(.vertical, 2)
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
             )
 
@@ -653,17 +654,17 @@ struct AccountView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 2)
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                     .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
             )
             }
-            .padding(16)
+            .padding(SeasonSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(.systemBackground).opacity(0.92))
@@ -962,7 +963,7 @@ struct AccountView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(.systemBackground).opacity(0.52))
@@ -1086,11 +1087,11 @@ struct AccountView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                 .fill(Color(.systemBackground).opacity(0.95))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
                 .stroke(seasonGreen.opacity(0.08), lineWidth: 0.7)
         )
         .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
@@ -1279,7 +1280,7 @@ struct AccountView: View {
 
     private var requiredUsernamePrompt: String? {
         guard shouldRequireUsernameOnboarding else { return nil }
-        return "Choose a username to complete account setup."
+        return viewModel.localizer.localized("account.auth.required_username_prompt")
     }
 
     @MainActor
@@ -1294,15 +1295,15 @@ struct AccountView: View {
     private func validateUsernameForAuth(_ raw: String) -> String? {
         let username = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if username.count < 3 {
-            return "Username must be at least 3 characters."
+            return viewModel.localizer.localized("account.auth.validation.username_min")
         }
         if username.count > 24 {
-            return "Username must be at most 24 characters."
+            return viewModel.localizer.localized("account.auth.validation.username_max")
         }
         let pattern = "^[a-zA-Z0-9_]+$"
         let valid = username.range(of: pattern, options: .regularExpression) != nil
         if !valid {
-            return "Use only letters, numbers, and underscore."
+            return viewModel.localizer.localized("account.auth.validation.username_chars")
         }
         return nil
     }
@@ -1313,17 +1314,17 @@ struct AccountView: View {
 
     private func providerTitle(_ provider: SocialAuthProvider) -> String {
         switch provider {
-        case .instagram: return "Instagram"
-        case .tiktok: return "TikTok"
-        case .apple: return "Apple"
+        case .instagram: return viewModel.localizer.localized("common.instagram")
+        case .tiktok: return viewModel.localizer.localized("common.tiktok")
+        case .apple: return viewModel.localizer.localized("common.apple")
         }
     }
 
     private func cloudProviderTitle(_ provider: String) -> String {
         switch provider.lowercased() {
-        case "instagram": return "Instagram"
-        case "tiktok": return "TikTok"
-        case "apple": return "Apple"
+        case "instagram": return viewModel.localizer.localized("common.instagram")
+        case "tiktok": return viewModel.localizer.localized("common.tiktok")
+        case "apple": return viewModel.localizer.localized("common.apple")
         default: return provider.capitalized
         }
     }
@@ -1507,14 +1508,23 @@ struct AccountView: View {
                 do {
                     try await supabaseService.deleteMyLinkedSocialAccount(provider: provider.rawValue)
                     cloudLinkedAccounts.removeAll { $0.provider.caseInsensitiveCompare(provider.rawValue) == .orderedSame }
-                    socialLinkStatusMessage = "\(providerTitle(provider)) disconnected."
+                    socialLinkStatusMessage = String(
+                        format: viewModel.localizer.localized("account.social.link.disconnected_format"),
+                        providerTitle(provider)
+                    )
                     socialLinkStatusIsError = false
                 } catch {
-                    socialLinkStatusMessage = "Failed to disconnect \(providerTitle(provider))."
+                    socialLinkStatusMessage = String(
+                        format: viewModel.localizer.localized("account.social.link.disconnect_failed_format"),
+                        providerTitle(provider)
+                    )
                     socialLinkStatusIsError = true
                 }
             } else {
-                socialLinkStatusMessage = "\(providerTitle(provider)) disconnected."
+                socialLinkStatusMessage = String(
+                    format: viewModel.localizer.localized("account.social.link.disconnected_format"),
+                    providerTitle(provider)
+                )
                 socialLinkStatusIsError = false
             }
         }
@@ -1574,7 +1584,11 @@ struct AccountView: View {
                     print("[SEASON_AUTH] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
                     let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: userID)
                     guard available else {
-                        throw NSError(domain: "SeasonAuth", code: 409, userInfo: [NSLocalizedDescriptionKey: "That username is already taken."])
+                        throw NSError(
+                            domain: "SeasonAuth",
+                            code: 409,
+                            userInfo: [NSLocalizedDescriptionKey: viewModel.localizer.localized("account.auth.validation.username_taken")]
+                        )
                     }
                     try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
                     print("[SEASON_AUTH] phase=username_saved_success user_id=\(userID.uuidString.lowercased()) username=\(username)")
@@ -1589,10 +1603,12 @@ struct AccountView: View {
                     applyCloudProfileSocialLinksToInputs(refreshedProfile)
                     let hasUsername = !(refreshedProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
                     print("[SEASON_AUTH] phase=username_check user_id=\(userID.uuidString.lowercased()) exists=\(hasUsername)")
-                    authStatusMessage = authModeIsSignUp ? "Account created." : "Signed in."
+                    authStatusMessage = authModeIsSignUp
+                        ? viewModel.localizer.localized("account.auth.status.account_created")
+                        : viewModel.localizer.localized("account.auth.status.signed_in")
                     authStatusIsError = false
                     if !hasUsername {
-                        authStatusMessage = "Signed in. Choose a username to continue."
+                        authStatusMessage = viewModel.localizer.localized("account.auth.status.signed_in_choose_username")
                     }
                 }
             } catch {
@@ -1630,7 +1646,11 @@ struct AccountView: View {
                 let currentUserID = supabaseService.currentAuthenticatedUserID()
                 let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: currentUserID)
                 guard available else {
-                    throw NSError(domain: "SeasonAuth", code: 409, userInfo: [NSLocalizedDescriptionKey: "That username is already taken."])
+                    throw NSError(
+                        domain: "SeasonAuth",
+                        code: 409,
+                        userInfo: [NSLocalizedDescriptionKey: viewModel.localizer.localized("account.auth.validation.username_taken")]
+                    )
                 }
                 try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
                 print("[SEASON_AUTH] phase=username_saved_success user_id=\(currentAuthenticatedUserID ?? "nil") username=\(username)")
@@ -1638,7 +1658,7 @@ struct AccountView: View {
                 await MainActor.run {
                     cloudProfile = refreshedProfile
                     applyCloudProfileSocialLinksToInputs(refreshedProfile)
-                    authStatusMessage = "Username saved."
+                    authStatusMessage = viewModel.localizer.localized("account.auth.status.username_saved")
                     authStatusIsError = false
                 }
             } catch {
@@ -1668,7 +1688,7 @@ struct AccountView: View {
                     viewModel.resetForLogout()
                     shoppingListViewModel.resetForLogout()
                     fridgeViewModel.resetForLogout()
-                    accountUsername = "You"
+                    accountUsername = viewModel.localizer.localized("account.auth.default_display_name")
                     followedAuthorsRaw = ""
                     linkedSocialAccountsRaw = ""
                     accountProfileImageURL = ""
@@ -1684,7 +1704,7 @@ struct AccountView: View {
                     socialLinkStatusMessage = ""
                     socialLinkStatusIsError = false
                     print("[SEASON_AUTH] phase=local_state_cleared")
-                    authStatusMessage = "Logged out."
+                    authStatusMessage = viewModel.localizer.localized("account.auth.status.logged_out")
                     authStatusIsError = false
                     print("[SEASON_AUTH] phase=ui_reset_completed")
                 }
@@ -1741,11 +1761,14 @@ struct AccountView: View {
                     if !fallback.isEmpty {
                         authUsernameInput = fallback
                     }
-                    authStatusMessage = "Choose a username to complete account setup."
+                    authStatusMessage = viewModel.localizer.localized("account.auth.required_username_prompt")
                     authStatusIsError = false
                 }
                 print("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
-                socialLinkStatusMessage = "\(providerTitle(provider)) connected."
+                socialLinkStatusMessage = String(
+                    format: viewModel.localizer.localized("account.social.link.connected_format"),
+                    providerTitle(provider)
+                )
                 socialLinkStatusIsError = false
             } catch {
                 let scopedMessage = providerScopedAuthErrorMessage(error, provider: provider)

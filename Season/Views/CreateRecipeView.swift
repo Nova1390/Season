@@ -24,6 +24,7 @@ private enum ImportedIngredientMatch {
 
 private struct ImportQualityBadge: View {
     let confidence: SocialImportConfidence
+    let localizer: AppLocalizer
 
     var body: some View {
         HStack(spacing: 6) {
@@ -44,9 +45,9 @@ private struct ImportQualityBadge: View {
 
     private var label: String {
         switch confidence {
-        case .high: return "High quality"
-        case .medium: return "Good start"
-        case .low: return "Needs review"
+        case .high: return localizer.localized("create.import.quality.high")
+        case .medium: return localizer.localized("create.import.quality.medium")
+        case .low: return localizer.localized("create.import.quality.low")
         }
     }
 
@@ -60,6 +61,13 @@ private struct ImportQualityBadge: View {
 }
 
 struct CreateRecipeView: View {
+    private enum ComposerStateKind {
+        case start
+        case editing
+        case ready
+        case draft
+    }
+
     struct PrefillDraft {
         let title: String
         let imageAssetName: String?
@@ -270,7 +278,7 @@ struct CreateRecipeView: View {
                 Image(systemName: "sparkles")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text("Composer")
+                Text(localizer.localized("create.composer.title"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -386,7 +394,7 @@ struct CreateRecipeView: View {
                     .disabled(!canImportFromAnyLink || isImportAnalyzing)
 
                     if let importConfidence {
-                        ImportQualityBadge(confidence: importConfidence)
+                        ImportQualityBadge(confidence: importConfidence, localizer: localizer)
                             .padding(.top, 4)
                             .scaleEffect(importConfidence == .low ? 1.02 : 1.0)
                     }
@@ -420,7 +428,7 @@ struct CreateRecipeView: View {
                         Text(localizer.text(.importFromLinkSectionTitle))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("Import and refine from social links or caption")
+                        Text(localizer.localized("create.import.subtitle"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -475,7 +483,7 @@ struct CreateRecipeView: View {
 
     private var servingsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("Servings")
+            sectionTitle(localizer.localized("create.servings.title"))
             HStack {
                 Text(String(format: localizer.text(.servesFormat), selectedServings))
                     .font(.subheadline.weight(.semibold))
@@ -969,7 +977,7 @@ struct CreateRecipeView: View {
     }
 
     private var recipeTitlePlaceholder: String {
-        localizer.languageCode.hasPrefix("it") ? "Titolo ricetta" : "Recipe title"
+        localizer.localized("create.recipe_title.placeholder")
     }
 
     private var hasMeaningfulIngredientsForComposer: Bool {
@@ -985,40 +993,53 @@ struct CreateRecipeView: View {
     }
 
     private var composerStateTitle: String {
-        if hasLoadedDraftForComposer {
-            return "Draft"
+        switch composerStateKind {
+        case .draft:
+            return localizer.localized("create.composer.state.draft")
+        case .ready:
+            return localizer.localized("create.composer.state.ready")
+        case .editing:
+            return localizer.localized("create.composer.state.editing")
+        case .start:
+            return localizer.localized("create.composer.state.start")
         }
-        if canPublish {
-            return "Ready"
-        }
-        if hasMeaningfulIngredientsForComposer || hasMeaningfulStepsForComposer || !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Editing"
-        }
-        return "Start here"
     }
 
     private var composerStateSubtitle: String {
+        switch composerStateKind {
+        case .draft:
+            return localizer.localized("create.composer.subtitle.draft")
+        case .ready:
+            return localizer.localized("create.composer.subtitle.ready")
+        case .editing:
+            return localizer.localized("create.composer.subtitle.editing")
+        case .start:
+            return localizer.localized("create.composer.subtitle.start")
+        }
+    }
+
+    private var composerStateKind: ComposerStateKind {
         if hasLoadedDraftForComposer {
-            return "Continue refining your saved draft."
+            return .draft
         }
         if canPublish {
-            return "Your recipe has enough detail to publish."
+            return .ready
         }
         if hasMeaningfulIngredientsForComposer || hasMeaningfulStepsForComposer || !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Keep adding ingredients, steps, and media."
+            return .editing
         }
-        return "Add a title, ingredients, and steps to begin."
+        return .start
     }
 
     private var composerStateColor: Color {
-        switch composerStateTitle {
-        case "Ready":
+        switch composerStateKind {
+        case .ready:
             return Color(red: 0.16, green: 0.65, blue: 0.30)
-        case "Draft":
+        case .draft:
             return Color(red: 0.43, green: 0.50, blue: 0.38)
-        case "Editing":
+        case .editing:
             return Color(red: 0.84, green: 0.58, blue: 0.18)
-        default:
+        case .start:
             return Color(red: 0.33, green: 0.38, blue: 0.28)
         }
     }

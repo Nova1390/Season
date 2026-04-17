@@ -5,8 +5,10 @@ struct SearchView: View {
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     @State private var searchQuery = ""
-    @State private var selectedScope: SearchResultScope = .recipes
+    @State private var selectedMode: SearchMode = .recipes
     @State private var selectedFilter: SearchFilterChip?
+    @State private var showSecondaryIngredients = false
+    @State private var showSecondaryRecipes = false
 
     var body: some View {
         ScrollView {
@@ -24,7 +26,7 @@ struct SearchView: View {
             .padding(.bottom, SeasonSpacing.xl)
         }
         .background(SeasonColors.primarySurface)
-        .navigationTitle("Discovery")
+        .navigationTitle(viewModel.localizer.localized("search.screen.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             CartToolbarItems(
@@ -35,6 +37,11 @@ struct SearchView: View {
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
+        }
+        .onChange(of: selectedMode) { _, mode in
+            if let activeFilter = selectedFilter, !availableFilters(for: mode).contains(activeFilter) {
+                selectedFilter = nil
+            }
         }
     }
 
@@ -47,27 +54,32 @@ struct SearchView: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search recipes or ingredients...", text: $searchQuery)
+                TextField(viewModel.localizer.localized("search.input.placeholder"), text: $searchQuery)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
             }
             .padding(.horizontal, 14)
             .frame(height: 56)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                     .fill(SeasonColors.subtleSurface)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                     .stroke(Color.primary.opacity(isSearching ? 0.14 : 0.06), lineWidth: 0.8)
             )
 
+            Picker(viewModel.localizer.localized("search.mode.picker.title"), selection: $selectedMode) {
+                Text(viewModel.localizer.localized("search.scope.recipes")).tag(SearchMode.recipes)
+                Text(viewModel.localizer.localized("search.scope.ingredients")).tag(SearchMode.ingredients)
+            }
+            .pickerStyle(.segmented)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: SeasonSpacing.xs) {
-                    scopeChip(title: "Recipes", scope: .recipes)
-                    scopeChip(title: "Ingredients", scope: .ingredients)
-                    filterChip(title: "Fridge Ready", filter: .fridgeReady)
-                    filterChip(title: "Seasonal", filter: .seasonal)
+                    ForEach(availableFilters(for: selectedMode)) { filter in
+                        filterChip(title: filterTitle(for: filter), filter: filter)
+                    }
                 }
                 .padding(.horizontal, 2)
             }
@@ -78,20 +90,31 @@ struct SearchView: View {
     private var activeSearchContent: some View {
         let ingredientResults = filteredIngredientSearchResults(query: searchQuery)
         let recipeResults = filteredRecipeSearchResults(query: searchQuery)
+        let hasPrimaryResults = selectedMode == .recipes ? !recipeResults.isEmpty : !ingredientResults.isEmpty
 
-        if ingredientResults.isEmpty && recipeResults.isEmpty {
+        if !hasPrimaryResults {
             noResultsSection
         } else {
             VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-                Text("Results for \"\(searchQuery.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+                Text(
+                    String(
+                        format: viewModel.localizer.localized("search.results_for_format"),
+                        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                    )
+                )
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                if selectedScope == .recipes {
+
+                if selectedMode == .recipes {
                     recipesSection(results: recipeResults)
-                    ingredientsSection(results: ingredientResults)
+                    if !ingredientResults.isEmpty {
+                        secondaryIngredientsSection(results: ingredientResults)
+                    }
                 } else {
                     ingredientsSection(results: ingredientResults)
-                    recipesSection(results: recipeResults)
+                    if !recipeResults.isEmpty {
+                        secondaryRecipesSection(results: recipeResults)
+                    }
                 }
             }
         }
@@ -99,27 +122,18 @@ struct SearchView: View {
 
     @ViewBuilder
     private var idleDiscoveryContent: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.xl) {
+        switch selectedMode {
+        case .recipes:
+            let fridgeRecipes = Array(recipesFromFridge(limit: 1))
+            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+                if !fridgeRecipes.isEmpty {
+                    fromYourFridgeSection(fridgeRecipes: fridgeRecipes)
+                }
+                trendingNowSection
+            }
+        case .ingredients:
             peakSeasonNowSection
-            fromYourFridgeSection
-            trendingNowSection
         }
-    }
-
-    private func scopeChip(title: String, scope: SearchResultScope) -> some View {
-        Button {
-            selectedScope = scope
-        } label: {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(selectedScope == scope ? Color.white : .secondary)
-                .seasonCapsuleChipStyle(
-                    horizontalPadding: 14,
-                    verticalPadding: 9,
-                    background: selectedScope == scope ? SeasonColors.seasonGreen : SeasonColors.subtleSurface
-                )
-        }
-        .buttonStyle(.plain)
     }
 
     private func filterChip(title: String, filter: SearchFilterChip) -> some View {
@@ -138,11 +152,31 @@ struct SearchView: View {
         .buttonStyle(.plain)
     }
 
+    private func availableFilters(for mode: SearchMode) -> [SearchFilterChip] {
+        switch mode {
+        case .recipes:
+            return [.fridgeReady, .seasonal]
+        case .ingredients:
+            return [.seasonal]
+        }
+    }
+
+    private func filterTitle(for filter: SearchFilterChip) -> String {
+        switch (selectedMode, filter) {
+        case (.ingredients, .fridgeReady):
+            return viewModel.localizer.localized("search.filter.in_fridge")
+        case (_, .fridgeReady):
+            return viewModel.localizer.localized("search.filter.fridge_ready")
+        case (_, .seasonal):
+            return viewModel.localizer.localized("search.filter.seasonal")
+        }
+    }
+
     private var peakSeasonNowSection: some View {
         let rankedIngredients = Array(viewModel.bestPicksToday(limit: 12))
         return VStack(alignment: .leading, spacing: SeasonSpacing.md) {
             HStack {
-                Text("Peak Season Now")
+                Text(viewModel.localizer.localized("search.discovery.peak_season_now"))
                     .font(.title3.weight(.bold))
                 Spacer()
                 Text(viewModel.currentMonthName.uppercased())
@@ -167,7 +201,12 @@ struct SearchView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
-                                Text("\(recipeCountForIngredient(ranked.item.id)) recipes")
+                                Text(
+                                    String(
+                                        format: viewModel.localizer.localized("search.discovery.recipes_count_format"),
+                                        recipeCountForIngredient(ranked.item.id)
+                                    )
+                                )
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -179,9 +218,9 @@ struct SearchView: View {
                 .padding(.horizontal, 2)
             }
         }
-        .padding(12)
+        .padding(SeasonSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                 .fill(Color(.systemBackground).opacity(0.84))
         )
     }
@@ -210,7 +249,7 @@ struct SearchView: View {
                 VStack(spacing: 4) {
                     CategoryIconView(category: item.category, size: 24)
                         .foregroundStyle(Color(red: 0.38, green: 0.42, blue: 0.34))
-                    Text("Season Pick")
+                    Text(viewModel.localizer.localized("search.discovery.season_pick"))
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(Color(red: 0.44, green: 0.47, blue: 0.40))
                 }
@@ -224,10 +263,9 @@ struct SearchView: View {
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 
-    private var fromYourFridgeSection: some View {
-        let fridgeRecipes = Array(recipesFromFridge(limit: 1))
+    private func fromYourFridgeSection(fridgeRecipes: [RankedRecipe]) -> some View {
         return VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-            Text("From Your Fridge")
+            Text(viewModel.localizer.localized("search.discovery.from_fridge"))
                 .font(.title3.weight(.bold))
 
             if let ranked = fridgeRecipes.first {
@@ -247,8 +285,8 @@ struct SearchView: View {
             } else {
                 EmptyStateCard(
                     symbol: "snowflake",
-                    title: "Add ingredients to your fridge",
-                    subtitle: "We'll suggest recipes you can cook right away."
+                    title: viewModel.localizer.localized("search.discovery.empty_fridge.title"),
+                    subtitle: viewModel.localizer.localized("search.discovery.empty_fridge.subtitle")
                 )
             }
         }
@@ -279,9 +317,9 @@ struct SearchView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(SeasonSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                 .fill(Color(.systemBackground).opacity(0.84))
         )
     }
@@ -290,15 +328,15 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             EmptyStateCard(
                 symbol: "magnifyingglass.circle",
-                title: viewModel.localizer.text(.searchEmptyTitle),
-                subtitle: "Try adjusting scope or filters."
+                title: noResultsTitle,
+                subtitle: viewModel.localizer.localized("search.no_results.subtitle")
             )
 
-            if selectedFilter != nil {
+            HStack(spacing: SeasonSpacing.xs) {
                 Button {
-                    selectedFilter = nil
+                    searchQuery = ""
                 } label: {
-                    Text("Clear filter")
+                    Text(viewModel.localizer.localized("search.action.clear_query"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .seasonCapsuleChipStyle(
@@ -308,9 +346,51 @@ struct SearchView: View {
                         )
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    selectedMode = selectedMode == .recipes ? .ingredients : .recipes
+                } label: {
+                    Text(selectedMode == .recipes
+                        ? viewModel.localizer.localized("search.action.switch_to_ingredients")
+                        : viewModel.localizer.localized("search.action.switch_to_recipes")
+                    )
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .seasonCapsuleChipStyle(
+                            horizontalPadding: 10,
+                            verticalPadding: 6,
+                            background: SeasonColors.subtleSurface
+                        )
+                }
+                .buttonStyle(.plain)
+
+                if selectedFilter != nil {
+                    Button {
+                        selectedFilter = nil
+                    } label: {
+                        Text(viewModel.localizer.localized("search.action.clear_filter"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .seasonCapsuleChipStyle(
+                                horizontalPadding: 10,
+                                verticalPadding: 6,
+                                background: SeasonColors.subtleSurface
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
         .padding(.vertical, SeasonSpacing.sm)
+    }
+
+    private var noResultsTitle: String {
+        switch selectedMode {
+        case .recipes:
+            return viewModel.localizer.localized("search.no_results.recipes_title")
+        case .ingredients:
+            return viewModel.localizer.localized("search.no_results.ingredients_title")
+        }
     }
 
     private func smartRankedRecipeResults(query: String) -> [RankedRecipe] {
@@ -350,21 +430,21 @@ struct SearchView: View {
 
     private func filteredRecipeSearchResults(query: String) -> [RankedRecipe] {
         let base = smartRankedRecipeResults(query: query)
-        guard let selectedFilter else { return base }
+        guard selectedMode == .recipes, let selectedFilter else { return base }
 
         let fridgeIDs = fridgeViewModel.allIngredientIDSet
         switch selectedFilter {
         case .seasonal:
-            return base.filter { $0.seasonalMatchPercent >= 70 }
+            return base.filter { $0.seasonalMatchPercent >= 80 }
         case .fridgeReady:
             guard !fridgeIDs.isEmpty else { return [] }
-            return base.filter { viewModel.fridgeMatchScore(for: $0.recipe, fridgeItemIDs: fridgeIDs) >= 0.35 }
+            return base.filter { viewModel.fridgeMatchScore(for: $0.recipe, fridgeItemIDs: fridgeIDs) >= 0.50 }
         }
     }
 
     private func filteredIngredientSearchResults(query: String) -> [IngredientSearchResult] {
         let base = viewModel.searchIngredientResults(query: query)
-        guard let selectedFilter else { return base }
+        guard selectedMode == .ingredients, let selectedFilter else { return base }
 
         switch selectedFilter {
         case .fridgeReady:
@@ -382,7 +462,7 @@ struct SearchView: View {
                 case .produce(let item):
                     return item.seasonalityScore(month: viewModel.currentMonth) >= 0.22
                 case .basic:
-                    return true
+                    return false
                 }
             }
         }
@@ -421,7 +501,7 @@ struct SearchView: View {
                 sectionHeader(
                     title: viewModel.localizer.text(.ingredients),
                     countText: ingredientCountText(results.count),
-                    subtitle: "Ingredients matching your query"
+                    subtitle: viewModel.localizer.localized("search.section.ingredients.subtitle")
                 )
                 ForEach(results) { result in
                     HStack(alignment: .center, spacing: 12) {
@@ -457,9 +537,9 @@ struct SearchView: View {
                     .padding(.vertical, 6)
                 }
             }
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                     .fill(Color(.systemBackground).opacity(0.84))
             )
         }
@@ -472,7 +552,7 @@ struct SearchView: View {
                 sectionHeader(
                     title: viewModel.localizer.text(.recipes),
                     countText: recipeCountText(results.count),
-                    subtitle: "Recipe results ranked for relevance"
+                    subtitle: viewModel.localizer.localized("search.section.recipes.subtitle")
                 )
                 ForEach(results) { ranked in
                     VStack(alignment: .leading, spacing: 6) {
@@ -505,9 +585,9 @@ struct SearchView: View {
                     .padding(.vertical, 6)
                 }
             }
-            .padding(12)
+            .padding(SeasonSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                     .fill(Color(.systemBackground).opacity(0.84))
             )
         }
@@ -530,6 +610,46 @@ struct SearchView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func secondaryIngredientsSection(results: [IngredientSearchResult]) -> some View {
+        DisclosureGroup(
+            isExpanded: $showSecondaryIngredients,
+            content: {
+                ingredientsSection(results: results)
+                    .padding(.top, SeasonSpacing.xs)
+            },
+            label: {
+                Text(viewModel.localizer.localized("search.secondary.ingredients"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+        )
+        .padding(SeasonSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.84))
+        )
+    }
+
+    private func secondaryRecipesSection(results: [RankedRecipe]) -> some View {
+        DisclosureGroup(
+            isExpanded: $showSecondaryRecipes,
+            content: {
+                recipesSection(results: results)
+                    .padding(.top, SeasonSpacing.xs)
+            },
+            label: {
+                Text(viewModel.localizer.localized("search.secondary.recipes_for_ingredients"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+        )
+        .padding(SeasonSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.84))
+        )
     }
 
     private func recipeCountText(_ count: Int) -> String {
@@ -565,6 +685,8 @@ struct SearchView: View {
                         .stroke(Color.primary.opacity(0.08), lineWidth: 0.6)
                 )
         }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
         .buttonStyle(.plain)
         .disabled(isInList)
     }
@@ -615,7 +737,7 @@ struct SearchView: View {
 
 }
 
-private enum SearchResultScope: String, CaseIterable, Identifiable {
+private enum SearchMode: String, CaseIterable, Identifiable {
     case recipes
     case ingredients
 
@@ -656,7 +778,7 @@ private struct SearchRecipeRow: View {
             VStack(alignment: .trailing, spacing: 6) {
                 if bestMatch {
                     SeasonBadge(
-                        text: "Best match",
+                        text: viewModel.localizer.localized("search.badge.best_match"),
                         semantic: .neutral,
                         horizontalPadding: 7,
                         verticalPadding: 3,
@@ -665,7 +787,10 @@ private struct SearchRecipeRow: View {
                 }
 
                 SeasonBadge(
-                    text: "Seasonal \(ranked.seasonalMatchPercent)%",
+                    text: String(
+                        format: viewModel.localizer.localized("search.badge.seasonal_format"),
+                        ranked.seasonalMatchPercent
+                    ),
                     icon: "leaf.fill",
                     semantic: .positive,
                     horizontalPadding: 7,
@@ -702,32 +827,35 @@ private struct SearchFridgeRecipeCard: View {
 
                 HStack(spacing: 6) {
                     SeasonBadge(
-                        text: "From fridge",
+                        text: viewModel.localizer.localized("search.badge.from_fridge"),
                         icon: "snowflake",
                         semantic: .positive,
                         horizontalPadding: 8,
                         verticalPadding: 4,
-                        cornerRadius: 8
+                        cornerRadius: SeasonRadius.small
                     )
                     SeasonBadge(
-                        text: "Seasonal \(ranked.seasonalMatchPercent)%",
+                        text: String(
+                            format: viewModel.localizer.localized("search.badge.seasonal_format"),
+                            ranked.seasonalMatchPercent
+                        ),
                         icon: "leaf.fill",
                         semantic: .positive,
                         horizontalPadding: 8,
                         verticalPadding: 4,
-                        cornerRadius: 8
+                        cornerRadius: SeasonRadius.small
                     )
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(SeasonSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                 .fill(Color(.systemBackground).opacity(0.88))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
         )
     }

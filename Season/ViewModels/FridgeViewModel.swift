@@ -271,7 +271,8 @@ final class FridgeViewModel: ObservableObject {
             itemID: localItemID,
             entityType: "fridge_item",
             operationType: "delete",
-            payload: FridgeOutboxDeletePayload(localItemID: localItemID)
+            payload: FridgeOutboxDeletePayload(localItemID: localItemID),
+            asynchronous: true
         )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=outbox_only_write_enqueued")
     }
@@ -305,7 +306,8 @@ final class FridgeViewModel: ObservableObject {
         itemID: String,
         entityType: String,
         operationType: String,
-        payload: T
+        payload: T,
+        asynchronous: Bool = false
     ) {
         guard let payloadData = try? JSONEncoder().encode(payload) else {
             print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
@@ -327,7 +329,11 @@ final class FridgeViewModel: ObservableObject {
             createdAt: now,
             updatedAt: now
         )
-        outboxStore.append(record)
+        if asynchronous {
+            outboxStore.appendAsync(record)
+        } else {
+            outboxStore.append(record)
+        }
         print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
     }
 }
