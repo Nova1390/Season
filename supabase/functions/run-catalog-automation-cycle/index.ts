@@ -20,6 +20,10 @@ interface AutomationRequest {
   recovery_limit?: number;
   enrich_limit?: number;
   create_limit?: number;
+  apply_aliases?: unknown;
+  apply_localizations?: unknown;
+  apply_reconciliation?: unknown;
+  dry_run?: unknown;
   debug?: unknown;
 }
 
@@ -31,6 +35,21 @@ interface CandidateRow {
   normalized_text?: string | null;
   suggested_resolution_type?: string | null;
   has_approved_alias?: boolean | null;
+}
+
+interface AutoApplyRow {
+  normalized_text?: string | null;
+  canonical_candidate_slug?: string | null;
+  attempted_alias_text?: string | null;
+  match_method?: string | null;
+  result_status?: string | null;
+  detail?: string | null;
+  error_message?: string | null;
+}
+
+interface ReconciliationApplyRow {
+  applied?: boolean | null;
+  apply_status?: string | null;
 }
 
 Deno.serve(async (request) => {
@@ -57,13 +76,19 @@ Deno.serve(async (request) => {
       payload = {};
     }
 
+    const runStartedAt = new Date();
     const recoveryLimit = clampLimit(payload.recovery_limit, DEFAULT_RECOVERY_LIMIT);
     const enrichLimit = clampLimit(payload.enrich_limit, DEFAULT_ENRICH_LIMIT);
     const createLimit = clampLimit(payload.create_limit, DEFAULT_CREATE_LIMIT);
+    const reconciliationLimit = createLimit;
+    const applyAliases = decodeBooleanWithDefault(payload.apply_aliases, true);
+    const applyLocalizations = decodeBooleanWithDefault(payload.apply_localizations, true);
+    const applyReconciliation = decodeBooleanWithDefault(payload.apply_reconciliation, true);
+    const dryRun = decodeBoolean(payload.dry_run);
     const debugEnabled = decodeBoolean(payload.debug);
 
     console.log(
-      `[SEASON_CATALOG_AUTOMATION] phase=cycle_started mode=${auth.mode} recovery_limit=${recoveryLimit} enrich_limit=${enrichLimit} create_limit=${createLimit} debug=${debugEnabled}`,
+      `[SEASON_CATALOG_AUTOMATION] phase=cycle_started mode=${auth.mode} recovery_limit=${recoveryLimit} enrich_limit=${enrichLimit} create_limit=${createLimit} reconciliation_limit=${reconciliationLimit} apply_aliases=${applyAliases} apply_localizations=${applyLocalizations} apply_reconciliation=${applyReconciliation} dry_run=${dryRun} debug=${debugEnabled}`,
     );
 
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -74,6 +99,11 @@ Deno.serve(async (request) => {
         recovery_limit: recoveryLimit,
         enrich_limit: enrichLimit,
         create_limit: createLimit,
+        reconciliation_limit: reconciliationLimit,
+        apply_aliases: applyAliases,
+        apply_localizations: applyLocalizations,
+        apply_reconciliation: applyReconciliation,
+        dry_run: dryRun,
       })
       : null;
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "start", {
@@ -81,6 +111,11 @@ Deno.serve(async (request) => {
       recovery_limit: recoveryLimit,
       enrich_limit: enrichLimit,
       create_limit: createLimit,
+      reconciliation_limit: reconciliationLimit,
+      apply_aliases: applyAliases,
+      apply_localizations: applyLocalizations,
+      apply_reconciliation: applyReconciliation,
+      dry_run: dryRun,
     });
 
     const userClient = auth.bearerToken
@@ -90,18 +125,36 @@ Deno.serve(async (request) => {
       })
       : null;
 
-    const recoverySummary = await runRecoveryStage({
-      userClient,
-      recoveryLimit,
-      mode: auth.mode,
-    });
+    const recoverySummary = dryRun
+      ? {
+        total: 0,
+        observed: 0,
+        skipped: 0,
+        failed: 0,
+        status: "skipped_dry_run",
+      }
+      : await runRecoveryStage({
+        userClient,
+        recoveryLimit,
+        mode: auth.mode,
+      });
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "recovery_summary", recoverySummary);
 
-    const candidateIntakeSummary = await runCandidateIntakeStage({
-      userClient,
-      candidateLimit: clampLimit(enrichLimit * CANDIDATE_INTAKE_MULTIPLIER, enrichLimit),
-      mode: auth.mode,
-    });
+    const candidateIntakeSummary = dryRun
+      ? {
+        selected: 0,
+        eligible: 0,
+        submitted: 0,
+        succeeded: 0,
+        failed: 0,
+        skipped: 0,
+        status: "skipped_dry_run",
+      }
+      : await runCandidateIntakeStage({
+        userClient,
+        candidateLimit: clampLimit(enrichLimit * CANDIDATE_INTAKE_MULTIPLIER, enrichLimit),
+        mode: auth.mode,
+      });
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "candidate_intake_summary", candidateIntakeSummary);
 
     const pendingDraftsBeforeEnrichment = await countPendingDrafts(serviceClient);
@@ -113,13 +166,22 @@ Deno.serve(async (request) => {
       limit: enrichLimit,
     });
 
-    const enrichmentSummary = await runFunctionStage({
-      functionName: "run-catalog-enrichment-draft-batch",
-      limit: enrichLimit,
-      mode: auth.mode,
-      bearerToken: auth.bearerToken,
-      debug: debugEnabled,
-    });
+    const enrichmentSummary = dryRun
+      ? {
+        total: 0,
+        succeeded: 0,
+        failed: 0,
+        skipped: 0,
+        ready: 0,
+        status: "skipped_dry_run",
+      }
+      : await runFunctionStage({
+        functionName: "run-catalog-enrichment-draft-batch",
+        limit: enrichLimit,
+        mode: auth.mode,
+        bearerToken: auth.bearerToken,
+        debug: debugEnabled,
+      });
     console.log(
       `[SEASON_CATALOG_AUTOMATION] phase=enrichment_stage_response ` +
       `total=${toInt(enrichmentSummary.total)} succeeded=${toInt(enrichmentSummary.succeeded)} ` +
@@ -131,23 +193,88 @@ Deno.serve(async (request) => {
 
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "creation_call_started", {
       limit: createLimit,
+      dry_run: dryRun,
     });
-    const creationSummary = await runFunctionStage({
-      functionName: "run-catalog-ingredient-creation-batch",
-      limit: createLimit,
-      mode: auth.mode,
-      bearerToken: auth.bearerToken,
-      debug: debugEnabled,
-    });
+    const creationSummary = dryRun
+      ? {
+        total: 0,
+        created: 0,
+        skipped_existing: 0,
+        skipped_invalid: 0,
+        failed: 0,
+        status: "skipped_dry_run",
+      }
+      : await runFunctionStage({
+        functionName: "run-catalog-ingredient-creation-batch",
+        limit: createLimit,
+        mode: auth.mode,
+        bearerToken: auth.bearerToken,
+        debug: debugEnabled,
+      });
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "creation_response", creationSummary);
+
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "alias_auto_apply_started", {
+      limit: enrichLimit,
+      apply_aliases: applyAliases,
+      dry_run: dryRun,
+    });
+    const aliasSummary = await runAutoAliasStage({
+      userClient,
+      limit: enrichLimit,
+      applyEnabled: applyAliases,
+      dryRun,
+    });
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "alias_auto_apply_response", aliasSummary);
+
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "localization_auto_apply_started", {
+      limit: enrichLimit,
+      apply_localizations: applyLocalizations,
+      dry_run: dryRun,
+    });
+    const localizationSummary = await runAutoLocalizationStage({
+      userClient,
+      limit: enrichLimit,
+      applyEnabled: applyLocalizations,
+      dryRun,
+    });
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "localization_auto_apply_response", localizationSummary);
+
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "reconciliation_apply_started", {
+      limit: reconciliationLimit,
+      apply_reconciliation: applyReconciliation,
+      dry_run: dryRun,
+    });
+    const reconciliationSummary = await runModernReconciliationStage({
+      userClient,
+      limit: reconciliationLimit,
+      applyEnabled: applyReconciliation,
+      dryRun,
+    });
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "reconciliation_apply_response", reconciliationSummary);
 
     console.log(
       `[SEASON_CATALOG_AUTOMATION] phase=cycle_completed ` +
       `recovery_failed=${recoverySummary.status == "failed"} ` +
       `candidate_intake_failed=${candidateIntakeSummary.status == "failed"} ` +
       `enrichment_failed=${enrichmentSummary.status == "failed"} ` +
-      `creation_failed=${creationSummary.status == "failed"}`,
+      `creation_failed=${creationSummary.status == "failed"} ` +
+      `alias_failed=${aliasSummary.status == "failed"} ` +
+      `localization_failed=${localizationSummary.status == "failed"} ` +
+      `reconciliation_failed=${reconciliationSummary.status == "failed"}`,
     );
+
+    const stageStatus = {
+      recovery: String(recoverySummary.status ?? "unknown"),
+      candidate_intake: String(candidateIntakeSummary.status ?? "unknown"),
+      enrichment: String(enrichmentSummary.status ?? "unknown"),
+      creation: String(creationSummary.status ?? "unknown"),
+      alias_auto_apply: String(aliasSummary.status ?? "unknown"),
+      localization_auto_apply: String(localizationSummary.status ?? "unknown"),
+      reconciliation_apply_modern_safe: String(reconciliationSummary.status ?? "unknown"),
+    };
+    const runCompletedAt = new Date();
+    const failedStageCount = Object.values(stageStatus).filter((status) => status === "failed").length;
+    const runStatus = failedStageCount > 0 ? "failed" : "ok";
 
     return json({
       summary: {
@@ -155,15 +282,31 @@ Deno.serve(async (request) => {
         candidate_intake: candidateIntakeSummary,
         enrichment: enrichmentSummary,
         creation: creationSummary,
+        alias_auto_apply: aliasSummary,
+        localization_auto_apply: localizationSummary,
+        reconciliation_apply_modern_safe: reconciliationSummary,
       },
       metadata: {
+        run_status: runStatus,
+        started_at: runStartedAt.toISOString(),
+        completed_at: runCompletedAt.toISOString(),
+        duration_ms: Math.max(0, runCompletedAt.getTime() - runStartedAt.getTime()),
         mode: auth.mode,
+        environment: resolveEnvironment(),
         debug_enabled: debugEnabled,
         debug_run_id: debugRunId,
+        policy: {
+          apply_aliases: applyAliases,
+          apply_localizations: applyLocalizations,
+          apply_reconciliation: applyReconciliation,
+          dry_run: dryRun,
+        },
+        stage_status: stageStatus,
         limits: {
           recovery_limit: recoveryLimit,
           enrich_limit: enrichLimit,
           create_limit: createLimit,
+          reconciliation_limit: reconciliationLimit,
         },
         generated_at: new Date().toISOString(),
       },
@@ -439,6 +582,278 @@ async function runFunctionStage(input: {
   }
 }
 
+async function runAutoAliasStage(input: {
+  userClient: ReturnType<typeof createClient> | null;
+  limit: number;
+  applyEnabled: boolean;
+  dryRun: boolean;
+}): Promise<Record<string, unknown>> {
+  if (!input.applyEnabled) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_policy",
+      detail: "apply_aliases_disabled",
+    };
+  }
+
+  if (input.dryRun) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_dry_run",
+      detail: "dry_run_enabled",
+    };
+  }
+
+  if (!input.userClient) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "noop",
+      detail: "no_user_context_alias_stage_not_executed",
+    };
+  }
+
+  try {
+    const { data, error } = await input.userClient.rpc("auto_apply_safe_aliases", {
+      p_limit: input.limit,
+      p_language_code: "it",
+    });
+
+    if (error) {
+      const rpcError = formatRpcError(error);
+      console.log(
+        `[SEASON_CATALOG_AUTOMATION] phase=alias_auto_apply_rpc_failed ` +
+        `message=${rpcError.message} code=${rpcError.code ?? "null"} ` +
+        `details=${rpcError.details ?? "null"} hint=${rpcError.hint ?? "null"}`,
+      );
+      return {
+        total: 1,
+        succeeded: 0,
+        skipped: 0,
+        failed: 1,
+        status: "failed",
+        error: rpcError.message,
+        rpc_error: rpcError,
+      };
+    }
+
+    const rows = Array.isArray(data) ? data as AutoApplyRow[] : [];
+    const succeeded = rows.filter((row) => String(row.result_status ?? "").toLowerCase() === "succeeded").length;
+    const failed = rows.filter((row) => String(row.result_status ?? "").toLowerCase() === "failed").length;
+    const skipped = Math.max(0, rows.length - succeeded - failed);
+    const status = failed > 0 ? "failed" : (rows.length > 0 ? "ok" : "noop");
+    const failedRows = rows
+      .filter((row) => String(row.result_status ?? "").toLowerCase() === "failed")
+      .map((row) => ({
+        normalized_text: normalizeNullableText(row.normalized_text),
+        canonical_candidate_slug: normalizeNullableText(row.canonical_candidate_slug),
+        attempted_alias_text: normalizeNullableText(row.attempted_alias_text),
+        match_method: normalizeNullableText(row.match_method),
+        detail: normalizeNullableText(row.detail),
+        error_message: normalizeNullableText(row.error_message),
+      }));
+    const failureSamples = failedRows.slice(0, 5);
+
+    console.log(
+      `[SEASON_CATALOG_AUTOMATION] phase=alias_auto_apply_rpc_response ` +
+      `total=${rows.length} succeeded=${succeeded} skipped=${skipped} failed=${failed} status=${status}`,
+    );
+    if (failureSamples.length > 0) {
+      console.log(
+        `[SEASON_CATALOG_AUTOMATION] phase=alias_auto_apply_failed_rows samples=${JSON.stringify(failureSamples)}`,
+      );
+    }
+
+    return {
+      total: rows.length,
+      succeeded,
+      skipped,
+      failed,
+      status,
+      failed_items: failureSamples,
+      failed_items_total: failedRows.length,
+      response_payload_size: rows.length,
+    };
+  } catch (error) {
+    const message = String(error);
+    console.log(
+      `[SEASON_CATALOG_AUTOMATION] phase=alias_auto_apply_unhandled_error error=${message}`,
+    );
+    return {
+      total: 1,
+      succeeded: 0,
+      skipped: 0,
+      failed: 1,
+      status: "failed",
+      error: message,
+    };
+  }
+}
+
+async function runAutoLocalizationStage(input: {
+  userClient: ReturnType<typeof createClient> | null;
+  limit: number;
+  applyEnabled: boolean;
+  dryRun: boolean;
+}): Promise<Record<string, unknown>> {
+  if (!input.applyEnabled) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_policy",
+      detail: "apply_localizations_disabled",
+    };
+  }
+
+  if (input.dryRun) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_dry_run",
+      detail: "dry_run_enabled",
+    };
+  }
+
+  if (!input.userClient) {
+    return {
+      total: 0,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      status: "noop",
+      detail: "no_user_context_localization_stage_not_executed",
+    };
+  }
+
+  try {
+    const { data, error } = await input.userClient.rpc("auto_apply_safe_localizations", {
+      p_limit: input.limit,
+      p_language_code: "it",
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const rows = Array.isArray(data) ? data as AutoApplyRow[] : [];
+    const succeeded = rows.filter((row) => String(row.result_status ?? "").toLowerCase() === "succeeded").length;
+    const failed = rows.filter((row) => String(row.result_status ?? "").toLowerCase() === "failed").length;
+    const skipped = Math.max(0, rows.length - succeeded - failed);
+    const status = failed > 0 ? "failed" : (rows.length > 0 ? "ok" : "noop");
+
+    return {
+      total: rows.length,
+      succeeded,
+      skipped,
+      failed,
+      status,
+    };
+  } catch (error) {
+    return {
+      total: 1,
+      succeeded: 0,
+      skipped: 0,
+      failed: 1,
+      status: "failed",
+      error: String(error),
+    };
+  }
+}
+
+async function runModernReconciliationStage(input: {
+  userClient: ReturnType<typeof createClient> | null;
+  limit: number;
+  applyEnabled: boolean;
+  dryRun: boolean;
+}): Promise<Record<string, unknown>> {
+  if (!input.applyEnabled) {
+    return {
+      total: 0,
+      applied: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_policy",
+      detail: "apply_reconciliation_disabled",
+    };
+  }
+
+  if (!input.userClient) {
+    return {
+      total: 0,
+      applied: 0,
+      skipped: 0,
+      failed: 0,
+      status: "noop",
+      detail: "no_user_context_reconciliation_stage_not_executed",
+    };
+  }
+
+  try {
+    if (input.dryRun) {
+      const { data, error } = await input.userClient.rpc("preview_safe_recipe_ingredient_reconciliation", {
+        p_limit: input.limit,
+        p_only_safe: true,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+      const rows = Array.isArray(data) ? data : [];
+      return {
+        total: rows.length,
+        applied: 0,
+        skipped: rows.length,
+        failed: 0,
+        status: "skipped_dry_run",
+        detail: "dry_run_enabled_preview_only",
+      };
+    }
+
+    const { data, error } = await input.userClient.rpc("apply_recipe_ingredient_reconciliation_modern", {
+      p_limit: input.limit,
+      p_recipe_ids: null,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const rows = Array.isArray(data) ? data as ReconciliationApplyRow[] : [];
+    const applied = rows.filter((row) => row.applied === true && String(row.apply_status ?? "").toLowerCase() === "applied").length;
+    const failed = rows.filter((row) => row.applied !== true && !isReconciliationSkipStatus(row.apply_status)).length;
+    const skipped = Math.max(0, rows.length - applied - failed);
+    const status = failed > 0 ? "failed" : (rows.length > 0 ? "ok" : "noop");
+
+    return {
+      total: rows.length,
+      applied,
+      skipped,
+      failed,
+      status,
+    };
+  } catch (error) {
+    return {
+      total: 1,
+      applied: 0,
+      skipped: 0,
+      failed: 1,
+      status: "failed",
+      error: String(error),
+    };
+  }
+}
+
 async function countPendingDrafts(client: ReturnType<typeof createClient>): Promise<number> {
   const { count, error } = await client
     .from("catalog_ingredient_enrichment_drafts")
@@ -564,6 +979,53 @@ function decodeBoolean(payload: unknown): boolean {
     return decodeBoolean((payload as Record<string, unknown>).is_current_user_catalog_admin);
   }
   return false;
+}
+
+function decodeBooleanWithDefault(payload: unknown, fallback: boolean): boolean {
+  if (payload === null || payload === undefined) return fallback;
+  return decodeBoolean(payload);
+}
+
+function isReconciliationSkipStatus(value: unknown): boolean {
+  const status = String(value ?? "").trim().toLowerCase();
+  if (!status) return false;
+  return status === "already_resolved" ||
+    status === "recipe_not_found_or_no_ingredients" ||
+    status === "ingredient_index_not_found" ||
+    status === "matched_ingredient_missing" ||
+    status === "failed_to_build_updated_ingredients";
+}
+
+function resolveEnvironment(): string {
+  return (
+    Deno.env.get("CATALOG_AUTOPILOT_ENV") ??
+    Deno.env.get("SUPABASE_ENV") ??
+    Deno.env.get("DENO_ENV") ??
+    "unknown"
+  );
+}
+
+function normalizeNullableText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function formatRpcError(error: unknown): { message: string; code: string | null; details: string | null; hint: string | null } {
+  if (isRecord(error)) {
+    return {
+      message: String(error.message ?? "unknown_rpc_error"),
+      code: normalizeNullableText(error.code),
+      details: normalizeNullableText(error.details),
+      hint: normalizeNullableText(error.hint),
+    };
+  }
+  return {
+    message: String(error ?? "unknown_rpc_error"),
+    code: null,
+    details: null,
+    hint: null,
+  };
 }
 
 function extractBearerToken(header: string): string | null {
