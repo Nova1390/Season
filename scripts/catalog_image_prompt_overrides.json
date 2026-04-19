@@ -1,0 +1,12 @@
+{
+  "category_overrides": {
+    "basic:duck": "poultry_meat_strict",
+    "basic:chicken": "poultry_meat_strict",
+    "basic:turkey": "poultry_meat",
+    "basic:salmon": "fish_seafood",
+    "basic:tuna": "fish_seafood"
+  },
+  "prompt_overrides": {
+    "basic:duck": "Raw duck breast fillet, single isolated object, centered, no plate, no garnish, no herbs, no utensils, no additional objects, no animal, no duck, no head, no feathers, plain white background, minimal shadow."
+  }
+}
