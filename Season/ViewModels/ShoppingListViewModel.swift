@@ -392,7 +392,8 @@ final class ShoppingListViewModel: ObservableObject {
         entries = []
         storage.removeObject(forKey: storageKey)
         storage.removeObject(forKey: "shoppingListItemIDs")
-        outboxStore.clearAll()
+        // Preserve the shared outbox across logout so pending offline mutations
+        // are not silently dropped across domains.
     }
 
     private func save() {

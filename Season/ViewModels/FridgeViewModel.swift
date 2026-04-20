@@ -153,7 +153,8 @@ final class FridgeViewModel: ObservableObject {
         customItems = []
         storage.removeObject(forKey: storageKey)
         storage.removeObject(forKey: legacyStorageKey)
-        outboxStore.clearAll()
+        // Preserve the shared outbox across logout so pending offline mutations
+        // are not silently dropped across domains.
     }
 
     private func save() {
@@ -271,8 +272,9 @@ final class FridgeViewModel: ObservableObject {
             itemID: localItemID,
             entityType: "fridge_item",
             operationType: "delete",
-            payload: FridgeOutboxDeletePayload(localItemID: localItemID),
-            asynchronous: true
+            // Deletes are destructive, so the tombstone must be durable before
+            // we rely on the local state as the source of truth.
+            payload: FridgeOutboxDeletePayload(localItemID: localItemID)
         )
         print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=outbox_only_write_enqueued")
     }
@@ -306,8 +308,7 @@ final class FridgeViewModel: ObservableObject {
         itemID: String,
         entityType: String,
         operationType: String,
-        payload: T,
-        asynchronous: Bool = false
+        payload: T
     ) {
         guard let payloadData = try? JSONEncoder().encode(payload) else {
             print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
@@ -329,11 +330,7 @@ final class FridgeViewModel: ObservableObject {
             createdAt: now,
             updatedAt: now
         )
-        if asynchronous {
-            outboxStore.appendAsync(record)
-        } else {
-            outboxStore.append(record)
-        }
+        outboxStore.append(record)
         print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
     }
 }
