@@ -2,13 +2,13 @@ import Foundation
 
 @MainActor
 final class FollowSyncManager {
-    static let shared = FollowSyncManager()
+    static let shared = FollowSyncManager(supabaseService: .shared)
 
     private let supabaseService: SupabaseService
     private var isSyncingFromBackend = false
     private var isSyncingToBackend = false
 
-    init(supabaseService: SupabaseService = .shared) {
+    init(supabaseService: SupabaseService) {
         self.supabaseService = supabaseService
     }
 

@@ -199,7 +199,7 @@ enum SocialImportParser {
             }
     }
 
-    private static func cleanedStructuredIngredientLine(_ raw: String) -> String {
+    nonisolated private static func cleanedStructuredIngredientLine(_ raw: String) -> String {
         raw
             .replacingOccurrences(
                 of: #"^\s*[-•\*]+\s*"#,
@@ -229,7 +229,7 @@ enum SocialImportParser {
         return sentenceSplit.count > 1 ? sentenceSplit : cleanedLines
     }
 
-    private static func cleanedStructuredStepLine(_ raw: String) -> String {
+    nonisolated private static func cleanedStructuredStepLine(_ raw: String) -> String {
         let noBullet = raw.replacingOccurrences(
             of: #"^\s*[-•\*]+\s*"#,
             with: "",

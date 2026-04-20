@@ -565,17 +565,11 @@ struct ProduceDetailView: View {
 
         guard keyProduceID != nil || keyBasicID != nil else { return [] }
 
-        let recipes = RecipeStore.loadRecipes()
-            .filter(\.isFeedEligible)
-            .filter { recipe in
-                recipe.ingredients.contains { ingredient in
-                    if let keyProduceID, ingredient.produceID == keyProduceID { return true }
-                    if let keyBasicID, ingredient.basicIngredientID == keyBasicID { return true }
-                    return false
-                }
-            }
-
-        return Array(recipes.prefix(4))
+        return viewModel.relatedRecipes(
+            matchingProduceID: keyProduceID,
+            basicIngredientID: keyBasicID,
+            limit: 4
+        )
     }
 
     private var rankedRelatedRecipes: [RankedRecipe] {

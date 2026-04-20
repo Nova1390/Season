@@ -77,7 +77,7 @@ struct RecipeIngredient: Identifiable, Codable, Hashable {
     var rawIngredientLine: String? = nil
     var mappingConfidence: RecipeIngredientMappingConfidence = .high
 
-    var hasCatalogIdentity: Bool {
+    nonisolated var hasCatalogIdentity: Bool {
         ingredientID != nil || produceID != nil || basicIngredientID != nil
     }
 

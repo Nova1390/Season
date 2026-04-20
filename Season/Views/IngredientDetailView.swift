@@ -472,17 +472,11 @@ struct IngredientDetailView: View {
         let keyBasicID = resolvedBasicIngredient?.id
         let normalizedName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        return Array(
-            RecipeStore.loadRecipes()
-                .filter(\.isFeedEligible)
-                .filter { recipe in
-                    recipe.ingredients.contains { item in
-                        if let keyProduceID, item.produceID == keyProduceID { return true }
-                        if let keyBasicID, item.basicIngredientID == keyBasicID { return true }
-                        return item.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
-                    }
-                }
-                .prefix(4)
+        return viewModel.relatedRecipes(
+            matchingProduceID: keyProduceID,
+            basicIngredientID: keyBasicID,
+            ingredientName: normalizedName,
+            limit: 4
         )
     }
 
