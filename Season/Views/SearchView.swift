@@ -7,8 +7,7 @@ struct SearchView: View {
     @State private var searchQuery = ""
     @State private var selectedMode: SearchMode = .recipes
     @State private var selectedFilter: SearchFilterChip?
-    @State private var showSecondaryIngredients = false
-    @State private var showSecondaryRecipes = false
+    @State private var searchResultsCache: [SearchResultsCacheKey: SearchResultsSnapshot] = [:]
 
     var body: some View {
         ScrollView {
@@ -43,10 +42,29 @@ struct SearchView: View {
                 selectedFilter = nil
             }
         }
+        .task(id: searchRequestKey) {
+            await refreshSearchResults(for: searchRequestKey)
+        }
     }
 
     private var isSearching: Bool {
         searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var searchRequestKey: SearchResultsCacheKey {
+        SearchResultsCacheKey(
+            query: normalizedSearchQuery,
+            mode: selectedMode,
+            filter: selectedFilter,
+            languageCode: viewModel.languageCode,
+            currentMonth: viewModel.currentMonth,
+            rankingDataVersion: viewModel.rankingDataVersion,
+            fridgeFingerprint: fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
+        )
     }
 
     private var searchHeaderArea: some View {
@@ -88,36 +106,105 @@ struct SearchView: View {
 
     @ViewBuilder
     private var activeSearchContent: some View {
-        let ingredientResults = filteredIngredientSearchResults(query: searchQuery)
-        let recipeResults = filteredRecipeSearchResults(query: searchQuery)
-        let hasPrimaryResults = selectedMode == .recipes ? !recipeResults.isEmpty : !ingredientResults.isEmpty
+        let key = searchRequestKey
 
-        if !hasPrimaryResults {
-            noResultsSection
-        } else {
-            VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-                Text(
-                    String(
-                        format: viewModel.localizer.localized("search.results_for_format"),
-                        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-                    )
-                )
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                if selectedMode == .recipes {
-                    recipesSection(results: recipeResults)
-                    if !ingredientResults.isEmpty {
-                        secondaryIngredientsSection(results: ingredientResults)
-                    }
+        if let snapshot = searchResultsCache[key] {
+            switch snapshot.mode {
+            case .recipes:
+                if snapshot.recipeResults.isEmpty {
+                    noResultsSection
                 } else {
-                    ingredientsSection(results: ingredientResults)
-                    if !recipeResults.isEmpty {
-                        secondaryRecipesSection(results: recipeResults)
+                    activeResultsContainer(query: snapshot.query) {
+                        recipesSection(results: snapshot.recipeResults)
+                    }
+                }
+            case .ingredients:
+                if snapshot.ingredientResults.isEmpty {
+                    noResultsSection
+                } else {
+                    activeResultsContainer(query: snapshot.query) {
+                        ingredientsSection(results: snapshot.ingredientResults)
                     }
                 }
             }
+        } else {
+            pendingSearchSection(query: key.query)
         }
+    }
+
+    private func refreshSearchResults(for key: SearchResultsCacheKey) async {
+        guard !key.query.isEmpty else {
+            searchResultsCache.removeAll(keepingCapacity: true)
+            return
+        }
+        guard searchResultsCache[key] == nil else { return }
+
+        do {
+            try await Task.sleep(nanoseconds: 250_000_000)
+        } catch {
+            return
+        }
+
+        guard !Task.isCancelled, key == searchRequestKey else { return }
+        await Task.yield()
+
+        let snapshot = buildSearchSnapshot(for: key)
+        guard !Task.isCancelled, key == searchRequestKey else { return }
+
+        searchResultsCache[key] = snapshot
+        pruneSearchResultsCache(keeping: key)
+    }
+
+    private func buildSearchSnapshot(for key: SearchResultsCacheKey) -> SearchResultsSnapshot {
+        switch key.mode {
+        case .recipes:
+            return SearchResultsSnapshot(
+                key: key,
+                recipeResults: filteredRecipeSearchResults(query: key.query, filter: key.filter),
+                ingredientResults: []
+            )
+        case .ingredients:
+            return SearchResultsSnapshot(
+                key: key,
+                recipeResults: [],
+                ingredientResults: filteredIngredientSearchResults(query: key.query, filter: key.filter)
+            )
+        }
+    }
+
+    private func pruneSearchResultsCache(keeping activeKey: SearchResultsCacheKey) {
+        guard searchResultsCache.count > 8 else { return }
+        searchResultsCache = searchResultsCache.filter { key, _ in key == activeKey }
+    }
+
+    private func activeResultsContainer<Content: View>(
+        query: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
+            searchResultsHeader(query: query)
+            content()
+        }
+    }
+
+    private func pendingSearchSection(query: String) -> some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+            searchResultsHeader(query: query)
+            ProgressView()
+                .controlSize(.small)
+                .padding(.vertical, SeasonSpacing.xs)
+        }
+    }
+
+    private func searchResultsHeader(query: String) -> some View {
+        Text(
+            String(
+                format: viewModel.localizer.localized("search.results_for_format"),
+                query
+            )
+        )
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -428,12 +515,12 @@ struct SearchView: View {
             .map(\.ranked)
     }
 
-    private func filteredRecipeSearchResults(query: String) -> [RankedRecipe] {
+    private func filteredRecipeSearchResults(query: String, filter: SearchFilterChip?) -> [RankedRecipe] {
         let base = smartRankedRecipeResults(query: query)
-        guard selectedMode == .recipes, let selectedFilter else { return base }
+        guard let filter else { return base }
 
         let fridgeIDs = fridgeViewModel.allIngredientIDSet
-        switch selectedFilter {
+        switch filter {
         case .seasonal:
             return base.filter { $0.seasonalMatchPercent >= 80 }
         case .fridgeReady:
@@ -442,11 +529,11 @@ struct SearchView: View {
         }
     }
 
-    private func filteredIngredientSearchResults(query: String) -> [IngredientSearchResult] {
+    private func filteredIngredientSearchResults(query: String, filter: SearchFilterChip?) -> [IngredientSearchResult] {
         let base = viewModel.searchIngredientResults(query: query)
-        guard selectedMode == .ingredients, let selectedFilter else { return base }
+        guard let filter else { return base }
 
-        switch selectedFilter {
+        switch filter {
         case .fridgeReady:
             return base.filter { result in
                 switch result.source {
@@ -612,46 +699,6 @@ struct SearchView: View {
         }
     }
 
-    private func secondaryIngredientsSection(results: [IngredientSearchResult]) -> some View {
-        DisclosureGroup(
-            isExpanded: $showSecondaryIngredients,
-            content: {
-                ingredientsSection(results: results)
-                    .padding(.top, SeasonSpacing.xs)
-            },
-            label: {
-                Text(viewModel.localizer.localized("search.secondary.ingredients"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-        )
-        .padding(SeasonSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.84))
-        )
-    }
-
-    private func secondaryRecipesSection(results: [RankedRecipe]) -> some View {
-        DisclosureGroup(
-            isExpanded: $showSecondaryRecipes,
-            content: {
-                recipesSection(results: results)
-                    .padding(.top, SeasonSpacing.xs)
-            },
-            label: {
-                Text(viewModel.localizer.localized("search.secondary.recipes_for_ingredients"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-        )
-        .padding(SeasonSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.84))
-        )
-    }
-
     private func recipeCountText(_ count: Int) -> String {
         "\(count.compactFormatted()) \(viewModel.localizer.text(.recipes).lowercased())"
     }
@@ -737,14 +784,33 @@ struct SearchView: View {
 
 }
 
-private enum SearchMode: String, CaseIterable, Identifiable {
+private struct SearchResultsCacheKey: Hashable {
+    let query: String
+    let mode: SearchMode
+    let filter: SearchFilterChip?
+    let languageCode: String
+    let currentMonth: Int
+    let rankingDataVersion: Int
+    let fridgeFingerprint: String
+}
+
+private struct SearchResultsSnapshot {
+    let key: SearchResultsCacheKey
+    let recipeResults: [RankedRecipe]
+    let ingredientResults: [IngredientSearchResult]
+
+    var query: String { key.query }
+    var mode: SearchMode { key.mode }
+}
+
+private enum SearchMode: String, CaseIterable, Identifiable, Hashable {
     case recipes
     case ingredients
 
     var id: String { rawValue }
 }
 
-private enum SearchFilterChip: String, CaseIterable, Identifiable {
+private enum SearchFilterChip: String, CaseIterable, Identifiable, Hashable {
     case fridgeReady
     case seasonal
 

@@ -2356,7 +2356,6 @@ struct HomeView: View {
         trendingIDs: Set<String>,
         previousHook: HookKind?
     ) -> [HookedRecipeCard] {
-        var lastHookKind = previousHook
         var consecutiveTrendingCount = 0
         return recipes.map { ranked in
             let primary = primaryHook(for: ranked)
@@ -2387,7 +2386,6 @@ struct HomeView: View {
             } else {
                 consecutiveTrendingCount = 0
             }
-            lastHookKind = chosen.kind
             return HookedRecipeCard(ranked: ranked, hook: chosen.text, hookKind: chosen.kind)
         }
     }
@@ -2403,10 +2401,14 @@ struct HomeView: View {
                     fallbackAssetName: trimmedFallbackAssetName(for: recipe)
                 )
             } else if let cover = resolvedRecipeCoverImage(for: recipe),
-                      let localImage = recipeUIImage(from: cover) {
-                Image(uiImage: localImage)
-                    .resizable()
-                    .scaledToFill()
+                      recipeImageFileURL(for: cover.localPath) != nil {
+                RecipeLocalImageView(
+                    image: cover,
+                    targetSize: CGSize(width: width ?? height * 1.6, height: height),
+                    contentMode: .fill
+                ) {
+                    recipeImageFallback(for: recipe)
+                }
             } else if let cover = resolvedRecipeCoverImage(for: recipe),
                       let remoteURLString = cover.remoteURL,
                       let remoteURL = URL(string: remoteURLString) {
@@ -2426,6 +2428,25 @@ struct HomeView: View {
         .frame(maxWidth: width == nil ? .infinity : nil)
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func recipeImageFallback(for recipe: Recipe) -> some View {
+        if let cover = resolvedRecipeCoverImage(for: recipe),
+           let remoteURLString = cover.remoteURL,
+           let remoteURL = URL(string: remoteURLString) {
+            RemoteImageView(
+                url: remoteURL,
+                fallbackAssetName: trimmedFallbackAssetName(for: recipe)
+            )
+        } else if let imageName = recipe.coverImageName,
+                  UIImage(named: imageName) != nil {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+        } else {
+            recipeFallbackImage
+        }
     }
 
     private func trimmedFallbackAssetName(for recipe: Recipe) -> String? {

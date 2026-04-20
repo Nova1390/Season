@@ -987,6 +987,38 @@ final class ProduceViewModel: ObservableObject {
             .sorted { $0.createdAt > $1.createdAt }
     }
 
+    func relatedRecipes(
+        matchingProduceID produceID: String?,
+        basicIngredientID: String?,
+        ingredientName: String? = nil,
+        limit: Int = 4
+    ) -> [Recipe] {
+        guard limit > 0 else { return [] }
+
+        let normalizedIngredientName = ingredientName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        guard produceID != nil || basicIngredientID != nil || normalizedIngredientName?.isEmpty == false else {
+            return []
+        }
+
+        let matches = feedEligibleDiscoverableRecipes.filter { recipe in
+            recipe.ingredients.contains { ingredient in
+                if let produceID, ingredient.produceID == produceID { return true }
+                if let basicIngredientID, ingredient.basicIngredientID == basicIngredientID { return true }
+                if let normalizedIngredientName, !normalizedIngredientName.isEmpty {
+                    return ingredient.name
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .lowercased() == normalizedIngredientName
+                }
+                return false
+            }
+        }
+
+        return Array(matches.prefix(limit))
+    }
+
     func archivedRecipes(for author: String) -> [Recipe] {
         nonDeletedRecipes
             .filter { $0.author == author && archivedRecipeIDs.contains($0.id) }
@@ -1284,7 +1316,7 @@ final class ProduceViewModel: ObservableObject {
         let creator = CurrentUser.shared.creator
         let resolvedCreatorName = resolvedCreatorDisplayName(from: author, creator: creator)
 
-        var recipe = Recipe(
+        let recipe = Recipe(
             id: recipeID,
             title: trimmedTitle,
             author: resolvedCreatorName,
