@@ -369,10 +369,74 @@ struct CatalogAutomationCycleCreationSummary: Sendable {
     let error: String?
 }
 
+struct CatalogAutomationCycleCandidateIntakeSummary: Sendable {
+    let selected: Int
+    let eligible: Int
+    let submitted: Int
+    let succeeded: Int
+    let failed: Int
+    let skipped: Int
+    let status: String
+    let error: String?
+}
+
+struct CatalogAutomationCycleRPCError: Sendable {
+    let message: String
+    let code: String?
+    let details: String?
+    let hint: String?
+}
+
+struct CatalogAutomationCycleAutoApplyFailedItem: Sendable {
+    let normalizedText: String?
+    let canonicalCandidateSlug: String?
+    let attemptedAliasText: String?
+    let matchMethod: String?
+    let detail: String?
+    let errorMessage: String?
+}
+
+struct CatalogAutomationCycleAutoApplySummary: Sendable {
+    let total: Int
+    let succeeded: Int
+    let skipped: Int
+    let failed: Int
+    let status: String
+    let detail: String?
+    let error: String?
+    let failedItemsTotal: Int
+    let failedItems: [CatalogAutomationCycleAutoApplyFailedItem]
+    let rpcError: CatalogAutomationCycleRPCError?
+}
+
+struct CatalogAutomationCycleReconciliationSummary: Sendable {
+    let total: Int
+    let applied: Int
+    let skipped: Int
+    let failed: Int
+    let status: String
+    let detail: String?
+    let error: String?
+}
+
+struct CatalogAutomationCyclePolicy: Sendable {
+    let applyAliases: Bool
+    let applyLocalizations: Bool
+    let applyReconciliation: Bool
+    let dryRun: Bool
+}
+
 struct CatalogAutomationCycleResult: Sendable {
     let recovery: CatalogAutomationCycleRecoverySummary
+    let candidateIntake: CatalogAutomationCycleCandidateIntakeSummary
     let enrichment: CatalogAutomationCycleEnrichmentSummary
     let creation: CatalogAutomationCycleCreationSummary
+    let aliasAutoApply: CatalogAutomationCycleAutoApplySummary
+    let localizationAutoApply: CatalogAutomationCycleAutoApplySummary
+    let reconciliationApplyModernSafe: CatalogAutomationCycleReconciliationSummary
+    let runStatus: String
+    let stageStatus: [String: String]
+    let policy: CatalogAutomationCyclePolicy
     let mode: String
 }
 
@@ -771,19 +835,84 @@ private struct CloudCatalogAutomationCycleCreationSummary: Codable {
     let error: String?
 }
 
+private struct CloudCatalogAutomationCycleCandidateIntakeSummary: Codable {
+    let selected: Int?
+    let eligible: Int?
+    let submitted: Int?
+    let succeeded: Int?
+    let failed: Int?
+    let skipped: Int?
+    let status: String?
+    let error: String?
+}
+
+private struct CloudCatalogAutomationCycleAutoApplySummary: Codable {
+    let total: Int?
+    let succeeded: Int?
+    let skipped: Int?
+    let failed: Int?
+    let status: String?
+    let detail: String?
+    let error: String?
+    let failed_items_total: Int?
+    let failed_items: [CloudCatalogAutomationCycleAutoApplyFailedItem]?
+    let rpc_error: CloudCatalogAutomationCycleRPCError?
+}
+
+private struct CloudCatalogAutomationCycleReconciliationSummary: Codable {
+    let total: Int?
+    let applied: Int?
+    let skipped: Int?
+    let failed: Int?
+    let status: String?
+    let detail: String?
+    let error: String?
+}
+
+private struct CloudCatalogAutomationCycleRPCError: Codable {
+    let message: String?
+    let code: String?
+    let details: String?
+    let hint: String?
+}
+
+private struct CloudCatalogAutomationCycleAutoApplyFailedItem: Codable {
+    let normalized_text: String?
+    let canonical_candidate_slug: String?
+    let attempted_alias_text: String?
+    let match_method: String?
+    let detail: String?
+    let error_message: String?
+}
+
 private struct CloudCatalogAutomationCycleSummary: Codable {
     let recovery: CloudCatalogAutomationCycleRecoverySummary?
+    let candidate_intake: CloudCatalogAutomationCycleCandidateIntakeSummary?
     let enrichment: CloudCatalogAutomationCycleEnrichmentSummary?
     let creation: CloudCatalogAutomationCycleCreationSummary?
+    let alias_auto_apply: CloudCatalogAutomationCycleAutoApplySummary?
+    let localization_auto_apply: CloudCatalogAutomationCycleAutoApplySummary?
+    let reconciliation_apply_modern_safe: CloudCatalogAutomationCycleReconciliationSummary?
 }
 
 private struct CloudCatalogAutomationCycleMetadataLimits: Codable {
     let recovery_limit: Int?
     let enrich_limit: Int?
     let create_limit: Int?
+    let reconciliation_limit: Int?
+}
+
+private struct CloudCatalogAutomationCycleMetadataPolicy: Codable {
+    let apply_aliases: Bool?
+    let apply_localizations: Bool?
+    let apply_reconciliation: Bool?
+    let dry_run: Bool?
 }
 
 private struct CloudCatalogAutomationCycleMetadata: Codable {
+    let run_status: String?
+    let stage_status: [String: String]?
+    let policy: CloudCatalogAutomationCycleMetadataPolicy?
     let mode: String?
     let limits: CloudCatalogAutomationCycleMetadataLimits?
 }
@@ -2542,6 +2671,16 @@ final class SupabaseService {
                 status: cleanedOptional(response.summary?.recovery?.status) ?? "failed",
                 error: cleanedOptional(response.summary?.recovery?.error)
             )
+            let candidateIntake = CatalogAutomationCycleCandidateIntakeSummary(
+                selected: response.summary?.candidate_intake?.selected ?? 0,
+                eligible: response.summary?.candidate_intake?.eligible ?? 0,
+                submitted: response.summary?.candidate_intake?.submitted ?? 0,
+                succeeded: response.summary?.candidate_intake?.succeeded ?? 0,
+                failed: response.summary?.candidate_intake?.failed ?? 0,
+                skipped: response.summary?.candidate_intake?.skipped ?? 0,
+                status: cleanedOptional(response.summary?.candidate_intake?.status) ?? "unknown",
+                error: cleanedOptional(response.summary?.candidate_intake?.error)
+            )
             let enrichment = CatalogAutomationCycleEnrichmentSummary(
                 total: response.summary?.enrichment?.total ?? 0,
                 succeeded: response.summary?.enrichment?.succeeded ?? 0,
@@ -2560,20 +2699,124 @@ final class SupabaseService {
                 status: cleanedOptional(response.summary?.creation?.status) ?? "failed",
                 error: cleanedOptional(response.summary?.creation?.error)
             )
+            let aliasFailedItems: [CatalogAutomationCycleAutoApplyFailedItem] = (response.summary?.alias_auto_apply?.failed_items ?? []).map { row in
+                CatalogAutomationCycleAutoApplyFailedItem(
+                    normalizedText: cleanedOptional(row.normalized_text),
+                    canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
+                    attemptedAliasText: cleanedOptional(row.attempted_alias_text),
+                    matchMethod: cleanedOptional(row.match_method),
+                    detail: cleanedOptional(row.detail),
+                    errorMessage: cleanedOptional(row.error_message)
+                )
+            }
+            let localizationFailedItems: [CatalogAutomationCycleAutoApplyFailedItem] = (response.summary?.localization_auto_apply?.failed_items ?? []).map { row in
+                CatalogAutomationCycleAutoApplyFailedItem(
+                    normalizedText: cleanedOptional(row.normalized_text),
+                    canonicalCandidateSlug: cleanedOptional(row.canonical_candidate_slug),
+                    attemptedAliasText: cleanedOptional(row.attempted_alias_text),
+                    matchMethod: cleanedOptional(row.match_method),
+                    detail: cleanedOptional(row.detail),
+                    errorMessage: cleanedOptional(row.error_message)
+                )
+            }
+            let aliasRPCError = CatalogAutomationCycleRPCError(
+                message: cleanedOptional(response.summary?.alias_auto_apply?.rpc_error?.message) ?? "unknown_rpc_error",
+                code: cleanedOptional(response.summary?.alias_auto_apply?.rpc_error?.code),
+                details: cleanedOptional(response.summary?.alias_auto_apply?.rpc_error?.details),
+                hint: cleanedOptional(response.summary?.alias_auto_apply?.rpc_error?.hint)
+            )
+            let localizationRPCError = CatalogAutomationCycleRPCError(
+                message: cleanedOptional(response.summary?.localization_auto_apply?.rpc_error?.message) ?? "unknown_rpc_error",
+                code: cleanedOptional(response.summary?.localization_auto_apply?.rpc_error?.code),
+                details: cleanedOptional(response.summary?.localization_auto_apply?.rpc_error?.details),
+                hint: cleanedOptional(response.summary?.localization_auto_apply?.rpc_error?.hint)
+            )
+            let aliasAutoApply = CatalogAutomationCycleAutoApplySummary(
+                total: response.summary?.alias_auto_apply?.total ?? 0,
+                succeeded: response.summary?.alias_auto_apply?.succeeded ?? 0,
+                skipped: response.summary?.alias_auto_apply?.skipped ?? 0,
+                failed: response.summary?.alias_auto_apply?.failed ?? 0,
+                status: cleanedOptional(response.summary?.alias_auto_apply?.status) ?? "unknown",
+                detail: cleanedOptional(response.summary?.alias_auto_apply?.detail),
+                error: cleanedOptional(response.summary?.alias_auto_apply?.error),
+                failedItemsTotal: response.summary?.alias_auto_apply?.failed_items_total ?? aliasFailedItems.count,
+                failedItems: aliasFailedItems,
+                rpcError: response.summary?.alias_auto_apply?.rpc_error == nil ? nil : aliasRPCError
+            )
+            let localizationAutoApply = CatalogAutomationCycleAutoApplySummary(
+                total: response.summary?.localization_auto_apply?.total ?? 0,
+                succeeded: response.summary?.localization_auto_apply?.succeeded ?? 0,
+                skipped: response.summary?.localization_auto_apply?.skipped ?? 0,
+                failed: response.summary?.localization_auto_apply?.failed ?? 0,
+                status: cleanedOptional(response.summary?.localization_auto_apply?.status) ?? "unknown",
+                detail: cleanedOptional(response.summary?.localization_auto_apply?.detail),
+                error: cleanedOptional(response.summary?.localization_auto_apply?.error),
+                failedItemsTotal: response.summary?.localization_auto_apply?.failed_items_total ?? localizationFailedItems.count,
+                failedItems: localizationFailedItems,
+                rpcError: response.summary?.localization_auto_apply?.rpc_error == nil ? nil : localizationRPCError
+            )
+            let reconciliationApplyModernSafe = CatalogAutomationCycleReconciliationSummary(
+                total: response.summary?.reconciliation_apply_modern_safe?.total ?? 0,
+                applied: response.summary?.reconciliation_apply_modern_safe?.applied ?? 0,
+                skipped: response.summary?.reconciliation_apply_modern_safe?.skipped ?? 0,
+                failed: response.summary?.reconciliation_apply_modern_safe?.failed ?? 0,
+                status: cleanedOptional(response.summary?.reconciliation_apply_modern_safe?.status) ?? "unknown",
+                detail: cleanedOptional(response.summary?.reconciliation_apply_modern_safe?.detail),
+                error: cleanedOptional(response.summary?.reconciliation_apply_modern_safe?.error)
+            )
+            let runStatus = cleanedOptional(response.metadata?.run_status) ?? "unknown"
+            let stageStatus = response.metadata?.stage_status ?? [:]
+            let policy = CatalogAutomationCyclePolicy(
+                applyAliases: response.metadata?.policy?.apply_aliases ?? true,
+                applyLocalizations: response.metadata?.policy?.apply_localizations ?? true,
+                applyReconciliation: response.metadata?.policy?.apply_reconciliation ?? true,
+                dryRun: response.metadata?.policy?.dry_run ?? false
+            )
 
             let result = CatalogAutomationCycleResult(
                 recovery: recovery,
+                candidateIntake: candidateIntake,
                 enrichment: enrichment,
                 creation: creation,
+                aliasAutoApply: aliasAutoApply,
+                localizationAutoApply: localizationAutoApply,
+                reconciliationApplyModernSafe: reconciliationApplyModernSafe,
+                runStatus: runStatus,
+                stageStatus: stageStatus,
+                policy: policy,
                 mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
             )
 
             print(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_ok " +
-                "recovery_total=\(recovery.total) recovery_failed=\(recovery.failed) " +
-                "enrichment_total=\(enrichment.total) enrichment_failed=\(enrichment.failed) " +
-                "creation_total=\(creation.total) creation_failed=\(creation.failed)"
+                "run_status=\(runStatus) mode=\(result.mode) " +
+                "recovery_total=\(recovery.total) recovery_failed=\(recovery.failed) recovery_status=\(recovery.status) " +
+                "candidate_intake_total=\(candidateIntake.submitted) candidate_intake_failed=\(candidateIntake.failed) candidate_intake_status=\(candidateIntake.status) " +
+                "enrichment_total=\(enrichment.total) enrichment_failed=\(enrichment.failed) enrichment_status=\(enrichment.status) " +
+                "creation_total=\(creation.total) creation_failed=\(creation.failed) creation_status=\(creation.status) " +
+                "alias_total=\(aliasAutoApply.total) alias_failed=\(aliasAutoApply.failed) alias_status=\(aliasAutoApply.status) " +
+                "localization_total=\(localizationAutoApply.total) localization_failed=\(localizationAutoApply.failed) localization_status=\(localizationAutoApply.status) " +
+                "reconciliation_total=\(reconciliationApplyModernSafe.total) reconciliation_failed=\(reconciliationApplyModernSafe.failed) reconciliation_status=\(reconciliationApplyModernSafe.status) " +
+                "policy_apply_aliases=\(policy.applyAliases) policy_apply_localizations=\(policy.applyLocalizations) policy_apply_reconciliation=\(policy.applyReconciliation) policy_dry_run=\(policy.dryRun) " +
+                "stage_status=\(stageStatus)"
             )
+            if aliasAutoApply.rpcError != nil || !aliasAutoApply.failedItems.isEmpty {
+                let aliasFailedItemsSummary = aliasAutoApply.failedItems.map { item in
+                    let normalizedText = item.normalizedText ?? "none"
+                    let detail = item.detail ?? "none"
+                    let errorMessage = item.errorMessage ?? "none"
+                    return "\(normalizedText)|\(detail)|\(errorMessage)"
+                }.joined(separator: ";")
+                print(
+                    "[SEASON_CATALOG_ADMIN] phase=automation_cycle_alias_diagnostics " +
+                    "failed_items_total=\(aliasAutoApply.failedItemsTotal) " +
+                    "rpc_error_message=\(aliasAutoApply.rpcError?.message ?? "none") " +
+                    "rpc_error_code=\(aliasAutoApply.rpcError?.code ?? "none") " +
+                    "rpc_error_details=\(aliasAutoApply.rpcError?.details ?? "none") " +
+                    "rpc_error_hint=\(aliasAutoApply.rpcError?.hint ?? "none") " +
+                    "failed_items=\(aliasFailedItemsSummary)"
+                )
+            }
 
             return result
         }

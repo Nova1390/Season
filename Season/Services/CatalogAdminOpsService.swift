@@ -23,8 +23,15 @@ struct CatalogEnrichmentBatchRunSummary: Sendable {
 
 struct CatalogAutomationCycleRunSummary: Sendable {
     let recovery: CatalogAutomationCycleRecoverySummary
+    let candidateIntake: CatalogAutomationCycleCandidateIntakeSummary
     let enrichment: CatalogAutomationCycleEnrichmentSummary
     let creation: CatalogAutomationCycleCreationSummary
+    let aliasAutoApply: CatalogAutomationCycleAutoApplySummary
+    let localizationAutoApply: CatalogAutomationCycleAutoApplySummary
+    let reconciliationApplyModernSafe: CatalogAutomationCycleReconciliationSummary
+    let runStatus: String
+    let stageStatus: [String: String]
+    let policy: CatalogAutomationCyclePolicy
 }
 
 struct CatalogAutoLocalizationRunSummary: Sendable {
@@ -263,8 +270,15 @@ final class CatalogAdminOpsService {
         )
         return CatalogAutomationCycleRunSummary(
             recovery: result.recovery,
+            candidateIntake: result.candidateIntake,
             enrichment: result.enrichment,
-            creation: result.creation
+            creation: result.creation,
+            aliasAutoApply: result.aliasAutoApply,
+            localizationAutoApply: result.localizationAutoApply,
+            reconciliationApplyModernSafe: result.reconciliationApplyModernSafe,
+            runStatus: result.runStatus,
+            stageStatus: result.stageStatus,
+            policy: result.policy
         )
     }
 

@@ -721,15 +721,39 @@ struct CatalogCandidatesDebugView: View {
     }
 
     private func isAutomationRunSuccessful(_ run: CatalogAutomationCycleRunSummary) -> Bool {
-        let failedStatuses = [run.recovery.status, run.enrichment.status, run.creation.status]
+        let failedStatuses = [
+            run.recovery.status,
+            run.candidateIntake.status,
+            run.enrichment.status,
+            run.creation.status,
+            run.aliasAutoApply.status,
+            run.localizationAutoApply.status,
+            run.reconciliationApplyModernSafe.status
+        ]
             .map { $0.lowercased() }
             .contains("failed")
-        return !failedStatuses && run.recovery.failed == 0 && run.enrichment.failed == 0 && run.creation.failed == 0
+        let stageFailedCount = run.stageStatus.values.map { $0.lowercased() }.filter { $0 == "failed" }.count
+        return !failedStatuses &&
+            run.runStatus.lowercased() != "failed" &&
+            stageFailedCount == 0 &&
+            run.recovery.failed == 0 &&
+            run.candidateIntake.failed == 0 &&
+            run.enrichment.failed == 0 &&
+            run.creation.failed == 0 &&
+            run.aliasAutoApply.failed == 0 &&
+            run.localizationAutoApply.failed == 0 &&
+            run.reconciliationApplyModernSafe.failed == 0
     }
 
     private func compactAutopilotSummary(from run: CatalogAutomationCycleRunSummary) -> String? {
-        let failedTotal = run.recovery.failed + run.enrichment.failed + run.creation.failed
-        return "Last run · recovered: \(run.recovery.observed) · enriched: \(run.enrichment.succeeded) · created: \(run.creation.created) · failed: \(failedTotal)"
+        let failedTotal = run.recovery.failed +
+            run.candidateIntake.failed +
+            run.enrichment.failed +
+            run.creation.failed +
+            run.aliasAutoApply.failed +
+            run.localizationAutoApply.failed +
+            run.reconciliationApplyModernSafe.failed
+        return "Last run · status: \(run.runStatus) · recovered: \(run.recovery.observed) · intake: \(run.candidateIntake.submitted) · enriched: \(run.enrichment.succeeded) · created: \(run.creation.created) · alias: \(run.aliasAutoApply.succeeded) · loc: \(run.localizationAutoApply.succeeded) · reconciled: \(run.reconciliationApplyModernSafe.applied) · failed: \(failedTotal)"
     }
 
     @ViewBuilder
@@ -1992,17 +2016,48 @@ struct CatalogCandidatesDebugView: View {
             )
             lastAutomationRun = result
             actionMessage =
-                "Automation cycle done. " +
+                "Automation cycle done (run_status=\(result.runStatus)). " +
                 "Recovery: total=\(result.recovery.total), observed=\(result.recovery.observed), skipped=\(result.recovery.skipped), failed=\(result.recovery.failed). " +
+                "Candidate intake: selected=\(result.candidateIntake.selected), eligible=\(result.candidateIntake.eligible), submitted=\(result.candidateIntake.submitted), succeeded=\(result.candidateIntake.succeeded), skipped=\(result.candidateIntake.skipped), failed=\(result.candidateIntake.failed). " +
                 "Enrichment: total=\(result.enrichment.total), succeeded=\(result.enrichment.succeeded), failed=\(result.enrichment.failed), skipped=\(result.enrichment.skipped), ready=\(result.enrichment.ready). " +
-                "Creation: total=\(result.creation.total), created=\(result.creation.created), skipped_existing=\(result.creation.skippedExisting), skipped_invalid=\(result.creation.skippedInvalid), failed=\(result.creation.failed)."
+                "Creation: total=\(result.creation.total), created=\(result.creation.created), skipped_existing=\(result.creation.skippedExisting), skipped_invalid=\(result.creation.skippedInvalid), failed=\(result.creation.failed). " +
+                "Alias auto-apply: total=\(result.aliasAutoApply.total), succeeded=\(result.aliasAutoApply.succeeded), skipped=\(result.aliasAutoApply.skipped), failed=\(result.aliasAutoApply.failed), status=\(result.aliasAutoApply.status). " +
+                "Localization auto-apply: total=\(result.localizationAutoApply.total), succeeded=\(result.localizationAutoApply.succeeded), skipped=\(result.localizationAutoApply.skipped), failed=\(result.localizationAutoApply.failed), status=\(result.localizationAutoApply.status). " +
+                "Reconciliation (modern safe): total=\(result.reconciliationApplyModernSafe.total), applied=\(result.reconciliationApplyModernSafe.applied), skipped=\(result.reconciliationApplyModernSafe.skipped), failed=\(result.reconciliationApplyModernSafe.failed), status=\(result.reconciliationApplyModernSafe.status). " +
+                "Policy: apply_aliases=\(result.policy.applyAliases), apply_localizations=\(result.policy.applyLocalizations), apply_reconciliation=\(result.policy.applyReconciliation), dry_run=\(result.policy.dryRun). " +
+                "Stage status: \(result.stageStatus)."
+            if result.aliasAutoApply.rpcError != nil || !result.aliasAutoApply.failedItems.isEmpty {
+                let aliasSample = result.aliasAutoApply.failedItems
+                    .prefix(3)
+                    .map { item in
+                        let normalizedText = item.normalizedText ?? "none"
+                        let detail = item.detail ?? "none"
+                        let errorMessage = item.errorMessage ?? "none"
+                        return "\(normalizedText)|\(detail)|\(errorMessage)"
+                    }
+                    .joined(separator: ";")
+                actionMessage +=
+                    " Alias diagnostics: failed_items_total=\(result.aliasAutoApply.failedItemsTotal), " +
+                    "rpc_error_message=\(result.aliasAutoApply.rpcError?.message ?? "none"), " +
+                    "rpc_error_code=\(result.aliasAutoApply.rpcError?.code ?? "none"), " +
+                    "rpc_error_details=\(result.aliasAutoApply.rpcError?.details ?? "none"), " +
+                    "rpc_error_hint=\(result.aliasAutoApply.rpcError?.hint ?? "none"), " +
+                    "failed_items=\(aliasSample)."
+            }
 
             print(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_done " +
                 "debug=\(enableDebugInstrumentation) " +
-                "recovery_total=\(result.recovery.total) recovery_failed=\(result.recovery.failed) " +
-                "enrichment_total=\(result.enrichment.total) enrichment_failed=\(result.enrichment.failed) " +
-                "creation_total=\(result.creation.total) creation_failed=\(result.creation.failed)"
+                "run_status=\(result.runStatus) " +
+                "recovery_total=\(result.recovery.total) recovery_failed=\(result.recovery.failed) recovery_status=\(result.recovery.status) " +
+                "candidate_intake_total=\(result.candidateIntake.submitted) candidate_intake_failed=\(result.candidateIntake.failed) candidate_intake_status=\(result.candidateIntake.status) " +
+                "enrichment_total=\(result.enrichment.total) enrichment_failed=\(result.enrichment.failed) enrichment_status=\(result.enrichment.status) " +
+                "creation_total=\(result.creation.total) creation_failed=\(result.creation.failed) creation_status=\(result.creation.status) " +
+                "alias_total=\(result.aliasAutoApply.total) alias_failed=\(result.aliasAutoApply.failed) alias_status=\(result.aliasAutoApply.status) " +
+                "localization_total=\(result.localizationAutoApply.total) localization_failed=\(result.localizationAutoApply.failed) localization_status=\(result.localizationAutoApply.status) " +
+                "reconciliation_total=\(result.reconciliationApplyModernSafe.total) reconciliation_failed=\(result.reconciliationApplyModernSafe.failed) reconciliation_status=\(result.reconciliationApplyModernSafe.status) " +
+                "policy_apply_aliases=\(result.policy.applyAliases) policy_apply_localizations=\(result.policy.applyLocalizations) policy_apply_reconciliation=\(result.policy.applyReconciliation) policy_dry_run=\(result.policy.dryRun) " +
+                "stage_status=\(result.stageStatus)"
             )
 
             withAnimation(.easeInOut(duration: 0.2)) {
