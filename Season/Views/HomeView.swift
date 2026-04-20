@@ -12,19 +12,20 @@ struct HomeView: View {
     @State private var featuredRecipeCache: RankedRecipe?
     @State private var fridgeMatchesCache: [FridgeMatchedRecipe] = []
     @State private var ingredientUsageCountByID: [String: Int] = [:]
+    @State private var appliedCacheSignature: String?
     private let homeQuickFilters: [HomeQuickFilter] = [.following, .readyNow, .under15, .highProtein, .peakSeason, .trending]
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Color(.systemGroupedBackground)
+                SeasonColors.primarySurface
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     fixedHeaderRow(safeAreaTopInset: proxy.safeAreaInsets.top)
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
+                        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
                             alwaysOnHeroSection
                             if hasFridgeMatches {
                                 readyToCookNowSection
@@ -33,8 +34,8 @@ struct HomeView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.horizontal, SeasonSpacing.lg)
-                        .padding(.top, 8)
-                        .padding(.bottom, SeasonSpacing.md)
+                        .padding(.top, SeasonSpacing.sm)
+                        .padding(.bottom, SeasonLayout.bottomBarContentClearance + SeasonSpacing.sm)
                     }
                     .refreshable {
                         await viewModel.refreshHomeFeed()
@@ -42,9 +43,8 @@ struct HomeView: View {
                 }
             }
         }
-        .onAppear(perform: refreshHomeFeedCache)
-        .onChange(of: cacheSignature) {
-            refreshHomeFeedCache()
+        .task(id: cacheSignature) {
+            await refreshHomeFeedCache(for: cacheSignature)
         }
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
@@ -61,7 +61,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private var belowFoldSections: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
             seasonalNowSection
                 .padding(.top, 0)
 
@@ -72,9 +72,15 @@ struct HomeView: View {
 
     private func fixedHeaderRow(safeAreaTopInset: CGFloat) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(viewModel.localizer.text(.homeTab))
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(viewModel.localizer.text(.homeTab))
+                    .font(.title.weight(.bold))
+                    .foregroundStyle(.primary)
+
+                Text(homeMastheadLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer(minLength: 8)
 
@@ -82,88 +88,8 @@ struct HomeView: View {
         }
         .padding(.top, safeAreaTopInset + 6)
         .padding(.horizontal, SeasonSpacing.md)
-        .padding(.bottom, 10)
-    }
-
-    private var fridgeCookingHeroCard: some View {
-        NavigationLink {
-            FridgeRecipeMatchesView(
-                produceViewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel,
-                fridgeViewModel: fridgeViewModel
-            )
-        } label: {
-            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                HStack(spacing: SeasonSpacing.sm) {
-                    Image(systemName: "snowflake")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color(red: 0.24, green: 0.43, blue: 0.56))
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(Color.white.opacity(0.52))
-                        )
-
-                    Text(homeHeroTitle)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.primary)
-                }
-
-                .fixedSize(horizontal: false, vertical: true)
-
-                Text(homeHeroSubtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack {
-                    Text(homeHeroCTA)
-                    .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(Color.white.opacity(0.65))
-                )
-
-                if let supportLine = homeHeroSupportingSignal {
-                    Text(supportLine)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .padding(SeasonSpacing.md)
-            .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.95, green: 0.92, blue: 0.86).opacity(0.96),
-                                Color(red: 0.92, green: 0.89, blue: 0.84).opacity(0.88),
-                                Color(red: 0.89, green: 0.87, blue: 0.82).opacity(0.72)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color(.separator).opacity(0.18), lineWidth: 0.7)
-            )
-            .shadow(color: Color.black.opacity(0.045), radius: 10, x: 0, y: 4)
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(PressableCardButtonStyle())
-        .padding(.top, SeasonSpacing.sm)
         .padding(.bottom, SeasonSpacing.sm)
+        .background(SeasonColors.primarySurface)
     }
 
     private var homeHeroState: HomeHeroState {
@@ -186,155 +112,6 @@ struct HomeView: View {
         return .seasonal(count: seasonalCount)
     }
 
-    private var homeHeroTitle: String {
-        switch homeHeroState {
-        case .readyNow(let count):
-            if let topReady = fridgeMatches.first(where: { $0.missingCount == 0 }) {
-                let totalMinutes = recipeTotalMinutes(topReady.rankedRecipe.recipe)
-                if totalMinutes > 0, totalMinutes <= 18 {
-                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
-                }
-            }
-
-            let format = count == 1
-                ? viewModel.localizer.text(.homeHeroReadySubtitleSingularFormat)
-                : viewModel.localizer.text(.homeHeroReadySubtitlePluralFormat)
-            return String(format: format, count)
-        case .almostReady(let count):
-            if let topAlmost = fridgeMatches.first(where: { $0.missingCount == 1 }) {
-                let totalMinutes = recipeTotalMinutes(topAlmost.rankedRecipe.recipe)
-                if totalMinutes > 0, totalMinutes <= 20 {
-                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
-                }
-            }
-            if count == 1 {
-                return viewModel.localizer.text(.quickActionOnlyOneIngredientMissing)
-            }
-            return String(format: viewModel.localizer.text(.homeHeroAlmostReadySubtitlePluralFormat), count)
-        case .seasonal:
-            if let featuredRecipe {
-                let totalMinutes = recipeTotalMinutes(featuredRecipe.recipe)
-                if totalMinutes > 0, totalMinutes <= 20 {
-                    return String(format: viewModel.localizer.text(.readyInMinutesFormat), totalMinutes)
-                }
-                if featuredRecipe.seasonalMatchPercent >= 90 {
-                    return viewModel.localizer.recipeTimingTitle(.perfectNow)
-                }
-            }
-            return viewModel.localizer.text(.homeHeroSeasonalTitle)
-        }
-    }
-
-    private var homeHeroSubtitle: String {
-        switch homeHeroState {
-        case .readyNow(let count):
-            let format = count == 1
-                ? viewModel.localizer.text(.homeHeroReadySubtitleSingularFormat)
-                : viewModel.localizer.text(.homeHeroReadySubtitlePluralFormat)
-            return String(format: format, count)
-        case .almostReady(let count):
-            let format = count == 1
-                ? viewModel.localizer.text(.homeHeroAlmostReadySubtitleSingularFormat)
-                : viewModel.localizer.text(.homeHeroAlmostReadySubtitlePluralFormat)
-            return String(format: format, count)
-        case .seasonal:
-            if let featuredRecipe {
-                return String(
-                    format: viewModel.localizer.text(.recipeReasonSeasonalMatchFormat),
-                    featuredRecipe.seasonalMatchPercent
-                )
-            }
-            return viewModel.localizer.text(.homeHeroSeasonalSubtitle)
-        }
-    }
-
-    private var homeHeroCTA: String {
-        switch homeHeroState {
-        case .readyNow:
-            return localizedReadyNowHeroCTA(for: homeHeroDaypart)
-        case .almostReady:
-            return viewModel.localizer.text(.homeHeroAlmostReadyCTA)
-        case .seasonal:
-            return viewModel.localizer.text(.homeHeroSeasonalCTA)
-        }
-    }
-
-    private var homeHeroDaypart: HomeHeroDaypart {
-        HomeHeroDaypart(currentHour: Calendar.current.component(.hour, from: Date()))
-    }
-
-    private func localizedReadyNowHeroTitle(for daypart: HomeHeroDaypart) -> String {
-        switch daypart {
-        case .morning:
-            return viewModel.localizer.text(.homeHeroReadyMorningTitle)
-        case .lunch:
-            return viewModel.localizer.text(.homeHeroReadyLunchTitle)
-        case .afternoon:
-            return viewModel.localizer.text(.homeHeroReadyAfternoonTitle)
-        case .evening:
-            return viewModel.localizer.text(.homeHeroReadyEveningTitle)
-        case .lateNight:
-            return viewModel.localizer.text(.homeHeroReadyLateNightTitle)
-        }
-    }
-
-    private func localizedReadyNowHeroCTA(for daypart: HomeHeroDaypart) -> String {
-        switch daypart {
-        case .morning:
-            return viewModel.localizer.text(.homeHeroReadyMorningCTA)
-        case .lunch:
-            return viewModel.localizer.text(.homeHeroReadyLunchCTA)
-        case .afternoon:
-            return viewModel.localizer.text(.homeHeroReadyAfternoonCTA)
-        case .evening:
-            return viewModel.localizer.text(.homeHeroReadyEveningCTA)
-        case .lateNight:
-            return viewModel.localizer.text(.homeHeroReadyLateNightCTA)
-        }
-    }
-
-    private var homeHeroSupportingSignal: String? {
-        switch homeHeroState {
-        case .readyNow:
-            guard
-                let topReady = fridgeMatches.first(where: { $0.missingCount == 0 }),
-                let title = cleanedHeroSupportingTitle(from: topReady.rankedRecipe.recipe.title)
-            else { return nil }
-            return String(format: viewModel.localizer.text(.homeHeroSupportBestMatchFormat), title)
-        case .almostReady:
-            guard
-                let topAlmost = fridgeMatches.first(where: { $0.missingCount == 1 }),
-                let title = cleanedHeroSupportingTitle(from: topAlmost.rankedRecipe.recipe.title)
-            else { return nil }
-            return String(format: viewModel.localizer.text(.homeHeroSupportOneMissingFormat), title)
-        case .seasonal:
-            guard
-                let featuredRecipe,
-                featuredRecipe.seasonalMatchPercent > 80,
-                let title = cleanedHeroSupportingTitle(from: featuredRecipe.recipe.title)
-            else { return nil }
-            return String(format: viewModel.localizer.text(.homeHeroSupportBestMatchFormat), title)
-        }
-    }
-
-    private func cleanedHeroSupportingTitle(from rawTitle: String) -> String? {
-        let trimmed = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let normalized = trimmed.lowercased()
-        let blockedTitles: Set<String> = [
-            "test",
-            "test jpg",
-            "test recipe",
-            "debug",
-            "placeholder"
-        ]
-        guard !blockedTitles.contains(normalized) else { return nil }
-        guard !normalized.hasPrefix("test ") else { return nil }
-
-        return trimmed
-    }
-
     private func recipeTotalMinutes(_ recipe: Recipe) -> Int {
         let prep = recipe.prepTimeMinutes ?? 0
         let cook = recipe.cookTimeMinutes ?? 0
@@ -351,14 +128,15 @@ struct HomeView: View {
             } label: {
                 Image(systemName: "snowflake")
                     .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .frame(width: 34, height: 34)
                     .background(
                         Circle()
-                            .fill(Color(.secondarySystemGroupedBackground).opacity(0.9))
+                            .fill(SeasonColors.secondarySurface.opacity(0.95))
                     )
                     .overlay(
                         Circle()
-                            .stroke(Color(.separator).opacity(0.12), lineWidth: 0.6)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.7)
                     )
                     .contentShape(Rectangle())
             }
@@ -374,14 +152,15 @@ struct HomeView: View {
             } label: {
                 Image(systemName: "bag")
                     .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .frame(width: 34, height: 34)
                     .background(
                         Circle()
-                            .fill(Color(.secondarySystemGroupedBackground).opacity(0.9))
+                            .fill(SeasonColors.secondarySurface.opacity(0.95))
                     )
                     .overlay(
                         Circle()
-                            .stroke(Color(.separator).opacity(0.12), lineWidth: 0.6)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.7)
                     )
                     .contentShape(Rectangle())
             }
@@ -389,113 +168,16 @@ struct HomeView: View {
             .contentShape(Rectangle())
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var stitchHeroSection: some View {
-        NavigationLink {
-            switch homeHeroState {
-            case .readyNow, .almostReady:
-                FridgeRecipeMatchesView(
-                    produceViewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel,
-                    fridgeViewModel: fridgeViewModel
-                )
-            case .seasonal:
-                SearchView(
-                    viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-            }
-        } label: {
-            ZStack(alignment: .bottomLeading) {
-                if let featured = featuredRecipe {
-                    recipeImage(for: featured.recipe, height: 360)
-                } else {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(SeasonColors.secondarySurface)
-                        .frame(height: 360)
-                }
-
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.72),
-                        Color.black.opacity(0.18),
-                        .clear
-                    ],
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(heroContextLabel)
-                        .font(.caption2.weight(.bold))
-                        .textCase(.uppercase)
-                        .tracking(1.2)
-                        .foregroundStyle(Color.white.opacity(0.92))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color(red: 0.42, green: 0.52, blue: 0.38).opacity(0.85))
-                        )
-
-                    Text(featuredRecipe?.recipe.title ?? homeHeroTitle)
-                        .font(.system(size: 41, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.78)
-
-                    HStack(spacing: 8) {
-                        Text(homeHeroCTA)
-                            .font(.subheadline.weight(.semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                            .fill(Color(red: 0.31, green: 0.38, blue: 0.28).opacity(0.88))
-                    )
-                }
-                .padding(20)
-
-                VStack(alignment: .trailing, spacing: 0) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption.weight(.semibold))
-                        Text(
-                            String(
-                                format: viewModel.localizer.localized("home.badge.best_match_format"),
-                                bestMatchBadgeText
-                            )
-                        )
-                            .font(.caption2.weight(.bold))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(Color(red: 0.30, green: 0.36, blue: 0.28))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
-                            .fill(Color.white.opacity(0.88))
-                    )
-                    .padding(.top, 16)
-                    .padding(.trailing, 16)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 6)
-        }
-        .buttonStyle(PressableCardButtonStyle())
-        .padding(.bottom, 4)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(SeasonColors.secondarySurface.opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+        )
     }
 
     private var heroContextLabel: String {
@@ -535,83 +217,88 @@ struct HomeView: View {
                 )
             }
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(cookNowHeroTitle)
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-
-                Text(cookNowHeroSubtitle)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let topRecipe = cookNowTopRecipe {
-                    VStack(alignment: .leading, spacing: 8) {
-                        recipeImage(for: topRecipe.recipe, height: 176)
-
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(topRecipe.recipe.title)
-                                .font(.headline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-
-                            Spacer(minLength: 8)
-
-                            let totalMinutes = recipeTotalMinutes(topRecipe.recipe)
-                            if totalMinutes > 0 {
-                                Text(
-                                    String(
-                                        format: viewModel.localizer.localized("home.time.minutes_compact_format"),
-                                        totalMinutes
+            VStack(spacing: 0) {
+                ZStack(alignment: .topTrailing) {
+                    Group {
+                        if let topRecipe = cookNowTopRecipe {
+                            recipeImage(
+                                for: topRecipe.recipe,
+                                height: hasFridgeMatches ? 214 : 184
+                            )
+                        } else {
+                            RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.36, green: 0.44, blue: 0.31),
+                                            Color(red: 0.29, green: 0.35, blue: 0.25)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
                                     )
                                 )
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.white.opacity(0.85))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(Color.white.opacity(0.18))
-                                    )
-                            }
+                                .frame(height: hasFridgeMatches ? 214 : 184)
                         }
+                    }
+
+                    if !bestMatchBadgeText.isEmpty {
+                        Text(bestMatchBadgeText)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color(red: 0.24, green: 0.29, blue: 0.20))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.white.opacity(0.92))
+                            )
+                            .padding(12)
                     }
                 }
 
-                HStack(spacing: 8) {
-                    Text(cookNowHeroCTA)
-                        .font(.subheadline.weight(.semibold))
-                    Image(systemName: "arrow.right")
-                        .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(heroContextLabel.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.9)
+                        .foregroundStyle(Color(red: 0.35, green: 0.42, blue: 0.30))
+
+                    Text(cookNowTopRecipe?.recipe.title ?? cookNowHeroTitle)
+                        .font(.system(size: hasFridgeMatches ? 31 : 28, weight: .bold, design: .serif))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+
+                    Text(cookNowHeroSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    HStack(spacing: 6) {
+                        Text(cookNowHeroCTA)
+                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(SeasonColors.seasonGreen)
+                    )
                 }
-                .foregroundStyle(Color(red: 0.18, green: 0.24, blue: 0.16))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    Capsule(style: .continuous)
-                        .fill(Color.white)
+                    RoundedRectangle(cornerRadius: 0, style: .continuous)
+                        .fill(SeasonColors.secondarySurface.opacity(0.95))
                 )
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.34, green: 0.42, blue: 0.30),
-                        Color(red: 0.27, green: 0.33, blue: 0.24)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.14), lineWidth: 0.9)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
             )
-            .shadow(color: Color.black.opacity(0.07), radius: 14, x: 0, y: 6)
-            .frame(minHeight: hasFridgeMatches ? 288 : 240, alignment: .topLeading)
+            .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
         }
         .buttonStyle(PressableCardButtonStyle())
     }
@@ -669,6 +356,13 @@ struct HomeView: View {
         viewModel.localizer.localized("home.badge.recipes")
     }
 
+    private var homeMastheadLabel: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEEE d MMM")
+        return formatter.string(from: Date())
+    }
+
     private var topLaneRecipeIDs: Set<String> {
         var ids = Set(fridgeMatches.map { $0.rankedRecipe.recipe.id })
         if let heroID = cookNowTopRecipe?.recipe.id {
@@ -715,8 +409,8 @@ struct HomeView: View {
         }
 
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(homeCopyFromYourFridgeTitle)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.primary)
@@ -724,7 +418,7 @@ struct HomeView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Spacer()
+                Spacer(minLength: 10)
                 NavigationLink {
                     FridgeRecipeMatchesView(
                         produceViewModel: viewModel,
@@ -732,11 +426,24 @@ struct HomeView: View {
                         fridgeViewModel: fridgeViewModel
                     )
                 } label: {
-                    Text(homeCopySeeAllMatches)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
+                    HStack(spacing: 4) {
+                        Text(homeCopySeeAllMatches)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(SeasonColors.secondarySurface.opacity(0.8))
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
                 }
                 .buttonStyle(.plain)
+                .layoutPriority(1)
             }
 
             if fridgeMatchesExcludingHero.isEmpty {
@@ -757,73 +464,72 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: SeasonSpacing.md) {
-                        ForEach(Array(fridgeMatchesExcludingHero.prefix(6))) { match in
-                            NavigationLink {
-                                RecipeDetailView(
-                                    rankedRecipe: match.rankedRecipe,
-                                    viewModel: viewModel,
-                                    shoppingListViewModel: shoppingListViewModel
-                                )
-                            } label: {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ZStack(alignment: .topLeading) {
-                                        recipeImage(for: match.rankedRecipe.recipe, height: 150, width: 260)
-                                        Text("\(match.matchingCount)/\(match.totalCount) \(homeCopyInStockBadge)")
-                                            .font(.caption2.weight(.bold))
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 5)
-                                            .background(
-                                                Capsule(style: .continuous)
-                                                    .fill(Color(red: 0.34, green: 0.42, blue: 0.30).opacity(0.92))
-                                            )
-                                            .foregroundStyle(.white)
-                                            .padding(10)
-                                    }
+                VStack(spacing: 0) {
+                    ForEach(Array(fridgeMatchesExcludingHero.prefix(4)).indices, id: \.self) { index in
+                        let match = fridgeMatchesExcludingHero[index]
+                        NavigationLink {
+                            RecipeDetailView(
+                                rankedRecipe: match.rankedRecipe,
+                                viewModel: viewModel,
+                                shoppingListViewModel: shoppingListViewModel
+                            )
+                        } label: {
+                            HStack(spacing: 10) {
+                                recipeImage(for: match.rankedRecipe.recipe, height: 66, width: 82)
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(match.rankedRecipe.recipe.title)
-                                            .font(.headline.weight(.semibold))
-                                            .foregroundStyle(.primary)
-                                            .lineLimit(2)
-                                        Text(fridgePrimaryMessage(for: match))
-                                            .font(.caption.weight(.medium))
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(match.rankedRecipe.recipe.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(2)
+
+                                    Text(fridgePrimaryMessage(for: match))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+
+                                    Text("\(match.matchingCount)/\(match.totalCount) \(homeCopyInStockBadge)")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Color(red: 0.34, green: 0.42, blue: 0.30))
+                                        .lineLimit(1)
                                 }
-                                .frame(width: 260, alignment: .leading)
-                                .padding(11)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.82))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(Color(.separator).opacity(0.10), lineWidth: 0.6)
-                                )
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
                             }
-                            .buttonStyle(PressableCardButtonStyle())
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressableCardButtonStyle())
+
+                        if index < min(3, fridgeMatchesExcludingHero.prefix(4).count - 1) {
+                            Divider()
+                                .overlay(Color.primary.opacity(0.07))
+                                .padding(.leading, 92)
                         }
                     }
-                    .padding(.horizontal, 1)
                 }
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(SeasonColors.secondarySurface.opacity(0.74))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
+                )
             }
         }
     }
 
     private var seasonalNowSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(homeCopySeasonalTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(homeCopySeasonalSubtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+            HStack(alignment: .center) {
+                Text(homeCopySeasonalTitle)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
                 Spacer()
                 NavigationLink {
                     InSeasonTodayView(
@@ -831,20 +537,16 @@ struct HomeView: View {
                         shoppingListViewModel: shoppingListViewModel
                     )
                 } label: {
-                    HStack(spacing: 2) {
-                        Text(homeCopySeasonalCTA)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
+                    Text(homeCopySeasonalCTA)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(Array(seasonalSpotlightItems.prefix(hasFridgeMatches ? 3 : 5)), id: \.item.id) { ranked in
+                HStack(spacing: 6) {
+                    ForEach(Array(seasonalSpotlightItems.prefix(8)), id: \.item.id) { ranked in
                         NavigationLink {
                             ProduceDetailView(
                                 item: ranked.item,
@@ -853,39 +555,24 @@ struct HomeView: View {
                             )
                             .environmentObject(fridgeViewModel)
                         } label: {
-                            HStack(spacing: 10) {
-                                ProduceThumbnailView(item: ranked.item, size: 46)
-                                    .frame(width: 46, height: 46)
-                                    .padding(4)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.95))
-                                    )
+                            VStack(alignment: .center, spacing: 3) {
+                                ProduceThumbnailView(item: ranked.item, size: 44)
+                                    .frame(width: 44, height: 44)
 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(ranked.item.displayName(languageCode: viewModel.languageCode))
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
+                                Text(ranked.item.displayName(languageCode: viewModel.languageCode))
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
 
-                                    Text("\(ingredientUsageCountByID[ranked.item.id] ?? 0) \(homeCopyRecipesCountSuffix)")
-                                        .font(.caption2.weight(.medium))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                Text("\(ingredientUsageCountByID[ranked.item.id] ?? 0) \(homeCopyRecipesCountSuffix)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .frame(width: 170, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                                    .fill(SeasonColors.secondarySurface.opacity(0.72))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.6)
-                            )
+                            .frame(width: 72)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -893,28 +580,27 @@ struct HomeView: View {
                 .padding(.horizontal, 1)
             }
         }
-        .padding(.vertical, SeasonSpacing.xs)
+        .padding(.top, 2)
+        .padding(.bottom, SeasonSpacing.xs)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private var demotedHomeSections: some View {
         VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-            Divider()
-                .overlay(Color.primary.opacity(0.10))
-
             Text(homeCopyMoreIdeas)
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.7)
                 .foregroundStyle(.secondary)
 
-            featuredSection
             weeklyDiscoveriesSection
-            smartSuggestionsFeedArea
+            if hasSmartSuggestionContent {
+                smartSuggestionsFeedArea
+            }
         }
-        .padding(.top, SeasonSpacing.xs)
-        .opacity(0.9)
+        .padding(.top, SeasonSpacing.sm)
+        .opacity(0.94)
     }
 
     private var seasonalSpotlightItems: [RankedInSeasonItem] {
@@ -923,7 +609,6 @@ struct HomeView: View {
 
     private var discoveryCards: [HookedRecipeCard] {
         var seen: Set<String> = []
-        let excludedSecondaryFeaturedID = secondaryFeaturedRecipe?.recipe.id
         let combined = (activeMiniFeedItems + remainingFeedItems)
             .compactMap { item -> HookedRecipeCard? in
                 if case .recipe(let card, _) = item { return card }
@@ -936,33 +621,77 @@ struct HomeView: View {
                 if topLaneRecipeIDs.contains(card.ranked.recipe.id) {
                     return false
                 }
-                if let excludedSecondaryFeaturedID,
-                   card.ranked.recipe.id == excludedSecondaryFeaturedID {
-                    return false
-                }
                 seen.insert(card.ranked.recipe.id)
                 return true
             }
         return Array(combined.prefix(8))
     }
 
+    private var hasSmartSuggestionContent: Bool {
+        if selectedQuickFilter != nil {
+            return !activeFilteredFeedItems.isEmpty
+        }
+        return !(activeMiniFeedItems.isEmpty && remainingFeedItems.isEmpty)
+    }
+
     @ViewBuilder
     private var weeklyDiscoveriesSection: some View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(homeCopyWeeklyLabel)
-                    .font(.caption2.weight(.bold))
-                    .textCase(.uppercase)
-                    .tracking(1.1)
-                    .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
-                Text(homeCopyWeeklyTitle)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.primary)
+            Text(homeCopyWeeklyLabel)
+                .font(.caption2.weight(.bold))
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
+
+            Text(homeCopyWeeklyTitle)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(.primary)
+
+            if let lead = discoveryCards.first {
+                NavigationLink {
+                    RecipeDetailView(
+                        rankedRecipe: lead.ranked,
+                        viewModel: viewModel,
+                        shoppingListViewModel: shoppingListViewModel
+                    )
+                } label: {
+                    ZStack(alignment: .bottomLeading) {
+                        recipeImage(for: lead.ranked.recipe, height: 252)
+                            .opacity(0.97)
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.72), .clear],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(lead.ranked.recipe.title)
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(.white.opacity(0.98))
+                                .lineLimit(2)
+                            Text(lead.ranked.recipe.author)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.84))
+                                .lineLimit(1)
+                        }
+                        .padding(16)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
+                    )
+                }
+                .buttonStyle(PressableCardButtonStyle())
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(discoveryCards, id: \.ranked.recipe.id) { card in
+            let secondaryCards = Array(discoveryCards.dropFirst().prefix(4))
+            if !secondaryCards.isEmpty {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                    spacing: 10
+                ) {
+                    ForEach(secondaryCards, id: \.ranked.recipe.id) { card in
                         NavigationLink {
                             RecipeDetailView(
                                 rankedRecipe: card.ranked,
@@ -970,107 +699,33 @@ struct HomeView: View {
                                 shoppingListViewModel: shoppingListViewModel
                             )
                         } label: {
-                            ZStack(alignment: .bottomLeading) {
-                                recipeImage(for: card.ranked.recipe, height: 132, width: 208)
-                                    .opacity(0.95)
-                                LinearGradient(
-                                    colors: [Color.black.opacity(0.58), .clear],
-                                    startPoint: .bottom,
-                                    endPoint: .top
-                                )
-                                .frame(width: 208, height: 132)
+                            VStack(alignment: .leading, spacing: 8) {
+                                recipeImage(for: card.ranked.recipe, height: 110)
+                                    .opacity(0.96)
 
                                 Text(card.ranked.recipe.title)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.96))
+                                    .foregroundStyle(.primary)
                                     .lineLimit(2)
-                                    .padding(10)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(width: 208, height: 132)
-                            .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous))
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(SeasonColors.secondarySurface.opacity(0.62))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+                            )
                         }
                         .buttonStyle(PressableCardButtonStyle())
                     }
                 }
             }
         }
-        .opacity(0.92)
-    }
-
-    @ViewBuilder
-    private var featuredSection: some View {
-        if let featured = secondaryFeaturedRecipe {
-            VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-                SeasonSectionHeader(title: viewModel.localizer.text(.featuredRecipe))
-
-                NavigationLink {
-                    RecipeDetailView(
-                        rankedRecipe: featured,
-                        viewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel
-                    )
-                } label: {
-                    ZStack(alignment: .bottomLeading) {
-                        recipeImage(for: featured.recipe, height: 244)
-                            .overlay(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.black.opacity(0.82), location: 0.0),
-                                        .init(color: Color.black.opacity(0.46), location: 0.45),
-                                        .init(color: Color.clear, location: 1.0)
-                                    ],
-                                    startPoint: .bottom,
-                                    endPoint: .top
-                                )
-                            )
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(featured.recipe.title)
-                                .font(.title3.weight(.bold))
-                                .foregroundStyle(.white)
-                                .lineLimit(2)
-
-                            HStack(spacing: 8) {
-                                Text(featured.recipe.author)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .lineLimit(1)
-
-                                Text("·")
-                                    .foregroundStyle(.white.opacity(0.6))
-
-                                Text(featuredHook(for: featured))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.92))
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(.horizontal, SeasonSpacing.md)
-                        .padding(.bottom, SeasonSpacing.md)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
-                    )
-                }
-                .buttonStyle(PressableCardButtonStyle())
-            }
-        }
-    }
-
-    private var secondaryFeaturedRecipe: RankedRecipe? {
-        let heroID = featuredRecipe?.recipe.id
-        let feedBackedCandidates = (activeMiniFeedItems + remainingFeedItems).compactMap { item -> RankedRecipe? in
-            if case .recipe(let card, _) = item {
-                return card.ranked
-            }
-            return nil
-        }
-        if let candidate = feedBackedCandidates.first(where: { $0.recipe.id != heroID }) {
-            return candidate
-        }
-        return featuredRecipe
+        .opacity(0.95)
     }
 
     @ViewBuilder
@@ -1362,7 +1017,8 @@ struct HomeView: View {
             return false
         }
         let mini = guaranteedMiniBlock(from: Array(recipeOnlySeed.prefix(3)))
-        return filterFeedItems(mini, excludingRecipeIDs: topLaneRecipeIDs)
+        let filtered = filterFeedItems(mini, excludingRecipeIDs: topLaneRecipeIDs)
+        return deduplicatedRenderableFeedItems(filtered)
     }
 
     private var activeFilteredFeedItems: [HomeFeedItem] {
@@ -1404,7 +1060,8 @@ struct HomeView: View {
             }
             debugHomeFeed("phase=filter_resolved filter=\(selectedQuickFilter.rawValue) total_items=\(filtered.count) recipe_items=\(recipeCount)")
         }
-        return filterFeedItems(filtered, excludingRecipeIDs: topLaneRecipeIDs)
+        let visible = filterFeedItems(filtered, excludingRecipeIDs: topLaneRecipeIDs)
+        return deduplicatedRenderableFeedItems(visible)
     }
 
     private var followingPrimaryVisibleCount: Int {
@@ -1428,9 +1085,9 @@ struct HomeView: View {
 
         // Keep Home feed deep: if strict dedupe makes it too short, prefer continuity over perfect uniqueness.
         if deduplicated.count >= 8 {
-            return deduplicated
+            return deduplicatedRenderableFeedItems(deduplicated)
         }
-        return topLaneFiltered
+        return deduplicatedRenderableFeedItems(topLaneFiltered)
     }
 
     private var fridgeMatches: [FridgeMatchedRecipe] {
@@ -1441,17 +1098,31 @@ struct HomeView: View {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
         let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
         // Rebuild feed only on semantic data/version changes, not raw recipe count churn.
-        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)"
+        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.rankingDataVersion)|\(followingIDs)"
     }
 
-    private func refreshHomeFeedCache() {
+    private func refreshHomeFeedCache(for signature: String) async {
+        guard appliedCacheSignature != signature else { return }
+
+        // Let navigation/scroll rendering finish and allow superseded refreshes to cancel
+        // before doing the heavier feed assembly.
+        await Task.yield()
+        guard !Task.isCancelled, signature == cacheSignature else { return }
+
         let feed = buildHomeFeed()
+        guard !Task.isCancelled, signature == cacheSignature else { return }
+
+        applyHomeFeedBuild(feed, signature: signature)
+    }
+
+    private func applyHomeFeedBuild(_ feed: HomeFeedBuild, signature: String) {
         featuredRecipeCache = feed.featured
         fridgeMatchesCache = feed.fridgeMatches
         ingredientUsageCountByID = feed.ingredientUsageCountByID
         mainContinuousFeedItems = feed.defaultFeedItems
         cachedMiniFeeds = feed.filteredMiniFeeds
         cachedFilteredFeeds = feed.filteredFeeds
+        appliedCacheSignature = signature
     }
 
     private func buildHomeFeed() -> HomeFeedBuild {
@@ -1524,8 +1195,9 @@ struct HomeView: View {
 
         var miniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
         var filteredFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
+        var usedLeadRecipeIDs: Set<String> = []
         for filter in homeQuickFilters {
-            miniFeeds[filter] = buildMiniFeedBlock(
+            let miniFeed = buildMiniFeedBlock(
                 for: filter,
                 baseRecipes: personalizedContinuousRecipes,
                 trendingRecipes: trendingRecipes,
@@ -1534,15 +1206,23 @@ struct HomeView: View {
                 fridgeItemIDs: fridgeIDs,
                 personalization: personalizationProfile
             )
-            filteredFeeds[filter] = buildFilteredFeed(
+            miniFeeds[filter] = deduplicatedRenderableFeedItems(miniFeed)
+
+            let filteredFeed = buildFilteredFeed(
                 for: filter,
                 baseRecipes: personalizedContinuousRecipes,
                 trendingRecipes: trendingRecipes,
                 backupRecipes: personalizedBackupRecipes,
                 trendingIDs: trendingIDs,
                 fridgeItemIDs: fridgeIDs,
-                personalization: personalizationProfile
+                personalization: personalizationProfile,
+                leadAvoidingRecipeIDs: usedLeadRecipeIDs
             )
+            let deduplicatedFeed = deduplicatedRenderableFeedItems(filteredFeed)
+            filteredFeeds[filter] = deduplicatedFeed
+            if let leadID = firstRecipeID(in: deduplicatedFeed) {
+                usedLeadRecipeIDs.insert(leadID)
+            }
         }
 
         return HomeFeedBuild(
@@ -1562,7 +1242,8 @@ struct HomeView: View {
         backupRecipes: [RankedRecipe],
         trendingIDs: Set<String>,
         fridgeItemIDs: Set<String>,
-        personalization: FeedPersonalizationProfile
+        personalization: FeedPersonalizationProfile,
+        leadAvoidingRecipeIDs: Set<String>
     ) -> [HomeFeedItem] {
         let cards: [HookedRecipeCard]
 
@@ -1656,8 +1337,12 @@ struct HomeView: View {
                 targetCount: 30
             )
         }
-
-        return buildEditorialFilteredItems(from: cards, targetCount: 18)
+        let leadDiversifiedCards = diversifiedLeadCards(
+            from: cards,
+            filter: filter,
+            avoidingLeadRecipeIDs: leadAvoidingRecipeIDs
+        )
+        return buildEditorialFilteredItems(from: leadDiversifiedCards, targetCount: 18)
     }
 
     private func applyHardGateCandidates(
@@ -1705,7 +1390,46 @@ struct HomeView: View {
         return items
     }
 
+    private func diversifiedLeadCards(
+        from cards: [HookedRecipeCard],
+        filter: HomeQuickFilter,
+        avoidingLeadRecipeIDs: Set<String>
+    ) -> [HookedRecipeCard] {
+        guard cards.count > 1 else { return cards }
+
+        let topPoolSize = min(5, cards.count)
+        let seed = smartVariationSeed(for: filter)
+        let rankedPool = Array(cards.prefix(topPoolSize))
+            .enumerated()
+            .map { index, card in
+                let key = stableHash64("\(seed)|lead|\(card.ranked.recipe.id)")
+                return (index: index, card: card, key: key)
+            }
+            .sorted { lhs, rhs in
+                if lhs.key != rhs.key {
+                    return lhs.key < rhs.key
+                }
+                return lhs.card.ranked.recipe.title.localizedCaseInsensitiveCompare(rhs.card.ranked.recipe.title) == .orderedAscending
+            }
+
+        let preferred = rankedPool.first { candidate in
+            !avoidingLeadRecipeIDs.contains(candidate.card.ranked.recipe.id)
+        } ?? rankedPool.first
+
+        guard let preferred, preferred.index != 0 else { return cards }
+
+        var reordered: [HookedRecipeCard] = [cards[preferred.index]]
+        for (index, card) in cards.enumerated() where index != preferred.index {
+            reordered.append(card)
+        }
+        return reordered
+    }
+
     private func deduplicatedFollowingFeedItems(_ items: [HomeFeedItem]) -> [HomeFeedItem] {
+        deduplicatedRenderableFeedItems(items)
+    }
+
+    private func deduplicatedRenderableFeedItems(_ items: [HomeFeedItem]) -> [HomeFeedItem] {
         var seenRecipeIDs = Set<String>()
         var deduplicated: [HomeFeedItem] = []
         var separatorIndex: Int?
@@ -1736,6 +1460,15 @@ struct HomeView: View {
         }
 
         return deduplicated
+    }
+
+    private func firstRecipeID(in items: [HomeFeedItem]) -> String? {
+        for item in items {
+            if case .recipe(let card, _) = item {
+                return card.ranked.recipe.id
+            }
+        }
+        return nil
     }
 
     private func buildMiniFeedBlock(
@@ -1912,7 +1645,52 @@ struct HomeView: View {
             debugFeedIntelligence("phase=filter_ranked filter=\(filter.rawValue) count=\(scored.count) top=\(summary)")
         }
 
-        return scored.map(\.ranked)
+        let ordered = scored.map(\.ranked)
+        return applyTopWindowVariation(for: filter, ranked: ordered)
+    }
+
+    private func applyTopWindowVariation(
+        for filter: HomeQuickFilter,
+        ranked: [RankedRecipe]
+    ) -> [RankedRecipe] {
+        guard ranked.count > 2 else { return ranked }
+
+        let topWindowSize = min(5, ranked.count)
+        let seed = smartVariationSeed(for: filter)
+        let topWindow = Array(ranked.prefix(topWindowSize))
+        let variedTopWindow = topWindow
+            .map { recipe in
+                // Deterministic pseudo-random key for controlled rotation inside the top window.
+                let key = stableHash64("\(seed)|\(recipe.recipe.id)")
+                return (recipe: recipe, key: key)
+            }
+            .sorted { lhs, rhs in
+                if lhs.key != rhs.key {
+                    return lhs.key < rhs.key
+                }
+                return lhs.recipe.recipe.title.localizedCaseInsensitiveCompare(rhs.recipe.recipe.title) == .orderedAscending
+            }
+            .map(\.recipe)
+
+        return variedTopWindow + Array(ranked.dropFirst(topWindowSize))
+    }
+
+    private func smartVariationSeed(for filter: HomeQuickFilter) -> String {
+        let now = Date()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: now)
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
+        let hourBlock = calendar.component(.hour, from: now) / 6
+        return "\(filter.rawValue)|\(year)-\(dayOfYear)-\(hourBlock)|\(viewModel.languageCode)"
+    }
+
+    private func stableHash64(_ value: String) -> UInt64 {
+        var hash: UInt64 = 1469598103934665603
+        for byte in value.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1099511628211
+        }
+        return hash
     }
 
     private func personalizedRanking(
@@ -2775,29 +2553,6 @@ private enum HomeHeroState {
     case readyNow(count: Int)
     case almostReady(count: Int)
     case seasonal(count: Int)
-}
-
-private enum HomeHeroDaypart {
-    case morning
-    case lunch
-    case afternoon
-    case evening
-    case lateNight
-
-    init(currentHour: Int) {
-        switch currentHour {
-        case 6...10:
-            self = .morning
-        case 11...14:
-            self = .lunch
-        case 15...17:
-            self = .afternoon
-        case 18...22:
-            self = .evening
-        default:
-            self = .lateNight
-        }
-    }
 }
 
 private struct HomeFeedBuild {

@@ -82,6 +82,7 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var recipeViewCounts: [String: Int] = [:]
     @Published private(set) var homeFeedRefreshID: Int = 0
     @Published private(set) var homeFeedDataVersion: Int = 0
+    @Published private(set) var rankingDataVersion: Int = 0
     @Published private(set) var didCompleteInitialRemoteRecipeHydration: Bool = false
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
@@ -555,6 +556,11 @@ final class ProduceViewModel: ObservableObject {
         print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
     }
 
+    private func bumpRankingDataVersion(reason: String) {
+        rankingDataVersion &+= 1
+        print("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
+    }
+
     private func mergedRecipes(local: [Recipe], remote: [Recipe]) -> [Recipe] {
         var seen = Set<String>()
         return (local + remote).filter { recipe in
@@ -570,22 +576,24 @@ final class ProduceViewModel: ObservableObject {
         #endif
     }
 
-    private func invalidateRecipeCaches() {
+    private func invalidateRecipeCaches(reason: String = "recipe_data_changed") {
         cachedDiscoverableRankedRecipes = []
         cachedDiscoverableRankedByID = [:]
         cachedDiscoverableRankedMonth = nil
         nutritionService.invalidateCaches()
         cachedMaxCrispy = nil
         cachedMaxViews = nil
+        bumpRankingDataVersion(reason: reason)
     }
 
-    private func invalidateRankingCaches() {
+    private func invalidateRankingCaches(reason: String = "ranking_inputs_changed") {
         cachedDiscoverableRankedRecipes = []
         cachedDiscoverableRankedByID = [:]
         cachedDiscoverableRankedMonth = nil
         nutritionService.invalidateCaches()
         cachedMaxCrispy = nil
         cachedMaxViews = nil
+        bumpRankingDataVersion(reason: reason)
     }
 
     var currentMonth: Int {
@@ -873,7 +881,7 @@ final class ProduceViewModel: ObservableObject {
         let isCrispied = updated.contains(recipe.id)
         crispiedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: crispiedRecipeIDsStorageKey)
-        invalidateRankingCaches()
+        invalidateRankingCaches(reason: "crispy_state_changed")
         UserInteractionTracker.shared.track(
             .recipeCrispied,
             recipeID: recipe.id,
@@ -903,6 +911,7 @@ final class ProduceViewModel: ObservableObject {
         let isSaved = updated.contains(recipe.id)
         savedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: savedRecipeIDsStorageKey)
+        invalidateRankingCaches(reason: "saved_state_changed")
         UserInteractionTracker.shared.track(
             .recipeSaved,
             recipeID: recipe.id,
@@ -936,7 +945,7 @@ final class ProduceViewModel: ObservableObject {
         updated.insert(recipe.id)
         archivedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: archivedRecipeIDsStorageKey)
-        invalidateRecipeCaches()
+        invalidateRecipeCaches(reason: "archive_state_changed")
     }
 
     func unarchiveRecipe(_ recipe: Recipe) {
@@ -944,7 +953,7 @@ final class ProduceViewModel: ObservableObject {
         updated.remove(recipe.id)
         archivedRecipeIDs = updated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: updated), forKey: archivedRecipeIDsStorageKey)
-        invalidateRecipeCaches()
+        invalidateRecipeCaches(reason: "archive_state_changed")
     }
 
     func deleteRecipe(_ recipe: Recipe) {
@@ -969,7 +978,7 @@ final class ProduceViewModel: ObservableObject {
         archivedRecipeIDs = archivedUpdated
         UserDefaults.standard.set(Self.normalizedStringSetRaw(from: archivedUpdated), forKey: archivedRecipeIDsStorageKey)
         RecipeStore.removeUserRecipe(id: recipe.id)
-        invalidateRecipeCaches()
+        invalidateRecipeCaches(reason: "delete_state_changed")
     }
 
     func activeRecipes(for author: String) -> [Recipe] {
@@ -1007,7 +1016,7 @@ final class ProduceViewModel: ObservableObject {
             recipeID: recipe.id,
             creatorID: recipe.canonicalCreatorID
         )
-        invalidateRankingCaches()
+        invalidateRankingCaches(reason: "recipe_view_count_changed")
     }
 
     func compactCountText(_ value: Int) -> String {
@@ -1810,7 +1819,7 @@ final class ProduceViewModel: ObservableObject {
 
         if nutritionPriorities != priorities {
             nutritionPriorities = priorities
-            invalidateRankingCaches()
+            invalidateRankingCaches(reason: "nutrition_priorities_changed")
         }
 
         let legacy = NutritionService.legacyGoals(from: priorities)
