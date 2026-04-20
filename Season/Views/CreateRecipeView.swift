@@ -789,11 +789,41 @@ struct CreateRecipeView: View {
 
     @ViewBuilder
     private var heroImageContent: some View {
-        if let cover = uploadedImages.first, let uiImage = recipeUIImage(from: cover) {
-            Image(uiImage: uiImage)
+        if let cover = uploadedImages.first,
+           recipeImageFileURL(for: cover.localPath) != nil {
+            RecipeLocalImageView(
+                image: cover,
+                targetSize: CGSize(width: 900, height: 420),
+                contentMode: .fill
+            ) {
+                heroImageFallbackContent
+            }
+        } else if let legacyName = prefillDraft?.imageAssetName, hasAsset(named: legacyName) {
+            Image(legacyName)
                 .resizable()
                 .scaledToFill()
-        } else if let legacyName = prefillDraft?.imageAssetName, hasAsset(named: legacyName) {
+        } else {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: 6) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text(localizer.text(.mediaNoImagesYet))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var heroImageFallbackContent: some View {
+        if let legacyName = prefillDraft?.imageAssetName, hasAsset(named: legacyName) {
             Image(legacyName)
                 .resizable()
                 .scaledToFill()
@@ -1210,8 +1240,10 @@ struct CreateRecipeView: View {
         var uploadedRecipeImageURL: String? = nil
 
         if let cover = uploadedImages.first,
-           let coverImage = recipeUIImage(from: cover),
-           let jpegData = coverImage.jpegData(compressionQuality: 0.9) {
+           let jpegData = await SeasonImageProcessor.jpegData(
+            fromRecipeImageLocalPath: cover.localPath,
+            compressionQuality: 0.9
+           ) {
             do {
                 uploadedRecipeImageURL = try await SupabaseService.shared.uploadRecipeImage(
                     imageData: jpegData,
@@ -3244,7 +3276,7 @@ struct CreateRecipeView: View {
 
         for item in items {
             guard let data = try? await item.loadTransferable(type: Data.self),
-                  let savedPath = saveImageDataToDocuments(data) else {
+                  let savedPath = await SeasonImageProcessor.saveRecipeImageDataToDocuments(data) else {
                 continue
             }
 
@@ -3267,16 +3299,23 @@ struct CreateRecipeView: View {
     }
 
     private func addCameraImage(_ image: UIImage) {
-        guard let savedPath = saveUIImageToDocuments(image) else { return }
-        uploadedImages.append(
-            RecipeImage(
-                id: UUID().uuidString.lowercased(),
-                localPath: savedPath,
-                remoteURL: nil
-            )
-        )
-        if coverImageID == nil {
-            coverImageID = uploadedImages.first?.id
+        Task {
+            guard let savedPath = await SeasonImageProcessor.saveRecipeUIImageToDocuments(image, compressionQuality: 0.9) else {
+                return
+            }
+
+            await MainActor.run {
+                uploadedImages.append(
+                    RecipeImage(
+                        id: UUID().uuidString.lowercased(),
+                        localPath: savedPath,
+                        remoteURL: nil
+                    )
+                )
+                if coverImageID == nil {
+                    coverImageID = uploadedImages.first?.id
+                }
+            }
         }
     }
 
@@ -3288,41 +3327,21 @@ struct CreateRecipeView: View {
         showingCameraPicker = true
     }
 
-    private func saveImageDataToDocuments(_ data: Data) -> String? {
-        let filename = "recipe_\(UUID().uuidString.lowercased()).jpg"
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        let fileURL = documentsURL.appendingPathComponent(filename)
-        do {
-            try data.write(to: fileURL, options: .atomic)
-            return filename
-        } catch {
-            return nil
-        }
-    }
-
-    private func saveUIImageToDocuments(_ image: UIImage) -> String? {
-        guard let jpegData = image.jpegData(compressionQuality: 0.9) else { return nil }
-        return saveImageDataToDocuments(jpegData)
-    }
-
     @ViewBuilder
     private func mediaItemCard(image: RecipeImage) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .topTrailing) {
                 Group {
-                    if let uiImage = recipeUIImage(from: image) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
+                    if recipeImageFileURL(for: image.localPath) != nil {
+                        RecipeLocalImageView(
+                            image: image,
+                            targetSize: CGSize(width: 120, height: 120),
+                            contentMode: .fill
+                        ) {
+                            mediaItemFallback
+                        }
                     } else {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(.tertiarySystemGroupedBackground))
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .foregroundStyle(.secondary)
-                            )
+                        mediaItemFallback
                     }
                 }
                 .frame(width: 120, height: 120)
@@ -3352,6 +3371,15 @@ struct CreateRecipeView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var mediaItemFallback: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color(.tertiarySystemGroupedBackground))
+            .overlay(
+                Image(systemName: "photo")
+                    .foregroundStyle(.secondary)
+            )
     }
 
     private func moveImageToCover(_ imageID: String) {

@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import Foundation
+import ImageIO
 
 enum SeasonSpacing {
     static let xs: CGFloat = 8
@@ -606,10 +607,14 @@ struct RecipeCardView: View {
     private func feedHeroImage(height: CGFloat) -> some View {
         Group {
             if let cover = resolvedRecipeCoverImage(for: recipe),
-               let localImage = recipeUIImage(from: cover) {
-                Image(uiImage: localImage)
-                    .resizable()
-                    .scaledToFill()
+               recipeImageFileURL(for: cover.localPath) != nil {
+                RecipeLocalImageView(
+                    image: cover,
+                    targetSize: CGSize(width: height * 1.6, height: height),
+                    contentMode: .fill
+                ) {
+                    feedHeroImageFallback(height: height)
+                }
             } else if let cover = resolvedRecipeCoverImage(for: recipe),
                       let remoteURLString = cover.remoteURL,
                       let remoteURL = URL(string: remoteURLString) {
@@ -635,6 +640,31 @@ struct RecipeCardView: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func feedHeroImageFallback(height: CGFloat) -> some View {
+        if let cover = resolvedRecipeCoverImage(for: recipe),
+           let remoteURLString = cover.remoteURL,
+           let remoteURL = URL(string: remoteURLString) {
+            AsyncImage(url: remoteURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                default:
+                    fallbackMedia
+                }
+            }
+        } else if let imageName = recipe.coverImageName,
+                  UIImage(named: imageName) != nil {
+            Image(imageName)
+                .resizable()
+                .scaledToFill()
+        } else {
+            fallbackMedia
+        }
     }
 
     private var fallbackMedia: some View {
@@ -1070,11 +1100,15 @@ struct RecipeThumbnailView: View {
                 }
             } else if let recipe,
                       let cover = resolvedRecipeCoverImage(for: recipe),
-                      let image = recipeUIImage(from: cover) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .clipped()
+                      recipeImageFileURL(for: cover.localPath) != nil {
+                RecipeLocalImageView(
+                    image: cover,
+                    targetSize: CGSize(width: size, height: size),
+                    contentMode: .fill
+                ) {
+                    thumbnailFallback(coverRemote: coverRemote, assetName: hasImage ? trimmedName : nil)
+                }
+                .clipped()
             } else if let coverRemote {
                 AsyncImage(url: coverRemote) { phase in
                     switch phase {
@@ -1099,6 +1133,29 @@ struct RecipeThumbnailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
+    @ViewBuilder
+    private func thumbnailFallback(coverRemote: URL?, assetName: String?) -> some View {
+        if let coverRemote {
+            AsyncImage(url: coverRemote) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                default:
+                    fallbackContent
+                }
+            }
+        } else if let assetName {
+            Image(assetName)
+                .resizable()
+                .scaledToFill()
+                .clipped()
+        } else {
+            fallbackContent
+        }
+    }
+
     private var fallbackContent: some View {
         Image(systemName: "fork.knife.circle.fill")
             .font(.system(size: size * 0.45, weight: .semibold))
@@ -1120,8 +1177,221 @@ func recipeImageFileURL(for localPath: String?) -> URL? {
 }
 
 func recipeUIImage(from image: RecipeImage) -> UIImage? {
-    guard let fileURL = recipeImageFileURL(for: image.localPath) else { return nil }
-    return UIImage(contentsOfFile: fileURL.path)
+    RecipeLocalImageLoader.shared.imageSynchronously(for: image.localPath, targetSize: nil)
+}
+
+enum SeasonImageProcessor {
+    static func jpegData(from image: UIImage, compressionQuality: CGFloat = 0.9) async -> Data? {
+        let sendableImage = SendableUIImage(image: image)
+        return await Task.detached(priority: .utility) {
+            sendableImage.image.jpegData(compressionQuality: compressionQuality)
+        }.value
+    }
+
+    static func jpegData(fromImageData imageData: Data, compressionQuality: CGFloat = 0.9) async -> Data? {
+        await Task.detached(priority: .utility) {
+            guard let image = UIImage(data: imageData) else { return nil }
+            return image.jpegData(compressionQuality: compressionQuality)
+        }.value
+    }
+
+    static func jpegData(fromRecipeImageLocalPath localPath: String?, compressionQuality: CGFloat = 0.9) async -> Data? {
+        guard let fileURL = recipeImageFileURL(for: localPath) else { return nil }
+        return await Task.detached(priority: .utility) {
+            guard let image = UIImage(contentsOfFile: fileURL.path) else { return nil }
+            return image.jpegData(compressionQuality: compressionQuality)
+        }.value
+    }
+
+    static func saveRecipeImageDataToDocuments(_ data: Data) async -> String? {
+        await Task.detached(priority: .utility) {
+            let filename = "recipe_\(UUID().uuidString.lowercased()).jpg"
+            guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                return nil
+            }
+
+            let fileURL = documentsURL.appendingPathComponent(filename)
+            do {
+                try data.write(to: fileURL, options: .atomic)
+                return filename
+            } catch {
+                return nil
+            }
+        }.value
+    }
+
+    static func saveRecipeUIImageToDocuments(_ image: UIImage, compressionQuality: CGFloat = 0.9) async -> String? {
+        guard let jpegData = await jpegData(from: image, compressionQuality: compressionQuality) else { return nil }
+        return await saveRecipeImageDataToDocuments(jpegData)
+    }
+}
+
+// UIImage is treated as immutable here and only handed to a utility task for JPEG encoding.
+private struct SendableUIImage: @unchecked Sendable {
+    let image: UIImage
+}
+
+struct RecipeLocalImageView<Placeholder: View>: View {
+    let image: RecipeImage
+    let targetSize: CGSize?
+    let contentMode: ContentMode
+    @ViewBuilder let placeholder: () -> Placeholder
+
+    @Environment(\.displayScale) private var displayScale
+    @State private var loadedImage: UIImage?
+    @State private var loadedCacheKey: String?
+    @State private var failedCacheKey: String?
+
+    init(
+        image: RecipeImage,
+        targetSize: CGSize? = nil,
+        contentMode: ContentMode = .fill,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
+    ) {
+        self.image = image
+        self.targetSize = targetSize
+        self.contentMode = contentMode
+        self.placeholder = placeholder
+    }
+
+    var body: some View {
+        let cacheKey = RecipeLocalImageLoader.shared.cacheKey(
+            for: image.localPath,
+            targetSize: targetSize,
+            displayScale: displayScale
+        )
+        let memoryImage = RecipeLocalImageLoader.shared.cachedImage(
+            for: image.localPath,
+            targetSize: targetSize,
+            displayScale: displayScale
+        )
+        let displayImage = loadedCacheKey == cacheKey ? loadedImage ?? memoryImage : memoryImage
+
+        Group {
+            if let displayImage {
+                Image(uiImage: displayImage)
+                    .resizable()
+                    .aspectRatio(contentMode: contentMode)
+            } else {
+                placeholder()
+            }
+        }
+        .task(id: cacheKey) {
+            guard failedCacheKey != cacheKey else { return }
+            if let memoryImage {
+                loadedImage = memoryImage
+                loadedCacheKey = cacheKey
+                return
+            }
+
+            let decodedImage = await RecipeLocalImageLoader.shared.image(
+                for: image.localPath,
+                targetSize: targetSize,
+                displayScale: displayScale
+            )
+            if let decodedImage {
+                loadedImage = decodedImage
+                loadedCacheKey = cacheKey
+            } else {
+                loadedImage = nil
+                loadedCacheKey = cacheKey
+                failedCacheKey = cacheKey
+            }
+        }
+    }
+}
+
+final class RecipeLocalImageLoader {
+    static let shared = RecipeLocalImageLoader()
+
+    private let cache = NSCache<NSString, UIImage>()
+
+    private init() {
+        cache.countLimit = 96
+    }
+
+    func cacheKey(for localPath: String?, targetSize: CGSize?, displayScale: CGFloat = 1) -> String {
+        guard let fileURL = recipeImageFileURL(for: localPath) else {
+            return "missing-local-recipe-image"
+        }
+
+        if let maxPixelDimension = maxPixelDimension(for: targetSize, displayScale: displayScale), maxPixelDimension > 0 {
+            return "\(fileURL.path)#\(maxPixelDimension)"
+        }
+        return "\(fileURL.path)#original"
+    }
+
+    func cachedImage(for localPath: String?, targetSize: CGSize?, displayScale: CGFloat = 1) -> UIImage? {
+        let key = cacheKey(for: localPath, targetSize: targetSize, displayScale: displayScale)
+        return cache.object(forKey: key as NSString)
+    }
+
+    func image(for localPath: String?, targetSize: CGSize?, displayScale: CGFloat = 1) async -> UIImage? {
+        guard let fileURL = recipeImageFileURL(for: localPath) else { return nil }
+        let key = cacheKey(for: localPath, targetSize: targetSize, displayScale: displayScale)
+
+        if let cached = cache.object(forKey: key as NSString) {
+            return cached
+        }
+
+        let maxPixelDimension = maxPixelDimension(for: targetSize, displayScale: displayScale)
+        let decoded = await Task.detached(priority: .utility) {
+            Self.loadImage(at: fileURL, maxPixelDimension: maxPixelDimension)
+        }.value
+
+        if let decoded {
+            cache.setObject(decoded, forKey: key as NSString)
+        }
+        return decoded
+    }
+
+    func imageSynchronously(for localPath: String?, targetSize: CGSize?) -> UIImage? {
+        guard let fileURL = recipeImageFileURL(for: localPath) else { return nil }
+        let key = cacheKey(for: localPath, targetSize: targetSize)
+
+        if let cached = cache.object(forKey: key as NSString) {
+            return cached
+        }
+
+        let decoded = Self.loadImage(at: fileURL, maxPixelDimension: maxPixelDimension(for: targetSize, displayScale: 1))
+        if let decoded {
+            cache.setObject(decoded, forKey: key as NSString)
+        }
+        return decoded
+    }
+
+    private func maxPixelDimension(for targetSize: CGSize?, displayScale: CGFloat) -> Int? {
+        guard let targetSize else { return nil }
+        let maxPointDimension = max(targetSize.width, targetSize.height)
+        guard maxPointDimension > 0 else { return nil }
+        return Int(ceil(maxPointDimension * max(displayScale, 1)))
+    }
+
+    nonisolated private static func loadImage(at fileURL: URL, maxPixelDimension: Int?) -> UIImage? {
+        guard let maxPixelDimension, maxPixelDimension > 0 else {
+            return UIImage(contentsOfFile: fileURL.path)
+        }
+
+        let options = [
+            kCGImageSourceShouldCache: false
+        ] as CFDictionary
+        guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, options) else {
+            return UIImage(contentsOfFile: fileURL.path)
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelDimension
+        ] as CFDictionary
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return UIImage(contentsOfFile: fileURL.path)
+        }
+
+        return UIImage(cgImage: cgImage)
+    }
 }
 
 struct CartToolbarItems: ToolbarContent {

@@ -1987,8 +1987,7 @@ struct AccountView: View {
 
         do {
             guard let imageData = try await item.loadTransferable(type: Data.self),
-                  let image = UIImage(data: imageData),
-                  let jpegData = image.jpegData(compressionQuality: 0.9) else {
+                  let jpegData = await SeasonImageProcessor.jpegData(fromImageData: imageData, compressionQuality: 0.9) else {
                 return
             }
 

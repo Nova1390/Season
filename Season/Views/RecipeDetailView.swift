@@ -1749,14 +1749,35 @@ private struct RecipeHeroView: View {
 
     @ViewBuilder
     private func resolvedImageView(for image: RecipeImage) -> some View {
-        if let localImage = recipeUIImage(from: image) {
-            Image(uiImage: localImage)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+        if recipeImageFileURL(for: image.localPath) != nil {
+            RecipeLocalImageView(image: image, contentMode: .fill) {
+                resolvedRemoteImageView(for: image)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
         } else if let remoteURLString = image.remoteURL,
                   let remoteURL = URL(string: remoteURLString) {
+            AsyncImage(url: remoteURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                default:
+                    fallbackImageView
+                }
+            }
+        } else {
+            fallbackImageView
+        }
+    }
+
+    @ViewBuilder
+    private func resolvedRemoteImageView(for image: RecipeImage) -> some View {
+        if let remoteURLString = image.remoteURL,
+           let remoteURL = URL(string: remoteURLString) {
             AsyncImage(url: remoteURL) { phase in
                 switch phase {
                 case .success(let image):
