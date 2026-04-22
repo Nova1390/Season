@@ -5,4 +5,6 @@ scripts/generate_produce_images.py
 scripts/resize_produce_images.py
 
 .env
-.env.local
+.env.local.agents/
+.images_backup/
+skills-lock.json
