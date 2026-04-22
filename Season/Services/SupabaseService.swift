@@ -1046,6 +1046,7 @@ private struct ParseRecipeCaptionFunctionRequest: Encodable {
     let caption: String?
     let url: String?
     let languageCode: String
+    let ingredientCandidates: [SmartImportIngredientCandidate]?
 }
 
 struct ImportedRecipePreview: Codable, Sendable {
@@ -1177,6 +1178,13 @@ final class SupabaseService {
     private let client: SupabaseClient?
     private let authRepository: AuthRepository
     private let recipeRepository: RecipeRepository
+    private let currentProfileCacheQueue = DispatchQueue(label: "season.supabase.current_profile_cache")
+    private var cachedCurrentProfileUserID: UUID?
+    private var cachedCurrentProfile: Profile?
+    private var hasCachedCurrentProfile = false
+    private var currentProfileFetchUserID: UUID?
+    private var currentProfileFetchToken: UUID?
+    private var currentProfileFetchTask: Task<Profile?, Error>?
 
     init(bundle: Bundle = .main) {
         do {
@@ -1363,12 +1371,14 @@ final class SupabaseService {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
         _ = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+        invalidateCurrentProfileCache()
         notifyAuthStateDidChange()
     }
 
     func signInWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithEmail") {
             let userID = try await authRepository.signInWithEmail(email: email, password: password)
+            invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
         }
@@ -1377,6 +1387,7 @@ final class SupabaseService {
     func signUpWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signUpWithEmail") {
             let userID = try await authRepository.signUpWithEmail(email: email, password: password)
+            invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
         }
@@ -1385,6 +1396,7 @@ final class SupabaseService {
     func signOut() async throws {
         try await instrumentedRequest(name: "signOut") {
             try await authRepository.signOut()
+            invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
         }
     }
@@ -1392,6 +1404,7 @@ final class SupabaseService {
     func signInWithAppleIDToken(_ idToken: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithAppleIDToken") {
             let userID = try await authRepository.signInWithAppleIDToken(idToken)
+            invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
         }
@@ -1424,6 +1437,7 @@ final class SupabaseService {
             guard let userID = client.auth.currentUser?.id else {
                 throw SupabaseServiceError.unauthenticated
             }
+            invalidateCurrentProfileCache()
             return userID
         }
     }
@@ -1434,26 +1448,45 @@ final class SupabaseService {
     }
 
     func fetchMyProfile() async throws -> Profile? {
-        try await instrumentedRequest(name: "fetchMyProfile") {
-            try await authRepository.fetchMyProfile()
+        guard let userID = currentAuthenticatedUserID() else {
+            invalidateCurrentProfileCache()
+            return nil
+        }
+
+        switch currentProfileFetchState(for: userID) {
+        case .cached(let profile):
+            return profile
+        case .inFlight(let token, let task):
+            do {
+                let profile = try await task.value
+                storeCurrentProfileFetchResult(profile, for: userID, token: token)
+                return profile
+            } catch {
+                clearCurrentProfileFetch(for: userID, token: token)
+                throw error
+            }
         }
     }
 
     func updateMyProfileSocialLinks(instagramURL: String?, tiktokURL: String?) async throws {
         try await instrumentedRequest(name: "updateProfileSocialLinks") {
             try await authRepository.updateMyProfileSocialLinks(instagramURL: instagramURL, tiktokURL: tiktokURL)
+            invalidateCurrentProfileCache(for: currentAuthenticatedUserID())
         }
     }
 
     func upsertMyProfileIdentity(username: String, displayName: String?) async throws {
         try await instrumentedRequest(name: "upsertMyProfileIdentity") {
             try await authRepository.upsertMyProfileIdentity(username: username, displayName: displayName)
+            invalidateCurrentProfileCache(for: currentAuthenticatedUserID())
         }
     }
 
     func uploadMyProfileAvatar(imageData: Data) async throws -> String {
         try await instrumentedRequest(name: "uploadMyProfileAvatar") {
-            try await authRepository.uploadMyProfileAvatar(imageData: imageData)
+            let avatarURL = try await authRepository.uploadMyProfileAvatar(imageData: imageData)
+            invalidateCurrentProfileCache(for: currentAuthenticatedUserID())
+            return avatarURL
         }
     }
 
@@ -1524,7 +1557,8 @@ final class SupabaseService {
     func parseRecipeCaption(
         caption: String?,
         url: String?,
-        languageCode: String
+        languageCode: String,
+        ingredientCandidates: [SmartImportIngredientCandidate]? = nil
     ) async throws -> ParseRecipeCaptionFunctionResponse {
         try await instrumentedRequest(name: "parseRecipeCaption") {
             guard let supabaseClient = self.client else {
@@ -1556,7 +1590,8 @@ final class SupabaseService {
             let payload = ParseRecipeCaptionFunctionRequest(
                 caption: normalizedCaption?.isEmpty == true ? nil : normalizedCaption,
                 url: normalizedURL?.isEmpty == true ? nil : normalizedURL,
-                languageCode: languageCode
+                languageCode: languageCode,
+                ingredientCandidates: ingredientCandidates?.isEmpty == true ? nil : ingredientCandidates
             )
 
             print("[SEASON_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased()) authenticated_context=true")
@@ -3838,6 +3873,83 @@ final class SupabaseService {
 
     private func notifyAuthStateDidChange() {
         NotificationCenter.default.post(name: .seasonAuthStateDidChange, object: nil)
+    }
+
+    private enum CurrentProfileFetchState {
+        case cached(Profile?)
+        case inFlight(UUID, Task<Profile?, Error>)
+    }
+
+    private func currentProfileFetchState(for userID: UUID) -> CurrentProfileFetchState {
+        currentProfileCacheQueue.sync {
+            if cachedCurrentProfileUserID == userID, hasCachedCurrentProfile {
+                return .cached(cachedCurrentProfile)
+            }
+
+            if currentProfileFetchUserID == userID,
+               let token = currentProfileFetchToken,
+               let task = currentProfileFetchTask {
+                return .inFlight(token, task)
+            }
+
+            let token = UUID()
+            let task = Task { [authRepository] in
+                try await self.instrumentedRequest(name: "fetchMyProfile") {
+                    try await authRepository.fetchMyProfile()
+                }
+            }
+
+            currentProfileFetchUserID = userID
+            currentProfileFetchToken = token
+            currentProfileFetchTask = task
+            return .inFlight(token, task)
+        }
+    }
+
+    private func storeCurrentProfileFetchResult(_ profile: Profile?, for userID: UUID, token: UUID) {
+        currentProfileCacheQueue.sync {
+            guard currentProfileFetchUserID == userID,
+                  currentProfileFetchToken == token else {
+                return
+            }
+
+            cachedCurrentProfileUserID = userID
+            cachedCurrentProfile = profile
+            hasCachedCurrentProfile = true
+            currentProfileFetchUserID = nil
+            currentProfileFetchToken = nil
+            currentProfileFetchTask = nil
+        }
+    }
+
+    private func clearCurrentProfileFetch(for userID: UUID, token: UUID) {
+        currentProfileCacheQueue.sync {
+            guard currentProfileFetchUserID == userID,
+                  currentProfileFetchToken == token else {
+                return
+            }
+
+            currentProfileFetchUserID = nil
+            currentProfileFetchToken = nil
+            currentProfileFetchTask = nil
+        }
+    }
+
+    private func invalidateCurrentProfileCache(for userID: UUID? = nil) {
+        currentProfileCacheQueue.sync {
+            if let userID {
+                guard cachedCurrentProfileUserID == userID || currentProfileFetchUserID == userID else {
+                    return
+                }
+            }
+
+            cachedCurrentProfileUserID = nil
+            cachedCurrentProfile = nil
+            hasCachedCurrentProfile = false
+            currentProfileFetchUserID = nil
+            currentProfileFetchToken = nil
+            currentProfileFetchTask = nil
+        }
     }
 
     private func mapCatalogResolutionCandidates(

@@ -39,7 +39,7 @@ If provider fails, times out, or returns invalid JSON/schema, function still ret
 No anon access.
 
 Allowed callers:
-- Authenticated user calls (`Authorization: Bearer <user_jwt>`)
+- Catalog-admin authenticated user calls (`Authorization: Bearer <user_jwt>`)
 - Service-role calls (`apikey: <service_role_key>`)
 
 ## Environment
@@ -58,7 +58,7 @@ supabase functions deploy catalog-enrichment-proposal
 ```
 
 ## Local test
-Authenticated user:
+Catalog-admin user:
 ```bash
 curl -i --location --request POST 'http://localhost:54321/functions/v1/catalog-enrichment-proposal' \
   --header 'Content-Type: application/json' \

@@ -1281,10 +1281,10 @@ struct RecipeDetailView: View {
     }
 
     private var ingredientRows: [IngredientRow] {
-        rankedRecipe.recipe.ingredients.map { ingredient in
+        rankedRecipe.recipe.ingredients.enumerated().map { sourceIndex, ingredient in
             let resolved = viewModel.resolveIngredientForDisplay(ingredient)
             return IngredientRow(
-                id: resolved.recipeIngredient.id,
+                id: "\(sourceIndex)-\(resolved.recipeIngredient.id)",
                 name: resolved.displayName,
                 item: resolved.produceItem,
                 basic: resolved.basicIngredient,

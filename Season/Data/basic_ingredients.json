@@ -205,6 +205,88 @@
     }
   },
   {
+    "id": "sea_bream",
+    "localizedNames": {
+      "en": "Sea bream",
+      "it": "Orata"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 97,
+      "protein": 19.0,
+      "carbs": 0.0,
+      "fat": 2.0,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 350.0
+    },
+    "nutritionSource": "Catalog enrichment draft",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Local bootstrap for promoted canonical sea_bream; nutrition values are conservative generic raw fish estimates.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 350.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
+    "id": "swordfish",
+    "localizedNames": {
+      "en": "Swordfish",
+      "it": "Pesce spada"
+    },
+    "category": "proteins",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 144,
+      "protein": 19.7,
+      "carbs": 0.0,
+      "fat": 6.7,
+      "fiber": 0.0,
+      "vitaminC": 0.0,
+      "potassium": 418.0
+    },
+    "nutritionSource": "Catalog enrichment draft",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Local bootstrap for promoted canonical swordfish; nutrition values are conservative generic raw fish estimates.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "g",
+      "supportedUnits": [
+        "g",
+        "piece"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0,
+        "piece": 150.0
+      },
+      "mlPerUnit": {},
+      "gramsPerMl": null
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": false,
+      "isVegan": false
+    }
+  },
+  {
     "id": "tuna",
     "localizedNames": {
       "en": "Tuna",
@@ -330,6 +412,48 @@
       "isGlutenFree": true,
       "isVegetarian": true,
       "isVegan": false
+    }
+  },
+  {
+    "id": "coconut_milk",
+    "localizedNames": {
+      "en": "Coconut milk",
+      "it": "Latte di cocco"
+    },
+    "category": "pantry",
+    "ingredientQualityLevel": "basic",
+    "nutrition": {
+      "calories": 197,
+      "protein": 2.0,
+      "carbs": 2.8,
+      "fat": 21.3,
+      "fiber": 0.0,
+      "vitaminC": 1.0,
+      "potassium": 220.0
+    },
+    "nutritionSource": "Catalog enrichment draft",
+    "nutritionBasis": "per_100g",
+    "nutritionReference": null,
+    "nutritionMappingNote": "Local bootstrap for promoted canonical coconut_milk; distinct from dairy milk.",
+    "nutritionMappingConfidence": "approximate",
+    "unitProfile": {
+      "defaultUnit": "ml",
+      "supportedUnits": [
+        "ml",
+        "g"
+      ],
+      "gramsPerUnit": {
+        "g": 1.0
+      },
+      "mlPerUnit": {
+        "ml": 1.0
+      },
+      "gramsPerMl": 1.0
+    },
+    "dietaryFlags": {
+      "isGlutenFree": true,
+      "isVegetarian": true,
+      "isVegan": true
     }
   },
   {

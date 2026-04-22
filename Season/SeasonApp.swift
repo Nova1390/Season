@@ -12,6 +12,14 @@ struct SeasonApp: App {
     var body: some Scene {
         WindowGroup {
             AuthGateView()
+                .task {
+                    #if DEBUG
+                    await runSmartImportBatchAuditIfRequested()
+                    await CreateRecipeView.runSmartImportCaptionHarnessIfRequested()
+                    await CreateRecipeView.runSmartImportRealFlowAuditIfRequested()
+                    await CreateRecipeView.runSmartImportSpecificityAuditIfRequested()
+                    #endif
+                }
         }
     }
 }

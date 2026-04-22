@@ -166,6 +166,7 @@ enum AppTextKey: String {
     case socialImportCaptionNudge
     case importDraft
     case importApplied
+    case importMissingSource
     case importNoMatches
     case importWeakResultCaptionHint
     case importAnalyzing
@@ -715,6 +716,7 @@ struct AppLocalizer {
             .socialImportCaptionNudge: "Tip: paste the caption to improve ingredient extraction.",
             .importDraft: "Import draft",
             .importApplied: "Draft imported. Review and edit before publishing.",
+            .importMissingSource: "Paste a caption or add a link to import a draft.",
             .importNoMatches: "No strong ingredient matches found. You can still edit manually.",
             .importWeakResultCaptionHint: "Paste the caption to extract ingredients automatically.",
             .importAnalyzing: "Analyzing import…",
@@ -1066,6 +1068,7 @@ struct AppLocalizer {
             .socialImportCaptionNudge: "Suggerimento: incolla la caption per migliorare l'estrazione degli ingredienti.",
             .importDraft: "Importa bozza",
             .importApplied: "Bozza importata. Controlla e modifica prima di pubblicare.",
+            .importMissingSource: "Incolla una caption o aggiungi un link per importare una bozza.",
             .importNoMatches: "Nessuna corrispondenza ingredienti forte. Puoi modificare manualmente.",
             .importWeakResultCaptionHint: "Incolla la caption per estrarre automaticamente gli ingredienti.",
             .importAnalyzing: "Analisi importazione in corso…",

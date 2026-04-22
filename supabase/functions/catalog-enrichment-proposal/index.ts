@@ -4,6 +4,19 @@ import {
   type CatalogEnrichmentProposal,
   validateCatalogEnrichmentProposal,
 } from "./llm_contract.ts";
+import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
+import {
+  env,
+  jsonResponse,
+  jsonResponseWithStatus,
+  numberEnv,
+} from "../_shared/edge.ts";
+import {
+  extractTokenUsage,
+  logLLMUsage,
+  requestIdFromHeaders,
+  type TokenUsage,
+} from "../_shared/observability.ts";
 
 interface CatalogEnrichmentRequest {
   normalized_text?: string;
@@ -17,23 +30,36 @@ interface NormalizedIdentityInput {
   removedQualifiers: string[];
 }
 
-const JSON_HEADERS = {
-  "content-type": "application/json; charset=utf-8",
-};
+interface ProviderInvocationResult {
+  parsed: unknown;
+  durationMs: number;
+  usage: TokenUsage;
+}
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+class ProviderInvocationError extends Error {
+  readonly durationMs: number;
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+  constructor(message: string, durationMs: number) {
+    super(message);
+    this.durationMs = durationMs;
+    this.name = "ProviderInvocationError";
+  }
+}
+
+const SUPABASE_URL = env("SUPABASE_URL");
+const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
+
+const OPENAI_API_KEY = env("OPENAI_API_KEY");
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = "gpt-5.4-mini";
-const PROVIDER_TIMEOUT_MS = Number(Deno.env.get("CATALOG_ENRICHMENT_PROVIDER_TIMEOUT_MS") ?? "15000");
+const PROVIDER_TIMEOUT_MS = numberEnv("CATALOG_ENRICHMENT_PROVIDER_TIMEOUT_MS", 15000);
 const MAX_NORMALIZED_TEXT_LENGTH = 120;
 
 Deno.serve(async (request) => {
+  const requestId = requestIdFromHeaders(request);
   try {
-    console.log(`[SEASON_CATALOG_ENRICHMENT] phase=request_received method=${request.method}`);
+    console.log(`[SEASON_CATALOG_ENRICHMENT] phase=request_received method=${request.method} request_id=${requestId}`);
 
     if (request.method !== "POST") {
       return errorJson(405, "METHOD_NOT_ALLOWED", "Only POST is supported.");
@@ -48,9 +74,14 @@ Deno.serve(async (request) => {
       return errorJson(500, "SERVER_MISCONFIGURED", "Supabase environment is not configured.");
     }
 
-    const auth = await resolveCallerAuth(request);
+    const auth = await resolveCatalogAdminOrServiceRole(request, {
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: SUPABASE_ANON_KEY,
+      supabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      logPrefix: "SEASON_CATALOG_ENRICHMENT",
+    });
     if (!auth.allowed) {
-      return errorJson(401, "UNAUTHENTICATED", "Authentication is required.");
+      return errorJson(401, "UNAUTHORIZED", "Catalog admin authentication is required.");
     }
 
     let payload: CatalogEnrichmentRequest;
@@ -77,23 +108,42 @@ Deno.serve(async (request) => {
       ...identityInput.removedQualifiers,
     ]);
     console.log(
-      `[SEASON_CATALOG_ENRICHMENT] phase=identity_input original_text=${originalText} cleaned_text=${cleanedText} removed_qualifiers=${removedQualifiers.join("|")}`,
+      `[SEASON_CATALOG_ENRICHMENT] phase=identity_input request_id=${requestId} original_length=${originalText.length} cleaned_length=${cleanedText.length} removed_qualifier_count=${removedQualifiers.length}`,
     );
 
     if (!OPENAI_API_KEY) {
       console.log("[SEASON_CATALOG_ENRICHMENT] phase=provider_not_configured fallback=true");
+      logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        status: "fallback",
+        providerDurationMs: null,
+        model: OPENAI_MODEL,
+        reason: "provider_not_configured",
+      });
       return json(buildFallbackProposal(cleanedText));
     }
 
     try {
       console.log("[SEASON_CATALOG_ENRICHMENT] phase=provider_call_start");
-      const providerOutput = await invokeProvider(cleanedText, originalText);
-      const validation = validateCatalogEnrichmentProposal(providerOutput);
+      const providerResult = await invokeProvider(cleanedText, originalText);
+      const validation = validateCatalogEnrichmentProposal(providerResult.parsed);
 
       if (!validation.ok || !validation.value) {
         console.log(
           `[SEASON_CATALOG_ENRICHMENT] phase=validator_failed fallback=true errors=${validation.errors.join(" | ")}`,
         );
+        logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+          functionName: "catalog-enrichment-proposal",
+          requestId,
+          status: "fallback",
+          providerDurationMs: providerResult.durationMs,
+          model: OPENAI_MODEL,
+          inputTokens: providerResult.usage.inputTokens,
+          outputTokens: providerResult.usage.outputTokens,
+          totalTokens: providerResult.usage.totalTokens,
+          reason: "validator_failed",
+        });
         return json(buildFallbackProposal(cleanedText));
       }
 
@@ -106,55 +156,59 @@ Deno.serve(async (request) => {
         (proposal.ingredient_type === "unknown" || proposal.confidence_score < 0.5)
       ) {
         console.log(
-          `[SEASON_CATALOG_ENRICHMENT] phase=deterministic_fallback_used reason=low_confidence_or_unknown_provider_output cleaned_text=${cleanedText} inferred_type=${deterministicFallback.ingredient_type}`,
+          `[SEASON_CATALOG_ENRICHMENT] phase=deterministic_fallback_used request_id=${requestId} reason=low_confidence_or_unknown_provider_output inferred_type=${deterministicFallback.ingredient_type}`,
         );
+        logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+          functionName: "catalog-enrichment-proposal",
+          requestId,
+          status: "fallback",
+          providerDurationMs: providerResult.durationMs,
+          model: OPENAI_MODEL,
+          inputTokens: providerResult.usage.inputTokens,
+          outputTokens: providerResult.usage.outputTokens,
+          totalTokens: providerResult.usage.totalTokens,
+          reason: "low_confidence_or_unknown_provider_output",
+        });
         return json(deterministicFallback);
       }
+      logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        status: "success",
+        providerDurationMs: providerResult.durationMs,
+        model: OPENAI_MODEL,
+        inputTokens: providerResult.usage.inputTokens,
+        outputTokens: providerResult.usage.outputTokens,
+        totalTokens: providerResult.usage.totalTokens,
+      });
       return json(proposal);
     } catch (error) {
       console.log(`[SEASON_CATALOG_ENRICHMENT] phase=provider_failed fallback=true error=${String(error)}`);
+      const providerDurationMs = error instanceof ProviderInvocationError ? error.durationMs : null;
+      logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        status: "error",
+        providerDurationMs,
+        model: OPENAI_MODEL,
+        reason: "provider_failed",
+      });
       return json(buildFallbackProposal(cleanedText));
     }
   } catch (error) {
     console.log(`[SEASON_CATALOG_ENRICHMENT] phase=unhandled_error error=${String(error)}`);
+    logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
+      functionName: "catalog-enrichment-proposal",
+      requestId,
+      status: "error",
+      model: OPENAI_MODEL,
+      reason: "unhandled_error",
+    });
     return json(buildFallbackProposal(""));
   }
 });
 
-async function resolveCallerAuth(request: Request): Promise<{ allowed: boolean; mode: "user" | "service_role" | "none" }> {
-  const apikey = request.headers.get("apikey") ?? "";
-  const authHeader = request.headers.get("Authorization") ?? "";
-  const bearerToken = extractBearerToken(authHeader) ?? "";
-
-  if (apikey && SUPABASE_SERVICE_ROLE_KEY && apikey === SUPABASE_SERVICE_ROLE_KEY) {
-    console.log("[SEASON_CATALOG_ENRICHMENT] phase=auth_resolved mode=service_role");
-    return { allowed: true, mode: "service_role" };
-  }
-
-  if (bearerToken && SUPABASE_SERVICE_ROLE_KEY && bearerToken === SUPABASE_SERVICE_ROLE_KEY) {
-    console.log("[SEASON_CATALOG_ENRICHMENT] phase=auth_resolved mode=service_role");
-    return { allowed: true, mode: "service_role" };
-  }
-
-  if (!bearerToken) {
-    console.log("[SEASON_CATALOG_ENRICHMENT] phase=auth_missing");
-    return { allowed: false, mode: "none" };
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data, error } = await supabase.auth.getUser(bearerToken);
-  if (error || !data.user?.id) {
-    console.log("[SEASON_CATALOG_ENRICHMENT] phase=auth_invalid_user_token");
-    return { allowed: false, mode: "none" };
-  }
-
-  console.log(`[SEASON_CATALOG_ENRICHMENT] phase=auth_resolved mode=user user_id=${data.user.id}`);
-  return { allowed: true, mode: "user" };
-}
-
-async function invokeProvider(cleanedText: string, originalText: string): Promise<unknown> {
+async function invokeProvider(cleanedText: string, originalText: string): Promise<ProviderInvocationResult> {
   const userPrompt = [
     "Generate a catalog enrichment proposal for this unresolved ingredient candidate.",
     "Return strict JSON only.",
@@ -189,6 +243,7 @@ async function invokeProvider(cleanedText: string, originalText: string): Promis
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const startedAt = performance.now();
 
   try {
     const response = await fetch(OPENAI_API_URL, {
@@ -207,6 +262,7 @@ async function invokeProvider(cleanedText: string, originalText: string): Promis
     }
 
     const providerJSON = await response.json();
+    const usage = extractTokenUsage(providerJSON);
     const outputText = extractProviderOutputText(providerJSON);
     if (!outputText) {
       throw new Error("provider_missing_output_text");
@@ -217,7 +273,13 @@ async function invokeProvider(cleanedText: string, originalText: string): Promis
       throw new Error("provider_invalid_json_output");
     }
 
-    return parsed;
+    return {
+      parsed,
+      durationMs: elapsedMs(startedAt),
+      usage,
+    };
+  } catch (error) {
+    throw new ProviderInvocationError(String(error), elapsedMs(startedAt));
   } finally {
     clearTimeout(timeout);
   }
@@ -577,13 +639,13 @@ function normalizedIngredientType(
   const text = normalizeText(normalizedText).toLowerCase();
   if (proposedType === "produce" && isSeafoodShellfishTerm(text)) {
     console.log(
-      `[SEASON_CATALOG_ENRICHMENT] phase=ingredient_type_override reason=seafood_shellfish normalized_text=${text} from=produce to=basic`,
+      `[SEASON_CATALOG_ENRICHMENT] phase=ingredient_type_override reason=seafood_shellfish text_length=${text.length} from=produce to=basic`,
     );
     return "basic";
   }
   if (proposedType === "produce" && isNarrowPlantDerivedPreservedBasicCandidate(text)) {
     console.log(
-      `[SEASON_CATALOG_ENRICHMENT] phase=ingredient_type_override reason=plant_derived_preserved_condiment normalized_text=${text} from=produce to=basic`,
+      `[SEASON_CATALOG_ENRICHMENT] phase=ingredient_type_override reason=plant_derived_preserved_condiment text_length=${text.length} from=produce to=basic`,
     );
     return "basic";
   }
@@ -694,11 +756,8 @@ function clamp01(value: number): number {
   return value;
 }
 
-function extractBearerToken(authHeader: string): string | null {
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
-  const token = match[1]?.trim();
-  return token ? token : null;
+function elapsedMs(startedAt: number): number {
+  return Math.max(0, Math.round(performance.now() - startedAt));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -706,18 +765,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function errorJson(status: number, code: string, message: string): Response {
-  return new Response(
-    JSON.stringify({ ok: false, error: { code, message } }),
-    {
-      status,
-      headers: JSON_HEADERS,
-    },
-  );
+  return jsonResponse({ ok: false, error: { code, message } }, { status });
 }
 
 function json(payload: CatalogEnrichmentProposal): Response {
-  return new Response(JSON.stringify(payload), {
-    status: 200,
-    headers: JSON_HEADERS,
-  });
+  return jsonResponseWithStatus(payload, 200);
 }

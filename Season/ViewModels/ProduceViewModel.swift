@@ -122,6 +122,14 @@ final class ProduceViewModel: ObservableObject {
     private var cachedMaxCrispy: Int?
     private var cachedMaxViews: Int?
     private var featuredRecipeRotationOffset: Int = 0
+    private var isBootstrapping = true
+    private var pendingInvalidation = false
+    private var bootstrapRemoteRecipesCompleted = false
+    private var bootstrapIngredientAliasesCompleted = false
+    private var bootstrapGeneration = 0
+    private var reconciliationInputVersion = 0
+    private var reconciliationNoMatchCache: Set<String> = []
+    private var ingredientDisplayResolutionCache: [String: ResolvedIngredient] = [:]
 
     var localizer: AppLocalizer {
         AppLocalizer(languageCode: languageCode)
@@ -177,6 +185,7 @@ final class ProduceViewModel: ObservableObject {
         let resolved = AppLanguage(rawValue: newCode)?.rawValue ?? AppLanguage.english.rawValue
         if languageCode != resolved {
             languageCode = resolved
+            ingredientDisplayResolutionCache.removeAll(keepingCapacity: true)
         }
         return resolved
     }
@@ -202,6 +211,7 @@ final class ProduceViewModel: ObservableObject {
         unifiedIngredientByID = [:]
         unifiedAliasLookup = [:]
         unifiedNameLookup = [:]
+        markReconciliationInputsChanged()
         nextRemoteRecipeOffset = 0
         hasMoreRemoteRecipePages = true
         isFetchingRemoteRecipePage = false
@@ -211,6 +221,7 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func loadBootstrapContent() {
+        let generation = beginBootstrap()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let startedAt = CFAbsoluteTimeGetCurrent()
             let loadedRecipes = RecipeStore.loadRecipes()
@@ -223,22 +234,29 @@ final class ProduceViewModel: ObservableObject {
                 self.invalidateRecipeCaches()
                 let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000.0).rounded())
                 self.debugLoadTimingIfNeeded(label: "bootstrap recipes", count: loadedRecipes.count, elapsedMs: elapsedMs)
-                self.fetchRemoteRecipesAndMerge(resetPagination: true)
-                self.fetchRemoteIngredientAliases()
+                self.fetchRemoteRecipesAndMerge(resetPagination: true, bootstrapGeneration: generation)
+                self.fetchRemoteIngredientAliases(bootstrapGeneration: generation)
                 self.fetchUnifiedIngredientParityData()
             }
         }
     }
 
-    private func fetchRemoteIngredientAliases() {
+    private func fetchRemoteIngredientAliases(bootstrapGeneration: Int? = nil) {
         Task { [weak self] in
             guard let self else { return }
             let aliases = await supabaseService.fetchActiveIngredientAliases()
             let lookup = self.aliasLookupMap(from: aliases)
             await MainActor.run {
                 self.remoteIngredientAliasLookup = lookup
-                self.recipes = self.reconciledRecipesOnRead(self.recipes)
-                self.invalidateRecipeCaches()
+                self.markReconciliationInputsChanged()
+                let reconciliation = self.reconciledRecipesOnReadResult(self.recipes)
+                if reconciliation.didChange {
+                    self.recipes = reconciliation.recipes
+                    self.invalidateRecipeCaches()
+                }
+                if let bootstrapGeneration {
+                    self.markBootstrapIngredientAliasesCompleted(generation: bootstrapGeneration)
+                }
             }
         }
     }
@@ -320,6 +338,7 @@ final class ProduceViewModel: ObservableObject {
         unifiedIngredientByID = entriesByID
         unifiedAliasLookup = aliasLookup
         unifiedNameLookup = nameLookup
+        markReconciliationInputsChanged()
 
         print(
             "[SEASON_UNIFIED_PARITY] phase=parity_cache_ready catalog_count=\(entriesByID.count) alias_count=\(aliasLookup.count) name_lookup_count=\(nameLookup.count)"
@@ -365,17 +384,46 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func reconciledRecipesOnRead(_ recipes: [Recipe]) -> [Recipe] {
-        recipes.map { reconcileRecipeOnRead($0) }
+        reconciledRecipesOnReadResult(recipes).recipes
+    }
+
+    private func reconciledRecipesOnReadResult(_ recipes: [Recipe]) -> (recipes: [Recipe], didChange: Bool) {
+        var didChange = false
+        let reconciled = recipes.map { recipe in
+            let updated = reconcileRecipeOnRead(recipe)
+            if updated != recipe {
+                didChange = true
+            }
+            return updated
+        }
+        return (reconciled, didChange)
     }
 
     private func reconcileRecipeOnRead(_ recipe: Recipe) -> Recipe {
-        let unresolvedCount = recipe.ingredients.filter { !$0.hasCatalogIdentity }.count
-        guard unresolvedCount > 0 else {
-            print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
+        guard recipeHasPotentialReconciliationWork(recipe) else {
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
+            }
             return recipe
         }
 
-        print("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
+        let cacheKey = reconciliationNoMatchCacheKey(for: recipe)
+        if reconciliationNoMatchCache.contains(cacheKey) {
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=cached_no_match")
+            }
+            return recipe
+        }
+
+        let unresolvedCount = recipe.ingredients.reduce(into: 0) { count, ingredient in
+            if !ingredient.hasCatalogIdentity {
+                count += 1
+            }
+        }
+
+        if SeasonLog.verbose {
+            print("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
+        }
 
         var successCount = 0
         let reconciledIngredients = recipe.ingredients.map { ingredient -> RecipeIngredient in
@@ -420,11 +468,16 @@ final class ProduceViewModel: ObservableObject {
         }
 
         guard successCount > 0 else {
-            print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
+            reconciliationNoMatchCache.insert(cacheKey)
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
+            }
             return recipe
         }
 
-        print("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
+        if SeasonLog.verbose {
+            print("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
+        }
         var updated = recipe
         updated = Recipe(
             id: recipe.id,
@@ -470,6 +523,43 @@ final class ProduceViewModel: ObservableObject {
         return updated
     }
 
+    private func recipeHasPotentialReconciliationWork(_ recipe: Recipe) -> Bool {
+        recipe.ingredients.contains { ingredient in
+            guard !ingredient.hasCatalogIdentity else { return false }
+            return !reconciliationSourceText(for: ingredient).isEmpty
+        }
+    }
+
+    private func reconciliationNoMatchCacheKey(for recipe: Recipe) -> String {
+        [
+            recipe.id,
+            String(reconciliationInputVersion),
+            unresolvedIngredientFingerprint(for: recipe)
+        ].joined(separator: "||")
+    }
+
+    private func unresolvedIngredientFingerprint(for recipe: Recipe) -> String {
+        recipe.ingredients.compactMap { ingredient -> String? in
+            guard !ingredient.hasCatalogIdentity else { return nil }
+            let source = reconciliationSourceText(for: ingredient)
+            guard !source.isEmpty else { return nil }
+            return [
+                source.lowercased(),
+                String(ingredient.quantityValue),
+                ingredient.quantityUnit.rawValue
+            ].joined(separator: "#")
+        }
+        .joined(separator: "|")
+    }
+
+    private func reconciliationSourceText(for ingredient: RecipeIngredient) -> String {
+        let rawLine = ingredient.rawIngredientLine?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !rawLine.isEmpty {
+            return rawLine
+        }
+        return ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func resolveCatalogMatchForCustomIngredient(query: String) -> IngredientAliasMatch? {
         let normalized = normalizedSearchText(query)
         guard !normalized.isEmpty else { return nil }
@@ -504,7 +594,7 @@ final class ProduceViewModel: ObservableObject {
         fetchRemoteRecipesAndMerge()
     }
 
-    private func fetchRemoteRecipesAndMerge(resetPagination: Bool = false) {
+    private func fetchRemoteRecipesAndMerge(resetPagination: Bool = false, bootstrapGeneration: Int? = nil) {
         if resetPagination {
             nextRemoteRecipeOffset = 0
             hasMoreRemoteRecipePages = true
@@ -541,10 +631,17 @@ final class ProduceViewModel: ObservableObject {
                     } else if self.recipes.count != previousRecipeCount {
                         self.bumpHomeFeedDataVersion(reason: "remote_recipe_page_merge")
                     }
+
+                    if let bootstrapGeneration {
+                        self.markBootstrapRemoteRecipesCompleted(generation: bootstrapGeneration)
+                    }
                 }
             } catch {
                 await MainActor.run {
                     self.isFetchingRemoteRecipePage = false
+                    if let bootstrapGeneration {
+                        self.markBootstrapRemoteRecipesCompleted(generation: bootstrapGeneration)
+                    }
                 }
                 print("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
             }
@@ -553,12 +650,16 @@ final class ProduceViewModel: ObservableObject {
 
     private func bumpHomeFeedDataVersion(reason: String) {
         homeFeedDataVersion &+= 1
-        print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
+        if SeasonLog.lifecycle {
+            print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
+        }
     }
 
     private func bumpRankingDataVersion(reason: String) {
         rankingDataVersion &+= 1
-        print("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
+        if SeasonLog.lifecycle {
+            print("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
+        }
     }
 
     private func mergedRecipes(local: [Recipe], remote: [Recipe]) -> [Recipe] {
@@ -577,6 +678,15 @@ final class ProduceViewModel: ObservableObject {
     }
 
     private func invalidateRecipeCaches(reason: String = "recipe_data_changed") {
+        if isBootstrapping {
+            pendingInvalidation = true
+            return
+        }
+
+        performCacheInvalidation(reason: reason)
+    }
+
+    private func performCacheInvalidation(reason: String) {
         cachedDiscoverableRankedRecipes = []
         cachedDiscoverableRankedByID = [:]
         cachedDiscoverableRankedMonth = nil
@@ -584,6 +694,45 @@ final class ProduceViewModel: ObservableObject {
         cachedMaxCrispy = nil
         cachedMaxViews = nil
         bumpRankingDataVersion(reason: reason)
+    }
+
+    private func beginBootstrap() -> Int {
+        bootstrapGeneration &+= 1
+        isBootstrapping = true
+        pendingInvalidation = false
+        bootstrapRemoteRecipesCompleted = false
+        bootstrapIngredientAliasesCompleted = false
+        return bootstrapGeneration
+    }
+
+    private func markBootstrapRemoteRecipesCompleted(generation: Int) {
+        guard bootstrapGeneration == generation else { return }
+        bootstrapRemoteRecipesCompleted = true
+        completeBootstrapIfNeeded()
+    }
+
+    private func markBootstrapIngredientAliasesCompleted(generation: Int) {
+        guard bootstrapGeneration == generation else { return }
+        bootstrapIngredientAliasesCompleted = true
+        completeBootstrapIfNeeded()
+    }
+
+    private func completeBootstrapIfNeeded() {
+        guard isBootstrapping,
+              bootstrapRemoteRecipesCompleted,
+              bootstrapIngredientAliasesCompleted else { return }
+
+        isBootstrapping = false
+        if pendingInvalidation {
+            pendingInvalidation = false
+            performCacheInvalidation(reason: "bootstrap_coalesced")
+        }
+    }
+
+    private func markReconciliationInputsChanged() {
+        reconciliationInputVersion &+= 1
+        reconciliationNoMatchCache.removeAll(keepingCapacity: true)
+        ingredientDisplayResolutionCache.removeAll(keepingCapacity: true)
     }
 
     private func invalidateRankingCaches(reason: String = "ranking_inputs_changed") {
@@ -1431,6 +1580,33 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func resolveIngredientForDisplay(_ ingredient: RecipeIngredient) -> ResolvedIngredient {
+        let cacheKey = ingredientDisplayResolutionCacheKey(for: ingredient)
+        if let cached = ingredientDisplayResolutionCache[cacheKey] {
+            return cached
+        }
+
+        let resolved = resolveIngredientForDisplayUncached(ingredient)
+        ingredientDisplayResolutionCache[cacheKey] = resolved
+        return resolved
+    }
+
+    private func ingredientDisplayResolutionCacheKey(for ingredient: RecipeIngredient) -> String {
+        [
+            languageCode,
+            String(reconciliationInputVersion),
+            ingredient.ingredientID ?? "",
+            ingredient.produceID ?? "",
+            ingredient.basicIngredientID ?? "",
+            ingredient.quality.rawValue,
+            ingredient.name,
+            ingredient.rawIngredientLine ?? "",
+            String(ingredient.quantityValue),
+            ingredient.quantityUnit.rawValue,
+            ingredient.mappingConfidence.rawValue
+        ].joined(separator: "||")
+    }
+
+    private func resolveIngredientForDisplayUncached(_ ingredient: RecipeIngredient) -> ResolvedIngredient {
         if let produceID = ingredient.produceID,
            let item = produceItem(forID: produceID) {
             return ResolvedIngredient(
@@ -1469,7 +1645,9 @@ final class ProduceViewModel: ObservableObject {
             : ingredient.name
         let normalizedQuery = normalizedSearchText(sourceText)
         guard !normalizedQuery.isEmpty else {
-            print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
+            }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
                 displayName: ingredient.name,
@@ -1479,13 +1657,17 @@ final class ProduceViewModel: ObservableObject {
             )
         }
 
-        print("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
+        if SeasonLog.verbose {
+            print("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
+        }
 
         let match = resolveUnifiedAliasMatch(query: normalizedQuery)
             ?? resolveUnifiedCatalogMatch(query: normalizedQuery)
             ?? resolveIngredientForImport(query: normalizedQuery)
         guard let match else {
-            print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
+            }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
                 displayName: ingredient.name,
@@ -1497,7 +1679,9 @@ final class ProduceViewModel: ObservableObject {
 
         switch match {
         case .produce(let item):
-            print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
+            }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
                     produceID: item.id,
@@ -1515,7 +1699,9 @@ final class ProduceViewModel: ObservableObject {
                 isReconciled: true
             )
         case .basic(let item):
-            print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
+            if SeasonLog.verbose {
+                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
+            }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
                     produceID: nil,
@@ -1938,9 +2124,11 @@ final class ProduceViewModel: ObservableObject {
     private func rankedHomeRecipes(from source: [Recipe]) -> [RankedRecipe] {
         source
             .map { recipe in
-                let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
-                let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-                print("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
+                if SeasonLog.verbose {
+                    let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+                    print("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
+                }
                 let seasonality = recipeSeasonalityScore(for: recipe)
                 let resolvedSeasonalPercent = Int((seasonality * 100.0).rounded())
                 let score = homeRankingScore(for: recipe) * 100.0

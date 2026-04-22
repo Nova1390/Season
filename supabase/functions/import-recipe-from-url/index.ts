@@ -1,4 +1,9 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
+import {
+  env,
+  jsonResponseWithStatus,
+  numberEnv,
+} from "../_shared/edge.ts";
 
 interface ImportRecipeFromURLRequest {
   url?: string;
@@ -20,14 +25,29 @@ interface JSONLDExtractionResult {
   parseFailureCount: number;
 }
 
-const JSON_HEADERS = {
-  "content-type": "application/json; charset=utf-8",
-};
+const SUPABASE_URL = env("SUPABASE_URL");
+const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
+const FETCH_TIMEOUT_MS = numberEnv("IMPORT_RECIPE_URL_FETCH_TIMEOUT_MS", 12000);
+const MAX_HTML_BYTES = numberEnv("IMPORT_RECIPE_URL_MAX_HTML_BYTES", 2000000);
+const MAX_REDIRECTS = numberEnv("IMPORT_RECIPE_URL_MAX_REDIRECTS", 5);
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const FETCH_TIMEOUT_MS = Number(Deno.env.get("IMPORT_RECIPE_URL_FETCH_TIMEOUT_MS") ?? "12000");
+type ImportFetchErrorCode =
+  | "URL_NOT_ALLOWED"
+  | "REDIRECT_URL_NOT_ALLOWED"
+  | "SOURCE_TOO_LARGE"
+  | "TOO_MANY_REDIRECTS"
+  | "FETCH_FAILED";
+
+class ImportFetchError extends Error {
+  readonly code: ImportFetchErrorCode;
+
+  constructor(code: ImportFetchErrorCode, message: string) {
+    super(message);
+    this.code = code;
+    this.name = "ImportFetchError";
+  }
+}
 
 Deno.serve(async (request) => {
   let stage = "request_received";
@@ -49,9 +69,14 @@ Deno.serve(async (request) => {
     }
 
     stage = "auth";
-    const auth = await resolveCallerAuth(request);
+    const auth = await resolveCatalogAdminOrServiceRole(request, {
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: SUPABASE_ANON_KEY,
+      supabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      logPrefix: "SEASON_URL_IMPORT",
+    });
     if (!auth.allowed) {
-      return errorJson(401, "UNAUTHENTICATED", "Authentication is required.");
+      return errorJson(401, "UNAUTHORIZED", "Catalog admin authentication is required.");
     }
 
     stage = "parse_body";
@@ -71,6 +96,11 @@ Deno.serve(async (request) => {
     if (!sourceURL) {
       return errorJson(422, "INVALID_URL", "A valid absolute http/https URL is required.");
     }
+    const disallowedReason = disallowedOutboundURLReason(sourceURL);
+    if (disallowedReason) {
+      logInfo("url_rejected", { reason: disallowedReason });
+      return errorJson(422, "URL_NOT_ALLOWED", "URL host is not allowed.");
+    }
 
     stage = "fetch_html";
     logInfo("fetch_started", { url: sourceURL });
@@ -79,6 +109,14 @@ Deno.serve(async (request) => {
       fetchResult = await fetchHTML(sourceURL);
     } catch (error) {
       logError("fetch_failed", error, stage);
+      if (error instanceof ImportFetchError) {
+        if (error.code === "SOURCE_TOO_LARGE") {
+          return errorJson(413, "SOURCE_TOO_LARGE", "Source page is too large to import.");
+        }
+        if (error.code === "URL_NOT_ALLOWED" || error.code === "REDIRECT_URL_NOT_ALLOWED") {
+          return errorJson(422, "URL_NOT_ALLOWED", "URL host is not allowed.");
+        }
+      }
       return errorJson(502, "FETCH_FAILED", "Could not fetch source page.");
     }
 
@@ -131,66 +169,118 @@ Deno.serve(async (request) => {
   }
 });
 
-async function resolveCallerAuth(request: Request): Promise<{ allowed: boolean; mode: "user" | "service_role" | "none" }> {
-  const apikey = request.headers.get("apikey") ?? "";
-  const authHeader = request.headers.get("Authorization") ?? "";
-  const bearerToken = extractBearerToken(authHeader) ?? "";
-
-  if (apikey && SUPABASE_SERVICE_ROLE_KEY && apikey === SUPABASE_SERVICE_ROLE_KEY) {
-    logInfo("auth_resolved", { mode: "service_role" });
-    return { allowed: true, mode: "service_role" };
-  }
-
-  if (bearerToken && SUPABASE_SERVICE_ROLE_KEY && bearerToken === SUPABASE_SERVICE_ROLE_KEY) {
-    logInfo("auth_resolved", { mode: "service_role" });
-    return { allowed: true, mode: "service_role" };
-  }
-
-  if (!bearerToken) {
-    logInfo("auth_missing", {});
-    return { allowed: false, mode: "none" };
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data, error } = await supabase.auth.getUser(bearerToken);
-  if (error || !data.user?.id) {
-    logInfo("auth_invalid_user_token", {});
-    return { allowed: false, mode: "none" };
-  }
-
-  logInfo("auth_resolved", { mode: "user", user_id: data.user.id });
-  return { allowed: true, mode: "user" };
-}
-
 async function fetchHTML(sourceURL: string): Promise<{ html: string; status: number; finalURL: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let currentURL = sourceURL;
 
   try {
-    const response = await fetch(sourceURL, {
-      method: "GET",
-      headers: {
-        "user-agent": "SeasonBot/1.0 (+https://season.local)",
-        "accept": "text/html,application/xhtml+xml",
-      },
-      signal: controller.signal,
-    });
+    for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+      const disallowedReason = disallowedOutboundURLReason(currentURL);
+      if (disallowedReason) {
+        throw new ImportFetchError("URL_NOT_ALLOWED", `url_not_allowed:${disallowedReason}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`fetch_http_${response.status}`);
+      const response = await fetch(currentURL, {
+        method: "GET",
+        headers: {
+          "user-agent": "SeasonBot/1.0 (+https://season.local)",
+          "accept": "text/html,application/xhtml+xml",
+        },
+        redirect: "manual",
+        signal: controller.signal,
+      });
+
+      if (isRedirectStatus(response.status)) {
+        const location = response.headers.get("location");
+        if (!location) {
+          throw new ImportFetchError("FETCH_FAILED", `redirect_missing_location:${response.status}`);
+        }
+
+        const nextURL = normalizeRedirectURL(location, currentURL);
+        const redirectDisallowedReason = nextURL ? disallowedOutboundURLReason(nextURL) : "invalid_redirect_url";
+        if (!nextURL || redirectDisallowedReason) {
+          throw new ImportFetchError(
+            "REDIRECT_URL_NOT_ALLOWED",
+            `redirect_url_not_allowed:${redirectDisallowedReason}`,
+          );
+        }
+
+        currentURL = nextURL;
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new ImportFetchError("FETCH_FAILED", `fetch_http_${response.status}`);
+      }
+
+      const contentLength = Number(response.headers.get("content-length") ?? "0");
+      if (Number.isFinite(contentLength) && contentLength > MAX_HTML_BYTES) {
+        throw new ImportFetchError("SOURCE_TOO_LARGE", `content_length_exceeded:${contentLength}`);
+      }
+
+      return {
+        html: await readResponseTextWithLimit(response, MAX_HTML_BYTES),
+        status: response.status,
+        finalURL: response.url || currentURL,
+      };
     }
 
-    return {
-      html: await response.text(),
-      status: response.status,
-      finalURL: response.url || sourceURL,
-    };
+    throw new ImportFetchError("TOO_MANY_REDIRECTS", `too_many_redirects:${MAX_REDIRECTS}`);
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function readResponseTextWithLimit(response: Response, maxBytes: number): Promise<string> {
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Best effort: response is already being rejected for size.
+      }
+      throw new ImportFetchError("SOURCE_TOO_LARGE", `body_size_exceeded:${totalBytes}`);
+    }
+    chunks.push(value);
+  }
+
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+function normalizeRedirectURL(location: string, baseURL: string): string {
+  const trimmed = location.trim();
+  if (!trimmed) return "";
+
+  try {
+    const parsed = new URL(trimmed, baseURL);
+    if (!(parsed.protocol === "http:" || parsed.protocol === "https:")) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status <= 399;
 }
 
 function buildRecipePreview(recipeNode: Record<string, unknown>, sourceURL: string): ImportedRecipePreview | null {
@@ -455,6 +545,75 @@ function normalizeURL(value: unknown): string {
   }
 }
 
+function disallowedOutboundURLReason(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "invalid_url";
+  }
+
+  if (!(parsed.protocol === "http:" || parsed.protocol === "https:")) {
+    return "unsupported_protocol";
+  }
+
+  if (parsed.username || parsed.password) {
+    return "credentials_not_allowed";
+  }
+
+  const hostname = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (!hostname) return "missing_hostname";
+
+  if (isBlockedHostname(hostname)) {
+    return "blocked_hostname";
+  }
+
+  if (isBlockedIPLiteral(hostname)) {
+    return "blocked_ip_literal";
+  }
+
+  return null;
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  if (hostname === "localhost" || hostname === "localhost.localdomain") return true;
+  if (hostname.endsWith(".localhost")) return true;
+  if (hostname.endsWith(".local")) return true;
+  if (hostname.endsWith(".internal")) return true;
+  return false;
+}
+
+function isBlockedIPLiteral(hostname: string): boolean {
+  const unwrapped = hostname.replace(/^\[|\]$/g, "");
+  const lower = unwrapped.toLowerCase();
+  if (lower.includes(":")) {
+    if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true;
+    if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
+    if (lower.startsWith("fe80:")) return true;
+    return false;
+  }
+
+  const octets = unwrapped.split(".");
+  if (octets.length !== 4) return false;
+
+  const numbers = octets.map((part) => Number(part));
+  if (!numbers.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
+    return false;
+  }
+
+  const [a, b] = numbers;
+  if (a === 0) return true;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a >= 224) return true;
+
+  return false;
+}
+
 function safeHostname(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase();
@@ -528,22 +687,12 @@ function safeParseJSON(raw: string): unknown | null {
   }
 }
 
-function extractBearerToken(authHeader: string): string | null {
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
-  const token = match[1]?.trim();
-  return token || null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: JSON_HEADERS,
-  });
+  return jsonResponseWithStatus(body, status);
 }
 
 function errorJson(status: number, code: string, message: string): Response {

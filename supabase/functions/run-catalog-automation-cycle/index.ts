@@ -1,18 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  env,
+  extractBearerToken,
+  fetchWithTimeout,
+  firstEnv,
+  jsonResponse,
+  numberEnv,
+} from "../_shared/edge.ts";
 
-const JSON_HEADERS = {
-  "content-type": "application/json; charset=utf-8",
-};
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_URL = env("SUPABASE_URL");
+const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 
 const DEFAULT_RECOVERY_LIMIT = 1000;
 const DEFAULT_ENRICH_LIMIT = 20;
 const DEFAULT_CREATE_LIMIT = 20;
 const CANDIDATE_INTAKE_MULTIPLIER = 5;
 const MAX_LIMIT = 5000;
+const FUNCTION_CALL_TIMEOUT_MS = numberEnv("CATALOG_AUTOMATION_FUNCTION_TIMEOUT_MS", 55000);
 
 type RunnerMode = "user" | "service_role";
 
@@ -524,7 +529,7 @@ async function runFunctionStage(input: {
       : `Bearer ${input.bearerToken ?? ""}`;
     const apikey = input.mode === "service_role" ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/${input.functionName}`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/${input.functionName}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -532,7 +537,7 @@ async function runFunctionStage(input: {
         Authorization: authHeader,
       },
       body: JSON.stringify(input.debug ? { limit: input.limit, debug: true } : { limit: input.limit }),
-    });
+    }, FUNCTION_CALL_TIMEOUT_MS);
 
     if (!response.ok) {
       const details = await response.text();
@@ -997,12 +1002,7 @@ function isReconciliationSkipStatus(value: unknown): boolean {
 }
 
 function resolveEnvironment(): string {
-  return (
-    Deno.env.get("CATALOG_AUTOPILOT_ENV") ??
-    Deno.env.get("SUPABASE_ENV") ??
-    Deno.env.get("DENO_ENV") ??
-    "unknown"
-  );
+  return firstEnv(["CATALOG_AUTOPILOT_ENV", "SUPABASE_ENV", "DENO_ENV"], "unknown");
 }
 
 function normalizeNullableText(value: unknown): string | null {
@@ -1028,11 +1028,6 @@ function formatRpcError(error: unknown): { message: string; code: string | null;
   };
 }
 
-function extractBearerToken(header: string): string | null {
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || null;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1044,13 +1039,7 @@ function toInt(value: unknown): number {
 }
 
 function json(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    ...init,
-    headers: {
-      ...JSON_HEADERS,
-      ...(init.headers ?? {}),
-    },
-  });
+  return jsonResponse(body, init);
 }
 
 function errorJson(status: number, code: string, message: string): Response {

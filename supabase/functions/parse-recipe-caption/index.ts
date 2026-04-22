@@ -1,13 +1,39 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
+  INGREDIENT_RESOLUTION_LLM_SYSTEM_PROMPT,
   RECIPE_IMPORT_LLM_SYSTEM_PROMPT,
+  validateLLMIngredientResolutionOutput,
   validateLLMRecipeImportOutput,
 } from "./llm_contract.ts";
+import {
+  extractTokenUsage,
+  logLLMUsage,
+  requestIdFromHeaders,
+  type TokenUsage,
+} from "../_shared/observability.ts";
 
 interface ParseRecipeCaptionRequest {
   caption?: string;
   url?: string;
   languageCode?: string;
+  ingredientCandidates?: PreparsedIngredientCandidate[];
+}
+
+type SmartImportMatchType = "exact" | "alias" | "ambiguous" | "none";
+type SmartImportStatus = "resolved" | "inferred" | "unknown";
+
+interface PreparsedIngredientCandidate {
+  raw_text?: string;
+  normalized_text?: string;
+  possible_quantity?: number | null;
+  possible_unit?: string | null;
+  catalog_match?: {
+    matchType?: SmartImportMatchType;
+    match_type?: SmartImportMatchType;
+    matchedIngredientId?: string | null;
+    matched_ingredient_id?: string | null;
+    confidence?: number | null;
+  };
 }
 
 type ImportConfidence = "high" | "medium" | "low";
@@ -16,6 +42,10 @@ interface ParsedIngredient {
   name: string;
   quantity: number | null;
   unit: string | null;
+  status?: SmartImportStatus;
+  confidence?: number;
+  matchType?: SmartImportMatchType;
+  matchedIngredientId?: string | null;
 }
 
 interface ParseRecipeCaptionResponse {
@@ -41,10 +71,37 @@ interface ParseRecipeCaptionResponse {
     dayBucket?: string;
     remainingToday?: number;
     retryAfterSeconds?: number;
+    smart_import_audit?: SmartImportAuditResponse;
   };
 }
 
+type ParseRecipeCaptionResult = NonNullable<ParseRecipeCaptionResponse["result"]>;
+
+interface SmartImportAuditResponse {
+  total_candidates: number;
+  resolved_locally: number;
+  sent_to_llm: number;
+  final_unknown: number;
+}
+
+interface ProviderInvocationResult {
+  parsed: unknown;
+  durationMs: number;
+  usage: TokenUsage;
+}
+
+class ProviderInvocationError extends Error {
+  readonly durationMs: number;
+
+  constructor(message: string, durationMs: number) {
+    super(message);
+    this.durationMs = durationMs;
+    this.name = "ProviderInvocationError";
+  }
+}
+
 const MAX_CAPTION_LENGTH = 12_000;
+const MAX_PREPARSED_INGREDIENT_CANDIDATES = 40;
 const DEFAULT_LANGUAGE_CODE = "en";
 const DAILY_IMPORT_LIMIT = Number(Deno.env.get("PARSE_RECIPE_DAILY_LIMIT") ?? "20");
 const MIN_COOLDOWN_SECONDS = Number(Deno.env.get("PARSE_RECIPE_MIN_COOLDOWN_SECONDS") ?? "2");
@@ -62,8 +119,9 @@ const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = "gpt-5.4-mini";
 
 Deno.serve(async (request) => {
+  const requestId = requestIdFromHeaders(request);
   try {
-    console.log(`[SEASON_IMPORT_EDGE] phase=request_received method=${request.method}`);
+    console.log(`[SEASON_IMPORT_EDGE] phase=request_received method=${request.method} request_id=${requestId}`);
 
     if (request.method !== "POST") {
       return errorJson(405, "METHOD_NOT_ALLOWED", "Only POST is supported.");
@@ -170,9 +228,194 @@ Deno.serve(async (request) => {
     }
     console.log(`[SEASON_IMPORT_EDGE] phase=quota_passed user_id=${userID}`);
 
+    const smartImportCandidates = normalizedPreparsedIngredientCandidates(payload.ingredientCandidates);
+    if (smartImportCandidates.length > 0) {
+      const targetedCandidates = smartImportCandidates.filter(candidateNeedsLLM);
+      const smartImportAudit = computeSmartImportAudit(smartImportCandidates);
+      console.log(
+        `[SEASON_IMPORT_EDGE] phase=smart_import_decision request_id=${requestId} candidates=${smartImportCandidates.length} targeted_llm_candidates=${targetedCandidates.length}`,
+      );
+      console.log(
+        `[SEASON_SMART_IMPORT_AUDIT] phase=edge_input request_id=${requestId} total=${smartImportAudit.total} resolved=${smartImportAudit.resolved} ambiguous=${smartImportAudit.ambiguous} none=${smartImportAudit.none} sent_to_llm=${smartImportAudit.sentToLLM}`,
+      );
+
+      if (targetedCandidates.length === 0) {
+        const mappedResult = buildSmartImportResult({
+          caption,
+          url,
+          languageCode,
+          candidates: smartImportCandidates,
+          llmResolvedByIndex: new Map(),
+        });
+        const outputAudit = computeSmartImportOutputAudit(mappedResult.ingredients);
+        console.log(
+          `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=false`,
+        );
+        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence} smart_import=true used_llm=false`);
+        return json(
+          {
+            ok: true,
+            result: mappedResult,
+            meta: {
+              languageCode,
+              usedServerLLM: false,
+              userId: userID,
+              dayBucket,
+              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+              smart_import_audit: buildSmartImportAuditResponse(smartImportAudit, outputAudit),
+            },
+          },
+          200,
+        );
+      }
+
+      if (!OPENAI_API_KEY) {
+        console.log(`[SEASON_IMPORT_EDGE] phase=provider_not_configured request_id=${requestId}`);
+        logLLMUsage("SEASON_IMPORT_EDGE", {
+          functionName: "parse-recipe-caption",
+          requestId,
+          status: "error",
+          providerDurationMs: null,
+          model: OPENAI_MODEL,
+          reason: "provider_not_configured",
+        });
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "PROVIDER_NOT_CONFIGURED",
+              message: "LLM provider key is not configured on the server.",
+            },
+            meta: {
+              usedServerLLM: false,
+              userId: userID,
+              dayBucket,
+              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+            },
+          },
+          500,
+        );
+      }
+
+      console.log(`[SEASON_IMPORT_EDGE] phase=targeted_provider_call_start request_id=${requestId} candidates=${targetedCandidates.length}`);
+      try {
+        const providerResult = await invokeProviderForIngredientResolution({
+          candidates: targetedCandidates,
+          languageCode,
+        });
+        const validation = validateLLMIngredientResolutionOutput(providerResult.parsed);
+
+        if (!validation.ok || !validation.value) {
+          console.log(`[SEASON_IMPORT_EDGE] phase=targeted_validator_failed request_id=${requestId} error_count=${validation.errors.length}`);
+          logLLMUsage("SEASON_IMPORT_EDGE", {
+            functionName: "parse-recipe-caption",
+            requestId,
+            status: "error",
+            providerDurationMs: providerResult.durationMs,
+            model: OPENAI_MODEL,
+            inputTokens: providerResult.usage.inputTokens,
+            outputTokens: providerResult.usage.outputTokens,
+            totalTokens: providerResult.usage.totalTokens,
+            reason: "targeted_validator_failed",
+          });
+          return json(
+            {
+              ok: false,
+              error: {
+                code: "VALIDATION_FAILED",
+                message: "Provider response did not match expected schema.",
+              },
+              meta: {
+                usedServerLLM: true,
+                userId: userID,
+                dayBucket,
+                remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+              },
+            },
+            502,
+          );
+        }
+
+        logLLMUsage("SEASON_IMPORT_EDGE", {
+          functionName: "parse-recipe-caption",
+          requestId,
+          status: "success",
+          providerDurationMs: providerResult.durationMs,
+          model: OPENAI_MODEL,
+          inputTokens: providerResult.usage.inputTokens,
+          outputTokens: providerResult.usage.outputTokens,
+          totalTokens: providerResult.usage.totalTokens,
+          reason: "targeted_ingredient_resolution",
+        });
+
+        const mappedResult = buildSmartImportResult({
+          caption,
+          url,
+          languageCode,
+          candidates: smartImportCandidates,
+          llmResolvedByIndex: llmResolutionMap(validation.value.ingredients),
+        });
+        const outputAudit = computeSmartImportOutputAudit(mappedResult.ingredients);
+        console.log(
+          `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=true`,
+        );
+        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence} smart_import=true used_llm=true`);
+        return json(
+          {
+            ok: true,
+            result: mappedResult,
+            meta: {
+              languageCode,
+              usedServerLLM: true,
+              userId: userID,
+              dayBucket,
+              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+              smart_import_audit: buildSmartImportAuditResponse(smartImportAudit, outputAudit),
+            },
+          },
+          200,
+        );
+      } catch (error) {
+        console.log(`[SEASON_IMPORT_EDGE] phase=targeted_provider_error request_id=${requestId} error=${String(error)}`);
+        const providerDurationMs = error instanceof ProviderInvocationError ? error.durationMs : null;
+        logLLMUsage("SEASON_IMPORT_EDGE", {
+          functionName: "parse-recipe-caption",
+          requestId,
+          status: "error",
+          providerDurationMs,
+          model: OPENAI_MODEL,
+          reason: "targeted_provider_request_failed",
+        });
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "PROVIDER_REQUEST_FAILED",
+              message: "Provider request failed.",
+            },
+            meta: {
+              usedServerLLM: true,
+              userId: userID,
+              dayBucket,
+              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+            },
+          },
+          502,
+        );
+      }
+    }
+
     console.log(`[SEASON_IMPORT_EDGE] phase=provider_key_present value=${OPENAI_API_KEY.length > 0}`);
     if (!OPENAI_API_KEY) {
-      console.log(`[SEASON_IMPORT_EDGE] phase=provider_not_configured user_id=${userID}`);
+      console.log(`[SEASON_IMPORT_EDGE] phase=provider_not_configured request_id=${requestId}`);
+      logLLMUsage("SEASON_IMPORT_EDGE", {
+        functionName: "parse-recipe-caption",
+        requestId,
+        status: "error",
+        providerDurationMs: null,
+        model: OPENAI_MODEL,
+        reason: "provider_not_configured",
+      });
       return json(
       {
         ok: false,
@@ -191,16 +434,27 @@ Deno.serve(async (request) => {
       );
     }
 
-    console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_start user_id=${userID}`);
+    console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_start request_id=${requestId}`);
 
     try {
-      const llmOutput = await invokeProviderForRecipeParse({ caption, url, languageCode });
-      console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_success user_id=${userID}`);
+      const providerResult = await invokeProviderForRecipeParse({ caption, url, languageCode });
+      console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_success request_id=${requestId}`);
 
-      const validation = validateLLMRecipeImportOutput(llmOutput);
+      const validation = validateLLMRecipeImportOutput(providerResult.parsed);
 
       if (!validation.ok || !validation.value) {
-        console.log(`[SEASON_IMPORT_EDGE] phase=validator_failed user_id=${userID} errors=${validation.errors.join(" | ")}`);
+        console.log(`[SEASON_IMPORT_EDGE] phase=validator_failed request_id=${requestId} error_count=${validation.errors.length}`);
+        logLLMUsage("SEASON_IMPORT_EDGE", {
+          functionName: "parse-recipe-caption",
+          requestId,
+          status: "error",
+          providerDurationMs: providerResult.durationMs,
+          model: OPENAI_MODEL,
+          inputTokens: providerResult.usage.inputTokens,
+          outputTokens: providerResult.usage.outputTokens,
+          totalTokens: providerResult.usage.totalTokens,
+          reason: "validator_failed",
+        });
         return json(
           {
             ok: false,
@@ -218,9 +472,19 @@ Deno.serve(async (request) => {
           502,
         );
       }
-      console.log(`[SEASON_IMPORT_EDGE] phase=validator_success user_id=${userID}`);
+      console.log(`[SEASON_IMPORT_EDGE] phase=validator_success request_id=${requestId}`);
+      logLLMUsage("SEASON_IMPORT_EDGE", {
+        functionName: "parse-recipe-caption",
+        requestId,
+        status: "success",
+        providerDurationMs: providerResult.durationMs,
+        model: OPENAI_MODEL,
+        inputTokens: providerResult.usage.inputTokens,
+        outputTokens: providerResult.usage.outputTokens,
+        totalTokens: providerResult.usage.totalTokens,
+      });
 
-      const mappedResult: ParseRecipeCaptionResponse["result"] = {
+      const mappedResult: ParseRecipeCaptionResult = {
         title: validation.value.title.trim() ? validation.value.title : null,
         ingredients: validation.value.ingredients.map((item) => {
           const normalized = recoverExplicitMeasuredIngredient({
@@ -230,7 +494,7 @@ Deno.serve(async (request) => {
           });
           if (normalized.quantity !== null && normalized.unit !== null) {
             console.log(
-              `[SEASON_IMPORT_EDGE] phase=final_quantity_preserved name=${normalized.name} quantity=${normalized.quantity} unit=${normalized.unit}`,
+              `[SEASON_IMPORT_EDGE] phase=final_quantity_preserved name_length=${normalized.name.length} quantity=${normalized.quantity} unit=${normalized.unit}`,
             );
           }
           return normalized;
@@ -243,7 +507,7 @@ Deno.serve(async (request) => {
         inferredDish: null,
       };
 
-      console.log(`[SEASON_IMPORT_EDGE] phase=response_success user_id=${userID} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence}`);
+      console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence}`);
       return json(
         {
           ok: true,
@@ -259,7 +523,16 @@ Deno.serve(async (request) => {
         200,
       );
     } catch (error) {
-      console.log(`[SEASON_IMPORT_EDGE] phase=provider_or_validation_error user_id=${userID} error=${String(error)}`);
+      console.log(`[SEASON_IMPORT_EDGE] phase=provider_or_validation_error request_id=${requestId} error=${String(error)}`);
+      const providerDurationMs = error instanceof ProviderInvocationError ? error.durationMs : null;
+      logLLMUsage("SEASON_IMPORT_EDGE", {
+        functionName: "parse-recipe-caption",
+        requestId,
+        status: "error",
+        providerDurationMs,
+        model: OPENAI_MODEL,
+        reason: "provider_request_failed",
+      });
       return json(
         {
           ok: false,
@@ -283,11 +556,235 @@ Deno.serve(async (request) => {
   }
 });
 
+interface NormalizedIngredientCandidate {
+  index: number;
+  rawText: string;
+  normalizedText: string;
+  possibleQuantity: number | null;
+  possibleUnit: string | null;
+  matchType: SmartImportMatchType;
+  matchedIngredientId: string | null;
+  matchConfidence: number;
+}
+
+interface LLMResolvedIngredient {
+  index: number;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  status: SmartImportStatus;
+  confidence: number;
+}
+
+interface SmartImportInputAudit {
+  total: number;
+  resolved: number;
+  ambiguous: number;
+  none: number;
+  sentToLLM: number;
+}
+
+interface SmartImportOutputAudit {
+  resolvedFinal: number;
+  inferred: number;
+  unknown: number;
+}
+
+function normalizedPreparsedIngredientCandidates(value: unknown): NormalizedIngredientCandidate[] {
+  if (!Array.isArray(value)) return [];
+
+  const candidates: NormalizedIngredientCandidate[] = [];
+  const seen = new Set<string>();
+  for (const item of value.slice(0, MAX_PREPARSED_INGREDIENT_CANDIDATES)) {
+    if (!isRecord(item)) continue;
+
+    const rawText = normalizeText(item.raw_text).slice(0, 180);
+    const normalizedText = normalizeIngredientCandidateText(
+      normalizeText(item.normalized_text) || rawText,
+    ).slice(0, 140);
+    if (!normalizedText) continue;
+
+    const quantity = normalizedPositiveNumber(item.possible_quantity);
+    const unit = normalizedAllowedUnit(item.possible_unit);
+    const catalogMatch = isRecord(item.catalog_match) ? item.catalog_match : {};
+    const matchType = normalizedMatchType(catalogMatch.matchType ?? catalogMatch.match_type);
+    const matchedIngredientId = normalizeText(catalogMatch.matchedIngredientId ?? catalogMatch.matched_ingredient_id) || null;
+    const matchConfidence = normalizedConfidence(catalogMatch.confidence);
+    const dedupeKey = `${normalizedText}|${quantity ?? "nil"}|${unit ?? "nil"}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    candidates.push({
+      index: candidates.length,
+      rawText: rawText || normalizedText,
+      normalizedText,
+      possibleQuantity: quantity,
+      possibleUnit: unit,
+      matchType,
+      matchedIngredientId,
+      matchConfidence,
+    });
+  }
+  return candidates;
+}
+
+function candidateNeedsLLM(candidate: NormalizedIngredientCandidate): boolean {
+  if (candidate.matchType === "exact") return false;
+  if (candidate.matchType === "alias" && candidate.matchConfidence >= 0.85) return false;
+  return true;
+}
+
+function computeSmartImportAudit(candidates: NormalizedIngredientCandidate[]): SmartImportInputAudit {
+  const ambiguous = candidates.filter((candidate) => candidate.matchType === "ambiguous").length;
+  const none = candidates.filter((candidate) => candidate.matchType === "none").length;
+  return {
+    total: candidates.length,
+    resolved: candidates.filter((candidate) =>
+      candidate.matchType === "exact" || candidate.matchType === "alias"
+    ).length,
+    ambiguous,
+    none,
+    sentToLLM: candidates.filter(candidateNeedsLLM).length,
+  };
+}
+
+function computeSmartImportOutputAudit(ingredients: ParsedIngredient[]): SmartImportOutputAudit {
+  const inferred = ingredients.filter((ingredient) => ingredient.status === "inferred").length;
+  const unknown = ingredients.filter((ingredient) => ingredient.status === "unknown").length;
+  return {
+    resolvedFinal: ingredients.filter((ingredient) => ingredient.status === "resolved").length,
+    inferred,
+    unknown,
+  };
+}
+
+function buildSmartImportAuditResponse(
+  inputAudit: SmartImportInputAudit,
+  outputAudit: SmartImportOutputAudit,
+): SmartImportAuditResponse {
+  return {
+    total_candidates: inputAudit.total,
+    resolved_locally: inputAudit.resolved,
+    sent_to_llm: inputAudit.sentToLLM,
+    final_unknown: outputAudit.unknown,
+  };
+}
+
+function buildSmartImportResult(input: {
+  caption: string;
+  url: string;
+  languageCode: string;
+  candidates: NormalizedIngredientCandidate[];
+  llmResolvedByIndex: Map<number, LLMResolvedIngredient>;
+}): ParseRecipeCaptionResult {
+  const ingredients = input.candidates.map((candidate): ParsedIngredient => {
+    const llmResolved = input.llmResolvedByIndex.get(candidate.index);
+    if (llmResolved) {
+      const recovered = recoverExplicitMeasuredIngredient({
+        name: llmResolved.name,
+        quantity: llmResolved.quantity,
+        unit: llmResolved.unit,
+      });
+      return {
+        ...recovered,
+        status: llmResolved.status,
+        confidence: clamp01(llmResolved.confidence),
+        matchType: candidate.matchType,
+        matchedIngredientId: candidate.matchedIngredientId,
+      };
+    }
+
+    const status: SmartImportStatus = candidateNeedsLLM(candidate) ? "unknown" : "resolved";
+    return {
+      name: candidate.normalizedText,
+      quantity: candidate.possibleQuantity,
+      unit: candidate.possibleUnit,
+      status,
+      confidence: candidateNeedsLLM(candidate) ? 0.35 : candidate.matchConfidence,
+      matchType: candidate.matchType,
+      matchedIngredientId: candidate.matchedIngredientId,
+    };
+  });
+
+  return {
+    title: inferDeterministicTitle(input.caption) || inferTitleFromURL(input.url),
+    ingredients,
+    steps: extractDeterministicSteps(input.caption),
+    prepTimeMinutes: null,
+    cookTimeMinutes: null,
+    servings: null,
+    confidence: confidenceFromIngredients(ingredients),
+    inferredDish: null,
+  };
+}
+
+function llmResolutionMap(items: LLMResolvedIngredient[]): Map<number, LLMResolvedIngredient> {
+  const byIndex = new Map<number, LLMResolvedIngredient>();
+  for (const item of items) {
+    const name = normalizeText(item.name);
+    if (!name) continue;
+    byIndex.set(item.index, {
+      index: item.index,
+      name,
+      quantity: normalizedPositiveNumber(item.quantity),
+      unit: normalizedAllowedUnit(item.unit),
+      status: normalizedStatus(item.status),
+      confidence: clamp01(item.confidence),
+    });
+  }
+  return byIndex;
+}
+
+async function invokeProviderForIngredientResolution(input: {
+  candidates: NormalizedIngredientCandidate[];
+  languageCode: string;
+}): Promise<ProviderInvocationResult> {
+  const userContent = [
+    `languageCode: ${input.languageCode}`,
+    "candidates:",
+    JSON.stringify(input.candidates.map((candidate) => ({
+      index: candidate.index,
+      raw_text: candidate.rawText,
+      normalized_text: candidate.normalizedText,
+      possible_quantity: candidate.possibleQuantity,
+      possible_unit: candidate.possibleUnit,
+      match_type: candidate.matchType,
+    }))),
+  ].join("\n");
+
+  const payload = {
+    model: OPENAI_MODEL,
+    input: [
+      {
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: INGREDIENT_RESOLUTION_LLM_SYSTEM_PROMPT,
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: userContent,
+          },
+        ],
+      },
+    ],
+    temperature: 0,
+  };
+
+  return invokeOpenAIProvider(payload);
+}
+
 async function invokeProviderForRecipeParse(input: {
   caption: string;
   url: string;
   languageCode: string;
-}): Promise<unknown> {
+}): Promise<ProviderInvocationResult> {
   const userContent = [
     `languageCode: ${input.languageCode}`,
     `url: ${input.url || ""}`,
@@ -320,8 +817,13 @@ async function invokeProviderForRecipeParse(input: {
     temperature: 0,
   };
 
+  return invokeOpenAIProvider(payload);
+}
+
+async function invokeOpenAIProvider(payload: unknown): Promise<ProviderInvocationResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const startedAt = performance.now();
 
   try {
     const response = await fetch(OPENAI_API_URL, {
@@ -340,6 +842,7 @@ async function invokeProviderForRecipeParse(input: {
     }
 
     const providerJSON = await response.json();
+    const usage = extractTokenUsage(providerJSON);
     const outputText = extractProviderOutputText(providerJSON);
     if (!outputText) {
       throw new Error("provider_missing_output_text");
@@ -350,10 +853,14 @@ async function invokeProviderForRecipeParse(input: {
       throw new Error("provider_invalid_json_output");
     }
 
-    return parsed;
+    return {
+      parsed,
+      durationMs: elapsedMs(startedAt),
+      usage,
+    };
   } catch (error) {
     console.log(`[SEASON_IMPORT_EDGE] phase=provider_fetch_failed error=${String(error)}`);
-    throw error;
+    throw new ProviderInvocationError(String(error), elapsedMs(startedAt));
   } finally {
     clearTimeout(timeout);
   }
@@ -418,6 +925,168 @@ function normalizeLanguageCode(value: unknown): string {
   return cleaned.slice(0, 5);
 }
 
+function normalizeIngredientCandidateText(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[_-]/g, " ")
+    .replace(/[^a-z0-9À-ÖØ-öø-ÿ\s]/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizedPositiveNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function normalizedAllowedUnit(value: unknown): string | null {
+  const unit = normalizeText(value).toLowerCase();
+  switch (unit) {
+    case "g":
+    case "ml":
+    case "piece":
+    case "tbsp":
+    case "tsp":
+      return unit;
+    default:
+      return null;
+  }
+}
+
+function normalizedMatchType(value: unknown): SmartImportMatchType {
+  switch (value) {
+    case "exact":
+    case "alias":
+    case "ambiguous":
+    case "none":
+      return value;
+    default:
+      return "none";
+  }
+}
+
+function normalizedStatus(value: unknown): SmartImportStatus {
+  switch (value) {
+    case "resolved":
+    case "inferred":
+    case "unknown":
+      return value;
+    default:
+      return "unknown";
+  }
+}
+
+function normalizedConfidence(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return clamp01(parsed);
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function confidenceFromIngredients(ingredients: ParsedIngredient[]): ImportConfidence {
+  if (ingredients.length === 0) return "low";
+  const average = ingredients.reduce((sum, ingredient) => sum + (ingredient.confidence ?? 0), 0) / ingredients.length;
+  const unknownCount = ingredients.filter((ingredient) => ingredient.status === "unknown").length;
+  if (average >= 0.88 && unknownCount === 0) return "high";
+  if (average >= 0.58 && unknownCount <= Math.max(1, Math.floor(ingredients.length / 3))) return "medium";
+  return "low";
+}
+
+function inferDeterministicTitle(caption: string): string | null {
+  const lines = nonEmptyCaptionLines(caption);
+  for (const line of lines) {
+    const cleaned = stripListMarker(line);
+    if (!cleaned || cleaned.length < 3) continue;
+    const lower = cleaned.toLowerCase();
+    if (isSectionHeader(lower)) continue;
+    if (lower.startsWith("#") || lower.startsWith("http")) continue;
+    if (looksLikeIngredientLine(cleaned)) continue;
+    return cleaned.replace(/[!?.,:\-–—…\s]+$/g, "").trim() || null;
+  }
+  return null;
+}
+
+function inferTitleFromURL(url: string): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    return host || null;
+  } catch {
+    return null;
+  }
+}
+
+function extractDeterministicSteps(caption: string): string[] {
+  const lines = nonEmptyCaptionLines(caption);
+  const steps: string[] = [];
+  let inSteps = false;
+  for (const line of lines) {
+    const stripped = stripListMarker(line);
+    const lower = stripped.toLowerCase();
+    if (isStepHeader(lower)) {
+      inSteps = true;
+      continue;
+    }
+    if (inSteps && isIngredientHeader(lower)) {
+      break;
+    }
+    if (inSteps && stripped) {
+      steps.push(stripped);
+    }
+  }
+  if (steps.length > 0) return steps;
+
+  return lines
+    .map(stripListMarker)
+    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna)\b/i.test(line))
+    .map((line) => line.replace(/^(step\s*)?\d+[\).\:-]\s+/i, "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function nonEmptyCaptionLines(caption: string): string[] {
+  return caption
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function stripListMarker(line: string): string {
+  return line
+    .replace(/^\s*[-•*]+\s*/, "")
+    .replace(/^\s*\d+[\).\:-]\s*/, "")
+    .trim();
+}
+
+function isSectionHeader(lower: string): boolean {
+  return isIngredientHeader(lower) || isStepHeader(lower);
+}
+
+function isIngredientHeader(lower: string): boolean {
+  return lower.replace(/:$/, "").startsWith("ingredienti") ||
+    lower.replace(/:$/, "").startsWith("ingredients");
+}
+
+function isStepHeader(lower: string): boolean {
+  const normalized = lower.replace(/:$/, "");
+  return normalized.startsWith("procedimento") ||
+    normalized.startsWith("preparazione") ||
+    normalized.startsWith("steps") ||
+    normalized.startsWith("method") ||
+    normalized.startsWith("instructions");
+}
+
+function looksLikeIngredientLine(line: string): boolean {
+  return /^\s*[-•*]/.test(line) ||
+    /\b\d+(?:[.,]\d+)?\s*(kg|g|ml|l|tbsp|tsp|cup|cups|piece|pieces)\b/i.test(line);
+}
+
 function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngredient {
   const rawName = item.name.trim();
   if (!rawName) return item;
@@ -426,7 +1095,7 @@ function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngred
   const match = rawName.match(pattern);
   if (!match) return item;
 
-  console.log(`[SEASON_IMPORT_EDGE] phase=explicit_quantity_detected raw=${rawName}`);
+  console.log(`[SEASON_IMPORT_EDGE] phase=explicit_quantity_detected raw_length=${rawName.length}`);
 
   const quantityToken = match[1].replace(",", ".");
   const unitToken = match[2].toLowerCase();
@@ -475,13 +1144,17 @@ function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngred
   if (!recoveredUnit) return item;
 
   console.log(
-    `[SEASON_IMPORT_EDGE] phase=explicit_quantity_recovered name=${remainingName} quantity=${recoveredQuantity} unit=${recoveredUnit}`,
+    `[SEASON_IMPORT_EDGE] phase=explicit_quantity_recovered name_length=${remainingName.length} quantity=${recoveredQuantity} unit=${recoveredUnit}`,
   );
   return {
     name: remainingName,
     quantity: recoveredQuantity,
     unit: recoveredUnit,
   };
+}
+
+function elapsedMs(startedAt: number): number {
+  return Math.max(0, Math.round(performance.now() - startedAt));
 }
 
 function extractBearerToken(authHeader: string): string | null {

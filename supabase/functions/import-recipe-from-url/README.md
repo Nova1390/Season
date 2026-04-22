@@ -37,4 +37,4 @@ Minimal structured-data URL importer for internal/admin usage.
 ## Notes
 - Extracts only `application/ld+json` recipe data.
 - No raw HTML is returned.
-- Requires authenticated user JWT or service role credentials.
+- Requires catalog-admin authenticated user JWT or service role credentials.

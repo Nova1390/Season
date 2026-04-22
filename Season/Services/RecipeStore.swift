@@ -406,8 +406,10 @@ enum RecipeStore {
             let rawCreatorIDLowercased = rawCreatorID.lowercased()
 
             if updated.canonicalCreatorID == nil {
-                if !rawCreatorID.isEmpty && rawCreatorIDLowercased != "unknown" {
-                    print("[SEASON_CREATOR_MIGRATION] phase=legacy_creator_found recipe_id=\(updated.id) raw_creator_id=\(rawCreatorID)")
+                if SeasonLog.verbose {
+                    if !rawCreatorID.isEmpty && rawCreatorIDLowercased != "unknown" {
+                        print("[SEASON_CREATOR_MIGRATION] phase=legacy_creator_found recipe_id=\(updated.id) raw_creator_id=\(rawCreatorID)")
+                    }
                 }
 
                 let normalizedAuthor = updated.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -417,25 +419,31 @@ enum RecipeStore {
                     if (updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) {
                         updated.creatorDisplayName = profile.name
                     }
-                    let displayNameForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? profile.name
-                    print("[SEASON_CREATOR_MIGRATION] phase=seed_creator_registry_used recipe_id=\(updated.id) creator_id=\(canonicalCreatorID)")
-                    print("[SEASON_CREATOR_MIGRATION] phase=creator_uuid_mapped recipe_id=\(updated.id) creator_id=\(canonicalCreatorID) display_name=\(displayNameForLog)")
+                    if SeasonLog.verbose {
+                        let displayNameForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? profile.name
+                        print("[SEASON_CREATOR_MIGRATION] phase=seed_creator_registry_used recipe_id=\(updated.id) creator_id=\(canonicalCreatorID)")
+                        print("[SEASON_CREATOR_MIGRATION] phase=creator_uuid_mapped recipe_id=\(updated.id) creator_id=\(canonicalCreatorID) display_name=\(displayNameForLog)")
+                    }
                 }
             }
 
-            if updated.canonicalCreatorID == nil {
+            if SeasonLog.verbose, updated.canonicalCreatorID == nil {
                 let displayNameForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? updated.author.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !displayNameForLog.isEmpty && displayNameForLog.lowercased() != "unknown" {
                     print("[SEASON_CREATOR_MIGRATION] phase=creator_uuid_missing recipe_id=\(updated.id) display_name=\(displayNameForLog)")
                 }
             }
 
-            let creatorIDForLog = updated.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
-            let creatorDisplayForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-            print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=recipe_store recipe_id=\(updated.id) title=\(updated.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(updated.author)")
+            if SeasonLog.verbose {
+                let creatorIDForLog = updated.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
+                let creatorDisplayForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
+                print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=recipe_store recipe_id=\(updated.id) title=\(updated.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(updated.author)")
+            }
 
-            if (updated.isUserGenerated || updated.sourceType == .userGenerated),
+            if SeasonLog.verbose,
+               (updated.isUserGenerated || updated.sourceType == .userGenerated),
                updated.canonicalCreatorID == nil {
+                let creatorDisplayForLog = updated.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
                 print("[SEASON_CREATOR_CHAIN] phase=missing_canonical_creator_id recipe_id=\(updated.id) title=\(updated.title) creator_display_name=\(creatorDisplayForLog) author=\(updated.author)")
             }
 
