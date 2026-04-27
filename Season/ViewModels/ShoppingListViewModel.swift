@@ -3,6 +3,7 @@ import Combine
 
 struct ShoppingListEntry: Identifiable, Codable, Hashable {
     let id: String
+    let ingredientID: String?
     let produceID: String?
     let basicIngredientID: String?
     let name: String
@@ -10,10 +11,11 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
     let sourceRecipeID: String?
     let sourceRecipeTitle: String?
 
-    var isCustom: Bool { produceID == nil && basicIngredientID == nil }
+    var isCustom: Bool { ingredientID == nil && produceID == nil && basicIngredientID == nil }
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case ingredientID
         case produceID
         case basicIngredientID
         case name
@@ -24,6 +26,7 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
 
     init(
         id: String,
+        ingredientID: String? = nil,
         produceID: String?,
         basicIngredientID: String?,
         name: String,
@@ -32,6 +35,7 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
         sourceRecipeTitle: String?
     ) {
         self.id = id
+        self.ingredientID = ingredientID
         self.produceID = produceID
         self.basicIngredientID = basicIngredientID
         self.name = name
@@ -43,6 +47,7 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
+        ingredientID = try container.decodeIfPresent(String.self, forKey: .ingredientID)
         produceID = try container.decodeIfPresent(String.self, forKey: .produceID)
         basicIngredientID = try container.decodeIfPresent(String.self, forKey: .basicIngredientID)
         name = try container.decode(String.self, forKey: .name)
@@ -54,6 +59,7 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(ingredientID, forKey: .ingredientID)
         try container.encodeIfPresent(produceID, forKey: .produceID)
         try container.encodeIfPresent(basicIngredientID, forKey: .basicIngredientID)
         try container.encode(name, forKey: .name)
@@ -108,6 +114,29 @@ struct ShoppingListEntry: Identifiable, Codable, Hashable {
         let quantityPart = normalizedQuantity?.lowercased() ?? ""
         return ShoppingListEntry(
             id: "custom:\(normalizedName.lowercased())|\(quantityPart)",
+            produceID: nil,
+            basicIngredientID: nil,
+            name: normalizedName,
+            quantity: normalizedQuantity?.isEmpty == false ? normalizedQuantity : nil,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+    }
+
+    static func catalog(
+        ingredientID: String,
+        name: String,
+        quantity: String?,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) -> ShoppingListEntry {
+        let normalizedID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedQuantity = quantity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let quantityPart = normalizedQuantity?.lowercased() ?? ""
+        return ShoppingListEntry(
+            id: "ingredient:\(normalizedID)|\(quantityPart)",
+            ingredientID: normalizedID,
             produceID: nil,
             basicIngredientID: nil,
             name: normalizedName,
@@ -175,6 +204,36 @@ final class ShoppingListViewModel: ObservableObject {
             sourceRecipeTitle: sourceRecipeTitle
         )
         guard !entry.name.isEmpty else { return }
+        if contains(entry) {
+            if sourceRecipeID != nil || sourceRecipeTitle != nil {
+                attachRecipeSourceIfNeeded(
+                    toMatchingEntryID: entry.id,
+                    sourceRecipeID: sourceRecipeID,
+                    sourceRecipeTitle: sourceRecipeTitle
+                )
+            }
+            return
+        }
+        entries.append(entry)
+        save()
+        writeThroughCreate(entry)
+    }
+
+    func addCatalog(
+        ingredientID: String,
+        name: String,
+        quantity: String?,
+        sourceRecipeID: String? = nil,
+        sourceRecipeTitle: String? = nil
+    ) {
+        let entry = ShoppingListEntry.catalog(
+            ingredientID: ingredientID,
+            name: name,
+            quantity: quantity,
+            sourceRecipeID: sourceRecipeID,
+            sourceRecipeTitle: sourceRecipeTitle
+        )
+        guard entry.ingredientID?.isEmpty == false, !entry.name.isEmpty else { return }
         if contains(entry) {
             if sourceRecipeID != nil || sourceRecipeTitle != nil {
                 attachRecipeSourceIfNeeded(
@@ -314,6 +373,33 @@ final class ShoppingListViewModel: ObservableObject {
         var alreadyInList = 0
 
         for ingredient in ingredients {
+            if let ingredientID = ingredient.ingredientID?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+               !ingredientID.isEmpty {
+                let catalogEntry = ShoppingListEntry.catalog(
+                    ingredientID: ingredientID,
+                    name: ingredient.name,
+                    quantity: ingredient.quantity
+                )
+                if contains(catalogEntry) {
+                    alreadyInList += 1
+                    attachRecipeSourceIfNeeded(
+                        toMatchingEntryID: catalogEntry.id,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                } else {
+                    addCatalog(
+                        ingredientID: ingredientID,
+                        name: ingredient.name,
+                        quantity: ingredient.quantity,
+                        sourceRecipeID: sourceRecipeID,
+                        sourceRecipeTitle: sourceRecipeTitle
+                    )
+                    added += 1
+                }
+                continue
+            }
+
             if let produceID = ingredient.produceID,
                let produceItem = produceLookup(produceID) {
                 if contains(produceItem) {
@@ -388,6 +474,15 @@ final class ShoppingListViewModel: ObservableObject {
         return basicCatalogByID[basicID]
     }
 
+    func containsCatalogIngredient(id ingredientID: String, quantity: String?) -> Bool {
+        let entry = ShoppingListEntry.catalog(
+            ingredientID: ingredientID,
+            name: "",
+            quantity: quantity
+        )
+        return contains(entry)
+    }
+
     func resetForLogout() {
         entries = []
         storage.removeObject(forKey: storageKey)
@@ -414,6 +509,7 @@ final class ShoppingListViewModel: ObservableObject {
 
         entries[index] = ShoppingListEntry(
             id: entry.id,
+            ingredientID: entry.ingredientID,
             produceID: entry.produceID,
             basicIngredientID: entry.basicIngredientID,
             name: entry.name,
@@ -447,6 +543,9 @@ final class ShoppingListViewModel: ObservableObject {
             }
             if let basicID = entry.basicIngredientID {
                 return basicCatalogByID[basicID] != nil
+            }
+            if entry.ingredientID != nil {
+                return !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
             if entry.produceID == nil && entry.basicIngredientID == nil {
                 return !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -540,7 +639,11 @@ final class ShoppingListViewModel: ObservableObject {
         let ingredientID: String?
         let customName: String?
 
-        if let produceID = entry.produceID {
+        if let catalogIngredientID = entry.ingredientID {
+            ingredientType = "catalog"
+            ingredientID = catalogIngredientID
+            customName = nil
+        } else if let produceID = entry.produceID {
             ingredientType = "produce"
             ingredientID = produceID
             customName = nil

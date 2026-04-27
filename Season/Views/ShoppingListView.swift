@@ -709,6 +709,7 @@ struct ShoppingListView: View {
         }
 
         if entry.produceID == nil,
+           entry.ingredientID == nil,
            entry.basicIngredientID == nil,
            fridgeViewModel.containsCustom(named: entry.name) {
             return .inFridge

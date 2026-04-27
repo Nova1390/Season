@@ -761,6 +761,7 @@ struct RecipeDetailView: View {
     private func shoppingListComparableIngredient(for ingredient: IngredientRow) -> RecipeIngredient {
         let scaledValue = scaledQuantityValue(for: ingredient.recipeIngredient)
         return RecipeIngredient(
+            ingredientID: ingredient.recipeIngredient.ingredientID,
             produceID: ingredient.recipeIngredient.produceID,
             basicIngredientID: ingredient.recipeIngredient.basicIngredientID,
             quality: ingredient.recipeIngredient.quality,
@@ -784,6 +785,13 @@ struct RecipeDetailView: View {
 
     private func isIngredientInShoppingList(_ ingredient: IngredientRow) -> Bool {
         let comparable = shoppingListComparableIngredient(for: ingredient)
+
+        if let ingredientID = comparable.ingredientID {
+            return shoppingListViewModel.containsCatalogIngredient(
+                id: ingredientID,
+                quantity: comparable.quantity
+            )
+        }
 
         if let produceID = comparable.produceID {
             if let produceItem = viewModel.produceItem(forID: produceID),

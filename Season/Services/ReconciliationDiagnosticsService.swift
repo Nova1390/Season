@@ -153,7 +153,11 @@ final class ReconciliationDiagnosticsService {
         let ingredientID: String?
         let customName: String?
 
-        if let produceID = entry.produceID {
+        if let catalogIngredientID = entry.ingredientID {
+            ingredientType = "catalog"
+            ingredientID = catalogIngredientID
+            customName = nil
+        } else if let produceID = entry.produceID {
             ingredientType = "produce"
             ingredientID = produceID
             customName = nil
