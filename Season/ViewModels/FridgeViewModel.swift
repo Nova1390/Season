@@ -4,6 +4,7 @@ import Combine
 final class FridgeViewModel: ObservableObject {
     @Published private var produceIDs: [String] = []
     @Published private var basicIngredientIDs: [String] = []
+    @Published private var catalogItems: [FridgeCatalogItem] = []
     @Published private var customItems: [FridgeCustomItem] = []
 
     // Backward-compatible alias used by existing views.
@@ -20,11 +21,13 @@ final class FridgeViewModel: ObservableObject {
     }
 
     var allItemCount: Int {
-        produceIDs.count + basicIngredientIDs.count + customItems.count
+        produceIDs.count + basicIngredientIDs.count + catalogItems.count + customItems.count
     }
 
     var allIngredientIDSet: Set<String> {
-        Set(produceIDs).union(basicIngredientIDs)
+        Set(produceIDs)
+            .union(basicIngredientIDs)
+            .union(catalogItems.map(\.ingredientID))
     }
 
     private let produceCatalogByID: [String: ProduceItem]
@@ -98,6 +101,38 @@ final class FridgeViewModel: ObservableObject {
         writeThroughCreateCustom(custom)
     }
 
+    func addCatalog(ingredientID: String, name: String, quantity: String? = nil) {
+        let normalizedID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedQuantity = quantity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedID.isEmpty, !normalizedName.isEmpty else { return }
+        let item = FridgeCatalogItem(
+            id: "ingredient:\(normalizedID)|\((normalizedQuantity ?? "").lowercased())",
+            ingredientID: normalizedID,
+            name: normalizedName,
+            quantity: normalizedQuantity?.isEmpty == false ? normalizedQuantity : nil
+        )
+        guard !containsCatalogIngredient(id: normalizedID) else { return }
+        catalogItems.append(item)
+        save()
+        writeThroughCreateCatalog(item)
+    }
+
+    func removeCatalog(ingredientID: String) {
+        let normalizedID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedID.isEmpty else { return }
+        let removed = catalogItems.filter { $0.ingredientID == normalizedID }
+        catalogItems.removeAll { $0.ingredientID == normalizedID }
+        save()
+        removed.forEach { writeThroughDelete(localItemID: $0.id) }
+    }
+
+    func containsCatalogIngredient(id ingredientID: String) -> Bool {
+        let normalizedID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedID.isEmpty else { return false }
+        return catalogItems.contains { $0.ingredientID == normalizedID }
+    }
+
     func removeCustom(named name: String) {
         let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return }
@@ -121,6 +156,10 @@ final class FridgeViewModel: ObservableObject {
 
     var customFridgeItems: [FridgeCustomItem] {
         customItems
+    }
+
+    var catalogFridgeItems: [FridgeCatalogItem] {
+        catalogItems
     }
 
     func remove(at offsets: IndexSet) {
@@ -150,6 +189,7 @@ final class FridgeViewModel: ObservableObject {
     func resetForLogout() {
         produceIDs = []
         basicIngredientIDs = []
+        catalogItems = []
         customItems = []
         storage.removeObject(forKey: storageKey)
         storage.removeObject(forKey: legacyStorageKey)
@@ -161,6 +201,7 @@ final class FridgeViewModel: ObservableObject {
         let payload = FridgeSelectionPayload(
             produceIDs: produceIDs,
             basicIngredientIDs: basicIngredientIDs,
+            catalogItems: catalogItems,
             customItems: customItems
         )
         if let encoded = try? JSONEncoder().encode(payload) {
@@ -173,6 +214,7 @@ final class FridgeViewModel: ObservableObject {
            let decoded = try? JSONDecoder().decode(FridgeSelectionPayload.self, from: data) {
             produceIDs = decoded.produceIDs.filter { produceCatalogByID[$0] != nil }
             basicIngredientIDs = decoded.basicIngredientIDs.filter { basicCatalogByID[$0] != nil }
+            catalogItems = decoded.catalogItems
             customItems = decoded.customItems
             return
         }
@@ -181,6 +223,7 @@ final class FridgeViewModel: ObservableObject {
         let savedIDs = storage.stringArray(forKey: legacyStorageKey) ?? []
         produceIDs = savedIDs.filter { produceCatalogByID[$0] != nil }
         basicIngredientIDs = []
+        catalogItems = []
         customItems = []
         save()
     }
@@ -253,6 +296,31 @@ final class FridgeViewModel: ObservableObject {
                 ingredientType: "custom",
                 ingredientID: nil,
                 customName: item.name,
+                quantity: parsed.quantity,
+                unit: parsed.unit
+            )
+        )
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
+    }
+
+    private func writeThroughCreateCatalog(_ item: FridgeCatalogItem) {
+        let traceID = String(UUID().uuidString.prefix(8))
+        let parsed = parseQuantityAndUnit(item.quantity)
+        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        Task { @MainActor in
+            syncFeedback.show(.pending)
+        }
+        appendOutboxRecord(
+            traceID: traceID,
+            action: "fridge_create",
+            itemID: item.id,
+            entityType: "fridge_item",
+            operationType: "create",
+            payload: FridgeOutboxCreatePayload(
+                localItemID: item.id,
+                ingredientType: "catalog",
+                ingredientID: item.ingredientID,
+                customName: nil,
                 quantity: parsed.quantity,
                 unit: parsed.unit
             )
@@ -338,7 +406,42 @@ final class FridgeViewModel: ObservableObject {
 private struct FridgeSelectionPayload: Codable {
     let produceIDs: [String]
     let basicIngredientIDs: [String]
+    let catalogItems: [FridgeCatalogItem]
     let customItems: [FridgeCustomItem]
+
+    private enum CodingKeys: String, CodingKey {
+        case produceIDs
+        case basicIngredientIDs
+        case catalogItems
+        case customItems
+    }
+
+    init(
+        produceIDs: [String],
+        basicIngredientIDs: [String],
+        catalogItems: [FridgeCatalogItem],
+        customItems: [FridgeCustomItem]
+    ) {
+        self.produceIDs = produceIDs
+        self.basicIngredientIDs = basicIngredientIDs
+        self.catalogItems = catalogItems
+        self.customItems = customItems
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        produceIDs = try container.decodeIfPresent([String].self, forKey: .produceIDs) ?? []
+        basicIngredientIDs = try container.decodeIfPresent([String].self, forKey: .basicIngredientIDs) ?? []
+        catalogItems = try container.decodeIfPresent([FridgeCatalogItem].self, forKey: .catalogItems) ?? []
+        customItems = try container.decodeIfPresent([FridgeCustomItem].self, forKey: .customItems) ?? []
+    }
+}
+
+struct FridgeCatalogItem: Identifiable, Codable, Hashable {
+    let id: String
+    let ingredientID: String
+    let name: String
+    let quantity: String?
 }
 
 struct FridgeCustomItem: Identifiable, Codable, Hashable {

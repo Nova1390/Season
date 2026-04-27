@@ -201,6 +201,20 @@ final class ReconciliationDiagnosticsService {
             )
         }
 
+        let catalog = fridge.catalogFridgeItems.map { item in
+            let parsed = parseQuantityAndUnit(item.quantity)
+            return FridgeLocalComparable(
+                localItemID: item.id,
+                valueSignature: [
+                    "catalog",
+                    item.ingredientID,
+                    "",
+                    parsed.quantity.map { String($0) } ?? "",
+                    parsed.unit ?? ""
+                ].joined(separator: "|")
+            )
+        }
+
         let custom = fridge.customFridgeItems.map { item in
             let parsed = parseQuantityAndUnit(item.quantity)
             return FridgeLocalComparable(
@@ -215,7 +229,7 @@ final class ReconciliationDiagnosticsService {
             )
         }
 
-        return produce + basic + custom
+        return produce + basic + catalog + custom
     }
 
     private func shoppingSignature(from item: CloudShoppingListItem) -> String {
