@@ -1,12 +1,19 @@
 import Foundation
 
 final class NutritionService {
+    struct CatalogNutritionEntry {
+        let nutrition: ProduceNutrition?
+        let unitProfile: IngredientUnitProfile
+        let isProduceLike: Bool
+    }
+
     struct Context {
         let produceItems: [ProduceItem]
         let discoverableRecipes: [Recipe]
         let produceByID: [String: ProduceItem]
         let basicByID: [String: BasicIngredient]
         let basicByNormalizedName: [String: BasicIngredient]
+        let catalogNutritionByIngredientID: [String: CatalogNutritionEntry]
         let fallbackUnitProfile: IngredientUnitProfile
         let quantityProfileForProduceID: (String) -> IngredientUnitProfile
     }
@@ -401,6 +408,12 @@ final class NutritionService {
     }
 
     private func dietarySupport(for ingredient: RecipeIngredient, context: Context) -> DietarySupport {
+        if let ingredientID = ingredient.ingredientID,
+           let catalogEntry = context.catalogNutritionByIngredientID[ingredientID],
+           catalogEntry.isProduceLike {
+            return DietarySupport(glutenFree: true, vegetarian: true, vegan: true)
+        }
+
         if ingredient.produceID != nil {
             return DietarySupport(glutenFree: true, vegetarian: true, vegan: true)
         }
@@ -424,6 +437,11 @@ final class NutritionService {
         for ingredient: RecipeIngredient,
         context: Context
     ) -> (nutrition: ProduceNutrition?, unitProfile: IngredientUnitProfile) {
+        if let ingredientID = ingredient.ingredientID,
+           let catalogEntry = context.catalogNutritionByIngredientID[ingredientID] {
+            return (catalogEntry.nutrition, catalogEntry.unitProfile)
+        }
+
         if let produceID = ingredient.produceID,
            let item = context.produceByID[produceID] {
             return (item.nutrition, context.quantityProfileForProduceID(produceID))

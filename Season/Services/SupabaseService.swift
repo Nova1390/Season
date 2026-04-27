@@ -131,6 +131,20 @@ struct UnifiedIngredientCatalogSummaryRecord: Sendable {
     let itName: String?
     let legacyProduceID: String?
     let legacyBasicID: String?
+    let isSeasonal: Bool
+    let seasonMonths: [Int]
+    let defaultUnit: String?
+    let supportedUnits: [String]
+    let gramsPerUnit: [String: Double]
+    let mlPerUnit: [String: Double]
+    let gramsPerMl: Double?
+    let caloriesPer100g: Double?
+    let proteinPer100g: Double?
+    let carbsPer100g: Double?
+    let fatPer100g: Double?
+    let fiberPer100g: Double?
+    let vitaminCPer100g: Double?
+    let potassiumPer100g: Double?
 }
 
 struct UnifiedIngredientAliasRecord: Sendable {
@@ -956,10 +970,25 @@ private struct CloudUnifiedIngredientCatalogSummaryRow: Codable {
     let ingredient_id: String
     let slug: String
     let ingredient_type: String
+    let quality_status: String?
     let en_name: String?
     let it_name: String?
     let legacy_produce_id: String?
     let legacy_basic_id: String?
+    let is_seasonal: Bool?
+    let season_months: [Int]?
+    let default_unit: String?
+    let supported_units: [String]?
+    let grams_per_unit: [String: Double]?
+    let ml_per_unit: [String: Double]?
+    let grams_per_ml: Double?
+    let calories_per_100g: Double?
+    let protein_per_100g: Double?
+    let carbs_per_100g: Double?
+    let fat_per_100g: Double?
+    let fiber_per_100g: Double?
+    let vitamin_c_per_100g: Double?
+    let potassium_per_100g: Double?
 }
 
 private struct CloudUnifiedIngredientAliasRow: Codable {
@@ -1857,7 +1886,7 @@ final class SupabaseService {
 
         do {
             let response = try await supabaseClient
-                .from("ingredient_catalog_summary")
+                .from("ingredient_catalog_app_summary")
                 .select()
                 .execute()
 
@@ -1870,7 +1899,21 @@ final class SupabaseService {
                     enName: row.en_name?.trimmingCharacters(in: .whitespacesAndNewlines),
                     itName: row.it_name?.trimmingCharacters(in: .whitespacesAndNewlines),
                     legacyProduceID: row.legacy_produce_id?.trimmingCharacters(in: .whitespacesAndNewlines),
-                    legacyBasicID: row.legacy_basic_id?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    legacyBasicID: row.legacy_basic_id?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    isSeasonal: row.is_seasonal ?? false,
+                    seasonMonths: row.season_months ?? [],
+                    defaultUnit: row.default_unit?.trimmingCharacters(in: .whitespacesAndNewlines),
+                    supportedUnits: row.supported_units ?? [],
+                    gramsPerUnit: row.grams_per_unit ?? [:],
+                    mlPerUnit: row.ml_per_unit ?? [:],
+                    gramsPerMl: row.grams_per_ml,
+                    caloriesPer100g: row.calories_per_100g,
+                    proteinPer100g: row.protein_per_100g,
+                    carbsPer100g: row.carbs_per_100g,
+                    fatPer100g: row.fat_per_100g,
+                    fiberPer100g: row.fiber_per_100g,
+                    vitaminCPer100g: row.vitamin_c_per_100g,
+                    potassiumPer100g: row.potassium_per_100g
                 )
             }
             print("[SEASON_UNIFIED] phase=catalog_fetch_ok count=\(records.count)")
@@ -1893,7 +1936,7 @@ final class SupabaseService {
 
         do {
             let response = try await supabaseClient
-                .from("ingredient_aliases_v2")
+                .from("ingredient_alias_app_summary")
                 .select()
                 .eq("is_active", value: true)
                 .execute()
@@ -3834,14 +3877,14 @@ final class SupabaseService {
     private func isMissingUnifiedIngredientSummaryRelationError(_ error: Error) -> Bool {
         let message = String(describing: error).lowercased()
         return message.contains("relation") &&
-            message.contains("ingredient_catalog_summary") &&
+            message.contains("ingredient_catalog_app_summary") &&
             message.contains("does not exist")
     }
 
     private func isMissingUnifiedIngredientAliasesRelationError(_ error: Error) -> Bool {
         let message = String(describing: error).lowercased()
         return message.contains("relation") &&
-            message.contains("ingredient_aliases_v2") &&
+            message.contains("ingredient_alias_app_summary") &&
             message.contains("does not exist")
     }
 

@@ -70,6 +70,10 @@ final class ProduceViewModel: ObservableObject {
         let itName: String?
         let legacyProduceID: String?
         let legacyBasicID: String?
+        let isSeasonal: Bool
+        let seasonMonths: [Int]
+        let nutrition: ProduceNutrition?
+        let unitProfile: IngredientUnitProfile
     }
 
     @Published private(set) var produceItems: [ProduceItem] = []
@@ -102,6 +106,8 @@ final class ProduceViewModel: ObservableObject {
     private var unifiedIngredientByID: [String: UnifiedIngredientParityEntry] = [:]
     private var unifiedAliasLookup: [String: IngredientAliasMatch] = [:]
     private var unifiedNameLookup: [String: IngredientAliasMatch] = [:]
+    private var unifiedEntryAliasLookup: [String: UnifiedIngredientParityEntry] = [:]
+    private var unifiedEntryNameLookup: [String: UnifiedIngredientParityEntry] = [:]
     private let nutritionService = NutritionService()
     private let supabaseService = SupabaseService.shared
     private let remoteRecipePageSize = 40
@@ -211,6 +217,8 @@ final class ProduceViewModel: ObservableObject {
         unifiedIngredientByID = [:]
         unifiedAliasLookup = [:]
         unifiedNameLookup = [:]
+        unifiedEntryAliasLookup = [:]
+        unifiedEntryNameLookup = [:]
         markReconciliationInputsChanged()
         nextRemoteRecipeOffset = 0
         hasMoreRemoteRecipePages = true
@@ -296,6 +304,7 @@ final class ProduceViewModel: ObservableObject {
     ) {
         var entriesByID: [String: UnifiedIngredientParityEntry] = [:]
         var nameLookup: [String: IngredientAliasMatch] = [:]
+        var entryNameLookup: [String: UnifiedIngredientParityEntry] = [:]
 
         for record in catalog {
             let ingredientID = record.ingredientID.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -310,27 +319,35 @@ final class ProduceViewModel: ObservableObject {
                 enName: record.enName,
                 itName: record.itName,
                 legacyProduceID: record.legacyProduceID,
-                legacyBasicID: record.legacyBasicID
+                legacyBasicID: record.legacyBasicID,
+                isSeasonal: record.isSeasonal,
+                seasonMonths: record.seasonMonths,
+                nutrition: Self.catalogNutrition(from: record),
+                unitProfile: Self.catalogUnitProfile(from: record) ?? fallbackUnitProfile
             )
             entriesByID[ingredientID] = entry
 
-            guard let match = ingredientAliasMatch(from: entry) else { continue }
-            appendUnifiedLookup(slug, match: match, into: &nameLookup)
-            appendUnifiedLookup(record.enName, match: match, into: &nameLookup)
-            appendUnifiedLookup(record.itName, match: match, into: &nameLookup)
+            let match = ingredientAliasMatch(from: entry)
+            appendUnifiedLookup(slug, match: match, entry: entry, into: &nameLookup, entryLookup: &entryNameLookup)
+            appendUnifiedLookup(record.enName, match: match, entry: entry, into: &nameLookup, entryLookup: &entryNameLookup)
+            appendUnifiedLookup(record.itName, match: match, entry: entry, into: &nameLookup, entryLookup: &entryNameLookup)
         }
 
         var aliasLookup: [String: IngredientAliasMatch] = [:]
+        var entryAliasLookup: [String: UnifiedIngredientParityEntry] = [:]
         var aliasConfidenceLookup: [String: Double] = [:]
         for alias in aliases where alias.isActive {
             let normalized = normalizedSearchText(alias.normalizedAliasText)
             guard !normalized.isEmpty else { continue }
-            guard let entry = entriesByID[alias.ingredientID],
-                  let match = ingredientAliasMatch(from: entry) else { continue }
+            guard let entry = entriesByID[alias.ingredientID] else { continue }
             let candidateConfidence = alias.confidence ?? -1
             let currentConfidence = aliasConfidenceLookup[normalized] ?? -1
-            if aliasLookup[normalized] == nil || candidateConfidence >= currentConfidence {
+            if let match = ingredientAliasMatch(from: entry),
+               aliasLookup[normalized] == nil || candidateConfidence >= currentConfidence {
                 aliasLookup[normalized] = match
+            }
+            if entryAliasLookup[normalized] == nil || candidateConfidence >= currentConfidence {
+                entryAliasLookup[normalized] = entry
                 aliasConfidenceLookup[normalized] = candidateConfidence
             }
         }
@@ -338,6 +355,8 @@ final class ProduceViewModel: ObservableObject {
         unifiedIngredientByID = entriesByID
         unifiedAliasLookup = aliasLookup
         unifiedNameLookup = nameLookup
+        unifiedEntryAliasLookup = entryAliasLookup
+        unifiedEntryNameLookup = entryNameLookup
         markReconciliationInputsChanged()
 
         print(
@@ -345,15 +364,59 @@ final class ProduceViewModel: ObservableObject {
         )
     }
 
+    private static func catalogNutrition(from record: UnifiedIngredientCatalogSummaryRecord) -> ProduceNutrition? {
+        guard let calories = record.caloriesPer100g,
+              let protein = record.proteinPer100g,
+              let carbs = record.carbsPer100g,
+              let fat = record.fatPer100g else {
+            return nil
+        }
+
+        return ProduceNutrition(
+            calories: Int(calories.rounded()),
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            fiber: record.fiberPer100g ?? 0,
+            vitaminC: record.vitaminCPer100g ?? 0,
+            potassium: record.potassiumPer100g ?? 0
+        )
+    }
+
+    private static func catalogUnitProfile(from record: UnifiedIngredientCatalogSummaryRecord) -> IngredientUnitProfile? {
+        let defaultUnit = RecipeQuantityUnit(rawValue: record.defaultUnit ?? "") ?? .g
+        let supportedUnits = record.supportedUnits.compactMap(RecipeQuantityUnit.init(rawValue:))
+        let supported = supportedUnits.isEmpty ? [defaultUnit] : supportedUnits
+        return IngredientUnitProfile(
+            defaultUnit: defaultUnit,
+            supportedUnits: supported,
+            gramsPerUnit: unitMap(from: record.gramsPerUnit),
+            mlPerUnit: unitMap(from: record.mlPerUnit),
+            gramsPerMl: record.gramsPerMl
+        )
+    }
+
+    private static func unitMap(from raw: [String: Double]) -> [RecipeQuantityUnit: Double] {
+        Dictionary(uniqueKeysWithValues: raw.compactMap { key, value in
+            guard let unit = RecipeQuantityUnit(rawValue: key) else { return nil }
+            return (unit, value)
+        })
+    }
+
     private func appendUnifiedLookup(
         _ raw: String?,
-        match: IngredientAliasMatch,
-        into lookup: inout [String: IngredientAliasMatch]
+        match: IngredientAliasMatch?,
+        entry: UnifiedIngredientParityEntry,
+        into lookup: inout [String: IngredientAliasMatch],
+        entryLookup: inout [String: UnifiedIngredientParityEntry]
     ) {
         guard let raw else { return }
         let normalized = normalizedSearchText(raw)
         guard !normalized.isEmpty else { return }
-        lookup[normalized] = match
+        if let match {
+            lookup[normalized] = match
+        }
+        entryLookup[normalized] = entry
     }
 
     private func ingredientAliasMatch(from entry: UnifiedIngredientParityEntry) -> IngredientAliasMatch? {
@@ -435,6 +498,11 @@ final class ProduceViewModel: ObservableObject {
                 : ingredient.name
             let normalizedQuery = normalizedSearchText(sourceText)
             guard !normalizedQuery.isEmpty else { return ingredient }
+
+            if let entry = resolveUnifiedCatalogEntry(query: normalizedQuery) {
+                successCount += 1
+                return recipeIngredient(from: entry, fallback: ingredient, confidence: .medium)
+            }
 
             let matched = resolveIngredientAlias(query: normalizedQuery)
                 ?? resolveCatalogMatchForCustomIngredient(query: normalizedQuery)
@@ -664,7 +732,7 @@ final class ProduceViewModel: ObservableObject {
 
     private func mergedRecipes(local: [Recipe], remote: [Recipe]) -> [Recipe] {
         var seen = Set<String>()
-        return (local + remote).filter { recipe in
+        return (remote + local).filter { recipe in
             seen.insert(recipe.id).inserted
         }
     }
@@ -1323,6 +1391,16 @@ final class ProduceViewModel: ObservableObject {
         return nil
     }
 
+    private func resolveUnifiedCatalogEntry(query: String) -> UnifiedIngredientParityEntry? {
+        if let alias = unifiedEntryAliasLookup[query] {
+            return alias
+        }
+        if let direct = unifiedEntryNameLookup[query] {
+            return direct
+        }
+        return nil
+    }
+
     private func parityMatchKey(_ match: IngredientAliasMatch?) -> String {
         guard let match else { return "none" }
         switch match {
@@ -1511,6 +1589,32 @@ final class ProduceViewModel: ObservableObject {
         return recipe
     }
 
+    private func recipeIngredient(
+        from entry: UnifiedIngredientParityEntry,
+        fallback ingredient: RecipeIngredient,
+        confidence: RecipeIngredientMappingConfidence
+    ) -> RecipeIngredient {
+        let displayName = displayName(for: entry)
+        return RecipeIngredient(
+            ingredientID: entry.ingredientID,
+            produceID: entry.legacyProduceID,
+            basicIngredientID: entry.legacyBasicID,
+            quality: entry.ingredientType == "produce" ? .coreSeasonal : .basic,
+            name: displayName,
+            quantityValue: ingredient.quantityValue,
+            quantityUnit: ingredient.quantityUnit,
+            rawIngredientLine: ingredient.rawIngredientLine ?? ingredient.name,
+            mappingConfidence: confidence
+        )
+    }
+
+    private func displayName(for entry: UnifiedIngredientParityEntry) -> String {
+        let localizedName = languageCode == AppLanguage.italian.rawValue
+            ? (entry.itName ?? entry.enName)
+            : (entry.enName ?? entry.itName)
+        return localizedName ?? entry.slug.replacingOccurrences(of: "_", with: " ")
+    }
+
     func quantityProfile(forProduceID produceID: String) -> IngredientUnitProfile {
         guard let item = produceItem(forID: produceID) else {
             return IngredientUnitProfile(
@@ -1626,6 +1730,39 @@ final class ProduceViewModel: ObservableObject {
                 produceItem: nil,
                 basicIngredient: basic,
                 isReconciled: false
+            )
+        }
+
+        if let ingredientID = ingredient.ingredientID,
+           let entry = unifiedIngredientByID[ingredientID] {
+            if let produceID = entry.legacyProduceID,
+               let item = produceItem(forID: produceID) {
+                return ResolvedIngredient(
+                    recipeIngredient: ingredient,
+                    displayName: item.displayName(languageCode: localizer.languageCode),
+                    produceItem: item,
+                    basicIngredient: nil,
+                    isReconciled: true
+                )
+            }
+
+            if let basicID = entry.legacyBasicID,
+               let basic = basicIngredient(forID: basicID) {
+                return ResolvedIngredient(
+                    recipeIngredient: ingredient,
+                    displayName: basic.displayName(languageCode: localizer.languageCode),
+                    produceItem: nil,
+                    basicIngredient: basic,
+                    isReconciled: true
+                )
+            }
+
+            return ResolvedIngredient(
+                recipeIngredient: ingredient,
+                displayName: displayName(for: entry),
+                produceItem: nil,
+                basicIngredient: nil,
+                isReconciled: true
             )
         }
 
@@ -2091,11 +2228,25 @@ final class ProduceViewModel: ObservableObject {
             produceByID: produceByID,
             basicByID: basicByID,
             basicByNormalizedName: basicByNormalizedName,
+            catalogNutritionByIngredientID: catalogNutritionContextEntries(),
             fallbackUnitProfile: fallbackUnitProfile,
             quantityProfileForProduceID: { [unowned self] produceID in
                 self.quantityProfile(forProduceID: produceID)
             }
         )
+    }
+
+    private func catalogNutritionContextEntries() -> [String: NutritionService.CatalogNutritionEntry] {
+        Dictionary(uniqueKeysWithValues: unifiedIngredientByID.map { ingredientID, entry in
+            (
+                ingredientID,
+                NutritionService.CatalogNutritionEntry(
+                    nutrition: entry.nutrition,
+                    unitProfile: entry.unitProfile,
+                    isProduceLike: entry.ingredientType == "produce" || entry.legacyProduceID != nil
+                )
+            )
+        })
     }
 
     private func compareItems(_ lhs: ProduceItem, _ rhs: ProduceItem) -> Bool {
@@ -2277,10 +2428,7 @@ final class ProduceViewModel: ObservableObject {
         _ ingredient: RecipeIngredient,
         fridgeIngredientIDs: Set<String>
     ) -> Bool {
-        guard let ingredientID = ingredient.produceID ?? ingredient.basicIngredientID else {
-            return false
-        }
-        return fridgeIngredientIDs.contains(ingredientID)
+        !catalogIdentityIDs(for: ingredient).isDisjoint(with: fridgeIngredientIDs)
     }
 
     func recipeTimingLabel(for recipe: Recipe) -> RecipeTimingLabel {
@@ -2386,10 +2534,9 @@ final class ProduceViewModel: ObservableObject {
         for recipe: Recipe,
         fridgeItemIDs: Set<String>
     ) -> (score: Double, availableWeight: Double, totalWeight: Double, matchingCount: Int, totalCount: Int) {
-        let ingredientIDs = recipe.ingredients.compactMap { ingredient in
-            ingredient.produceID ?? ingredient.basicIngredientID
-        }
-        let totalCount = ingredientIDs.count
+        let totalCount = recipe.ingredients.filter { ingredient in
+            !catalogIdentityIDs(for: ingredient).isEmpty
+        }.count
         guard totalCount > 0 else {
             return (score: 0, availableWeight: 0, totalWeight: 0, matchingCount: 0, totalCount: 0)
         }
@@ -2402,7 +2549,7 @@ final class ProduceViewModel: ObservableObject {
         var matchingCount = 0
 
         for ingredient in recipe.ingredients {
-            guard ingredient.produceID != nil || ingredient.basicIngredientID != nil else { continue }
+            guard !catalogIdentityIDs(for: ingredient).isEmpty else { continue }
             let weight = fallbackEqualWeight ? 1.0 : ingredientWeight(for: ingredient)
             totalWeight += weight
             if isRecipeIngredientAvailable(ingredient, fridgeIngredientIDs: fridgeItemIDs) {
@@ -2416,6 +2563,28 @@ final class ProduceViewModel: ObservableObject {
         }
         let score = min(1.0, max(0.0, availableWeight / totalWeight))
         return (score: score, availableWeight: availableWeight, totalWeight: totalWeight, matchingCount: matchingCount, totalCount: totalCount)
+    }
+
+    private func catalogIdentityIDs(for ingredient: RecipeIngredient) -> Set<String> {
+        var ids: Set<String> = []
+        if let ingredientID = ingredient.ingredientID {
+            ids.insert(ingredientID)
+            if let entry = unifiedIngredientByID[ingredientID] {
+                if let produceID = entry.legacyProduceID {
+                    ids.insert(produceID)
+                }
+                if let basicID = entry.legacyBasicID {
+                    ids.insert(basicID)
+                }
+            }
+        }
+        if let produceID = ingredient.produceID {
+            ids.insert(produceID)
+        }
+        if let basicID = ingredient.basicIngredientID {
+            ids.insert(basicID)
+        }
+        return ids
     }
 
     private func seasonalityScore(for item: ProduceItem) -> Double {
