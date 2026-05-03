@@ -1608,6 +1608,30 @@ final class ProduceViewModel: ObservableObject {
         )
     }
 
+    func canonicalRecipeIngredientForImport(
+        query: String,
+        quantityValue: Double,
+        quantityUnit: RecipeQuantityUnit,
+        rawIngredientLine: String? = nil,
+        confidence: RecipeIngredientMappingConfidence = .medium
+    ) -> RecipeIngredient? {
+        let normalizedQuery = normalizedSearchText(query)
+        guard !normalizedQuery.isEmpty else { return nil }
+        guard let entry = resolveUnifiedCatalogEntry(query: normalizedQuery) else { return nil }
+
+        return RecipeIngredient(
+            ingredientID: entry.ingredientID,
+            produceID: entry.legacyProduceID,
+            basicIngredientID: entry.legacyBasicID,
+            quality: entry.ingredientType == "produce" ? .coreSeasonal : .basic,
+            name: displayName(for: entry),
+            quantityValue: quantityValue,
+            quantityUnit: quantityUnit,
+            rawIngredientLine: rawIngredientLine,
+            mappingConfidence: confidence
+        )
+    }
+
     private func displayName(for entry: UnifiedIngredientParityEntry) -> String {
         let localizedName = languageCode == AppLanguage.italian.rawValue
             ? (entry.itName ?? entry.enName)

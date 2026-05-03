@@ -930,6 +930,15 @@ struct CreateRecipeView: View {
                 return nil
             }
 
+            if let canonicalIngredient = viewModel.canonicalRecipeIngredientForImport(
+                query: customName,
+                quantityValue: value,
+                quantityUnit: draft.quantityUnit,
+                rawIngredientLine: customName
+            ) {
+                return canonicalIngredient
+            }
+
             let isSyntheticFallback = isSyntheticCustomFallbackIngredientDraft(
                 draft,
                 resolvedName: customName
@@ -3303,7 +3312,9 @@ struct CreateRecipeView: View {
         for ingredient in ingredients {
             let finalName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
             let ingredientType: String
-            if ingredient.produceID != nil {
+            if ingredient.ingredientID != nil {
+                ingredientType = "catalog"
+            } else if ingredient.produceID != nil {
                 ingredientType = "produce"
             } else if ingredient.basicIngredientID != nil {
                 ingredientType = "basic"
