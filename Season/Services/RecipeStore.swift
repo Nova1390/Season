@@ -30,6 +30,7 @@ enum RecipeStore {
             return cachedRecipes
         }
 
+        #if false
         let curated: [Recipe] = [
             Recipe(
                 id: "recipe_1",
@@ -252,15 +253,10 @@ enum RecipeStore {
                 originalAuthorName: nil
             )
         ]
+        #endif
 
-        let profiles = loadProfiles()
-        let seedRecipes = loadSeedRecipesFromBundle()
-        var seen = Set<String>()
         let localUserRecipes = loadPersistedUserRecipes()
-        let merged = (localUserRecipes + curated + seedRecipes).filter { recipe in
-            seen.insert(recipe.id).inserted
-        }
-        let normalized = normalizeCreatorIdentity(in: merged, profiles: profiles)
+        let normalized = normalizeCreatorIdentity(in: localUserRecipes, profiles: loadProfiles())
         cachedRecipes = normalized
         return normalized
     }

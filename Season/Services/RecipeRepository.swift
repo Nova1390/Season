@@ -192,7 +192,16 @@ final class RecipeRepository {
             let trimmedCreatorDisplayName = row.creator_display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let trimmedCreatorAvatarURL = row.creator_avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let legacyAvatarURL = row.avatar_url?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let safeAuthorName = trimmedCreatorDisplayName.isEmpty ? "Unknown" : trimmedCreatorDisplayName
+            let trimmedSourceName = row.source_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let safeAuthorName: String = {
+                if !trimmedCreatorDisplayName.isEmpty {
+                    return trimmedCreatorDisplayName
+                }
+                if !trimmedSourceName.isEmpty {
+                    return Self.displaySourceName(from: trimmedSourceName)
+                }
+                return "Unknown"
+            }()
 
             var recipe = Recipe(
                 id: row.id,
@@ -223,7 +232,7 @@ final class RecipeRepository {
                 instagramURL: row.instagram_url?.trimmingCharacters(in: .whitespacesAndNewlines),
                 tiktokURL: row.tiktok_url?.trimmingCharacters(in: .whitespacesAndNewlines),
                 sourceURL: row.source_url?.trimmingCharacters(in: .whitespacesAndNewlines),
-                sourceName: row.source_name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                sourceName: trimmedSourceName.isEmpty ? nil : Self.displaySourceName(from: trimmedSourceName),
                 sourcePlatform: nil,
                 sourceCaptionRaw: nil,
                 importedFromSocial: false,
@@ -305,6 +314,35 @@ final class RecipeRepository {
             .execute()
 
         return try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
+    }
+
+    private static func displaySourceName(from rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "Unknown" }
+
+        let lowercased = trimmed.lowercased()
+        if lowercased.contains("giallozafferano") {
+            return "Giallo Zafferano"
+        }
+        if lowercased.contains("themealdb") {
+            return "TheMealDB"
+        }
+
+        let withoutScheme = trimmed
+            .replacingOccurrences(of: "https://", with: "")
+            .replacingOccurrences(of: "http://", with: "")
+        let host = withoutScheme.split(separator: "/").first.map(String.init) ?? withoutScheme
+        let cleanedHost = host
+            .replacingOccurrences(of: "www.", with: "")
+            .replacingOccurrences(of: "ricette.", with: "")
+        let name = cleanedHost.split(separator: ".").first.map(String.init) ?? cleanedHost
+        guard !name.isEmpty else { return trimmed }
+        return name
+            .split(separator: "-")
+            .map { token in
+                token.prefix(1).uppercased() + token.dropFirst()
+            }
+            .joined(separator: " ")
     }
 
     private func resolveRecipeOptionalColumnCapabilities(
