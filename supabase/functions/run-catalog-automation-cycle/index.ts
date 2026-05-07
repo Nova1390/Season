@@ -129,6 +129,7 @@ Deno.serve(async (request) => {
         global: { headers: { Authorization: `Bearer ${auth.bearerToken}` } },
       })
       : null;
+    const mutationClient = userClient ?? serviceClient;
 
     const recoverySummary = dryRun
       ? {
@@ -257,6 +258,19 @@ Deno.serve(async (request) => {
     });
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "reconciliation_apply_response", reconciliationSummary);
 
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "qualifier_reconciliation_apply_started", {
+      limit: reconciliationLimit,
+      apply_reconciliation: applyReconciliation,
+      dry_run: dryRun,
+    });
+    const qualifierReconciliationSummary = await runQualifierReconciliationStage({
+      client: mutationClient,
+      limit: reconciliationLimit,
+      applyEnabled: applyReconciliation,
+      dryRun,
+    });
+    await writeDebugEvent(serviceClient, debugRunId, "run-catalog-automation-cycle", "qualifier_reconciliation_apply_response", qualifierReconciliationSummary);
+
     console.log(
       `[SEASON_CATALOG_AUTOMATION] phase=cycle_completed ` +
       `recovery_failed=${recoverySummary.status == "failed"} ` +
@@ -265,7 +279,8 @@ Deno.serve(async (request) => {
       `creation_failed=${creationSummary.status == "failed"} ` +
       `alias_failed=${aliasSummary.status == "failed"} ` +
       `localization_failed=${localizationSummary.status == "failed"} ` +
-      `reconciliation_failed=${reconciliationSummary.status == "failed"}`,
+      `reconciliation_failed=${reconciliationSummary.status == "failed"} ` +
+      `qualifier_reconciliation_failed=${qualifierReconciliationSummary.status == "failed"}`,
     );
 
     const stageStatus = {
@@ -276,6 +291,7 @@ Deno.serve(async (request) => {
       alias_auto_apply: String(aliasSummary.status ?? "unknown"),
       localization_auto_apply: String(localizationSummary.status ?? "unknown"),
       reconciliation_apply_modern_safe: String(reconciliationSummary.status ?? "unknown"),
+      qualifier_reconciliation_apply: String(qualifierReconciliationSummary.status ?? "unknown"),
     };
     const runCompletedAt = new Date();
     const failedStageCount = Object.values(stageStatus).filter((status) => status === "failed").length;
@@ -290,6 +306,7 @@ Deno.serve(async (request) => {
         alias_auto_apply: aliasSummary,
         localization_auto_apply: localizationSummary,
         reconciliation_apply_modern_safe: reconciliationSummary,
+        qualifier_reconciliation_apply: qualifierReconciliationSummary,
       },
       metadata: {
         run_status: runStatus,
@@ -304,6 +321,7 @@ Deno.serve(async (request) => {
           apply_aliases: applyAliases,
           apply_localizations: applyLocalizations,
           apply_reconciliation: applyReconciliation,
+          apply_qualifier_reconciliation: applyReconciliation,
           dry_run: dryRun,
         },
         stage_status: stageStatus,
@@ -826,6 +844,77 @@ async function runModernReconciliationStage(input: {
     }
 
     const { data, error } = await input.userClient.rpc("apply_recipe_ingredient_reconciliation_modern", {
+      p_limit: input.limit,
+      p_recipe_ids: null,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const rows = Array.isArray(data) ? data as ReconciliationApplyRow[] : [];
+    const applied = rows.filter((row) => row.applied === true && String(row.apply_status ?? "").toLowerCase() === "applied").length;
+    const failed = rows.filter((row) => row.applied !== true && !isReconciliationSkipStatus(row.apply_status)).length;
+    const skipped = Math.max(0, rows.length - applied - failed);
+    const status = failed > 0 ? "failed" : (rows.length > 0 ? "ok" : "noop");
+
+    return {
+      total: rows.length,
+      applied,
+      skipped,
+      failed,
+      status,
+    };
+  } catch (error) {
+    return {
+      total: 1,
+      applied: 0,
+      skipped: 0,
+      failed: 1,
+      status: "failed",
+      error: String(error),
+    };
+  }
+}
+
+async function runQualifierReconciliationStage(input: {
+  client: ReturnType<typeof createClient>;
+  limit: number;
+  applyEnabled: boolean;
+  dryRun: boolean;
+}): Promise<Record<string, unknown>> {
+  if (!input.applyEnabled) {
+    return {
+      total: 0,
+      applied: 0,
+      skipped: 0,
+      failed: 0,
+      status: "skipped_policy",
+      detail: "apply_reconciliation_disabled",
+    };
+  }
+
+  try {
+    if (input.dryRun) {
+      const { data, error } = await input.client.rpc("preview_recipe_ingredient_qualifier_reconciliation", {
+        p_limit: input.limit,
+        p_only_safe: true,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+      const rows = Array.isArray(data) ? data : [];
+      return {
+        total: rows.length,
+        applied: 0,
+        skipped: rows.length,
+        failed: 0,
+        status: "skipped_dry_run",
+        detail: "dry_run_enabled_preview_only",
+      };
+    }
+
+    const { data, error } = await input.client.rpc("apply_recipe_ingredient_qualifier_reconciliation", {
       p_limit: input.limit,
       p_recipe_ids: null,
     });
