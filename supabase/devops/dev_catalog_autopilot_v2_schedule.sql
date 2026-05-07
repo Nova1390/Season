@@ -62,7 +62,8 @@ BEGIN
         'apply_reconciliation', true,
         'dry_run', false,
         'debug', false
-      )
+      ),
+      timeout_milliseconds := 60000
     ) AS request_id;
   $cmd$, v_service_key);
 

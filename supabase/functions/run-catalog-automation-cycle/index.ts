@@ -140,7 +140,7 @@ Deno.serve(async (request) => {
         status: "skipped_dry_run",
       }
       : await runRecoveryStage({
-        userClient,
+        userClient: mutationClient,
         recoveryLimit,
         mode: auth.mode,
       });
@@ -157,7 +157,7 @@ Deno.serve(async (request) => {
         status: "skipped_dry_run",
       }
       : await runCandidateIntakeStage({
-        userClient,
+        userClient: mutationClient,
         candidateLimit: clampLimit(enrichLimit * CANDIDATE_INTAKE_MULTIPLIER, enrichLimit),
         mode: auth.mode,
       });
@@ -225,7 +225,7 @@ Deno.serve(async (request) => {
       dry_run: dryRun,
     });
     const aliasSummary = await runAutoAliasStage({
-      userClient,
+      userClient: mutationClient,
       limit: enrichLimit,
       applyEnabled: applyAliases,
       dryRun,
@@ -238,7 +238,7 @@ Deno.serve(async (request) => {
       dry_run: dryRun,
     });
     const localizationSummary = await runAutoLocalizationStage({
-      userClient,
+      userClient: mutationClient,
       limit: enrichLimit,
       applyEnabled: applyLocalizations,
       dryRun,
@@ -251,7 +251,7 @@ Deno.serve(async (request) => {
       dry_run: dryRun,
     });
     const reconciliationSummary = await runModernReconciliationStage({
-      userClient,
+      userClient: mutationClient,
       limit: reconciliationLimit,
       applyEnabled: applyReconciliation,
       dryRun,
@@ -1034,6 +1034,12 @@ async function resolveAndAuthorize(
     return { allowed: true, mode: "service_role", bearerToken: null };
   }
 
+  const invocationToken = bearer || apikey;
+  if (invocationToken && await isCatalogAutomationInvocationToken(invocationToken)) {
+    console.log("[SEASON_CATALOG_AUTOMATION] phase=auth_ok mode=automation_invocation_token");
+    return { allowed: true, mode: "service_role", bearerToken: null };
+  }
+
   if (!bearer) {
     console.log("[SEASON_CATALOG_AUTOMATION] phase=auth_missing_user_token");
     return { allowed: false, mode: "user", bearerToken: null };
@@ -1057,6 +1063,25 @@ async function resolveAndAuthorize(
   );
 
   return { allowed: isAdmin, mode: "user", bearerToken: bearer };
+}
+
+async function isCatalogAutomationInvocationToken(token: string): Promise<boolean> {
+  try {
+    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await serviceClient.rpc("is_catalog_automation_invocation_token", {
+      p_token: token,
+    });
+    if (error) {
+      console.log("[SEASON_CATALOG_AUTOMATION] phase=automation_invocation_token_check_failed");
+      return false;
+    }
+    return decodeBoolean(data);
+  } catch {
+    console.log("[SEASON_CATALOG_AUTOMATION] phase=automation_invocation_token_check_failed");
+    return false;
+  }
 }
 
 function clampLimit(value: unknown, fallback: number): number {
