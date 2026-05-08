@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Season · Home v2 · Creator-aware smart feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   SEASON — HOME v2
+   Creator-aware smart feed. No magazine ornaments.
+   Off-white surfaces. Reason chips. Liquid-glass tab bar.
+   Crispy as the like verb.
+   ============================================================ */
+
+:root {
+  /* Surfaces — warm off-white, not vellum */
+  --bg:          #faf9f6;
+  --bg-sub:      #f3f0ea;
+  --card:        #ffffff;
+  --card-soft:   #fbfaf7;
+  --border:      rgba(26, 28, 24, 0.06);
+  --border-m:    rgba(26, 28, 24, 0.10);
+  --border-s:    rgba(26, 28, 24, 0.16);
+
+  /* Ink */
+  --ink:         #1a1c18;
+  --ink-soft:    #41443c;
+  --ink-muted:   #85867d;
+  --ink-faint:   #b5b4ab;
+
+  /* Season accents — matured, less magazine, more app */
+  --sage:        #586a4a;
+  --sage-deep:   #3f4c33;
+  --sage-soft:   #e6ebdd;
+  --terracotta:  #b35d3f;
+  --terracotta-soft: #f4e0d3;
+  --ochre:       #c9893a;
+  --ochre-soft:  #f6e8cd;
+  --fresh:       #5f8a3f;
+
+  /* Reason chip palette (quiet — Substack-discreet) */
+  --rc-fridge-bg:  #e6ebdd;
+  --rc-fridge-fg:  #3e5030;
+  --rc-creator-bg: #ece3d4;
+  --rc-creator-fg: #6d5025;
+  --rc-similar-bg: #eee9dd;
+  --rc-similar-fg: #625842;
+  --rc-peak-bg:    #dfe8de;
+  --rc-peak-fg:    #42573c;
+  --rc-trend-bg:   #f4e0d3;
+  --rc-trend-fg:   #8a3f20;
+  --rc-fresh-bg:   #dde9e1;
+  --rc-fresh-fg:   #2f6b53;
+
+  /* Typography */
+  --serif:  'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --sans:   'Inter', -apple-system, system-ui, sans-serif;
+  --mono:   'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Radii — modern, not flat, not round */
+  --r-xs:  8px;
+  --r-sm:  12px;
+  --r-md:  16px;
+  --r-lg:  20px;
+  --r-xl:  24px;
+  --r-pill:9999px;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(26, 28, 24, 0.04);
+  --shadow-2: 0 4px 16px rgba(26, 28, 24, 0.06);
+  --shadow-3: 0 10px 32px rgba(26, 28, 24, 0.10);
+
+  /* Device */
+  --device-w: 390px;
+  --device-h: 844px;
+  --device-radius: 58px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: linear-gradient(135deg, #e8e2d4 0%, #d6cdb8 100%);
+  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body {
+  display: flex; align-items: center; justify-content: center;
+  padding: 28px 20px;
+}
+
+button { font-family: inherit; color: inherit; }
+
+/* ---------- Device frame ---------- */
+.device {
+  position: relative;
+  width: var(--device-w);
+  height: var(--device-h);
+  border-radius: var(--device-radius);
+  background: #0a0a0a;
+  padding: 10px;
+  box-shadow:
+    0 50px 100px -20px rgba(26, 28, 24, 0.35),
+    0 30px 60px -30px rgba(26, 28, 24, 0.40),
+    inset 0 0 0 1.5px #1a1a1a;
+}
+.device__notch {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: 110px; height: 32px;
+  background: #000;
+  border-radius: 22px;
+  z-index: 50;
+}
+.device__screen {
+  position: relative;
+  width: 100%; height: 100%;
+  border-radius: calc(var(--device-radius) - 10px);
+  overflow: hidden;
+  background: var(--bg);
+  contain: layout paint;
+}
+
+/* ---------- Status bar ---------- */
+.statusbar {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 54px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 28px 0;
+  font-family: -apple-system, system-ui, sans-serif;
+  font-weight: 600; font-size: 15px;
+  color: var(--ink);
+  z-index: 40;
+  pointer-events: none;
+}
+.statusbar__icons { display: flex; gap: 6px; align-items: center; }
+
+/* ---------- Scrollable screen ---------- */
+.screen {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 54px;
+  padding-bottom: 110px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+/* ---------- Top bar (masthead) ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 22px 14px;
+  background: var(--bg);
+  position: sticky; top: 0;
+  z-index: 20;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(to bottom, var(--bg) 80%, rgba(250,249,246,0.85));
+}
+.wordmark {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  user-select: none;
+}
+.wordmark em {
+  font-style: italic;
+  color: var(--sage);
+  font-weight: 500;
+}
+.topbar__actions { display: flex; gap: 6px; align-items: center; }
+.icon-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease;
+}
+.icon-btn:hover { background: var(--bg-sub); }
+.icon-btn svg { stroke: var(--ink); fill: none; stroke-width: 1.6; }
+.icon-btn__dot {
+  position: absolute; top: 10px; right: 10px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--terracotta);
+  border: 2px solid var(--bg);
+}
+.avatar-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: #fff;
+  font-family: var(--sans); font-weight: 600; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none;
+  margin-left: 4px;
+  padding: 0;
+  overflow: hidden;
+}
+.avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- Greeting ---------- */
+.greeting {
+  padding: 8px 22px 20px;
+}
+.greeting__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.greeting__dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--fresh);
+  box-shadow: 0 0 0 3px rgba(95, 138, 63, 0.18);
+}
+.greeting__title {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+.greeting__title em {
+  font-style: italic;
+  color: var(--sage-deep);
+  font-weight: 500;
+}
+
+/* ---------- Hero card ---------- */
+.hero {
+  margin: 0 16px 24px;
+  background: var(--card);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+  border: 1px solid var(--border);
+}
+.hero__media {
+  position: relative;
+  width: 100%;
+  padding-bottom: 84%;
+  background: #e6e1d4;
+  overflow: hidden;
+}
+.hero__media img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.hero__badge {
+  position: absolute;
+  top: 14px; left: 14px;
+  background: rgba(26, 28, 24, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  display: flex; align-items: center; gap: 6px;
+}
+.hero__badge .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--fresh);
+}
+.hero__crispy {
+  position: absolute;
+  top: 14px; right: 14px;
+  min-height: 34px;
+  padding: 0 12px 0 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: none;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b4817;  /* brown (matches inactive state in app) */
+  transition: transform 0.15s ease, color 0.2s ease, background 0.2s ease;
+  box-shadow: var(--shadow-1);
+  font-variant-numeric: tabular-nums;
+}
+.hero__crispy svg { color: #b37a30; }  /* terracotta/ochre flame stroke (inactive) */
+.hero__crispy:active { transform: scale(0.94); }
+.hero__crispy.is-crispied { color: #c0621f; background: rgba(255, 180, 120, 0.28); }
+.hero__crispy.is-crispied svg { color: #e2801c; }  /* orange flame (active) */
+.hero__crispy-label { font-weight: 500; opacity: 0.78; letter-spacing: 0.01em; }
+.hero__body {
+  padding: 18px 18px 20px;
+}
+.hero__creator {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.hero__creator-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #d8cfbc;
+  background-size: cover; background-position: center;
+  flex-shrink: 0;
+  border: 1.5px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.hero__creator-info { flex: 1; min-width: 0; }
+.hero__creator-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.hero__creator-meta {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 1px;
+}
+.follow-btn {
+  background: transparent;
+  border: 1.5px solid var(--border-s);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.follow-btn:hover { background: var(--bg-sub); }
+.follow-btn.is-following {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.hero__title {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+.hero__meta {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-bottom: 16px;
+}
+.hero__meta-item { display: flex; align-items: center; gap: 5px; }
+.hero__meta-item strong {
+  color: var(--ink); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.hero__cta-row {
+  display: flex; gap: 10px; align-items: center;
+}
+.cta-primary {
+  flex: 1;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 14px 18px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+.cta-primary:active { transform: scale(0.985); }
+.cta-primary:hover { opacity: 0.92; }
+.cta-secondary {
+  background: var(--bg-sub);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--r-md);
+  padding: 14px 18px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 48px;
+  min-width: 48px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease;
+}
+.cta-secondary:hover { background: #e9e5dc; }
+
+/* ---------- Reason chip (Substack-discreet) ---------- */
+.reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  padding: 4px 8px;
+  border-radius: var(--r-xs);
+  white-space: nowrap;
+  font-weight: 500;
+}
+.reason[data-why="fridge"]   { background: var(--rc-fridge-bg);  color: var(--rc-fridge-fg); }
+.reason[data-why="creator"]  { background: var(--rc-creator-bg); color: var(--rc-creator-fg); }
+.reason[data-why="similar"]  { background: var(--rc-similar-bg); color: var(--rc-similar-fg); }
+.reason[data-why="peak"]     { background: var(--rc-peak-bg);    color: var(--rc-peak-fg); }
+.reason[data-why="trending"] { background: var(--rc-trend-bg);   color: var(--rc-trend-fg); }
+.reason[data-why="fresh"]    { background: var(--rc-fresh-bg);   color: var(--rc-fresh-fg); }
+.reason__glyph {
+  width: 8px; height: 8px; border-radius: 50%; opacity: 0.55;
+}
+.reason[data-why="fridge"]   .reason__glyph { background: var(--rc-fridge-fg); }
+.reason[data-why="creator"]  .reason__glyph { background: var(--rc-creator-fg); }
+.reason[data-why="similar"]  .reason__glyph { background: var(--rc-similar-fg); }
+.reason[data-why="peak"]     .reason__glyph { background: var(--rc-peak-fg); }
+.reason[data-why="trending"] .reason__glyph { background: var(--rc-trend-fg); }
+.reason[data-why="fresh"]    .reason__glyph { background: var(--rc-fresh-fg); }
+
+/* ---------- Hero reason (distinct position) ---------- */
+.hero__reason {
+  margin-bottom: 10px;
+}
+
+/* ---------- Section container ---------- */
+.section {
+  margin-bottom: 26px;
+}
+.section__head {
+  padding: 0 22px;
+  margin-bottom: 12px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px;
+}
+.section__title {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.section__sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  display: block;
+  margin-top: 2px;
+}
+.section__link {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-weight: 500;
+  padding: 4px 0;
+}
+.section__link:hover { color: var(--ink); }
+
+/* ---------- Fresh strip ---------- */
+.fresh-strip {
+  margin: 0 16px;
+  padding: 14px 16px;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fresh-strip:hover { background: var(--card-soft); }
+.fresh-strip__avatars {
+  display: flex;
+  flex-shrink: 0;
+}
+.fresh-strip__avatars .av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  background-color: #d8cfbc;
+  border: 2px solid var(--card);
+  margin-left: -10px;
+  box-shadow: 0 1px 2px rgba(26,28,24,0.06);
+}
+.fresh-strip__avatars .av:first-child { margin-left: 0; }
+.fresh-strip__text { flex: 1; min-width: 0; }
+.fresh-strip__title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.fresh-strip__meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.fresh-strip__count {
+  background: var(--fresh);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.fresh-strip__arrow {
+  color: var(--ink-muted);
+  font-size: 16px;
+}
+
+/* ---------- In-season today ---------- */
+.in-season {
+  margin-bottom: 32px;
+}
+.in-season__scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 22px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.in-season__scroll::-webkit-scrollbar { display: none; }
+.in-season__item {
+  flex-shrink: 0;
+  width: 78px;
+  text-align: center;
+  cursor: pointer;
+}
+.in-season__thumb {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: #e6e1d4;
+  background-size: cover; background-position: center;
+  margin-bottom: 8px;
+  position: relative;
+  box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px var(--sage-soft);
+}
+.in-season__item--peak .in-season__thumb::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; right: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--sage);
+  border: 2px solid var(--bg);
+}
+.in-season__name {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.in-season__count {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* ---------- Filter chips ---------- */
+.filter-row {
+  padding: 0 0 4px;
+  margin-bottom: 18px;
+  position: sticky;
+  top: 60px;
+  z-index: 15;
+  background: linear-gradient(to bottom, var(--bg) 70%, rgba(250,249,246,0));
+  padding-top: 6px;
+  padding-bottom: 10px;
+}
+.filter-scroll {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  padding: 0 22px;
+  scrollbar-width: none;
+}
+.filter-scroll::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border-m);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  padding: 10px 14px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--border-s); color: var(--ink); }
+.chip.is-active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.chip svg { width: 14px; height: 14px; }
+
+/* ---------- Smart feed ---------- */
+.feed {
+  padding: 0 16px;
+  display: flex; flex-direction: column;
+  gap: 18px;
+}
+.feed-empty {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--ink-muted);
+  font-family: var(--sans);
+  font-size: 13px;
+}
+
+/* Feed card */
+.fcard {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+.fcard:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+.fcard__header {
+  padding: 12px 14px 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.fcard__avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  background-color: #d8cfbc;
+  flex-shrink: 0;
+  border: 1.5px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.fcard__creator-row { flex: 1; min-width: 0; }
+.fcard__creator-name {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fcard__creator-bio {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fcard__follow-mini {
+  background: transparent;
+  border: 1.2px solid var(--border-s);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.fcard__follow-mini.is-following {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-muted);
+}
+.fcard__media {
+  position: relative;
+  width: 100%;
+  padding-bottom: 62%;
+  background: #e6e1d4;
+  overflow: hidden;
+}
+.fcard__media img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.fcard__crispy {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  min-height: 30px;
+  padding: 0 10px 0 9px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b4817;
+  transition: transform 0.15s ease, color 0.2s ease, background 0.2s ease;
+  box-shadow: var(--shadow-1);
+  font-variant-numeric: tabular-nums;
+}
+.fcard__crispy svg { color: #b37a30; }
+.fcard__crispy:active { transform: scale(0.92); }
+.fcard__crispy.is-crispied { color: #c0621f; background: rgba(255, 180, 120, 0.28); }
+.fcard__crispy.is-crispied svg { color: #e2801c; }
+.fcard__body {
+  padding: 12px 14px 14px;
+}
+.fcard__reason {
+  margin-bottom: 8px;
+}
+.fcard__title {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.fcard__meta {
+  display: flex; gap: 12px; align-items: center;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fcard__meta strong { color: var(--ink-soft); font-weight: 600; }
+.fcard__meta-dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+/* Feed card — large variant (for first / last mixed) */
+.fcard--large .fcard__media { padding-bottom: 78%; }
+.fcard--large .fcard__title { font-size: 22px; }
+
+/* ---------- Mid-feed follow nudge ---------- */
+.nudge {
+  background: linear-gradient(135deg, var(--sage-soft), #eef1e4);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  border: 1px solid rgba(88, 106, 74, 0.15);
+}
+.nudge__head {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--sage-deep);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.nudge__row {
+  display: flex; align-items: center; gap: 12px;
+}
+.nudge__avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #d8cfbc;
+  background-size: cover; background-position: center;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(26,28,24,0.08);
+}
+.nudge__info { flex: 1; min-width: 0; }
+.nudge__name {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.nudge__bio {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.3;
+  margin-top: 2px;
+}
+.nudge__reason {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  color: var(--sage-deep);
+  margin-top: 4px;
+  text-transform: none;
+}
+.nudge__follow {
+  background: var(--sage-deep);
+  color: #fff;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nudge__follow.is-following {
+  background: transparent;
+  color: var(--sage-deep);
+  border: 1.5px solid rgba(88, 106, 74, 0.3);
+}
+
+/* ---------- Tab bar — liquid glass ---------- */
+.tabbar {
+  position: absolute;
+  left: 10px; right: 10px; bottom: 14px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 10px 30px rgba(26,28,24,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.7);
+  display: flex;
+  justify-content: space-around;
+  z-index: 30;
+}
+.tab {
+  background: none; border: none; cursor: pointer;
+  flex: 1;
+  padding: 8px 4px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  position: relative;
+  min-height: 54px;
+  border-radius: 16px;
+  transition: background 0.15s ease;
+}
+.tab:hover { background: rgba(255,255,255,0.4); }
+.tab__icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-muted);
+  transition: color 0.15s ease;
+}
+.tab__icon svg { stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tab__label {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink-muted);
+  transition: color 0.15s ease;
+}
+.tab.is-active .tab__icon { color: var(--ink); }
+.tab.is-active .tab__label { color: var(--ink); font-weight: 600; }
+.tab.is-active .tab__icon svg { fill: var(--ink); stroke: var(--ink); }
+.tab__dot {
+  position: absolute;
+  top: 4px; right: 14px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--terracotta);
+}
+
+/* Create tab — center, prominent */
+.tab--create {
+  align-self: center;
+  padding: 0;
+  min-height: 0;
+}
+.tab--create .tab__pad {
+  width: 50px; height: 50px;
+  border-radius: 16px;
+  background: linear-gradient(140deg, var(--sage) 0%, var(--sage-deep) 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  box-shadow:
+    0 6px 14px rgba(63, 76, 51, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  position: relative;
+  top: -6px;
+}
+.tab--create:hover .tab__pad { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(63, 76, 51, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.20); }
+.tab--create:active .tab__pad { transform: scale(0.96); }
+.tab--create .tab__pad svg { stroke: #fff; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.tab--create .tab__label {
+  position: relative;
+  top: -6px;
+  margin-top: 2px;
+  color: var(--sage-deep);
+  font-weight: 600;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: absolute;
+  left: 50%; bottom: 90px;
+  transform: translate(-50%, 20px);
+  background: rgba(26, 28, 24, 0.92);
+  color: #fff;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  display: flex; align-items: center; gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(26,28,24,0.25);
+}
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.toast svg { width: 16px; height: 16px; }
+
+/* ---------- Language toggle (in side sheet trigger — simple here) ---------- */
+.lang-toggle {
+  display: inline-flex;
+  background: var(--bg-sub);
+  border-radius: var(--r-pill);
+  padding: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  margin-left: auto;
+}
+.lang-toggle button {
+  background: none; border: none;
+  padding: 5px 10px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: var(--r-pill);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.lang-toggle button.is-active {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+/* ---------- Small helpers ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+/* Caption under device */
+.caption {
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(26, 28, 24, 0.45);
+  text-align: center;
+  max-width: 420px;
+}
+.caption strong { color: rgba(26, 28, 24, 0.7); }
+
+</style>
+</head>
+<body>
+
+<div class="frame-wrap" style="display:flex;flex-direction:column;align-items:center;">
+<div class="device" aria-label="Season home screen v2">
+  <div class="device__notch"></div>
+  <div class="device__screen">
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="statusbar__icons">
+        <svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="6" width="2.5" height="4" rx="0.5" fill="currentColor"/><rect x="4" y="4" width="2.5" height="6" rx="0.5" fill="currentColor"/><rect x="8" y="2" width="2.5" height="8" rx="0.5" fill="currentColor"/><rect x="12" y="0" width="2.5" height="10" rx="0.5" fill="currentColor"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11"><rect x="0.5" y="0.5" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.4" fill="none"/><rect x="2" y="2" width="16" height="7" rx="1.5" fill="currentColor"/></svg>
+      </div>
+    </div>
+
+    <main class="screen" id="screen">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="wordmark" id="wordmark">Season<em>.</em></div>
+        <div class="topbar__actions">
+          <button class="icon-btn" aria-label="Lista spesa" id="topbar-list">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 6h14l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8L5 6z"/><path d="M9 6V5a3 3 0 0 1 6 0v1"/></svg>
+            <span class="icon-btn__dot" aria-label="Elementi in lista"></span>
+          </button>
+          <button class="icon-btn" aria-label="Notifiche" id="topbar-notifications">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3l1.5-2V9a4.5 4.5 0 0 1 9 0v5z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+          </button>
+          <button class="avatar-btn" aria-label="Profilo">
+            <img src="_assets/av_rocco.png" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;"/>
+          </button>
+        </div>
+      </header>
+
+      <!-- Greeting -->
+      <section class="greeting">
+        <div class="greeting__label">
+          <span class="greeting__dot"></span>
+          <span id="greeting-context">Aprile · Milano · Settimana 16</span>
+        </div>
+        <h1 class="greeting__title" id="greeting-title">
+          Buongiorno Rocco, <em>cosa cuciniamo</em> con quello che hai?
+        </h1>
+      </section>
+
+      <!-- HERO -->
+      <article class="hero" id="hero">
+        <div class="hero__media">
+          <img id="hero-img" src="_assets/hero_risotto.jpg" alt="" />
+          <div class="hero__badge">
+            <span class="dot"></span>
+            <span id="hero-badge-text">Perfetta per stasera</span>
+          </div>
+          <button class="hero__crispy" id="hero-crispy" aria-label="Crispy">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M12 2c0 4-4 5-4 9a4 4 0 1 0 8 0c0-1.5-1-2.5-1-4 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 4-6 6-10z"/>
+            </svg>
+            <span id="hero-crispy-count">128</span>
+            <span class="hero__crispy-label" data-i18n="crispy-word">crispy</span>
+          </button>
+        </div>
+        <div class="hero__body">
+          <div class="hero__reason">
+            <span class="reason" data-why="fridge">
+              <span class="reason__glyph"></span>
+              <span id="hero-reason-text">5 su 7 ingredienti nel tuo frigo</span>
+            </span>
+          </div>
+          <div class="hero__creator">
+            <div class="hero__creator-avatar" style="background-image:url('_assets/av_elena.png')"></div>
+            <div class="hero__creator-info">
+              <div class="hero__creator-name">Elena Vanzi</div>
+              <div class="hero__creator-meta" id="hero-creator-meta">12,3k follower · 47 ricette</div>
+            </div>
+            <button class="follow-btn is-following" id="hero-follow">
+              <span data-i18n="following">Segui già</span>
+            </button>
+          </div>
+          <h2 class="hero__title" id="hero-title">Risotto Carnaroli ai Carciofi e Limone</h2>
+          <div class="hero__meta">
+            <span class="hero__meta-item"><strong>40</strong><span data-i18n="min">min</span></span>
+            <span class="hero__meta-item"><strong>4</strong><span data-i18n="serves">porzioni</span></span>
+            <span class="hero__meta-item"><span data-i18n="intermediate">Intermedio</span></span>
+          </div>
+          <div class="hero__cta-row">
+            <button class="cta-primary" id="hero-start">
+              <span data-i18n="start">Inizia a cucinare</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+            </button>
+            <button class="cta-secondary" aria-label="Salva">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Fresh strip -->
+      <div class="section">
+        <div class="section__head">
+          <div>
+            <span class="section__sub" data-i18n="fresh-sub">Dalla tua rete</span>
+            <h3 class="section__title" data-i18n="fresh-title">Pubblicato questa settimana</h3>
+          </div>
+          <button class="section__link" data-i18n="see-all">Vedi tutti</button>
+        </div>
+        <div class="fresh-strip" id="fresh-strip">
+          <div class="fresh-strip__avatars">
+            <div class="av" style="background-image:url('_assets/av_elena.png')"></div>
+            <div class="av" style="background-image:url('_assets/av_marco.png')"></div>
+            <div class="av" style="background-image:url('_assets/av_sara.png')"></div>
+            <div class="av" style="background-image:url('_assets/av_luca.png')"></div>
+          </div>
+          <div class="fresh-strip__text">
+            <div class="fresh-strip__title" data-i18n="fresh-line1">6 ricette nuove da creator che segui</div>
+            <div class="fresh-strip__meta" data-i18n="fresh-line2">Elena · Marco · Sara · +1</div>
+          </div>
+          <div class="fresh-strip__count">6</div>
+          <span class="fresh-strip__arrow">→</span>
+        </div>
+      </div>
+
+      <!-- In season today -->
+      <div class="section in-season">
+        <div class="section__head">
+          <div>
+            <span class="section__sub" data-i18n="season-sub">In questo momento · Lombardia</span>
+            <h3 class="section__title" data-i18n="season-title">Al picco questa settimana</h3>
+          </div>
+          <button class="section__link" data-i18n="see-all">Vedi tutti</button>
+        </div>
+        <div class="in-season__scroll" id="season-scroll">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="filter-row">
+        <div class="filter-scroll" id="filter-scroll">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Feed header -->
+      <div class="section__head" style="margin-bottom:14px;">
+        <div>
+          <span class="section__sub" id="feed-sub" data-i18n="feed-sub">Scelto per te</span>
+          <h3 class="section__title" id="feed-title" data-i18n="feed-title">Ricette per il tuo momento</h3>
+        </div>
+      </div>
+
+      <!-- Smart feed -->
+      <div class="feed" id="feed"></div>
+
+      <div style="height: 16px;"></div>
+    </main>
+
+    <!-- Tab bar (coerente con ContentView.swift): Home | Scopri | [+Crea] | Oggi | Io
+         Frigo è accessibile da Home (hero + reason chip) e dalla Lista spesa in alto a destra. -->
+    <nav class="tabbar" role="navigation" aria-label="Tab principale">
+      <button class="tab is-active" data-tab="home">
+        <span class="tab__icon">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v5a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2z"/></svg>
+        </span>
+        <span class="tab__label" data-i18n="tab-home">Home</span>
+      </button>
+      <button class="tab" data-tab="discover">
+        <span class="tab__icon">
+          <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        </span>
+        <span class="tab__label" data-i18n="tab-discover">Scopri</span>
+      </button>
+      <button class="tab tab--create" data-tab="create" id="create-tab" aria-label="Crea ricetta">
+        <span class="tab__pad">
+          <svg viewBox="0 0 24 24" width="22" height="22"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </span>
+        <span class="tab__label" data-i18n="tab-create">Crea</span>
+      </button>
+      <button class="tab" data-tab="today">
+        <span class="tab__icon">
+          <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2.6" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.4"/><line x1="2.6" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.4" y2="12"/><line x1="5.6" y1="5.6" x2="7.3" y2="7.3"/><line x1="16.7" y1="16.7" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.3" y2="16.7"/><line x1="16.7" y1="7.3" x2="18.4" y2="5.6"/></svg>
+        </span>
+        <span class="tab__label" data-i18n="tab-today">Oggi</span>
+      </button>
+      <button class="tab" data-tab="profile">
+        <span class="tab__icon">
+          <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        </span>
+        <span class="tab__label" data-i18n="tab-profile">Io</span>
+      </button>
+    </nav>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21 C 6 18, 4 12, 6 7 C 8 3, 13 2, 17 4 C 20 6, 21 10, 19 14 C 17 17, 14 18, 12 21 Z M12 21 C 11 16, 11 11, 14 7" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+      <span id="toast-text">Crispy!</span>
+    </div>
+
+  </div>
+</div>
+<div class="caption">
+  <strong>Season · Home v2</strong> — Smart feed creator-aware · Off-white · Newsreader · Liquid glass tabs · Reason chips · Crispy
+</div>
+</div>
+
+<script>
+/* ===========================================================
+   SEASON v2 — Data + Behavior
+   =========================================================== */
+
+const I18N = {
+  it: {
+    'greeting-title': 'Buongiorno Rocco, <em>cosa cuciniamo</em> con quello che hai?',
+    'greeting-context': 'Aprile · Milano · Settimana 16',
+    'hero-badge-text': 'Perfetta per stasera',
+    'hero-reason-text': '5 su 7 ingredienti nel tuo frigo',
+    'hero-creator-meta': '12,3k follower · 47 ricette',
+    'hero-title': 'Risotto Carnaroli ai Carciofi e Limone',
+    'fresh-sub': 'Dalla tua rete',
+    'fresh-title': 'Pubblicato questa settimana',
+    'fresh-line1': '6 ricette nuove da creator che segui',
+    'fresh-line2': 'Elena · Marco · Sara · +1',
+    'season-sub': 'In questo momento · Lombardia',
+    'season-title': 'Al picco questa settimana',
+    'feed-sub': 'Scelto per te',
+    'feed-title': 'Ricette per il tuo momento',
+    'see-all': 'Vedi tutti',
+    min: 'min',
+    serves: 'porzioni',
+    intermediate: 'Intermedio',
+    start: 'Inizia a cucinare',
+    following: 'Segui già',
+    follow: 'Segui',
+    'tab-home': 'Home',
+    'tab-discover': 'Scopri',
+    'tab-create': 'Crea',
+    'tab-today': 'Oggi',
+    'tab-profile': 'Io',
+    // Filter chips
+    'chip-all': 'Tutte',
+    'chip-ready': 'Pronte ora',
+    'chip-under15': '15 min',
+    'chip-protein': 'Proteiche',
+    'chip-peak': 'Di stagione',
+    'chip-trending': 'Trending',
+    // Reasons
+    'reason-creator': 'da {name} · segui',
+    'reason-fridge-n': '{n} su {t} nel tuo frigo',
+    'reason-similar': 'come quelle che hai crispato',
+    'reason-peak': '{ing} al picco ora',
+    'reason-trending': '{n} la stanno cucinando',
+    'reason-fresh': 'nuova · {t}',
+    // Toast
+    'toast-crispied': 'Crispata!',
+    'toast-uncrispied': 'Crispy tolto',
+    'crispy-word': 'crispy',
+    'toast-followed': 'Ora segui {name}',
+    'toast-unfollowed': 'Non segui più {name}',
+    // Nudge
+    'nudge-head': 'Ti potrebbe piacere',
+    'nudge-reason': 'Stile simile a Elena e Marco',
+  },
+  en: {
+    'greeting-title': 'Good morning Rocco, <em>what shall we cook</em> with what you have?',
+    'greeting-context': 'April · Milan · Week 16',
+    'hero-badge-text': 'Right for tonight',
+    'hero-reason-text': '5 of 7 ingredients in your fridge',
+    'hero-creator-meta': '12.3k followers · 47 recipes',
+    'hero-title': 'Carnaroli Risotto with Artichoke & Lemon',
+    'fresh-sub': 'From your network',
+    'fresh-title': 'Posted this week',
+    'fresh-line1': '6 new recipes from creators you follow',
+    'fresh-line2': 'Elena · Marco · Sara · +1',
+    'season-sub': 'Right now · Lombardy',
+    'season-title': 'At peak this week',
+    'feed-sub': 'Chosen for you',
+    'feed-title': 'Recipes for your moment',
+    'see-all': 'See all',
+    min: 'min',
+    serves: 'serves',
+    intermediate: 'Intermediate',
+    start: 'Start cooking',
+    following: 'Following',
+    follow: 'Follow',
+    'tab-home': 'Home',
+    'tab-discover': 'Discover',
+    'tab-create': 'Create',
+    'tab-today': 'Today',
+    'tab-profile': 'Me',
+    // Filter chips
+    'chip-all': 'All',
+    'chip-ready': 'Ready now',
+    'chip-under15': '15 min',
+    'chip-protein': 'Protein',
+    'chip-peak': 'Peak season',
+    'chip-trending': 'Trending',
+    // Reasons
+    'reason-creator': 'from {name} · following',
+    'reason-fridge-n': '{n} of {t} in your fridge',
+    'reason-similar': 'like ones you crispied',
+    'reason-peak': '{ing} at peak now',
+    'reason-trending': '{n} cooking this week',
+    'reason-fresh': 'new · {t}',
+    // Toast
+    'toast-crispied': 'Crispied!',
+    'toast-uncrispied': 'Crispy removed',
+    'crispy-word': 'crispy',
+    'toast-followed': 'Now following {name}',
+    'toast-unfollowed': 'No longer following {name}',
+    // Nudge
+    'nudge-head': 'You might like',
+    'nudge-reason': 'Style similar to Elena and Marco',
+  },
+};
+
+let LANG = 'it';
+
+function t(key, vars) {
+  let s = I18N[LANG][key] || I18N.en[key] || key;
+  if (vars) for (const k in vars) s = s.replace('{' + k + '}', vars[k]);
+  return s;
+}
+
+// ---------- In-season data (Italy, April) ----------
+const SEASON = [
+  { name_it: 'Carciofi',   name_en: 'Artichokes',   img: '_assets/p_carciofi.jpg', recipes: 42, peak: true },
+  { name_it: 'Asparagi',   name_en: 'Asparagus',    img: '_assets/p_asparagi.jpg', recipes: 67, peak: true },
+  { name_it: 'Fave',       name_en: 'Fava beans',   img: '_assets/p_fave.jpg',     recipes: 23, peak: true },
+  { name_it: 'Piselli',    name_en: 'Peas',         img: '_assets/p_piselli.jpg',  recipes: 34, peak: true },
+  { name_it: 'Fragole',    name_en: 'Strawberries', img: '_assets/p_fragole.jpg',  recipes: 29, peak: true },
+  { name_it: 'Agretti',    name_en: 'Saltwort',     img: '_assets/p_agretti.jpg',  recipes: 11, peak: false },
+  { name_it: 'Rucola',     name_en: 'Rocket',       img: '_assets/p_rucola.jpg',   recipes: 21, peak: false },
+];
+
+// ---------- Creators ----------
+// Bio mostra solo dati che esistono già: follower count + numero ricette.
+// Professione / regione sarà aggiunta quando il modello Creator avrà quei
+// campi (es. via integrazione LinkedIn per verifica).
+const CREATORS = {
+  elena:  { name: 'Elena Vanzi',    av: '_assets/av_elena.png',  following: true,  followers: '12,3k', recipes: 47 },
+  marco:  { name: 'Marco Rizzi',    av: '_assets/av_marco.png',  following: true,  followers: '4,8k',  recipes: 22 },
+  sara:   { name: 'Sara Conte',     av: '_assets/av_sara.png',   following: true,  followers: '9,1k',  recipes: 34 },
+  chiara: { name: 'Chiara Bellini', av: '_assets/av_chiara.png', following: false, followers: '2,4k',  recipes: 18 },
+  luca:   { name: 'Luca Neri',      av: '_assets/av_luca.png',   following: false, followers: '6,7k',  recipes: 29 },
+};
+
+// ---------- Feed items ----------
+// Each item declares the PRIMARY reason it's in the feed.
+// Mix approximates the balance the FeedPersonalizationService produces:
+// fridge, creator, similar, peak, trending, fresh — in varying ratios.
+const FEED = [
+  {
+    id: 'f1',
+    title_it: 'Pasta con fave, pecorino e limone',
+    title_en: 'Pasta with fava, pecorino & lemon',
+    img: '_assets/pasta_fave.jpg',
+    creator: 'marco',
+    minutes: 15, serves: 2, crispy: 87,
+    reason: 'fresh', reason_time_it: 'oggi', reason_time_en: 'today',
+    tags: ['under15', 'ready', 'peak'],
+  },
+  {
+    id: 'f2',
+    title_it: 'Crostini con ricotta, fragole e pepe nero',
+    title_en: 'Crostini with ricotta, strawberry & black pepper',
+    img: '_assets/crostini_fragole.jpg',
+    creator: 'sara',
+    minutes: 10, serves: 4, crispy: 312,
+    reason: 'similar',
+    tags: ['under15', 'ready'],
+  },
+  {
+    id: 'f3',
+    title_it: 'Vellutata di piselli, menta e ricotta',
+    title_en: 'Pea soup with mint & ricotta',
+    img: '_assets/vellutata_piselli.jpg',
+    creator: 'elena',
+    minutes: 25, serves: 4, crispy: 156, protein: 18,
+    reason: 'fridge', reason_n: 4, reason_t: 5,
+    tags: ['ready', 'protein', 'peak'],
+    large: true,
+  },
+  // NUDGE placeholder — rendered specially
+  { id: 'nudge1', type: 'nudge', creator: 'chiara' },
+  {
+    id: 'f4',
+    title_it: 'Tortino di asparagi e parmigiano',
+    title_en: 'Asparagus & parmesan tart',
+    img: '_assets/tortino_asparagi.jpg',
+    creator: 'luca',
+    minutes: 35, serves: 6, crispy: 421,
+    reason: 'peak', reason_ing_it: 'Asparagi', reason_ing_en: 'Asparagus',
+    tags: ['peak'],
+  },
+  {
+    id: 'f5',
+    title_it: 'Insalata di farro, carciofi e stracciatella',
+    title_en: 'Farro salad, artichoke & stracciatella',
+    img: '_assets/farro_carciofi.jpg',
+    creator: 'chiara',
+    minutes: 20, serves: 4, crispy: 213,
+    reason: 'trending', reason_n: 213,
+    tags: ['trending', 'peak', 'protein'],
+  },
+  {
+    id: 'f6',
+    title_it: 'Frittata di erbe spontanee',
+    title_en: 'Wild-herb frittata',
+    img: '_assets/frittata_erbe.jpg',
+    creator: 'elena',
+    minutes: 15, serves: 2, crispy: 98, protein: 22,
+    reason: 'creator',
+    tags: ['under15', 'ready', 'protein'],
+  },
+  {
+    id: 'f7',
+    title_it: 'Crema di fave al finocchietto',
+    title_en: 'Fava cream with wild fennel',
+    img: '_assets/crema_fave.jpg',
+    creator: 'marco',
+    minutes: 30, serves: 4, crispy: 54,
+    reason: 'fridge', reason_n: 3, reason_t: 5,
+    tags: ['ready', 'peak'],
+  },
+];
+
+const FILTERS = [
+  { id: 'all',      key: 'chip-all',      icon: null },
+  { id: 'ready',    key: 'chip-ready',    icon: 'check' },
+  { id: 'under15',  key: 'chip-under15',  icon: 'timer' },
+  { id: 'protein',  key: 'chip-protein',  icon: 'bolt' },
+  { id: 'peak',     key: 'chip-peak',     icon: 'leaf' },
+  { id: 'trending', key: 'chip-trending', icon: 'flame' },
+];
+
+const FILTER_ICONS = {
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 15 15"/><line x1="9" y1="2" x2="15" y2="2"/></svg>',
+  bolt:  '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  leaf:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20a7 7 0 0 1-7-7V4h9a7 7 0 0 1 7 7v2a7 7 0 0 1-7 7z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>',
+  flame: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c0 4-4 5-4 9a4 4 0 1 0 8 0c0-1.5-1-2.5-1-4 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 4-6 6-10z"/></svg>',
+};
+
+// ---------- State ----------
+const state = {
+  activeFilter: 'all',
+  crispied: new Set(),
+  follow: Object.fromEntries(Object.entries(CREATORS).map(([k, v]) => [k, v.following])),
+};
+
+// ---------- Render helpers ----------
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+function crispySVG() {
+  return `
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+    <path d="M12 2c0 4-4 5-4 9a4 4 0 1 0 8 0c0-1.5-1-2.5-1-4 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 4-6 6-10z"/>
+  </svg>`;
+}
+
+function reasonHTML(item) {
+  const r = item.reason;
+  const creator = CREATORS[item.creator] || {};
+  let label;
+  if (r === 'creator') label = t('reason-creator', { name: creator.name.split(' ')[0] });
+  else if (r === 'fridge') label = t('reason-fridge-n', { n: item.reason_n, t: item.reason_t });
+  else if (r === 'similar') label = t('reason-similar');
+  else if (r === 'peak') label = t('reason-peak', { ing: LANG === 'it' ? item.reason_ing_it : item.reason_ing_en });
+  else if (r === 'trending') label = t('reason-trending', { n: item.reason_n });
+  else if (r === 'fresh') label = t('reason-fresh', { t: LANG === 'it' ? item.reason_time_it : item.reason_time_en });
+  return `<span class="reason" data-why="${r}"><span class="reason__glyph"></span>${label}</span>`;
+}
+
+function renderSeason() {
+  const el = $('#season-scroll');
+  el.innerHTML = SEASON.map(p => `
+    <div class="in-season__item ${p.peak ? 'in-season__item--peak' : ''}">
+      <div class="in-season__thumb" style="background-image:url('${p.img}')"></div>
+      <div class="in-season__name">${LANG === 'it' ? p.name_it : p.name_en}</div>
+      <div class="in-season__count">${p.recipes} ${LANG === 'it' ? 'ricette' : 'recipes'}</div>
+    </div>
+  `).join('');
+}
+
+function renderFilters() {
+  const el = $('#filter-scroll');
+  el.innerHTML = FILTERS.map(f => `
+    <button class="chip ${state.activeFilter === f.id ? 'is-active' : ''}" data-filter="${f.id}">
+      ${f.icon ? FILTER_ICONS[f.icon] : ''}
+      <span>${t(f.key)}</span>
+    </button>
+  `).join('');
+  $$('.chip', el).forEach(b => {
+    b.addEventListener('click', () => {
+      state.activeFilter = b.dataset.filter;
+      renderFilters();
+      renderFeed();
+      updateFeedTitle();
+    });
+  });
+}
+
+function updateFeedTitle() {
+  const sub = $('#feed-sub');
+  const title = $('#feed-title');
+  const f = state.activeFilter;
+  const labels = {
+    it: {
+      all:      ['Scelto per te',             'Ricette per il tuo momento'],
+      ready:    ['Dal tuo frigo',             'Puoi iniziare ora'],
+      under15:  ['Veloci',                     'In 15 minuti o meno'],
+      protein:  ['Alta proteina',             'Per recuperare dopo'],
+      peak:     ['Di stagione a Milano',      'Quello che aprile offre'],
+      trending: ['Sulla community',           'Cucinato in tanti questa settimana'],
+    },
+    en: {
+      all:      ['Chosen for you',            'Recipes for your moment'],
+      ready:    ['From your fridge',          'You can start right now'],
+      under15:  ['Quick',                      'In 15 minutes or less'],
+      protein:  ['High protein',               'To recover after'],
+      peak:     ['In season in Lombardy',      'What April offers'],
+      trending: ['Across the community',       'Cooked a lot this week'],
+    }
+  };
+  const l = labels[LANG][f];
+  sub.textContent = l[0];
+  title.textContent = l[1];
+}
+
+function renderFeed() {
+  const el = $('#feed');
+  const items = FEED.filter(it => {
+    if (it.type === 'nudge') return state.activeFilter === 'all';
+    if (state.activeFilter === 'all') return true;
+    return (it.tags || []).includes(state.activeFilter);
+  });
+
+  if (items.length === 0) {
+    el.innerHTML = `<div class="feed-empty">${LANG === 'it' ? 'Nessuna ricetta per questo filtro.' : 'No recipes for this filter.'}</div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(it => {
+    if (it.type === 'nudge') return nudgeHTML(it);
+    return cardHTML(it);
+  }).join('');
+
+  // Wire crispy buttons
+  $$('.fcard__crispy, .hero__crispy').forEach(btn => {
+    const id = btn.dataset.id || 'hero';
+    if (state.crispied.has(id)) btn.classList.add('is-crispied');
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleCrispy(id, btn);
+    });
+  });
+
+  // Wire follow buttons in feed + nudge
+  $$('[data-follow]').forEach(btn => {
+    const c = btn.dataset.follow;
+    syncFollowBtn(btn, c);
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFollow(c, btn);
+    });
+  });
+}
+
+function cardHTML(it) {
+  const c = CREATORS[it.creator];
+  const title = LANG === 'it' ? it.title_it : it.title_en;
+  // Bio onesto: solo segnali realmente disponibili oggi — follower + ricette
+  const bio = LANG === 'it'
+    ? `${c.followers} follower · ${c.recipes} ricette`
+    : `${c.followers.replace(',', '.')} followers · ${c.recipes} recipes`;
+  const large = it.large ? 'fcard--large' : '';
+  const following = state.follow[it.creator];
+  const followLabel = following ? t('following') : t('follow');
+  const followClass = following ? 'is-following' : '';
+
+  return `
+    <a href="#" class="fcard ${large}" data-id="${it.id}">
+      <div class="fcard__header">
+        <div class="fcard__avatar" style="background-image:url('${c.av}')"></div>
+        <div class="fcard__creator-row">
+          <div class="fcard__creator-name">${c.name}</div>
+          <div class="fcard__creator-bio">${bio}</div>
+        </div>
+        <button class="fcard__follow-mini ${followClass}" data-follow="${it.creator}">${followLabel}</button>
+      </div>
+      <div class="fcard__media">
+        <img src="${it.img}" alt="" loading="lazy"/>
+        <button class="fcard__crispy" data-id="${it.id}" aria-label="Crispy ${it.crispy}">
+          ${crispySVG()}<span class="fcard__crispy-count">${it.crispy}</span>
+        </button>
+      </div>
+      <div class="fcard__body">
+        <div class="fcard__reason">${reasonHTML(it)}</div>
+        <h3 class="fcard__title">${title}</h3>
+        <div class="fcard__meta">
+          <span><strong>${it.minutes}</strong> ${t('min')}</span>
+          <span class="fcard__meta-dot"></span>
+          <span><strong>${it.serves}</strong> ${t('serves')}</span>
+          ${it.protein ? `<span class="fcard__meta-dot"></span><span><strong>${it.protein}g</strong> prot.</span>` : ''}
+        </div>
+      </div>
+    </a>
+  `;
+}
+
+function crispySmall() {
+  return `<svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" style="vertical-align:-1px;opacity:0.55"><path d="M12 2c0 4-4 5-4 9a4 4 0 1 0 8 0c0-1.5-1-2.5-1-4 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 4-6 6-10z"/></svg>`;
+}
+
+function nudgeHTML(it) {
+  const c = CREATORS[it.creator];
+  const bio = LANG === 'it'
+    ? `${c.followers} follower · ${c.recipes} ricette`
+    : `${c.followers.replace(',', '.')} followers · ${c.recipes} recipes`;
+  return `
+    <div class="nudge">
+      <div class="nudge__head">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2l2.5 7 7.5.5-6 5 2 7.5-6-4-6 4 2-7.5-6-5 7.5-.5z"/></svg>
+        <span>${t('nudge-head')}</span>
+      </div>
+      <div class="nudge__row">
+        <div class="nudge__avatar" style="background-image:url('${c.av}')"></div>
+        <div class="nudge__info">
+          <div class="nudge__name">${c.name}</div>
+          <div class="nudge__bio">${bio}</div>
+          <div class="nudge__reason">${t('nudge-reason')}</div>
+        </div>
+        <button class="nudge__follow" data-follow="${it.creator}">${state.follow[it.creator] ? t('following') : t('follow')}</button>
+      </div>
+    </div>
+  `;
+}
+
+function syncFollowBtn(btn, creatorKey) {
+  const following = state.follow[creatorKey];
+  if (btn.classList.contains('nudge__follow')) {
+    btn.textContent = following ? t('following') : t('follow');
+    btn.classList.toggle('is-following', following);
+  } else {
+    btn.textContent = following ? t('following') : t('follow');
+    btn.classList.toggle('is-following', following);
+  }
+}
+
+function toggleCrispy(id, btn) {
+  const countEl = btn.querySelector('.fcard__crispy-count') || btn.querySelector('#hero-crispy-count');
+  const current = countEl ? parseInt(countEl.textContent, 10) || 0 : 0;
+  if (state.crispied.has(id)) {
+    state.crispied.delete(id);
+    btn.classList.remove('is-crispied');
+    if (countEl) countEl.textContent = Math.max(0, current - 1);
+    toast(t('toast-uncrispied'));
+  } else {
+    state.crispied.add(id);
+    btn.classList.add('is-crispied');
+    if (countEl) countEl.textContent = current + 1;
+    toast(t('toast-crispied'));
+  }
+}
+
+function toggleFollow(creatorKey, btn) {
+  state.follow[creatorKey] = !state.follow[creatorKey];
+  // Update all follow buttons for this creator
+  $$(`[data-follow="${creatorKey}"]`).forEach(b => syncFollowBtn(b, creatorKey));
+  const c = CREATORS[creatorKey];
+  toast(t(state.follow[creatorKey] ? 'toast-followed' : 'toast-unfollowed', { name: c.name.split(' ')[0] }));
+  // Update hero follow if relevant
+  if (creatorKey === 'elena') {
+    const hf = $('#hero-follow');
+    hf.querySelector('span').textContent = state.follow.elena ? t('following') : t('follow');
+    hf.classList.toggle('is-following', state.follow.elena);
+  }
+}
+
+function toast(msg) {
+  const el = $('#toast');
+  $('#toast-text').textContent = msg;
+  el.classList.add('is-visible');
+  clearTimeout(el._tmr);
+  el._tmr = setTimeout(() => el.classList.remove('is-visible'), 1800);
+}
+
+// ---------- Hero crispy wire ----------
+$('#hero-crispy').addEventListener('click', e => {
+  e.preventDefault();
+  toggleCrispy('hero', e.currentTarget);
+});
+
+// ---------- Hero follow wire ----------
+$('#hero-follow').addEventListener('click', e => {
+  e.preventDefault();
+  toggleFollow('elena', e.currentTarget);
+});
+
+// ---------- Hero start ----------
+$('#hero-start').addEventListener('click', e => {
+  e.preventDefault();
+  toast(LANG === 'it' ? 'Preparazione in corso…' : 'Getting ready…');
+});
+
+// ---------- Fresh strip tap ----------
+$('#fresh-strip').addEventListener('click', () => {
+  toast(LANG === 'it' ? 'Apro le nuove da chi segui…' : 'Opening new from creators you follow…');
+});
+
+// ---------- Tab bar wire ----------
+$$('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    // Il tab Crea è azione, non navigazione — non lo rende "active"
+    if (tab.dataset.tab === 'create') {
+      toast(LANG === 'it' ? 'Apro Crea ricetta…' : 'Opening Create recipe…');
+      return;
+    }
+    $$('.tab').forEach(x => {
+      if (x.dataset.tab !== 'create') x.classList.remove('is-active');
+    });
+    tab.classList.add('is-active');
+  });
+});
+
+// ---------- Top-bar icons ----------
+$('#topbar-list').addEventListener('click', () => {
+  toast(LANG === 'it' ? 'Apro lista della spesa…' : 'Opening shopping list…');
+});
+$('#topbar-notifications').addEventListener('click', () => {
+  toast(LANG === 'it' ? '3 nuove: 1 crispy, 2 follower' : '3 new: 1 crispy, 2 followers');
+});
+
+function applyI18N() {
+  // Top-level keyed nodes
+  $('#greeting-context').textContent = I18N[LANG]['greeting-context'];
+  $('#greeting-title').innerHTML = I18N[LANG]['greeting-title'];
+  $('#hero-badge-text').textContent = I18N[LANG]['hero-badge-text'];
+  $('#hero-reason-text').textContent = I18N[LANG]['hero-reason-text'];
+  $('#hero-creator-meta').textContent = I18N[LANG]['hero-creator-meta'];
+  $('#hero-title').textContent = I18N[LANG]['hero-title'];
+  $$('[data-i18n]').forEach(n => {
+    const k = n.dataset.i18n;
+    if (I18N[LANG][k]) n.textContent = I18N[LANG][k];
+  });
+  // Hero follow label
+  const hf = $('#hero-follow');
+  hf.querySelector('span').textContent = state.follow.elena ? t('following') : t('follow');
+
+  renderSeason();
+  renderFilters();
+  renderFeed();
+  updateFeedTitle();
+}
+
+// ---------- Initial render ----------
+renderSeason();
+renderFilters();
+renderFeed();
+updateFeedTitle();
+
+</script>
+</body>
+</html>

@@ -15,7 +15,6 @@ struct AuthorProfileView: View {
     let profileSocialLinks: [CreatorSocialLink]
     let profileAvatarURL: String?
     @Environment(\.openURL) private var openURL
-    private let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
 
     init(
         authorName: String,
@@ -35,7 +34,7 @@ struct AuthorProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
+            VStack(alignment: .leading, spacing: 22) {
                 profileHeaderSection
 
                 if !profileSocialLinks.isEmpty {
@@ -48,54 +47,56 @@ struct AuthorProfileView: View {
             .padding(.top, SeasonSpacing.md)
             .padding(.bottom, SeasonLayout.bottomBarContentClearance)
         }
-        .background(SeasonColors.primarySurface)
-        .navigationTitle(authorName)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            CartToolbarItems(
-                produceViewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        }
+        .background(DS.Color.bg)
+        .seasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel,
+            leading: .back
+        )
         .onAppear {
             print("[SEASON_FOLLOW_IDENTITY] phase=profile_appear creator_id=\(canonicalCreatorID ?? "nil") creator_name=\(authorName) was_following=\(isFollowing)")
         }
     }
 
     private var profileHeaderSection: some View {
-        VStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .center, spacing: 16) {
             ZStack(alignment: .bottomTrailing) {
                 Circle()
-                    .fill(Color(.tertiarySystemGroupedBackground))
-                    .frame(width: 116, height: 116)
+                    .fill(DS.Color.sageSoft.opacity(0.58))
+                    .frame(width: 122, height: 122)
                     .overlay(avatarContent)
                     .overlay(
                         Circle()
-                            .stroke(seasonGreen.opacity(0.22), lineWidth: 1.1)
+                            .stroke(Color.white.opacity(0.84), lineWidth: 4)
                     )
-                    .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 4)
+                    .shadow(color: DS.Color.ink.opacity(0.08), radius: 18, x: 0, y: 9)
 
                 if !authorBadges.isEmpty {
                     Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.white, seasonGreen)
-                        .padding(6)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.white, DS.Color.sage)
+                        .padding(7)
                         .background(
                             Circle()
-                                .fill(Color(.systemBackground))
+                                .fill(DS.Color.card)
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(DS.Color.bg, lineWidth: 2)
                         )
                 }
             }
 
-            VStack(spacing: 3) {
+            VStack(spacing: 5) {
                 Text(authorName)
-                    .font(.system(size: 34, weight: .heavy))
-                    .tracking(-0.5)
+                    .font(DS.Font.serif(34, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
+                    .tracking(-0.4)
                     .multilineTextAlignment(.center)
 
                 Text(viewModel.localizer.text(.creatorProfileSubtitle))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(14, weight: .medium))
+                    .foregroundStyle(DS.Color.inkMuted)
                     .multilineTextAlignment(.center)
             }
 
@@ -108,11 +109,11 @@ struct AuthorProfileView: View {
                                 .padding(.vertical, 2)
                                 .background(
                                     Capsule(style: .continuous)
-                                        .fill(Color(.systemBackground).opacity(0.78))
+                                        .fill(DS.Color.card.opacity(0.78))
                                 )
                                 .overlay(
                                     Capsule(style: .continuous)
-                                        .stroke(seasonGreen.opacity(0.12), lineWidth: 0.7)
+                                        .stroke(DS.Color.borderM, lineWidth: 0.7)
                                 )
                         }
                     }
@@ -129,18 +130,18 @@ struct AuthorProfileView: View {
                         Image(systemName: isFollowing ? "person.fill.checkmark" : "person.badge.plus")
                             .font(.subheadline.weight(.semibold))
                         Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
-                            .font(.headline.weight(.semibold))
+                            .font(DS.Font.sans(16, weight: .bold))
                     }
-                    .foregroundStyle(isFollowing ? Color.primary : Color.white)
+                    .foregroundStyle(isFollowing ? DS.Color.ink : Color.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
+                    .padding(.vertical, 15)
                     .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(buttonBackgroundStyle)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(seasonGreen.opacity(isFollowing ? 0.10 : 0.05), lineWidth: 0.6)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(DS.Color.border.opacity(isFollowing ? 0.95 : 0.16), lineWidth: 0.8)
                     )
                 }
                 .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
@@ -154,7 +155,7 @@ struct AuthorProfileView: View {
                 )
 
                 Rectangle()
-                    .fill(seasonGreen.opacity(0.12))
+                    .fill(DS.Color.borderM)
                     .frame(width: 1, height: 30)
 
                 profileStatColumn(
@@ -163,7 +164,7 @@ struct AuthorProfileView: View {
                 )
 
                 Rectangle()
-                    .fill(seasonGreen.opacity(0.12))
+                    .fill(DS.Color.borderM)
                     .frame(width: 1, height: 30)
 
                 profileStatColumn(
@@ -171,27 +172,28 @@ struct AuthorProfileView: View {
                     label: viewModel.localizer.text(.crispyAction)
                 )
             }
-            .padding(.vertical, 5)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.68))
+                Capsule(style: .continuous)
+                    .fill(DS.Color.card.opacity(0.72))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(seasonGreen.opacity(0.09), lineWidth: 0.7)
+                Capsule(style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 0.8)
             )
         }
-        .padding(16)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 22)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.95, green: 0.93, blue: 0.88).opacity(0.92),
-                            Color(red: 0.94, green: 0.91, blue: 0.85).opacity(0.65),
-                            Color(red: 0.92, green: 0.89, blue: 0.82).opacity(0.44)
+                            DS.Color.card.opacity(0.98),
+                            DS.Color.sageSoft.opacity(0.66),
+                            DS.Color.ochreSoft.opacity(0.28)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -199,8 +201,8 @@ struct AuthorProfileView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(seasonGreen.opacity(0.11), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(DS.Color.borderM, lineWidth: 0.8)
         )
     }
 
@@ -217,8 +219,12 @@ struct AuthorProfileView: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground).opacity(0.52))
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(DS.Color.cardSoft.opacity(0.58))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.Color.border.opacity(0.72), lineWidth: 0.7)
         )
     }
 
@@ -264,7 +270,7 @@ struct AuthorProfileView: View {
                 localizer: viewModel.localizer,
                 variant: .profile,
                 cardBackground: Color(.systemBackground),
-                cardBackgroundOpacity: 0.92,
+                cardBackgroundOpacity: 0.88,
                 cardBorderOpacity: 0.05,
                 cardShadowOpacity: 0.015,
                 cardShadowRadius: 8,
@@ -293,7 +299,7 @@ struct AuthorProfileView: View {
                     localizer: viewModel.localizer,
                     variant: .feedLarge,
                     cardBackground: Color(.systemBackground),
-                    cardBackgroundOpacity: 0.96,
+                    cardBackgroundOpacity: 0.94,
                     cardBorderOpacity: 0.05,
                     cardShadowOpacity: 0.02,
                     cardShadowRadius: 10,
@@ -315,7 +321,7 @@ struct AuthorProfileView: View {
                     .padding(6)
                     .background(
                         Circle()
-                            .fill(seasonGreen.opacity(0.12))
+                            .fill(DS.Color.sageSoft.opacity(0.76))
                     )
                 Text(socialDisplayValue(for: link))
                     .font(.subheadline.weight(.semibold))
@@ -324,16 +330,16 @@ struct AuthorProfileView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.primary)
+            .foregroundStyle(DS.Color.ink)
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.95))
+                    .fill(DS.Color.card.opacity(0.92))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(seasonGreen.opacity(0.09), lineWidth: 0.7)
+                    .stroke(DS.Color.border, lineWidth: 0.7)
             )
         }
         .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
@@ -342,11 +348,12 @@ struct AuthorProfileView: View {
     private func profileStatColumn(value: String, label: String) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.headline.weight(.bold))
-                .foregroundStyle(seasonGreen)
+                .font(DS.Font.sans(17, weight: .bold))
+                .foregroundStyle(DS.Color.ink)
             Text(label.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(DS.Font.mono(9.5, weight: .medium))
+                .tracking(0.5)
+                .foregroundStyle(DS.Color.inkMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -356,11 +363,11 @@ struct AuthorProfileView: View {
 
     private var buttonBackgroundStyle: AnyShapeStyle {
         if isFollowing {
-            return AnyShapeStyle(Color(.tertiarySystemGroupedBackground))
+            return AnyShapeStyle(DS.Color.card.opacity(0.82))
         }
         return AnyShapeStyle(
             LinearGradient(
-                colors: [SeasonColors.seasonGreen, SeasonColors.seasonGreen.opacity(0.88)],
+                colors: [DS.Color.sage, DS.Color.sageDeep.opacity(0.92)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -403,10 +410,6 @@ struct AuthorProfileView: View {
 
     private var followerCountValue: Int {
         followerCount(for: canonicalCreatorID, fallbackName: authorName)
-    }
-
-    private var estimatedFollowersStatText: String {
-        "\(formattedFollowerCount(followerCountValue)) \(viewModel.localizer.text(.followers).lowercased())"
     }
 
     private var compactRecipeCountText: String {

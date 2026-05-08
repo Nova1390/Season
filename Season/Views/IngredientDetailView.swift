@@ -31,8 +31,11 @@ struct IngredientDetailView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
-        .navigationTitle("Ingredient")
-        .navigationBarTitleDisplayMode(.inline)
+        .seasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel,
+            leading: .back
+        )
     }
 
     @ViewBuilder
@@ -124,7 +127,7 @@ struct IngredientDetailView: View {
                 pulseFridgeButton()
             } label: {
                 primaryActionLabel(
-                    text: isInFridge ? "In Fridge" : "Add to Fridge",
+                    text: isInFridge ? localizer.text(.inFridge) : localizer.text(.addToFridge),
                     systemImage: isInFridge ? "snowflake" : "plus"
                 )
             }
@@ -138,7 +141,7 @@ struct IngredientDetailView: View {
                 pulseShoppingButton()
             } label: {
                 secondaryActionLabel(
-                    text: isInShoppingList ? "In List" : "Add to List",
+                    text: isInShoppingList ? localizer.text(.inShoppingList) : localizer.text(.addToList),
                     systemImage: isInShoppingList ? "checkmark" : "plus",
                     foreground: isInShoppingList ? SeasonColors.seasonGreen.opacity(0.96) : .primary,
                     background: isInShoppingList ? SeasonColors.seasonGreenSoft.opacity(0.55) : SeasonColors.secondarySurface
@@ -282,7 +285,7 @@ struct IngredientDetailView: View {
         SeasonCardContainer(
             content: {
                 VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-                    Text("Seasonality")
+                    Text(localizer.localized("detail.seasonality"))
                         .font(.caption2.weight(.bold))
                         .textCase(.uppercase)
                         .tracking(0.7)
@@ -318,7 +321,7 @@ struct IngredientDetailView: View {
         if !rankedRelatedRecipes.isEmpty {
             VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
                 HStack {
-                    Text("What to cook with this")
+                    Text(localizer.localized("detail.related_recipes.title"))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -492,7 +495,7 @@ struct IngredientDetailView: View {
             guard month - 1 < shortNames.count else { return nil }
             return shortNames[month - 1]
         }
-        return labels.isEmpty ? "Seasonality unavailable" : labels.joined(separator: " · ")
+        return labels.isEmpty ? localizer.localized("detail.seasonality.unavailable") : labels.joined(separator: " · ")
     }
 
     private func totalRecipeMinutes(for recipe: Recipe) -> Int? {
@@ -505,9 +508,9 @@ struct IngredientDetailView: View {
     private func difficultyLabel(for recipe: Recipe) -> String? {
         guard let difficulty = recipe.difficulty else { return nil }
         switch difficulty {
-        case .easy: return "Easy"
-        case .medium: return "Medium"
-        case .hard: return "Hard"
+        case .easy: return localizer.recipeDifficultyTitle(.easy)
+        case .medium: return localizer.recipeDifficultyTitle(.medium)
+        case .hard: return localizer.recipeDifficultyTitle(.hard)
         }
     }
 

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Season · Me v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared/season-v2.css" />
+<style>
+/* =========================
+   Account (Io) — view-specific
+   ========================= */
+
+/* Profile header */
+.ac-profile {
+  padding: 14px 22px 22px;
+  text-align: center;
+  position: relative;
+}
+.ac-profile__avatar-wrap {
+  display: inline-block;
+  position: relative;
+  margin-bottom: 10px;
+}
+.ac-profile__avatar {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  background-size: cover; background-position: center;
+  background-color: var(--sage-soft);
+  border: 3px solid var(--card);
+  box-shadow: var(--shadow-2);
+}
+.ac-profile__avatar-edit {
+  position: absolute;
+  bottom: 2px; right: -2px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  border: 2px solid var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.ac-profile__name {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 4px 0 2px;
+}
+.ac-profile__handle {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 12px;
+}
+.ac-profile__stats {
+  display: flex; justify-content: center; gap: 22px;
+  margin-bottom: 14px;
+}
+.ac-profile__stat { display: flex; flex-direction: column; align-items: center; }
+.ac-profile__stat strong {
+  font-family: var(--sans);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ac-profile__stat span {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-top: 3px;
+}
+.ac-profile__actions {
+  display: flex; justify-content: center; gap: 6px;
+  margin-top: 6px;
+}
+.ac-profile__btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  background: var(--card);
+  border: 1.2px solid var(--border-m);
+  color: var(--ink);
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: all 0.15s ease;
+}
+.ac-profile__btn:hover { border-color: var(--border-s); }
+.ac-profile__btn--icon {
+  width: 36px; height: 36px; padding: 0;
+  justify-content: center;
+  background: var(--card);
+}
+.ac-profile__btn--icon svg { width: 14px; height: 14px; stroke: var(--ink); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Socials */
+.ac-socials {
+  display: flex; justify-content: center; gap: 8px;
+  padding: 0 22px 18px;
+}
+.ac-social {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.ac-social svg { width: 14px; height: 14px; color: var(--ink-muted); }
+.ac-social--linked svg { color: var(--fresh); }
+.ac-social--unlinked { color: var(--ink-muted); opacity: 0.82; }
+
+/* Shared section wrapper */
+.ac-section {
+  margin: 0 16px 18px;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.ac-section--sage {
+  background: linear-gradient(140deg, var(--sage-soft) 0%, rgba(230, 235, 221, 0.55) 100%);
+  border-color: rgba(88, 106, 74, 0.16);
+}
+.ac-section__head {
+  padding: 14px 16px 6px;
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.ac-section__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0;
+}
+.ac-section__body {
+  padding: 6px 16px 16px;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+
+/* Library sub-group */
+.ac-lib-group { display: flex; flex-direction: column; gap: 8px; }
+.ac-lib-group__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 2px;
+}
+.ac-lib-group__title {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.ac-lib-group__count {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 2px 9px;
+  text-transform: uppercase;
+}
+
+/* Recipe row (compact) — use shared frow but add status pill */
+.ac-lib-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.72);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ac-lib-row:hover { background: var(--card); }
+.ac-lib-row__thumb {
+  width: 48px; height: 48px;
+  border-radius: var(--r-sm);
+  background-size: cover; background-position: center;
+  background-color: #e6e1d4;
+  flex-shrink: 0;
+}
+.ac-lib-row__body { flex: 1; min-width: 0; }
+.ac-lib-row__title {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 3px;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ac-lib-row__meta {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-muted);
+  display: flex; gap: 8px; align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.ac-lib-row__status {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--r-xs);
+}
+.ac-lib-row__status--draft { background: var(--ochre-soft); color: #7a5617; }
+.ac-lib-row__status--archived { background: var(--bg-sub); color: var(--ink-muted); }
+
+/* Empty row */
+.ac-lib-empty {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px;
+  background: rgba(255,255,255,0.52);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border-m);
+  color: var(--ink-muted);
+  font-family: var(--sans);
+  font-size: 12.5px;
+}
+.ac-lib-empty svg { flex-shrink: 0; width: 18px; height: 18px; color: var(--ink-faint); }
+
+/* Create CTA */
+.ac-create-cta {
+  background: linear-gradient(140deg, var(--sage) 0%, var(--sage-deep) 100%);
+  color: #fff;
+  border: none;
+  padding: 13px 16px;
+  border-radius: var(--r-md);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  box-shadow: var(--shadow-2);
+  transition: transform 0.12s ease;
+}
+.ac-create-cta:active { transform: scale(0.99); }
+.ac-create-cta svg { color: #fff; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Preferences rows */
+.ac-pref-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.ac-pref-row:first-child { border-top: none; }
+.ac-pref-row__main {
+  display: flex; gap: 12px; align-items: center; min-width: 0;
+}
+.ac-pref-row__icon {
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  background: var(--bg-sub);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-soft);
+}
+.ac-pref-row__icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ac-pref-row__text { min-width: 0; }
+.ac-pref-row__label {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.ac-pref-row__sub {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+.ac-pref-row__value {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  display: inline-flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+}
+.ac-pref-row__value svg { color: var(--ink-faint); }
+
+/* Toggle switch */
+.ac-toggle {
+  width: 42px; height: 24px;
+  background: var(--bg-sub);
+  border-radius: var(--r-pill);
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+.ac-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.2s ease;
+}
+.ac-toggle.is-on { background: var(--sage); border-color: var(--sage-deep); }
+.ac-toggle.is-on::after { transform: translateX(18px); }
+
+/* Auth row — primary */
+.ac-auth {
+  padding: 14px;
+  background: var(--bg-sub);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+.ac-auth__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+.ac-auth__line {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+.ac-auth__line strong { color: var(--ink); font-weight: 600; }
+.ac-auth__btns { display: flex; gap: 8px; }
+.ac-auth__btn-out {
+  flex: 1;
+  background: transparent;
+  border: 1.2px solid var(--border-m);
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--terracotta);
+  cursor: pointer;
+}
+.ac-auth__btn-out:hover { border-color: var(--terracotta); background: rgba(179, 93, 63, 0.04); }
+
+/* Footer version */
+.ac-footer {
+  text-align: center;
+  padding: 18px 22px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.caption { max-width: 420px; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="device__notch"></div>
+  <div class="device__screen">
+    <div class="screen" id="screen">
+      <div id="statusbar-slot"></div>
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="wordmark" id="wordmark">Season<em>.</em></div>
+        <div class="topbar__actions">
+          <button class="icon-btn" aria-label="Lista spesa">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 6h14l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8L5 6z"/><path d="M9 6V5a3 3 0 0 1 6 0v1"/></svg>
+            <span class="icon-btn__dot"></span>
+          </button>
+          <button class="icon-btn" aria-label="Impostazioni" id="ac-settings">
+            <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Profile header -->
+      <section class="ac-profile">
+        <div class="ac-profile__avatar-wrap">
+          <div class="ac-profile__avatar" style="background-image:url('_assets/av_rocco.png')"></div>
+          <button class="ac-profile__avatar-edit" aria-label="Modifica avatar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2a3 3 0 0 1 3 3l-10 10-4 1 1-4z"/></svg>
+          </button>
+        </div>
+        <h1 class="ac-profile__name" id="ac-name">Rocco</h1>
+        <div class="ac-profile__handle">@rocco.cooks</div>
+
+        <div class="ac-profile__stats">
+          <div class="ac-profile__stat">
+            <strong>847</strong>
+            <span data-i18n="ac-stat-followers">follower</span>
+          </div>
+          <div class="ac-profile__stat">
+            <strong>42</strong>
+            <span data-i18n="ac-stat-following">seguiti</span>
+          </div>
+          <div class="ac-profile__stat">
+            <strong>12</strong>
+            <span data-i18n="ac-stat-recipes">ricette</span>
+          </div>
+        </div>
+
+        <div class="ac-profile__actions">
+          <button class="ac-profile__btn" id="ac-edit-profile">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2a3 3 0 0 1 3 3l-10 10-4 1 1-4z"/></svg>
+            <span data-i18n="ac-edit-profile">Modifica profilo</span>
+          </button>
+          <button class="ac-profile__btn ac-profile__btn--icon" aria-label="Condividi">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Linked socials -->
+      <div class="ac-socials">
+        <a href="#" class="ac-social ac-social--linked">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.7" fill="currentColor"/></svg>
+          <span>@rocco.cooks</span>
+        </a>
+        <a href="#" class="ac-social ac-social--unlinked">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3v7.5a3.5 3.5 0 0 1-3.5 3.5A3.5 3.5 0 0 1 10 10.5"/><path d="M17 3h-3v12.5a3.5 3.5 0 1 1-3.5-3.5"/></svg>
+          <span data-i18n="ac-connect-tiktok">Collega TikTok</span>
+        </a>
+      </div>
+
+      <!-- LIBRARY SECTION -->
+      <div class="ac-section ac-section--sage">
+        <div class="ac-section__head">
+          <h2 class="ac-section__title" data-i18n="ac-library">Libreria</h2>
+        </div>
+        <div class="ac-section__body">
+
+          <!-- Saved -->
+          <div class="ac-lib-group">
+            <div class="ac-lib-group__head">
+              <h3 class="ac-lib-group__title" data-i18n="ac-saved">Salvate</h3>
+              <span class="ac-lib-group__count">6</span>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/hero_risotto.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Risotto Carnaroli ai Carciofi e Limone</div>
+                <div class="ac-lib-row__meta">
+                  <span>Elena Vanzi</span>
+                  <span>·</span>
+                  <span><strong>40</strong> <span data-i18n="min">min</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/pasta_fave.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Pasta fave, menta e pecorino</div>
+                <div class="ac-lib-row__meta">
+                  <span>Sara Conte</span>
+                  <span>·</span>
+                  <span><strong>25</strong> <span data-i18n="min">min</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/vellutata_piselli.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Vellutata di piselli e menta</div>
+                <div class="ac-lib-row__meta">
+                  <span>Chiara Bellini</span>
+                  <span>·</span>
+                  <span><strong>20</strong> <span data-i18n="min">min</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- My recipes -->
+          <div class="ac-lib-group">
+            <div class="ac-lib-group__head">
+              <h3 class="ac-lib-group__title" data-i18n="ac-my">Le mie ricette</h3>
+              <span class="ac-lib-group__count">12</span>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/frittata_erbe.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Frittata alle erbe di campo</div>
+                <div class="ac-lib-row__meta">
+                  <span><strong>58</strong> crispy</span>
+                  <span>·</span>
+                  <span><strong>312</strong> views</span>
+                </div>
+              </div>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/farro_carciofi.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Farro con carciofi e menta</div>
+                <div class="ac-lib-row__meta">
+                  <span><strong>42</strong> crispy</span>
+                  <span>·</span>
+                  <span><strong>221</strong> views</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create CTA -->
+          <button class="ac-create-cta" id="ac-create">
+            <svg width="18" height="18" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="ac-create">Crea ricetta</span>
+          </button>
+
+          <!-- Drafts -->
+          <div class="ac-lib-group">
+            <div class="ac-lib-group__head">
+              <h3 class="ac-lib-group__title" data-i18n="ac-drafts">Bozze</h3>
+              <span class="ac-lib-group__count">2</span>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/crostini_fragole.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Crostini fragole, stracciatella e pepe</div>
+                <div class="ac-lib-row__meta">
+                  <span data-i18n="ac-draft-incomplete">Mancano passaggi · ultima modifica 3g fa</span>
+                </div>
+              </div>
+              <span class="ac-lib-row__status ac-lib-row__status--draft" data-i18n="ac-draft">Bozza</span>
+            </div>
+            <div class="ac-lib-row">
+              <div class="ac-lib-row__thumb" style="background-image:url('_assets/tortino_asparagi.jpg')"></div>
+              <div class="ac-lib-row__body">
+                <div class="ac-lib-row__title">Tortino di asparagi e pecorino</div>
+                <div class="ac-lib-row__meta">
+                  <span data-i18n="ac-draft-photo">Mancano foto · ultima modifica ieri</span>
+                </div>
+              </div>
+              <span class="ac-lib-row__status ac-lib-row__status--draft" data-i18n="ac-draft">Bozza</span>
+            </div>
+          </div>
+
+          <!-- Archived -->
+          <div class="ac-lib-group">
+            <div class="ac-lib-group__head">
+              <h3 class="ac-lib-group__title" data-i18n="ac-archived">Archiviate</h3>
+              <span class="ac-lib-group__count">3</span>
+            </div>
+            <div class="ac-lib-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              <span data-i18n="ac-archived-desc">Le ricette archiviate non appaiono nel tuo feed pubblico.</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PREFERENCES SECTION -->
+      <div class="ac-section">
+        <div class="ac-section__head">
+          <h2 class="ac-section__title" data-i18n="ac-prefs">Preferenze</h2>
+        </div>
+        <div class="ac-section__body">
+
+          <!-- Auth card -->
+          <div class="ac-auth">
+            <div class="ac-auth__label" data-i18n="ac-auth-label">Account</div>
+            <div class="ac-auth__line">
+              <strong>rocco@daffuso.it</strong><br/>
+              <span data-i18n="ac-auth-connected">Collegato con Apple · sync attiva</span>
+            </div>
+            <div class="ac-auth__btns">
+              <button class="ac-auth__btn-out" id="ac-logout"><span data-i18n="ac-logout">Esci</span></button>
+            </div>
+          </div>
+
+          <!-- Pref rows -->
+          <div>
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14.7 14.7 0 0 1 0 18 14.7 14.7 0 0 1 0-18"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-lang-label">Lingua</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-lang-sub">Segue la lingua di sistema</div>
+                </div>
+              </div>
+              <div class="ac-pref-row__value">
+                <span data-i18n="ac-lang-value">Italiano</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+              </div>
+            </div>
+
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><path d="M20 13a8 8 0 0 1-16 0"/><path d="M8 13V7a4 4 0 0 1 8 0v6"/><path d="M12 17v4"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-nutri-label">Obiettivo nutrizionale</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-nutri-sub">Target calorie e macro</div>
+                </div>
+              </div>
+              <div class="ac-pref-row__value">
+                <span data-i18n="ac-nutri-value">Bilanciato</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+              </div>
+            </div>
+
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 4 7v4h6v-4c2-2 4-4 4-7a7 7 0 0 0-7-7z"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-diet-label">Dieta</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-diet-sub">Filtri automatici sulle ricette</div>
+                </div>
+              </div>
+              <div class="ac-pref-row__value">
+                <span data-i18n="ac-diet-value">Vegetariana</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+              </div>
+            </div>
+
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-region-label">Regione</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-region-sub">Per disponibilità stagionale</div>
+                </div>
+              </div>
+              <div class="ac-pref-row__value">
+                <span>Lombardia</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+              </div>
+            </div>
+
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3l1.5-2V9a4.5 4.5 0 0 1 9 0v5z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-notif-label">Notifiche stagionali</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-notif-sub">Quando qualcosa entra al picco</div>
+                </div>
+              </div>
+              <div class="ac-toggle is-on" id="ac-notif"></div>
+            </div>
+
+            <div class="ac-pref-row">
+              <div class="ac-pref-row__main">
+                <div class="ac-pref-row__icon">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.4" fill="currentColor"/></svg>
+                </div>
+                <div class="ac-pref-row__text">
+                  <div class="ac-pref-row__label" data-i18n="ac-about-label">About Season</div>
+                  <div class="ac-pref-row__sub" data-i18n="ac-about-sub">Versione, privacy, termini</div>
+                </div>
+              </div>
+              <div class="ac-pref-row__value">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ac-footer">Season 1.4.0 · Build 218</div>
+
+    </div>
+
+    <!-- Tab bar -->
+    <div id="tabbar-slot"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-text"></span></div>
+  </div>
+</div>
+
+<div class="caption">
+  <strong>Season · Me v2</strong> — Profile · Linked socials · Library (saved / mine / drafts / archived) · Preferences (lang, nutrition, diet, region, notifications, about) · Auth
+</div>
+
+<script src="_shared/season-v2.js"></script>
+<script>
+(function () {
+  const S = window.Season;
+  const { $, $$, t, registerDict, applyI18N, toast } = S;
+
+  // ---------- i18n ----------
+  registerDict({
+    it: {
+      'ac-stat-followers': 'follower',
+      'ac-stat-following': 'seguiti',
+      'ac-stat-recipes': 'ricette',
+      'ac-edit-profile': 'Modifica profilo',
+      'ac-connect-tiktok': 'Collega TikTok',
+      'ac-library': 'Libreria',
+      'ac-saved': 'Salvate',
+      'ac-my': 'Le mie ricette',
+      'ac-drafts': 'Bozze',
+      'ac-archived': 'Archiviate',
+      'ac-archived-desc': 'Le ricette archiviate non appaiono nel tuo feed pubblico.',
+      'ac-draft': 'Bozza',
+      'ac-draft-incomplete': 'Mancano passaggi · ultima modifica 3g fa',
+      'ac-draft-photo': 'Mancano foto · ultima modifica ieri',
+      'ac-create': 'Crea ricetta',
+      'ac-prefs': 'Preferenze',
+      'ac-auth-label': 'Account',
+      'ac-auth-connected': 'Collegato con Apple · sync attiva',
+      'ac-logout': 'Esci',
+      'ac-lang-label': 'Lingua',
+      'ac-lang-sub': 'Segue la lingua di sistema',
+      'ac-lang-value': 'Italiano',
+      'ac-nutri-label': 'Obiettivo nutrizionale',
+      'ac-nutri-sub': 'Target calorie e macro',
+      'ac-nutri-value': 'Bilanciato',
+      'ac-diet-label': 'Dieta',
+      'ac-diet-sub': 'Filtri automatici sulle ricette',
+      'ac-diet-value': 'Vegetariana',
+      'ac-region-label': 'Regione',
+      'ac-region-sub': 'Per disponibilità stagionale',
+      'ac-notif-label': 'Notifiche stagionali',
+      'ac-notif-sub': 'Quando qualcosa entra al picco',
+      'ac-about-label': 'About Season',
+      'ac-about-sub': 'Versione, privacy, termini',
+      'toast-logout': 'Esci dal tuo account?',
+      'toast-create': 'Apro Crea ricetta…',
+      'toast-notif-off': 'Notifiche disattivate',
+      'toast-notif-on': 'Notifiche attive',
+    },
+    en: {
+      'ac-stat-followers': 'followers',
+      'ac-stat-following': 'following',
+      'ac-stat-recipes': 'recipes',
+      'ac-edit-profile': 'Edit profile',
+      'ac-connect-tiktok': 'Connect TikTok',
+      'ac-library': 'Library',
+      'ac-saved': 'Saved',
+      'ac-my': 'My recipes',
+      'ac-drafts': 'Drafts',
+      'ac-archived': 'Archived',
+      'ac-archived-desc': "Archived recipes don't appear on your public feed.",
+      'ac-draft': 'Draft',
+      'ac-draft-incomplete': 'Steps missing · last edited 3d ago',
+      'ac-draft-photo': 'Photos missing · last edited yesterday',
+      'ac-create': 'Create recipe',
+      'ac-prefs': 'Preferences',
+      'ac-auth-label': 'Account',
+      'ac-auth-connected': 'Signed in with Apple · sync active',
+      'ac-logout': 'Log out',
+      'ac-lang-label': 'Language',
+      'ac-lang-sub': 'Follows system language',
+      'ac-lang-value': 'English',
+      'ac-nutri-label': 'Nutrition goal',
+      'ac-nutri-sub': 'Target calories & macros',
+      'ac-nutri-value': 'Balanced',
+      'ac-diet-label': 'Diet',
+      'ac-diet-sub': 'Auto-filters on recipes',
+      'ac-diet-value': 'Vegetarian',
+      'ac-region-label': 'Region',
+      'ac-region-sub': 'For seasonal availability',
+      'ac-notif-label': 'Seasonal alerts',
+      'ac-notif-sub': "When something's at peak",
+      'ac-about-label': 'About Season',
+      'ac-about-sub': 'Version, privacy, terms',
+      'toast-logout': 'Log out of your account?',
+      'toast-create': 'Opening Create recipe…',
+      'toast-notif-off': 'Notifications off',
+      'toast-notif-on': 'Notifications on',
+    },
+  });
+
+  // ---------- Mount ----------
+  $('#statusbar-slot').innerHTML = S.statusBarHTML();
+  $('#tabbar-slot').innerHTML = S.tabBarHTML('profile');
+  S.wireTabBar(key => {
+    toast((S.getLang() === 'it' ? 'Vai a ' : 'Go to ') + key);
+  });
+
+  // ---------- Wiring ----------
+  // Notification toggle
+  $('#ac-notif').addEventListener('click', () => {
+    const el = $('#ac-notif');
+    el.classList.toggle('is-on');
+    toast(t(el.classList.contains('is-on') ? 'toast-notif-on' : 'toast-notif-off'));
+  });
+
+  // Buttons
+  $('#ac-create').addEventListener('click', () => toast(t('toast-create')));
+  $('#ac-edit-profile').addEventListener('click', () => toast(S.getLang() === 'it' ? 'Apro editor profilo…' : 'Opening profile editor…'));
+  $('#ac-logout').addEventListener('click', () => toast(t('toast-logout')));
+
+  // Library rows — fake nav
+  $$('.ac-lib-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const title = row.querySelector('.ac-lib-row__title').textContent.trim();
+      toast((S.getLang() === 'it' ? 'Apro ' : 'Opening ') + title);
+    });
+  });
+
+  // Socials
+  $$('.ac-social').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      if (a.classList.contains('ac-social--unlinked')) {
+        toast(S.getLang() === 'it' ? 'Collegamento TikTok…' : 'Connecting TikTok…');
+      } else {
+        toast(S.getLang() === 'it' ? 'Apro Instagram…' : 'Opening Instagram…');
+      }
+    });
+  });
+
+  // Pref rows with chevron — fake nav
+  $$('.ac-pref-row').forEach(row => {
+    const chev = row.querySelector('.ac-pref-row__value svg');
+    if (!chev) return;
+    row.addEventListener('click', () => {
+      const label = row.querySelector('.ac-pref-row__label').textContent.trim();
+      toast((S.getLang() === 'it' ? 'Apro ' : 'Opening ') + label);
+    });
+  });
+
+  // Settings (topbar)
+  $('#ac-settings').addEventListener('click', () => {
+    toast(S.getLang() === 'it' ? 'Impostazioni avanzate' : 'Advanced settings');
+  });
+
+  applyI18N();
+})();
+</script>
+</body>
+</html>

@@ -10,6 +10,26 @@
 		A1B2C3D42F70000100AA0001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D32F70000100AA0001 /* Supabase */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C0DE00102F96000100AA0001 /* Exceptions for "Season" folder in "Season" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Debug/smart-import-synthetic-batch.json",
+				"Debug/smart-import-synthetic-report-after-alias-rls-fix.json",
+				"Debug/smart-import-synthetic-report-after-autopilot-round3.json",
+				"Debug/smart-import-synthetic-report-after-preparse.json",
+				"Debug/smart-import-synthetic-report-final-micropass.json",
+				"Debug/smart-import-synthetic-report-run1.json",
+				"Debug/smart-import-synthetic-report-run2.json",
+				"Debug/smart-import-synthetic-report.json",
+				"Data/seed_recipes.json",
+				"Docs/DataArchitecture.md",
+				"Support/Fonts/README.md",
+			);
+			target = DF9307102F695FDB00BB719F /* Season */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileReference section */
 		DF9307112F695FDB00BB719F /* Season.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Season.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -17,6 +37,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DF9307132F695FDB00BB719F /* Season */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C0DE00102F96000100AA0001 /* Exceptions for "Season" folder in "Season" target */,
+			);
 			path = Season;
 			sourceTree = "<group>";
 		};
@@ -262,7 +285,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Season/Season.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -306,7 +329,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Season/Season.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = U2LP29JWX6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -315,10 +338,10 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to add recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow saving and attaching recipe photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow selecting photos for your recipes.";
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5dWVkeHljYm5xbGpyeWVuYXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTM2NTQsImV4cCI6MjA4OTU4OTY1NH0.6K9PSrie94ypXB8hoo1grGxl8vaf9S-sii3g3upljug";
-				INFOPLIST_KEY_SUPABASE_URL = "https://gyuedxycbnqljryenapx.supabase.co";
-				INFOPLIST_KEY_SupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6ZHNubnNpenlobGRpdXJsbXhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTA3NjAsImV4cCI6MjA5MTg2Njc2MH0.P-OxvMGD454BW8RUVBuf3hJPQxc1DCF7qGmcCeNMBnk";
-				INFOPLIST_KEY_SupabaseURL = "https://czdsnnsizyhldiurlmxd.supabase.co";
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6ZHNubnNpenlobGRpdXJsbXhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTA3NjAsImV4cCI6MjA5MTg2Njc2MH0.P-OxvMGD454BW8RUVBuf3hJPQxc1DCF7qGmcCeNMBnk";
+				INFOPLIST_KEY_SUPABASE_URL = "https://czdsnnsizyhldiurlmxd.supabase.co";
+				INFOPLIST_KEY_SupabaseAnonKey = "$(INFOPLIST_KEY_SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseURL = "$(INFOPLIST_KEY_SUPABASE_URL)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

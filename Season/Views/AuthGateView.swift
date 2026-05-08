@@ -116,8 +116,9 @@ struct AuthGateView: View {
             switch phase {
             case .loading:
                 ZStack {
-                    Color(.systemBackground).ignoresSafeArea()
+                    DS.Color.bg.ignoresSafeArea()
                     ProgressView()
+                        .tint(DS.Color.sage)
                 }
             case .unauthenticated:
                 AuthEntryScreen {
@@ -208,11 +209,10 @@ private struct AuthEntryScreen: View {
 
             LinearGradient(
                 stops: [
-                    .init(color: Color.black.opacity(0.24), location: 0.0),
-                    .init(color: Color.black.opacity(0.12), location: 0.22),
-                    .init(color: Color.black.opacity(0.08), location: 0.42),
-                    .init(color: Color(.systemBackground).opacity(0.62), location: 0.72),
-                    .init(color: Color(.systemBackground).opacity(0.82), location: 1.0)
+                    .init(color: DS.Color.ink.opacity(0.18), location: 0.0),
+                    .init(color: DS.Color.ink.opacity(0.24), location: 0.28),
+                    .init(color: DS.Color.ink.opacity(0.56), location: 0.62),
+                    .init(color: DS.Color.ink.opacity(0.90), location: 1.0)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -220,27 +220,44 @@ private struct AuthEntryScreen: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text("Season")
+                        .font(DS.Font.wordmark)
+                    Text(".")
+                        .font(DS.Font.serif(22, weight: .medium, italic: true))
+                        .foregroundStyle(DS.Color.sageSoft)
+                    Spacer()
+                    Text("EST. MMXXVI")
+                        .font(DS.Font.mono(9.5, weight: .medium))
+                        .tracking(1.6)
+                        .foregroundStyle(Color.white.opacity(0.56))
+                }
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 24)
+                .padding(.top, 18)
+
                 Spacer(minLength: 0)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Eat better,\nin season.")
-                            .font(.system(size: 53, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Color.black.opacity(0.88))
-                            .lineSpacing(-2)
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Cook with the\nland, not\nagainst it.")
+                            .font(DS.Font.serif(46, weight: .medium, italic: true))
+                            .foregroundStyle(Color.white)
+                            .lineSpacing(-4)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Text("Turn what’s in your fridge into smarter seasonal meals.")
-                            .font(.system(size: 19, weight: .regular, design: .default))
-                            .foregroundStyle(Color.black.opacity(0.58))
+                        Text("A field guide to seasonal cooking, built around what’s growing near you right now.")
+                            .font(DS.Font.serif(16, weight: .regular, italic: true))
+                            .foregroundStyle(Color.white.opacity(0.72))
+                            .lineSpacing(2)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 4)
-                    .padding(.bottom, mode == .entry ? 28 : 18)
+                    .padding(.bottom, mode == .entry ? 32 : 20)
 
                     VStack(spacing: 12) {
                         if mode == .entry {
@@ -248,7 +265,7 @@ private struct AuthEntryScreen: View {
                                 continueWithApple()
                             } label: {
                                 Label("Continue with Apple", systemImage: "applelogo")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(DS.Font.sans(16, weight: .semibold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.9)
                                     .frame(maxWidth: .infinity, minHeight: 56)
@@ -261,12 +278,12 @@ private struct AuthEntryScreen: View {
                                 mode = .signUp
                             } label: {
                                 Text("Sign up with email")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(DS.Font.sans(16, weight: .semibold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.9)
                                     .frame(maxWidth: .infinity, minHeight: 56)
                             }
-                            .buttonStyle(AuthGateEmailButtonStyle())
+                            .buttonStyle(AuthGateOutlineButtonStyle())
                             .disabled(isLoading)
 
                             Button {
@@ -274,19 +291,19 @@ private struct AuthEntryScreen: View {
                                 mode = .logIn
                             } label: {
                                 Text("Already have an account? \(Text("Log in").underline())")
-                                    .font(.footnote.weight(.semibold))
+                                    .font(DS.Font.sans(13, weight: .semibold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.9)
                             }
                             .buttonStyle(.plain)
-                            .foregroundStyle(Color.black.opacity(0.58))
+                            .foregroundStyle(Color.white.opacity(0.66))
                             .padding(.top, 6)
                             .disabled(isLoading)
                         } else {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(mode == .signUp ? "Create your account" : "Welcome back")
-                                    .font(.headline.weight(.semibold))
-                                    .foregroundStyle(Color.black.opacity(0.82))
+                                    .font(DS.Font.serif(23, weight: .medium))
+                                    .foregroundStyle(DS.Color.ink)
 
                                 Group {
                                     TextField("Email", text: $email)
@@ -306,30 +323,30 @@ private struct AuthEntryScreen: View {
 
                                 if mode == .signUp {
                                     Text("3-24 chars • letters, numbers, underscore")
-                                        .font(.caption2)
-                                        .foregroundStyle(Color.black.opacity(0.56))
+                                        .font(DS.Font.sans(11))
+                                        .foregroundStyle(DS.Color.inkMuted)
                                 }
                             }
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color(.systemBackground).opacity(0.72))
+                                    .fill(DS.Color.card.opacity(0.86))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.20), lineWidth: 0.8)
                             )
 
                             Button {
                                 submitEmailAuth()
                             } label: {
                                 Text(mode == .signUp ? "Create account" : "Log in")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(DS.Font.sans(16, weight: .bold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.9)
                                     .frame(maxWidth: .infinity, minHeight: 56)
                             }
-                            .buttonStyle(AuthGateEmailButtonStyle())
+                            .buttonStyle(AuthGateSageButtonStyle())
                             .disabled(
                                 isLoading ||
                                 email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -342,23 +359,24 @@ private struct AuthEntryScreen: View {
                                 mode = .entry
                             }
                             .buttonStyle(.plain)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.black.opacity(0.64))
+                            .font(DS.Font.sans(13, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.70))
                             .disabled(isLoading)
                         }
 
                         if isLoading {
                             HStack(spacing: 8) {
                                 ProgressView().controlSize(.small)
+                                    .tint(Color.white.opacity(0.82))
                                 Text("Processing…")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.black.opacity(0.60))
+                                    .font(DS.Font.sans(12))
+                                    .foregroundStyle(Color.white.opacity(0.70))
                             }
                             .padding(.top, 4)
                         } else if !statusMessage.isEmpty {
                             Text(statusMessage)
-                                .font(.caption)
-                                .foregroundStyle(isError ? .red.opacity(0.95) : Color.black.opacity(0.64))
+                                .font(DS.Font.sans(12))
+                                .foregroundStyle(isError ? Color.red.opacity(0.92) : Color.white.opacity(0.72))
                                 .multilineTextAlignment(.center)
                                 .padding(.top, 4)
                                 .frame(maxWidth: .infinity)
@@ -371,7 +389,7 @@ private struct AuthEntryScreen: View {
                 .padding(.horizontal, 24)
             }
             .safeAreaPadding(.top, 16)
-            .safeAreaPadding(.bottom, 18)
+            .safeAreaPadding(.bottom, 24)
         }
     }
 
@@ -450,31 +468,49 @@ private struct AuthEntryScreen: View {
 private struct AuthGateAppleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(Color.white)
+            .foregroundStyle(DS.Color.ink)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color.black.opacity(configuration.isPressed ? 0.88 : 0.94))
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.88 : 0.96))
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
             .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 
-private struct AuthGateEmailButtonStyle: ButtonStyle {
+private struct AuthGateOutlineButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(Color.white.opacity(0.98))
+            .foregroundStyle(Color.white.opacity(0.96))
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.12 : 0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.28), lineWidth: 0.9)
+            )
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+private struct AuthGateSageButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.white)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [Color(red: 0.49, green: 0.55, blue: 0.44), Color(red: 0.58, green: 0.63, blue: 0.53)],
+                            colors: [DS.Color.sage, DS.Color.sageDeep.opacity(0.92)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
             )
-            .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 6)
+            .shadow(color: DS.Color.ink.opacity(0.18), radius: 14, x: 0, y: 8)
             .opacity(configuration.isPressed ? 0.92 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
             .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
@@ -484,15 +520,17 @@ private struct AuthGateEmailButtonStyle: ButtonStyle {
 private struct AuthGateTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
+            .font(DS.Font.sans(14))
+            .foregroundStyle(DS.Color.ink)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.86))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(DS.Color.card.opacity(0.92))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 0.8)
             )
     }
 }
@@ -510,22 +548,28 @@ private struct UsernameCompletionScreen: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            DS.Color.bg.ignoresSafeArea()
 
             VStack(spacing: 18) {
                 Spacer()
 
                 Text("Choose your username")
-                    .font(.title.weight(.bold))
+                    .font(DS.Font.serif(32, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
+
+                Text("This is how other cooks will find you on Season.")
+                    .font(DS.Font.serif(16, weight: .regular, italic: true))
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .multilineTextAlignment(.center)
 
                 TextField("Username", text: $username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(AuthGateTextFieldStyle())
 
                 Text("3-24 chars • letters, numbers, underscore")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(11))
+                    .foregroundStyle(DS.Color.inkMuted)
 
                 Button {
                     saveUsername()
@@ -533,26 +577,29 @@ private struct UsernameCompletionScreen: View {
                     Text("Continue")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(SeasonPrimaryButtonStyle())
                 .disabled(isSaving || UsernameValidation.validationError(for: username) != nil)
 
                 if isSaving {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
+                            .tint(DS.Color.sage)
                         Text("Saving username…")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(DS.Font.sans(12))
+                            .foregroundStyle(DS.Color.inkMuted)
                     }
                 } else if !statusMessage.isEmpty {
                     Text(statusMessage)
-                        .font(.caption)
-                        .foregroundStyle(isError ? .red : .secondary)
+                        .font(DS.Font.sans(12))
+                        .foregroundStyle(isError ? .red : DS.Color.inkMuted)
                         .multilineTextAlignment(.center)
                 }
 
                 Spacer()
             }
             .padding(.horizontal, 24)
+            .padding(.vertical, 24)
+            .frame(maxWidth: 390)
         }
     }
 

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Season · Discover v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared/season-v2.css" />
+<style>
+/* =========================
+   Discover (Scopri) — view-specific
+   ========================= */
+
+/* Search input */
+.sr-search {
+  margin: 6px 16px 14px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px;
+  height: 54px;
+  background: var(--bg-sub);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.sr-search.is-focused { border-color: var(--border-s); background: var(--card); }
+.sr-search svg { color: var(--ink-muted); flex-shrink: 0; }
+.sr-search input {
+  flex: 1;
+  border: none; outline: none;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.sr-search input::placeholder { color: var(--ink-muted); }
+.sr-search__clear {
+  background: var(--card);
+  border: 1px solid var(--border-m);
+  color: var(--ink-muted);
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.sr-search.has-text .sr-search__clear { display: inline-flex; }
+
+/* Segmented mode picker */
+.sr-mode {
+  margin: 0 16px 12px;
+  display: inline-flex;
+  background: var(--bg-sub);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  border: 1px solid var(--border);
+  width: calc(100% - 32px);
+}
+.sr-mode__btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 9px 12px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: -0.005em;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sr-mode__btn.is-active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+/* Filter chips */
+.sr-filters {
+  padding: 4px 0 14px;
+}
+.sr-filters__scroll {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  padding: 0 16px;
+  scrollbar-width: none;
+}
+.sr-filters__scroll::-webkit-scrollbar { display: none; }
+
+/* Section containers */
+.sr-block {
+  margin: 0 16px 18px;
+  background: rgba(255,255,255,0.84);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  padding: 14px 14px 16px;
+}
+.sr-block__title {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+.sr-block__title--row {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.sr-block__title .sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+/* From-your-fridge hero card */
+.sr-fridge {
+  display: block;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  color: inherit; text-decoration: none;
+  cursor: pointer;
+}
+.sr-fridge__media {
+  position: relative;
+  width: 100%;
+  padding-bottom: 60%;
+  background: #e6e1d4;
+}
+.sr-fridge__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sr-fridge__badge {
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  color: var(--sage-deep);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: var(--r-pill);
+  display: flex; align-items: center; gap: 5px;
+}
+.sr-fridge__badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fresh); }
+.sr-fridge__body { padding: 14px; }
+.sr-fridge__eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+.sr-fridge__title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.sr-fridge__meta {
+  display: flex; gap: 12px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sr-fridge__meta strong { color: var(--ink-soft); }
+.sr-fridge__reason {
+  margin-top: 8px;
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+/* Trending list (compact rows) */
+.sr-rows {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* Peak season now carousel (ingredients mode idle) */
+.sr-peak {
+  margin: 0;
+  display: block;
+}
+.sr-peak__carousel {
+  display: flex; gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px 6px;
+  scrollbar-width: none;
+}
+.sr-peak__carousel::-webkit-scrollbar { display: none; }
+.sr-peak__card {
+  flex-shrink: 0;
+  width: 88px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  cursor: pointer;
+  color: inherit; text-decoration: none;
+}
+.sr-peak__thumb {
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  background-size: cover; background-position: center;
+  background-color: #e6e1d4;
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.sr-peak__score-dot {
+  position: absolute; bottom: 0; right: -2px;
+  background: var(--card);
+  border-radius: var(--r-pill);
+  padding: 2px 7px;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sage-deep);
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border);
+}
+.sr-peak__name {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sr-peak__meta {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/* Recent queries (idle) */
+.sr-recent {
+  margin: 0 16px 16px;
+}
+.sr-recent__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding: 0 2px;
+  margin-bottom: 8px;
+}
+.sr-recent__pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-recent__pill {
+  background: var(--card);
+  border: 1px solid var(--border-m);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.sr-recent__pill svg { color: var(--ink-muted); width: 11px; height: 11px; }
+
+/* Search results */
+.sr-results {
+  padding: 0 16px 8px;
+}
+.sr-results__header {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding: 0 2px 8px;
+}
+.sr-empty {
+  margin: 0 16px 16px;
+  padding: 22px 18px;
+  text-align: center;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+}
+.sr-empty__icon {
+  width: 40px; height: 40px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: var(--bg-sub);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-muted);
+}
+.sr-empty__title {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.sr-empty__subtitle {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+.sr-empty__actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+/* Loading shimmer */
+.sr-loading {
+  margin: 0 16px 16px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  color: var(--ink-muted);
+  font-family: var(--sans);
+  font-size: 12px;
+}
+.sr-loading__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-muted);
+  animation: srPulse 1.2s ease-in-out infinite;
+}
+.sr-loading__dot:nth-child(2) { animation-delay: 0.15s; }
+.sr-loading__dot:nth-child(3) { animation-delay: 0.30s; }
+@keyframes srPulse {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+/* Override compact row bits from shared to fit the search context */
+.frow__best {
+  background: var(--sage-soft);
+  color: var(--rc-peak-fg);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--r-xs);
+}
+
+.caption { max-width: 420px; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="device__notch"></div>
+  <div class="device__screen">
+    <div class="screen" id="screen">
+      <div id="statusbar-slot"></div>
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="wordmark" id="wordmark">Season<em>.</em></div>
+        <div class="topbar__actions">
+          <button class="icon-btn" aria-label="Lista spesa">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 6h14l-1.5 11a2 2 0 0 1-2 1.8H8.5a2 2 0 0 1-2-1.8L5 6z"/><path d="M9 6V5a3 3 0 0 1 6 0v1"/></svg>
+            <span class="icon-btn__dot"></span>
+          </button>
+          <button class="icon-btn" aria-label="Notifiche">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3l1.5-2V9a4.5 4.5 0 0 1 9 0v5z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+          </button>
+          <button class="avatar-btn" aria-label="Profilo">
+            <img src="_assets/av_rocco.png" alt=""/>
+          </button>
+        </div>
+      </header>
+
+      <!-- Search -->
+      <div class="sr-search" id="sr-search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <input id="sr-input" type="text" data-i18n-placeholder="sr-placeholder" placeholder="Cerca ricette o ingredienti…" />
+        <button class="sr-search__clear" id="sr-clear" aria-label="Pulisci">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="sr-mode" role="tablist">
+        <button class="sr-mode__btn is-active" data-mode="recipes" role="tab"><span data-i18n="sr-mode-recipes">Ricette</span></button>
+        <button class="sr-mode__btn" data-mode="ingredients" role="tab"><span data-i18n="sr-mode-ingredients">Ingredienti</span></button>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="sr-filters">
+        <div class="sr-filters__scroll" id="sr-filters">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Dynamic content -->
+      <div id="sr-content"><!-- populated by JS --></div>
+
+    </div>
+
+    <!-- Tab bar -->
+    <div id="tabbar-slot"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-text"></span></div>
+  </div>
+</div>
+
+<div class="caption">
+  <strong>Season · Discover v2</strong> — Live search · Recipes/Ingredients mode · Fridge-ready & seasonal filters · Idle discovery: fridge hero, trending list, peak-season ingredients
+</div>
+
+<script src="_shared/season-v2.js"></script>
+<script>
+(function () {
+  const S = window.Season;
+  const { $, $$, t, registerDict, applyI18N, SVG, CREATORS, toast } = S;
+
+  // ---------- i18n ----------
+  registerDict({
+    it: {
+      'sr-placeholder': 'Cerca ricette o ingredienti…',
+      'sr-mode-recipes': 'Ricette',
+      'sr-mode-ingredients': 'Ingredienti',
+      'sr-filter-fridge-ready': 'Pronti col frigo',
+      'sr-filter-in-fridge': 'Nel tuo frigo',
+      'sr-filter-seasonal': 'Di stagione',
+      'sr-recent-title': 'Cerche recenti',
+      'sr-block-fridge-title': 'Dal tuo frigo',
+      'sr-block-fridge-sub': 'Pronta stasera',
+      'sr-fridge-badge': '5 su 7 pronti',
+      'sr-fridge-eyebrow': 'Mancano 2 ingredienti',
+      'sr-block-trending-title': 'Trending ora',
+      'sr-block-trending-sub': 'Questa settimana',
+      'sr-block-peak-title': 'Al picco adesso',
+      'sr-block-peak-sub': 'Aprile · Lombardia',
+      'sr-block-browse-title': 'Esplora per categoria',
+      'sr-results-format': 'Risultati per "{q}"',
+      'sr-searching': 'Cerco…',
+      'sr-empty-recipes-title': 'Nessuna ricetta trovata',
+      'sr-empty-ingredients-title': 'Nessun ingrediente trovato',
+      'sr-empty-subtitle': 'Prova a togliere i filtri o a cambiare modalità.',
+      'sr-action-clear': 'Pulisci ricerca',
+      'sr-action-switch-ing': 'Cerca ingredienti',
+      'sr-action-switch-rec': 'Cerca ricette',
+      'sr-action-clear-filter': 'Rimuovi filtro',
+      'sr-best-match': 'Match migliore',
+      'sr-recipes-count': '{n} ricette',
+    },
+    en: {
+      'sr-placeholder': 'Search recipes or ingredients…',
+      'sr-mode-recipes': 'Recipes',
+      'sr-mode-ingredients': 'Ingredients',
+      'sr-filter-fridge-ready': 'Fridge-ready',
+      'sr-filter-in-fridge': 'In your fridge',
+      'sr-filter-seasonal': 'Seasonal',
+      'sr-recent-title': 'Recent searches',
+      'sr-block-fridge-title': 'From your fridge',
+      'sr-block-fridge-sub': 'Ready tonight',
+      'sr-fridge-badge': '5 of 7 ready',
+      'sr-fridge-eyebrow': '2 ingredients missing',
+      'sr-block-trending-title': 'Trending now',
+      'sr-block-trending-sub': 'This week',
+      'sr-block-peak-title': 'At peak now',
+      'sr-block-peak-sub': 'April · Lombardy',
+      'sr-block-browse-title': 'Browse by category',
+      'sr-results-format': 'Results for "{q}"',
+      'sr-searching': 'Searching…',
+      'sr-empty-recipes-title': 'No recipes found',
+      'sr-empty-ingredients-title': 'No ingredients found',
+      'sr-empty-subtitle': 'Try removing filters or switching mode.',
+      'sr-action-clear': 'Clear search',
+      'sr-action-switch-ing': 'Search ingredients',
+      'sr-action-switch-rec': 'Search recipes',
+      'sr-action-clear-filter': 'Clear filter',
+      'sr-best-match': 'Best match',
+      'sr-recipes-count': '{n} recipes',
+    },
+  });
+
+  // ---------- Fake data ----------
+  const FRIDGE_RECIPE = {
+    id: 'risotto-carciofi',
+    title_it: 'Risotto Carnaroli ai Carciofi e Limone',
+    title_en: 'Carnaroli Risotto with Artichoke & Lemon',
+    img: '_assets/hero_risotto.jpg',
+    creator: 'elena',
+    time: 40, serves: 4, difficulty_it: 'Intermedio', difficulty_en: 'Intermediate',
+    fridgePercent: 71, missing: 2,
+  };
+
+  const RECIPES = [
+    { id: 'risotto-carciofi',  title_it: 'Risotto ai carciofi e limone',     title_en: 'Artichoke & lemon risotto',      creator: 'elena',  img: '_assets/hero_risotto.jpg',      time: 40, reason: 'fridge',   crispy: 128 },
+    { id: 'farro-carciofi',    title_it: 'Farro con carciofi e menta',       title_en: 'Farro with artichoke & mint',    creator: 'marco',  img: '_assets/farro_carciofi.jpg',    time: 30, reason: 'trending', crispy: 96 },
+    { id: 'pasta-fave',        title_it: 'Pasta fave, menta e pecorino',     title_en: 'Pasta with broad beans, mint & pecorino', creator: 'sara', img: '_assets/pasta_fave.jpg', time: 25, reason: 'fresh',   crispy: 84 },
+    { id: 'vellutata-piselli', title_it: 'Vellutata di piselli e menta',      title_en: 'Pea & mint soup',                creator: 'chiara', img: '_assets/vellutata_piselli.jpg', time: 20, reason: 'similar',  crispy: 71 },
+    { id: 'tortino-asparagi',  title_it: 'Tortino di asparagi e pecorino',    title_en: 'Asparagus & pecorino pie',       creator: 'luca',   img: '_assets/tortino_asparagi.jpg',  time: 45, reason: 'peak',     crispy: 64 },
+    { id: 'crostini-fragole',  title_it: 'Crostini fragole, stracciatella e pepe', title_en: 'Strawberry & stracciatella toast', creator: 'elena', img: '_assets/crostini_fragole.jpg', time: 10, reason: 'trending', crispy: 112 },
+    { id: 'crema-fave',        title_it: 'Crema di fave con cicoria',         title_en: 'Broad bean cream with chicory',  creator: 'marco',  img: '_assets/crema_fave.jpg',        time: 35, reason: 'similar',  crispy: 42 },
+    { id: 'frittata-erbe',     title_it: 'Frittata alle erbe di campo',       title_en: 'Wild herb frittata',             creator: 'sara',   img: '_assets/frittata_erbe.jpg',     time: 18, reason: 'fridge',   crispy: 58 },
+  ];
+
+  const PEAK_ING = [
+    { id: 'carciofi',  name_it: 'Carciofi',   name_en: 'Artichokes',      img: '_assets/p_carciofi.jpg', score: 98, recipeCount: 12 },
+    { id: 'asparagi',  name_it: 'Asparagi',   name_en: 'Asparagus',       img: '_assets/p_asparagi.jpg', score: 94, recipeCount: 9 },
+    { id: 'fave',      name_it: 'Fave',       name_en: 'Broad beans',     img: '_assets/p_fave.jpg',     score: 91, recipeCount: 7 },
+    { id: 'piselli',   name_it: 'Piselli',    name_en: 'Peas',            img: '_assets/p_piselli.jpg', score: 88, recipeCount: 11 },
+    { id: 'fragole',   name_it: 'Fragole',    name_en: 'Strawberries',    img: '_assets/p_fragole.jpg', score: 86, recipeCount: 8 },
+    { id: 'rucola',    name_it: 'Rucola',     name_en: 'Rocket',          img: '_assets/p_rucola.jpg',  score: 78, recipeCount: 5 },
+    { id: 'agretti',   name_it: 'Agretti',    name_en: 'Agretti',         img: '_assets/p_agretti.jpg', score: 74, recipeCount: 4 },
+  ];
+
+  const RECENT_QUERIES_IT = ['carciofi', 'senza glutine', 'pasta 20 min', 'fragole'];
+  const RECENT_QUERIES_EN = ['artichokes', 'gluten free', 'pasta 20 min', 'strawberries'];
+
+  // ---------- State ----------
+  let mode = 'recipes';
+  let activeFilter = null;
+  let query = '';
+  let searchTimeout = null;
+  let isSearching = false;
+
+  // ---------- Mount ----------
+  $('#statusbar-slot').innerHTML = S.statusBarHTML();
+  $('#tabbar-slot').innerHTML = S.tabBarHTML('discover');
+  S.wireTabBar(key => {
+    toast((S.getLang() === 'it' ? 'Vai a ' : 'Go to ') + key);
+  });
+
+  // ---------- Filter definitions ----------
+  function filtersFor(mode) {
+    if (mode === 'recipes') return ['fridge-ready', 'seasonal'];
+    return ['in-fridge', 'seasonal'];
+  }
+  function filterTitle(f) {
+    if (f === 'fridge-ready') return t('sr-filter-fridge-ready');
+    if (f === 'in-fridge')    return t('sr-filter-in-fridge');
+    if (f === 'seasonal')     return t('sr-filter-seasonal');
+    return '';
+  }
+
+  // ---------- Rendering ----------
+  function renderFilters() {
+    const filters = filtersFor(mode);
+    $('#sr-filters').innerHTML = filters.map(f => `
+      <button class="chip ${activeFilter === f ? 'is-active' : ''}" data-filter="${f}">
+        <span>${filterTitle(f)}</span>
+      </button>
+    `).join('');
+    $$('#sr-filters .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        activeFilter = activeFilter === chip.dataset.filter ? null : chip.dataset.filter;
+        renderFilters();
+        renderContent();
+      });
+    });
+  }
+
+  function creatorRow(id) {
+    const c = CREATORS[id];
+    return `
+      <div class="fcard__header">
+        <div class="fcard__avatar" style="background-image:url('${c.av}')"></div>
+        <div class="fcard__creator-row">
+          <div class="fcard__creator-name">${c.name}</div>
+          <div class="fcard__creator-bio">${S.creatorBio(c)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function recipeRow(r, bestMatch = false) {
+    const lang = S.getLang();
+    const title = lang === 'it' ? r.title_it : r.title_en;
+    const c = CREATORS[r.creator];
+    return `
+      <a class="frow" href="#" data-id="${r.id}">
+        <div class="frow__thumb" style="background-image:url('${r.img}')"></div>
+        <div class="frow__body">
+          <div class="frow__title">${title}</div>
+          <div class="frow__meta">
+            <span>${c.name}</span>
+            <span class="fcard__meta-dot"></span>
+            <span><strong>${r.time}</strong> ${t('min')}</span>
+            ${bestMatch ? `<span class="frow__best" data-i18n="sr-best-match">${t('sr-best-match')}</span>` : ''}
+          </div>
+        </div>
+        <span class="frow__arrow">›</span>
+      </a>
+    `;
+  }
+
+  function renderIdleRecipes() {
+    const r = FRIDGE_RECIPE;
+    const lang = S.getLang();
+    const title = lang === 'it' ? r.title_it : r.title_en;
+    const diff = lang === 'it' ? r.difficulty_it : r.difficulty_en;
+    const c = CREATORS[r.creator];
+
+    const recentItems = (lang === 'it' ? RECENT_QUERIES_IT : RECENT_QUERIES_EN).map(q => `
+      <button class="sr-recent__pill" data-recent="${q}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg>
+        <span>${q}</span>
+      </button>
+    `).join('');
+
+    const trending = RECIPES.slice(0, 5).map(rc => recipeRow(rc)).join('');
+
+    return `
+      <div class="sr-recent">
+        <div class="sr-recent__title" data-i18n="sr-recent-title">${t('sr-recent-title')}</div>
+        <div class="sr-recent__pills">${recentItems}</div>
+      </div>
+
+      <div class="sr-block">
+        <div class="sr-block__title-row" style="display:flex;align-items:baseline;justify-content:space-between;">
+          <h3 class="sr-block__title" data-i18n="sr-block-fridge-title">${t('sr-block-fridge-title')}</h3>
+          <span class="sub" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted);" data-i18n="sr-block-fridge-sub">${t('sr-block-fridge-sub')}</span>
+        </div>
+        <a class="sr-fridge" href="#" data-id="${r.id}">
+          <div class="sr-fridge__media">
+            <img src="${r.img}" alt=""/>
+            <div class="sr-fridge__badge"><span class="dot"></span><span data-i18n="sr-fridge-badge">${t('sr-fridge-badge')}</span></div>
+          </div>
+          <div class="sr-fridge__body">
+            <div class="sr-fridge__eyebrow" data-i18n="sr-fridge-eyebrow">${t('sr-fridge-eyebrow')}</div>
+            <h4 class="sr-fridge__title">${title}</h4>
+            <div class="sr-fridge__meta">
+              <span>${c.name}</span>
+              <span><strong>${r.time}</strong> ${t('min')}</span>
+              <span><strong>${r.serves}</strong> ${t('serves')}</span>
+              <span>${diff}</span>
+            </div>
+            <div class="sr-fridge__reason">
+              <span class="reason" data-why="fridge"><span class="reason__glyph"></span><span>5 / 7</span></span>
+              <span class="reason" data-why="peak"><span class="reason__glyph"></span><span>${lang === 'it' ? 'carciofi al picco' : 'artichoke at peak'}</span></span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="sr-block">
+        <div class="sr-block__title-row" style="display:flex;align-items:baseline;justify-content:space-between;">
+          <h3 class="sr-block__title" data-i18n="sr-block-trending-title">${t('sr-block-trending-title')}</h3>
+          <span class="sub" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted);" data-i18n="sr-block-trending-sub">${t('sr-block-trending-sub')}</span>
+        </div>
+        <div class="sr-rows">${trending}</div>
+      </div>
+    `;
+  }
+
+  function renderIdleIngredients() {
+    const lang = S.getLang();
+    const cards = PEAK_ING.map(ing => {
+      const name = lang === 'it' ? ing.name_it : ing.name_en;
+      return `
+        <a class="sr-peak__card" href="#" data-id="${ing.id}">
+          <div class="sr-peak__thumb" style="background-image:url('${ing.img}')">
+            <div class="sr-peak__score-dot">${ing.score}%</div>
+          </div>
+          <div class="sr-peak__name">${name}</div>
+          <div class="sr-peak__meta">${t('sr-recipes-count', { n: ing.recipeCount })}</div>
+        </a>
+      `;
+    }).join('');
+
+    const recentItems = (lang === 'it' ? RECENT_QUERIES_IT : RECENT_QUERIES_EN).map(q => `
+      <button class="sr-recent__pill" data-recent="${q}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg>
+        <span>${q}</span>
+      </button>
+    `).join('');
+
+    return `
+      <div class="sr-recent">
+        <div class="sr-recent__title" data-i18n="sr-recent-title">${t('sr-recent-title')}</div>
+        <div class="sr-recent__pills">${recentItems}</div>
+      </div>
+
+      <div class="sr-block">
+        <div class="sr-block__title-row" style="display:flex;align-items:baseline;justify-content:space-between;">
+          <h3 class="sr-block__title" data-i18n="sr-block-peak-title">${t('sr-block-peak-title')}</h3>
+          <span class="sub" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted);" data-i18n="sr-block-peak-sub">${t('sr-block-peak-sub')}</span>
+        </div>
+        <div class="sr-peak__carousel">${cards}</div>
+      </div>
+    `;
+  }
+
+  function renderSearching() {
+    const lang = S.getLang();
+    return `
+      <div class="sr-results">
+        <div class="sr-results__header">${t('sr-results-format', { q: query })}</div>
+      </div>
+      <div class="sr-loading">
+        <span class="sr-loading__dot"></span>
+        <span class="sr-loading__dot"></span>
+        <span class="sr-loading__dot"></span>
+        <span data-i18n="sr-searching">${t('sr-searching')}</span>
+      </div>
+    `;
+  }
+
+  function filterRecipes() {
+    const q = query.trim().toLowerCase();
+    let results = RECIPES.filter(r => {
+      const text = (r.title_it + ' ' + r.title_en).toLowerCase();
+      return text.includes(q);
+    });
+    if (activeFilter === 'fridge-ready') results = results.filter(r => r.reason === 'fridge');
+    if (activeFilter === 'seasonal')     results = results.filter(r => r.reason === 'peak' || r.reason === 'fresh');
+    return results;
+  }
+
+  function filterIngredients() {
+    const q = query.trim().toLowerCase();
+    let results = PEAK_ING.filter(i => {
+      const text = (i.name_it + ' ' + i.name_en).toLowerCase();
+      return text.includes(q);
+    });
+    if (activeFilter === 'seasonal') results = results.filter(i => i.score >= 85);
+    return results;
+  }
+
+  function renderResults() {
+    if (mode === 'recipes') {
+      const results = filterRecipes();
+      if (!results.length) return renderEmpty();
+      const header = `<div class="sr-results"><div class="sr-results__header">${t('sr-results-format', { q: query })}</div></div>`;
+      const rows = `<div class="sr-block"><div class="sr-rows">${
+        results.map((r, i) => recipeRow(r, i === 0)).join('')
+      }</div></div>`;
+      return header + rows;
+    } else {
+      const results = filterIngredients();
+      if (!results.length) return renderEmpty();
+      const header = `<div class="sr-results"><div class="sr-results__header">${t('sr-results-format', { q: query })}</div></div>`;
+      const cards = results.map(ing => {
+        const lang = S.getLang();
+        const name = lang === 'it' ? ing.name_it : ing.name_en;
+        return `
+          <a class="sr-peak__card" href="#" data-id="${ing.id}" style="flex-shrink:0;width:100%;flex-direction:row;gap:12px;align-items:center;text-align:left;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);">
+            <div class="sr-peak__thumb" style="background-image:url('${ing.img}');width:48px;height:48px;">
+              <div class="sr-peak__score-dot" style="bottom:-3px;right:-3px;">${ing.score}%</div>
+            </div>
+            <div style="flex:1;">
+              <div class="sr-peak__name" style="text-align:left;white-space:normal;font-family:var(--serif);font-size:15px;">${name}</div>
+              <div class="sr-peak__meta" style="text-align:left;">${t('sr-recipes-count', { n: ing.recipeCount })}</div>
+            </div>
+            <span class="frow__arrow">›</span>
+          </a>
+        `;
+      }).join('');
+      return `
+        ${header}
+        <div class="sr-block">
+          <div class="sr-rows">${cards}</div>
+        </div>
+      `;
+    }
+  }
+
+  function renderEmpty() {
+    const lang = S.getLang();
+    const title = mode === 'recipes' ? t('sr-empty-recipes-title') : t('sr-empty-ingredients-title');
+    return `
+      <div class="sr-empty">
+        <div class="sr-empty__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        </div>
+        <h4 class="sr-empty__title">${title}</h4>
+        <p class="sr-empty__subtitle" data-i18n="sr-empty-subtitle">${t('sr-empty-subtitle')}</p>
+        <div class="sr-empty__actions">
+          <button class="chip" id="sr-action-clear"><span data-i18n="sr-action-clear">${t('sr-action-clear')}</span></button>
+          <button class="chip" id="sr-action-switch">
+            <span>${mode === 'recipes' ? t('sr-action-switch-ing') : t('sr-action-switch-rec')}</span>
+          </button>
+          ${activeFilter ? `<button class="chip" id="sr-action-clear-filter"><span>${t('sr-action-clear-filter')}</span></button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderContent() {
+    const wrap = $('#sr-content');
+    if (query.trim().length === 0) {
+      wrap.innerHTML = mode === 'recipes' ? renderIdleRecipes() : renderIdleIngredients();
+    } else if (isSearching) {
+      wrap.innerHTML = renderSearching();
+    } else {
+      wrap.innerHTML = renderResults();
+    }
+    applyI18N();
+
+    // wire row clicks
+    $$('.frow, .sr-fridge, .sr-peak__card, .sr-recent__pill, #sr-action-clear, #sr-action-switch, #sr-action-clear-filter').forEach(el => {
+      el.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (el.id === 'sr-action-clear') {
+          $('#sr-input').value = '';
+          query = '';
+          $('#sr-search').classList.remove('has-text');
+          renderContent();
+          return;
+        }
+        if (el.id === 'sr-action-switch') {
+          mode = mode === 'recipes' ? 'ingredients' : 'recipes';
+          activeFilter = null;
+          $$('.sr-mode__btn').forEach(b => b.classList.toggle('is-active', b.dataset.mode === mode));
+          renderFilters();
+          renderContent();
+          return;
+        }
+        if (el.id === 'sr-action-clear-filter') {
+          activeFilter = null;
+          renderFilters();
+          renderContent();
+          return;
+        }
+        if (el.dataset.recent) {
+          $('#sr-input').value = el.dataset.recent;
+          handleInput(el.dataset.recent);
+          return;
+        }
+        if (el.dataset.id) {
+          toast((S.getLang() === 'it' ? 'Apro ' : 'Opening ') + el.dataset.id);
+        }
+      });
+    });
+  }
+
+  // ---------- Search input ----------
+  function handleInput(val) {
+    query = val;
+    if (val.length > 0) {
+      $('#sr-search').classList.add('has-text');
+      isSearching = true;
+      renderContent();
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        isSearching = false;
+        renderContent();
+      }, 380);
+    } else {
+      $('#sr-search').classList.remove('has-text');
+      isSearching = false;
+      renderContent();
+    }
+  }
+
+  $('#sr-input').addEventListener('input', e => handleInput(e.target.value));
+  $('#sr-input').addEventListener('focus', () => $('#sr-search').classList.add('is-focused'));
+  $('#sr-input').addEventListener('blur', () => $('#sr-search').classList.remove('is-focused'));
+  $('#sr-clear').addEventListener('click', () => {
+    $('#sr-input').value = '';
+    handleInput('');
+    $('#sr-input').focus();
+  });
+
+  // ---------- Mode toggle ----------
+  $$('.sr-mode__btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mode = btn.dataset.mode;
+      activeFilter = null;
+      $$('.sr-mode__btn').forEach(b => b.classList.toggle('is-active', b === btn));
+      renderFilters();
+      renderContent();
+    });
+  });
+
+  // ---------- Initial ----------
+  $('#sr-input').placeholder = t('sr-placeholder');
+  renderFilters();
+  renderContent();
+  applyI18N();
+})();
+</script>
+</body>
+</html>

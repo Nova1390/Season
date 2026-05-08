@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Season — Editorial Forager Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #1d1f1c; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  /* hide horizontal scroll thumbs in carousels */
+  .no-scroll::-webkit-scrollbar { display: none; }
+  button { font-family: inherit; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="screens-a.jsx"></script>
+<script type="text/babel" src="screens-b.jsx"></script>
+<script type="text/babel" src="screens-c.jsx"></script>
+
+<script type="text/babel">
+const { TOKENS, FONTS, EyebrowLabel, Display, Body, TabBar } = window.SEASON_UI;
+const { HomeScreen, RecipeDetailScreen } = window.SCREENS_A;
+const { IngredientScreen, SearchScreen, FridgeScreen } = window.SCREENS_B;
+const { ShoppingScreen, ProfileScreen, AccountScreen, LoginScreen, CreateScreen } = window.SCREENS_C;
+
+const SCREENS = [
+  { id: 'home', label: 'Home', tab: 'home', Comp: HomeScreen },
+  { id: 'recipe', label: 'Recipe Detail', tab: 'home', Comp: RecipeDetailScreen },
+  { id: 'ingredient', label: 'Ingredient', tab: 'discover', Comp: IngredientScreen },
+  { id: 'search', label: 'Discover', tab: 'discover', Comp: SearchScreen },
+  { id: 'fridge', label: 'Fridge', tab: 'fridge', Comp: FridgeScreen },
+  { id: 'shopping', label: 'Shopping List', tab: 'list', Comp: ShoppingScreen },
+  { id: 'profile', label: 'Profile (Public)', tab: 'profile', Comp: ProfileScreen },
+  { id: 'account', label: 'Account', tab: 'profile', Comp: AccountScreen },
+  { id: 'login', label: 'Login', tab: null, Comp: LoginScreen },
+  { id: 'create', label: 'Create Recipe', tab: null, Comp: CreateScreen },
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#a85a3c",
+  "primary": "#526048",
+  "vellum": "#f4f1ea",
+  "fontDisplay": "Cormorant Garamond",
+  "density": "comfortable"
+}/*EDITMODE-END*/;
+
+// Phone frame — the "magazine" framing
+function Phone({ children, screen }) {
+  const W = 393, H = 852;
+  return (
+    <div style={{
+      width: W, height: H, borderRadius: 52, overflow: 'hidden',
+      position: 'relative', background: TOKENS.vellum,
+      boxShadow: '0 30px 80px rgba(0,0,0,0.35), 0 8px 30px rgba(0,0,0,0.18), 0 0 0 10px #1d1f1c, 0 0 0 11px rgba(255,255,255,0.06)',
+      flexShrink: 0,
+    }}>
+      {/* dynamic island */}
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 122, height: 36, borderRadius: 24, background: '#000', zIndex: 100,
+      }} />
+      {/* content scroll */}
+      <div className="no-scroll" style={{ height: '100%', overflow: 'auto' }}>
+        {children}
+      </div>
+      {/* bottom tab bar (hidden for login/create) */}
+      {screen.tab !== null && <TabBar active={screen.tab} />}
+      {/* home indicator */}
+      <div style={{
+        position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+        width: 134, height: 5, borderRadius: 100,
+        background: 'rgba(29,31,28,0.4)', zIndex: 200,
+      }}/>
+    </div>
+  );
+}
+
+function App() {
+  const [activeIdx, setActiveIdx] = React.useState(() => {
+    const saved = parseInt(localStorage.getItem('season_screen') || '0', 10);
+    return isNaN(saved) ? 0 : Math.min(saved, SCREENS.length - 1);
+  });
+  const [tweakOpen, setTweakOpen] = React.useState(false);
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+
+  React.useEffect(() => { localStorage.setItem('season_screen', String(activeIdx)); }, [activeIdx]);
+
+  // Tweaks protocol
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data) return;
+      if (e.data.type === '__activate_edit_mode') setTweakOpen(true);
+      if (e.data.type === '__deactivate_edit_mode') setTweakOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const setTweak = (k, v) => {
+    const next = { ...tweaks, [k]: v };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  };
+
+  // Apply CSS variable overrides
+  React.useEffect(() => {
+    const r = document.documentElement.style;
+    r.setProperty('--accent', tweaks.accent);
+    r.setProperty('--primary', tweaks.primary);
+    r.setProperty('--vellum', tweaks.vellum);
+  }, [tweaks]);
+
+  const screen = SCREENS[activeIdx];
+  const Comp = screen.Comp;
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#1d1f1c',
+      padding: '40px 20px 60px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28,
+    }}
+    data-screen-label={`${String(activeIdx + 1).padStart(2, '0')} ${screen.label}`}>
+
+      {/* Top masthead — like a magazine cover */}
+      <div style={{ textAlign: 'center', color: '#fff', maxWidth: 700, marginBottom: 4 }}>
+        <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.22em', marginBottom: 12 }}>
+          SEASON · iOS REDESIGN · ISSUE 47
+        </div>
+        <div style={{ fontFamily: FONTS.display, fontSize: 44, fontStyle: 'italic', letterSpacing: '-0.02em', lineHeight: 1, color: '#fff' }}>
+          Editorial Forager
+        </div>
+        <div style={{ fontFamily: FONTS.serif, fontSize: 15, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', marginTop: 10, maxWidth: 480, marginInline: 'auto', lineHeight: 1.5 }}>
+          A premium, editorial direction for Season — built on the existing "Digital Greenhouse" design system, pushed into masthead-grade typography, asymmetric layouts, full-bleed photography and tonal vellum surfaces.
+        </div>
+      </div>
+
+      {/* Screen tab nav */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 760, marginBottom: 4 }}>
+        {SCREENS.map((s, i) => (
+          <button key={s.id} onClick={() => setActiveIdx(i)} style={{
+            padding: '8px 14px', borderRadius: 9999,
+            background: i === activeIdx ? '#fff' : 'transparent',
+            color: i === activeIdx ? '#1d1f1c' : 'rgba(255,255,255,0.65)',
+            border: i === activeIdx ? 'none' : '1px solid rgba(255,255,255,0.18)',
+            fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.1em',
+            textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500,
+          }}>
+            {String(i + 1).padStart(2, '0')} · {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* The phone */}
+      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <Phone screen={screen}>
+          <Comp />
+        </Phone>
+        <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.18em' }}>
+          PLATE №{String(activeIdx + 1).padStart(2, '0')} · {screen.label.toUpperCase()}
+        </div>
+      </div>
+
+      {/* Footer notes */}
+      <div style={{ marginTop: 36, maxWidth: 720, color: 'rgba(255,255,255,0.55)' }}>
+        <div style={{ fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.2em', marginBottom: 14, color: 'rgba(255,255,255,0.4)' }}>
+          DESIGN NOTES
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28, fontFamily: FONTS.serif, fontSize: 14, lineHeight: 1.55, fontStyle: 'italic' }}>
+          <div>
+            <strong style={{ fontStyle: 'normal', fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.14em', color: '#fff' }}>SYSTEM —</strong><br/>
+            One curated direction blending four pulls: Swiss editorial structure, immersive photography, tactile vellum surfaces, and small foraged/farmer accents (stamps, sprigs, monospace numerals).
+          </div>
+          <div>
+            <strong style={{ fontStyle: 'normal', fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.14em', color: '#fff' }}>TYPE —</strong><br/>
+            Cormorant Garamond italic for masthead and recipe titles, Inter for UI, JetBrains Mono for numerals and eyebrow labels — the "rivista" rhythm.
+          </div>
+          <div>
+            <strong style={{ fontStyle: 'normal', fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.14em', color: '#fff' }}>SURFACES —</strong><br/>
+            Warmer vellum (#f4f1ea) over the original off-white. Tonal nesting: vellum → vellumWarm → card. Zero hard borders. Dotted dividers where structure helps.
+          </div>
+          <div>
+            <strong style={{ fontStyle: 'normal', fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.14em', color: '#fff' }}>NEXT —</strong><br/>
+            Translate to SwiftUI: Cormorant via custom Font, Inter via SF fallback. Push existing design tokens to the warmer vellum + monospace metadata. I can mock dark mode, onboarding, or any specific state on request.
+          </div>
+        </div>
+      </div>
+
+      {/* TWEAKS PANEL */}
+      {tweakOpen && (
+        <div style={{
+          position: 'fixed', bottom: 16, right: 16, width: 280,
+          background: '#fff', borderRadius: 12, padding: 16,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          fontFamily: FONTS.sans, fontSize: 12, zIndex: 9999,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: TOKENS.ink }}>Tweaks</div>
+            <button onClick={() => setTweakOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: TOKENS.inkMuted }}>×</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: TOKENS.inkMuted, fontFamily: FONTS.mono }}>Accent (terracotta)</span>
+              <input type="color" value={tweaks.accent} onChange={e => setTweak('accent', e.target.value)} style={{ width: '100%', height: 32, border: 'none', background: 'none', cursor: 'pointer' }}/>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: TOKENS.inkMuted, fontFamily: FONTS.mono }}>Primary (sage)</span>
+              <input type="color" value={tweaks.primary} onChange={e => setTweak('primary', e.target.value)} style={{ width: '100%', height: 32, border: 'none', background: 'none', cursor: 'pointer' }}/>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: TOKENS.inkMuted, fontFamily: FONTS.mono }}>Vellum (paper)</span>
+              <input type="color" value={tweaks.vellum} onChange={e => setTweak('vellum', e.target.value)} style={{ width: '100%', height: 32, border: 'none', background: 'none', cursor: 'pointer' }}/>
+            </label>
+            <div style={{ fontSize: 10, color: TOKENS.inkMuted, fontFamily: FONTS.serif, fontStyle: 'italic', marginTop: 4 }}>
+              Live changes apply to the running preview. Reload to confirm persistence.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>

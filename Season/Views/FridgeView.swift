@@ -1,12 +1,33 @@
 import SwiftUI
 
+enum FridgeViewMode {
+    case inventory
+    case recipes
+}
+
 struct FridgeView: View {
     @ObservedObject var produceViewModel: ProduceViewModel
     @ObservedObject var fridgeViewModel: FridgeViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @State private var query = ""
     @State private var selectedSortControl: FridgeSortControl = .freshness
+    @State private var selectedMode: FridgeViewMode
     @State private var showSearchField = false
+    @State private var addMissingMessage = ""
+    @State private var showingAddMissingAlert = false
     private let emptyQueryAddableLimit = 10
+
+    init(
+        produceViewModel: ProduceViewModel,
+        fridgeViewModel: FridgeViewModel,
+        shoppingListViewModel: ShoppingListViewModel,
+        initialMode: FridgeViewMode = .inventory
+    ) {
+        self.produceViewModel = produceViewModel
+        self.fridgeViewModel = fridgeViewModel
+        self.shoppingListViewModel = shoppingListViewModel
+        _selectedMode = State(initialValue: initialMode)
+    }
 
     var body: some View {
         let addableResults = resolvedAddableResults
@@ -19,8 +40,15 @@ struct FridgeView: View {
                 if isAddSearchMode {
                     addIngredientSection(addableResults: addableResults)
                 } else {
-                    fridgeSection
-                    addIngredientSection(addableResults: addableResults)
+                    modePicker
+
+                    switch selectedMode {
+                    case .inventory:
+                        fridgeSection
+                        addIngredientSection(addableResults: addableResults)
+                    case .recipes:
+                        fridgeRecipesSection
+                    }
                 }
             }
             .padding(.horizontal, SeasonSpacing.md)
@@ -28,13 +56,19 @@ struct FridgeView: View {
             .padding(.bottom, SeasonLayout.bottomBarContentClearance)
         }
         .background(SeasonColors.primarySurface)
-        .navigationTitle(produceViewModel.localizer.text(.fridgeTab))
-        .navigationBarTitleDisplayMode(.inline)
+        .seasonTopBar(
+            produceViewModel: produceViewModel,
+            shoppingListViewModel: shoppingListViewModel,
+            leading: .back
+        )
         .searchable(
             text: $query,
             isPresented: $showSearchField,
             prompt: produceViewModel.localizer.text(.searchPlaceholder)
         )
+        .alert(addMissingMessage, isPresented: $showingAddMissingAlert) {
+            Button("OK", role: .cancel) {}
+        }
     }
 
     private var resolvedAddableResults: [IngredientSearchResult] {
@@ -51,15 +85,16 @@ struct FridgeView: View {
     private var fridgeEntries: [FridgeEntry] {
         let produce = fridgeViewModel.produceItems.map { FridgeEntry.produce($0, languageCode: produceViewModel.languageCode, localizer: produceViewModel.localizer) }
         let basic = fridgeViewModel.basicItems.map { FridgeEntry.basic($0, languageCode: produceViewModel.languageCode, localizer: produceViewModel.localizer) }
+        let catalog = fridgeViewModel.catalogFridgeItems.map { FridgeEntry.catalog($0, localizer: produceViewModel.localizer) }
         let custom = fridgeViewModel.customFridgeItems.map { FridgeEntry.custom($0, localizer: produceViewModel.localizer) }
 
         switch selectedSortControl {
         case .alphabetical:
-            return (produce + basic + custom)
+            return (produce + basic + catalog + custom)
                 .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .freshness:
             // Approximate freshness using local insertion order (most recently added first).
-            return Array(produce.reversed()) + Array(basic.reversed()) + Array(custom.reversed())
+            return Array(produce.reversed()) + Array(basic.reversed()) + Array(catalog.reversed()) + Array(custom.reversed())
         }
     }
 
@@ -107,6 +142,236 @@ struct FridgeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var modePicker: some View {
+        HStack(spacing: 8) {
+            modePickerButton(
+                mode: .inventory,
+                title: produceViewModel.localizer.text(.fridgeTab),
+                systemImage: "snowflake"
+            )
+            modePickerButton(
+                mode: .recipes,
+                title: produceViewModel.localizer.text(.recipes),
+                systemImage: "fork.knife"
+            )
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.88))
+        )
+    }
+
+    private func modePickerButton(mode: FridgeViewMode, title: String, systemImage: String) -> some View {
+        let isSelected = selectedMode == mode
+        return Button {
+            selectedMode = mode
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.semibold))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.72))
+            .frame(maxWidth: .infinity)
+            .frame(height: 42)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? DS.Color.sageDeep : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var fridgeRecipeMatches: [FridgeMatchedRecipe] {
+        let fridgeIDs = fridgeViewModel.allIngredientIDSet
+        guard !fridgeIDs.isEmpty else { return [] }
+        return produceViewModel
+            .rankedFridgeRecommendations(fridgeItemIDs: fridgeIDs)
+            .filter { $0.totalCount > 0 && $0.matchingCount > 0 }
+    }
+
+    private var readyNowMatches: [FridgeMatchedRecipe] {
+        fridgeRecipeMatches.filter { $0.missingCount == 0 }
+    }
+
+    private var oneMissingMatches: [FridgeMatchedRecipe] {
+        fridgeRecipeMatches.filter { $0.missingCount == 1 }
+    }
+
+    private var almostReadyMatches: [FridgeMatchedRecipe] {
+        fridgeRecipeMatches.filter { $0.missingCount > 1 }
+    }
+
+    private var fridgeRecipesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                SectionTitleCountRow(
+                    title: produceViewModel.localizer.localized("fridge.recipes.title"),
+                    countText: "\(fridgeRecipeMatches.count)"
+                )
+                Text(produceViewModel.localizer.localized("fridge.recipes.subtitle"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if fridgeViewModel.allItemCount == 0 {
+                fridgeRecipesEmptyState(
+                    title: produceViewModel.localizer.localized("fridge.recipes.empty_fridge.title"),
+                    subtitle: produceViewModel.localizer.localized("fridge.recipes.empty_fridge.subtitle"),
+                    actionTitle: produceViewModel.localizer.text(.addIngredients)
+                ) {
+                    selectedMode = .inventory
+                    showSearchField = true
+                }
+            } else if fridgeRecipeMatches.isEmpty {
+                fridgeRecipesEmptyState(
+                    title: produceViewModel.localizer.localized("fridge.recipes.no_matches.title"),
+                    subtitle: produceViewModel.localizer.localized("fridge.recipes.no_matches.subtitle"),
+                    actionTitle: produceViewModel.localizer.text(.addIngredients)
+                ) {
+                    selectedMode = .inventory
+                    showSearchField = true
+                }
+            } else {
+                fridgeRecipeGroup(
+                    title: produceViewModel.localizer.text(.readyNow),
+                    matches: readyNowMatches
+                )
+                fridgeRecipeGroup(
+                    title: produceViewModel.localizer.localized("fridge.recipes.one_missing"),
+                    matches: oneMissingMatches
+                )
+                fridgeRecipeGroup(
+                    title: produceViewModel.localizer.localized("fridge.recipes.almost_ready"),
+                    matches: almostReadyMatches
+                )
+            }
+        }
+    }
+
+    private func fridgeRecipeGroup(title: String, matches: [FridgeMatchedRecipe]) -> some View {
+        Group {
+            if !matches.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(title)
+                        .font(.caption.weight(.bold))
+                        .tracking(0.9)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.secondary)
+
+                    LazyVStack(spacing: 12) {
+                        ForEach(matches) { match in
+                            fridgeRecipeCard(match)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func fridgeRecipeCard(_ match: FridgeMatchedRecipe) -> some View {
+        let ranked = match.rankedRecipe
+        let missingIngredients = missingIngredients(for: ranked.recipe)
+        return VStack(alignment: .leading, spacing: 10) {
+            NavigationLink {
+                RecipeDetailView(
+                    rankedRecipe: ranked,
+                    viewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
+                HStack(spacing: 12) {
+                    RecipeThumbnailView(recipe: ranked.recipe, size: 66)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(ranked.recipe.title)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+
+                        Text(fridgeMatchSummary(for: match))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+
+                        if !missingIngredients.isEmpty {
+                            Text(missingPreviewText(for: missingIngredients))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if !missingIngredients.isEmpty {
+                Button {
+                    addMissingIngredients(missingIngredients, for: ranked.recipe)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cart.badge.plus")
+                            .font(.caption.weight(.bold))
+                        Text(produceViewModel.localizer.text(.addMissingAction))
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(DS.Color.sageDeep)
+                    .padding(.horizontal, 10)
+                    .frame(height: 32)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(DS.Color.sageSoft.opacity(0.72))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.94))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.8)
+        )
+    }
+
+    private func fridgeRecipesEmptyState(
+        title: String,
+        subtitle: String,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(spacing: 12) {
+            EmptyStateCard(
+                symbol: "fork.knife.circle",
+                title: title,
+                subtitle: subtitle
+            )
+
+            Button(action: action) {
+                Text(actionTitle)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(SeasonPrimaryButtonStyle())
+        }
+        .padding(SeasonSpacing.md)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.92))
+        )
+    }
+
     private func addIngredientSection(addableResults: [IngredientSearchResult]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionTitleCountRow(
@@ -149,7 +414,7 @@ struct FridgeView: View {
             switch entry.source {
             case .produce(let item):
                 ProduceThumbnailView(item: item, size: 46)
-            case .basic:
+            case .basic, .catalog:
                 Circle()
                     .fill(Color(.tertiarySystemGroupedBackground))
                     .frame(width: 46, height: 46)
@@ -372,12 +637,78 @@ struct FridgeView: View {
         }
     }
 
+    private func isAvailableInFridge(_ ingredient: RecipeIngredient) -> Bool {
+        if let ingredientID = ingredient.ingredientID,
+           fridgeViewModel.allIngredientIDSet.contains(ingredientID) {
+            return true
+        }
+
+        if let produceID = ingredient.produceID,
+           fridgeViewModel.allIngredientIDSet.contains(produceID) {
+            return true
+        }
+
+        if let basicID = ingredient.basicIngredientID,
+           fridgeViewModel.allIngredientIDSet.contains(basicID) {
+            return true
+        }
+
+        return false
+    }
+
+    private func missingIngredients(for recipe: Recipe) -> [RecipeIngredient] {
+        recipe.ingredients.filter { !isAvailableInFridge($0) }
+    }
+
+    private func fridgeMatchSummary(for match: FridgeMatchedRecipe) -> String {
+        if match.missingCount == 0 {
+            return produceViewModel.localizer.text(.readyNow)
+        }
+
+        return String(
+            format: produceViewModel.localizer.text(.onlyMissingFormat),
+            match.missingCount
+        )
+    }
+
+    private func missingPreviewText(for ingredients: [RecipeIngredient]) -> String {
+        let names = ingredients
+            .prefix(3)
+            .map { $0.name }
+            .joined(separator: ", ")
+        if ingredients.count > 3 {
+            return "\(produceViewModel.localizer.text(.missing)): \(names) +\(ingredients.count - 3)"
+        }
+        return "\(produceViewModel.localizer.text(.missing)): \(names)"
+    }
+
+    private func addMissingIngredients(_ ingredients: [RecipeIngredient], for recipe: Recipe) {
+        let result = shoppingListViewModel.addAllRecipeIngredients(
+            ingredients,
+            sourceRecipeID: recipe.id,
+            sourceRecipeTitle: recipe.title,
+            produceLookup: { produceID in
+                produceViewModel.produceItem(forID: produceID)
+            },
+            basicLookup: { basicID in
+                produceViewModel.basicIngredient(forID: basicID)
+            }
+        )
+        addMissingMessage = produceViewModel.ingredientsAddFeedbackText(
+            added: result.added,
+            alreadyInList: result.alreadyInList
+        )
+        showingAddMissingAlert = true
+    }
+
     private func removeFromFridge(_ entry: FridgeEntry) {
         switch entry.source {
         case .produce(let item):
             fridgeViewModel.remove(item)
         case .basic(let basic):
             fridgeViewModel.remove(basic)
+        case .catalog(let catalog):
+            fridgeViewModel.removeCatalog(ingredientID: catalog.ingredientID)
         case .custom(let custom):
             fridgeViewModel.removeCustom(named: custom.name)
         }
@@ -388,6 +719,7 @@ private struct FridgeEntry: Identifiable {
     enum Source {
         case produce(ProduceItem)
         case basic(BasicIngredient)
+        case catalog(FridgeCatalogItem)
         case custom(FridgeCustomItem)
     }
 
@@ -421,6 +753,16 @@ private struct FridgeEntry: Identifiable {
             title: item.name,
             subtitle: subtitle,
             source: .custom(item)
+        )
+    }
+
+    static func catalog(_ item: FridgeCatalogItem, localizer: AppLocalizer) -> FridgeEntry {
+        let subtitle = item.quantity?.isEmpty == false ? item.quantity! : localizer.text(.basicIngredient)
+        return FridgeEntry(
+            id: item.id,
+            title: item.name,
+            subtitle: subtitle,
+            source: .catalog(item)
         )
     }
 }

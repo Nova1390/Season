@@ -17,7 +17,6 @@ struct ContentView: View {
     @State private var selectedTab: MainTab = .home
     @State private var showingCreateRecipe = false
     @State private var activeDraftRecipeID: String?
-    @State private var homeRootResetID = UUID()
     @State private var outboxDispatcher = OutboxDispatcher()
     @StateObject private var syncFeedback = SyncFeedbackCenter.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -34,7 +33,6 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
-            .id(homeRootResetID)
             .tag(MainTab.home)
             .tabItem {
                 Label(viewModel.localizer.text(.homeTab), systemImage: "house.fill")
@@ -89,12 +87,7 @@ struct ContentView: View {
         }
         .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color(.separator).opacity(0.35))
-                    .frame(height: 0.5)
-
-                HStack(spacing: 0) {
+            HStack(spacing: 0) {
                     tabBarButton(
                         tab: .home,
                         title: viewModel.localizer.text(.homeTab),
@@ -103,7 +96,7 @@ struct ContentView: View {
 
                     tabBarButton(
                         tab: .search,
-                        title: viewModel.localizer.text(.searchTab),
+                        title: bottomBarDiscoverTitle,
                         imageName: "magnifyingglass"
                     )
 
@@ -116,18 +109,27 @@ struct ContentView: View {
                         VStack(spacing: 2) {
                             Image(systemName: "plus")
                                 .font(.system(size: 20, weight: .bold))
-                                .foregroundStyle(Color.primary)
-                                .frame(width: 26, height: 26)
+                                .foregroundStyle(Color.white)
+                                .frame(width: 50, height: 50)
                                 .background(
-                                    Circle()
-                                        .fill(Color(.tertiarySystemFill))
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [DS.Color.sage, DS.Color.sageDeep],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: DS.Color.sageDeep.opacity(0.28), radius: 12, x: 0, y: 6)
                                 )
+                                .offset(y: -6)
                             Text(viewModel.localizer.text(.createTab))
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.primary)
+                                .font(DS.Font.sans(10, weight: .semibold))
+                                .foregroundStyle(DS.Color.sageDeep)
+                                .offset(y: -6)
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 50)
+                        .frame(height: 62)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -140,21 +142,27 @@ struct ContentView: View {
 
                     tabBarButton(
                         tab: .account,
-                        title: viewModel.localizer.text(.accountTab),
+                        title: bottomBarProfileTitle,
                         imageName: "person.crop.circle.fill"
                     )
-                }
-                .padding(.horizontal, 6)
-                .padding(.top, 6)
-                .padding(.bottom, 6)
             }
-            .background(Color(.secondarySystemBackground))
+            .padding(8)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.white.opacity(0.75), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 30, x: 0, y: 10)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 8)
         }
         .fullScreenCover(isPresented: $showingCreateRecipe, onDismiss: {
             activeDraftRecipeID = nil
         }) {
             CreateRecipeView(
                 viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel,
                 initialDraftRecipeID: activeDraftRecipeID,
                 enableDraftMode: true
             )
@@ -188,24 +196,34 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.2), value: syncFeedback.isVisible)
     }
 
+    private var bottomBarDiscoverTitle: String {
+        viewModel.languageCode == AppLanguage.italian.rawValue ? "Scopri" : "Discover"
+    }
+
+    private var bottomBarProfileTitle: String {
+        viewModel.languageCode == AppLanguage.italian.rawValue ? "Io" : "Me"
+    }
+
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {
         let isActive = selectedTab == tab
 
         return Button {
-            if tab == .home {
-                homeRootResetID = UUID()
-            }
             selectedTab = tab
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Image(systemName: imageName)
-                    .font(.system(size: 18, weight: isActive ? .bold : .semibold))
+                    .font(.system(size: 19, weight: isActive ? .semibold : .regular))
+                    .frame(width: 24, height: 24)
                 Text(title)
-                    .font(.caption2.weight(isActive ? .semibold : .regular))
+                    .font(DS.Font.sans(10, weight: isActive ? .semibold : .medium))
             }
-            .foregroundStyle(isActive ? Color.primary : Color.secondary.opacity(0.78))
+            .foregroundStyle(isActive ? DS.Color.ink : DS.Color.inkMuted)
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isActive ? Color.white.opacity(0.38) : Color.clear)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct SeasonApp: App {
+    init() {
+        DS.Font.logRegistrationStatus()
+    }
+
     var body: some Scene {
         WindowGroup {
             AuthGateView()

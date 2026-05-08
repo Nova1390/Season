@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Season · Home Redesign Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ===========================================================
+   SEASON — Home Prototype
+   Design language: "Editorial Organicism"
+   Tokens mirror /docs/design/season-ui-refresh/ui.jsx
+   =========================================================== */
+
+:root {
+  /* Surfaces — vellum stack */
+  --vellum:       #f4f1ea;
+  --vellum-warm:  #ece7dd;
+  --card:         #ffffff;
+  --inset:        #e3ddd0;
+  --ink:          #1d1f1c;
+  --ink-soft:     #3a3d36;
+  --ink-muted:    #7a7c73;
+  /* Accents */
+  --sage:         #526048;
+  --sage-deep:    #3d4a35;
+  --terracotta:   #a85a3c;
+  --terracotta-soft: #f4d8c8;
+  --ochre:        #c89455;
+  /* Status */
+  --fresh:        #6a8a4f;
+  --eat-soon:     #c46a3a;
+  --pantry:       #9a8b6a;
+
+  /* Typography */
+  --serif:   "Cormorant Garamond", "GT Sectra", Georgia, serif;
+  --sans:    "Inter", -apple-system, system-ui, sans-serif;
+  --mono:    "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  /* Radii (anti-sharp, organic) */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 9px;
+  --r-lg: 16px;
+  --r-pill: 9999px;
+
+  /* Spacing scale */
+  --s-xs: 6px;
+  --s-sm: 10px;
+  --s-md: 16px;
+  --s-lg: 22px;
+  --s-xl: 32px;
+  --s-2xl: 48px;
+
+  /* Device */
+  --device-w: 390px;
+  --device-h: 844px;
+  --device-radius: 58px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  /* page backdrop is a warm studio — emphasizes the vellum device */
+  background:
+    radial-gradient(ellipse at 30% 10%, #efe9dc 0%, #d9d2bf 60%, #c3bba4 100%);
+  display: grid;
+  place-items: start center;
+  padding: 48px 24px 96px;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ===========================================================
+   STAGE — side panel + device
+   =========================================================== */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) auto;
+  gap: 56px;
+  align-items: start;
+  max-width: 1080px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .stage { grid-template-columns: 1fr; gap: 32px; justify-items: center; }
+}
+
+.stage__notes {
+  position: sticky;
+  top: 32px;
+  padding: 8px 0 8px 12px;
+  border-left: 1px solid rgba(29,31,28,0.14);
+  color: var(--ink-soft);
+}
+
+.stage__notes .kicker {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 10px;
+}
+
+.stage__notes h1 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.stage__notes h1 span { font-style: normal; }
+
+.stage__notes p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+
+.stage__notes .legend {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(29,31,28,0.18);
+}
+
+.stage__notes .legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.stage__notes .legend-item strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.stage__notes .legend-item .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--terracotta); margin-top: 5px; flex-shrink: 0;
+}
+
+.lang-toggle {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(29,31,28,0.2);
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.5);
+}
+.lang-toggle button {
+  all: unset;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  color: var(--ink-muted);
+  transition: background 0.2s, color 0.2s;
+}
+.lang-toggle button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--vellum);
+}
+
+/* ===========================================================
+   DEVICE FRAME — iPhone 14
+   =========================================================== */
+.device {
+  position: relative;
+  width: var(--device-w);
+  height: var(--device-h);
+  border-radius: var(--device-radius);
+  background: #0b0b0a;
+  padding: 11px;
+  box-shadow:
+    0 0 0 1.5px rgba(0,0,0,0.9),
+    0 40px 80px -30px rgba(40,30,15,0.6),
+    0 18px 30px -18px rgba(60,40,20,0.45);
+  flex-shrink: 0;
+}
+
+.device__screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--device-radius) - 11px);
+  overflow: hidden;
+  background: var(--vellum);
+  isolation: isolate;
+  contain: layout paint;
+}
+
+/* Dynamic island */
+.device__island {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 22px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Status bar */
+.statusbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px 8px;
+  font-family: -apple-system, system-ui;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+  background: linear-gradient(to bottom, var(--vellum) 60%, rgba(244,241,234,0));
+}
+.statusbar__icons { display: flex; gap: 6px; align-items: center; }
+.statusbar__spacer { width: 100px; }
+
+/* ===========================================================
+   SCROLL CONTAINER
+   =========================================================== */
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+.screen__inner {
+  padding-bottom: 130px; /* room for tab bar */
+}
+
+/* ===========================================================
+   HEADER / MASTHEAD (sticky-ish at top of scroll)
+   =========================================================== */
+.masthead {
+  padding: 0 var(--s-lg) 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: -2px;
+}
+
+.masthead__title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.eyebrow.-accent { color: var(--terracotta); }
+.eyebrow.-sage { color: var(--sage); }
+
+.wordmark {
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-style: italic;
+}
+
+.masthead__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(29,31,28,0.08);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  position: relative;
+}
+.icon-btn:hover { background: var(--card); }
+.icon-btn:active { transform: scale(0.95); }
+.icon-btn svg { width: 16px; height: 16px; color: var(--ink); }
+
+.icon-btn__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--terracotta);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--vellum);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #d6cfbe;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.6);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ===========================================================
+   CONTEXTUAL GREETING STRIP
+   =========================================================== */
+.greeting {
+  padding: 0 var(--s-lg) 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.greeting .rule {
+  flex: 1;
+  height: 1px;
+  background: var(--inset);
+}
+
+.greeting .eyebrow { white-space: nowrap; }
+
+/* ===========================================================
+   HERO — tonight's dispatch
+   =========================================================== */
+.hero {
+  position: relative;
+  padding: 0 var(--s-lg);
+  margin-bottom: var(--s-xl);
+}
+
+.hero__photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--inset);
+  margin-bottom: -68px;
+  box-shadow: 0 20px 40px -28px rgba(61,50,30,0.55);
+}
+.hero__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 6s ease;
+}
+.hero__photo:hover img { transform: scale(1.04); }
+
+.hero__match {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(244,241,234,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+}
+
+.hero__stamp {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1.5px solid var(--terracotta);
+  background: rgba(244,241,234,0.86);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--terracotta);
+  letter-spacing: 0.12em;
+  text-align: center;
+  line-height: 1.1;
+  transform: rotate(-6deg);
+  padding: 6px;
+}
+
+.hero__card {
+  position: relative;
+  background: var(--vellum);
+  padding: 20px 20px 18px;
+  margin: 0 auto 0 18px;
+  margin-right: 56px;
+  box-shadow: 0 1px 0 rgba(29,31,28,0.04);
+}
+
+.hero__title {
+  font-family: var(--serif);
+  font-size: 34px;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  margin-top: 8px;
+}
+.hero__title span { font-style: normal; }
+
+.hero__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.hero__meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-muted); }
+
+.hero__ctas {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ===========================================================
+   Pill buttons
+   =========================================================== */
+.pill {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 22px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.pill:active { transform: translateY(1px); }
+
+.pill.-dark {
+  background: linear-gradient(135deg, var(--sage), var(--sage-deep));
+  color: #fff;
+  box-shadow: 0 2px 14px rgba(61,74,53,0.22);
+}
+
+.pill.-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--inset);
+}
+
+.pill.-full { width: 100%; }
+
+.pill .arrow { transition: transform 0.2s; }
+.pill:hover .arrow { transform: translateX(3px); }
+
+.save-btn {
+  all: unset;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--inset);
+  background: transparent;
+  color: var(--ink-muted);
+  transition: color 0.2s, background 0.2s, transform 0.15s;
+}
+.save-btn:hover { background: var(--vellum-warm); }
+.save-btn.-saved { color: var(--terracotta); background: var(--terracotta-soft); border-color: transparent; }
+.save-btn:active { transform: scale(0.92); }
+
+/* ===========================================================
+   SECTION HEAD (editorial)
+   =========================================================== */
+.section-head {
+  padding: 0 var(--s-lg);
+  margin-bottom: 16px;
+}
+.section-head__top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.section-head__rule {
+  flex: 1;
+  height: 1px;
+  background: var(--inset);
+  margin-bottom: 3px;
+}
+.section-head__action {
+  all: unset;
+  cursor: pointer;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-muted);
+  transition: color 0.2s;
+}
+.section-head__action:hover { color: var(--terracotta); }
+
+.section-head__title {
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.section-head__title em { font-style: italic; font-weight: 500; }
+
+/* ===========================================================
+   FRIDGE MATCHES — editorial list with image thumbs
+   =========================================================== */
+.fridge-list {
+  padding: 0 var(--s-lg);
+  margin-bottom: var(--s-xl);
+}
+
+.fridge-item {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--inset);
+  align-items: flex-start;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.fridge-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.fridge-item:hover { transform: translateX(3px); }
+
+.fridge-item__photo {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: var(--r-xs);
+  overflow: hidden;
+  background: var(--inset);
+}
+.fridge-item__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.fridge-item__num {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(244,241,234,0.94);
+  backdrop-filter: blur(6px);
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+
+.fridge-item__body { flex: 1; padding-top: 2px; min-width: 0; }
+
+.fridge-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.fridge-item__title {
+  font-family: var(--serif);
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.fridge-item__meta {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.fridge-item__meta .mono {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fridge-item__meta .tags {
+  font-family: var(--serif);
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.fridge-item__meta .dot {
+  width: 3px; height: 3px; border-radius: 50%; background: var(--ink-muted);
+}
+
+/* Ingredient mini-row */
+.fridge-item__ings {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+.fridge-item__ings .ing-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: #e8efe0;
+  color: var(--fresh);
+}
+.fridge-item__ings .ing-chip.-missing { background: var(--terracotta-soft); color: var(--terracotta); }
+
+/* ===========================================================
+   ALMOST READY — horizontal strip, emotional nudge
+   =========================================================== */
+.almost-ready {
+  margin: 0 0 var(--s-xl);
+  padding: 20px 0;
+  background: var(--vellum-warm);
+  border-top: 1px solid var(--inset);
+  border-bottom: 1px solid var(--inset);
+}
+
+.almost-ready__head {
+  padding: 0 var(--s-lg);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.almost-ready__head .eyebrow {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.almost-ready__head .title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink-muted);
+  line-height: 1.2;
+  text-align: right;
+}
+
+.almost-ready__scroll {
+  display: flex;
+  gap: 12px;
+  padding: 0 var(--s-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+}
+.almost-ready__scroll::-webkit-scrollbar { display: none; }
+
+.ar-card {
+  flex-shrink: 0;
+  width: 180px;
+  scroll-snap-align: start;
+  background: var(--card);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.25s, box-shadow 0.25s;
+  border: 1px solid rgba(29,31,28,0.05);
+}
+.ar-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -22px rgba(61,50,30,0.45); }
+
+.ar-card__photo {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+  background: var(--inset);
+}
+
+.ar-card__body { padding: 10px 12px 14px; }
+.ar-card__title {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.15;
+  color: var(--ink);
+  font-weight: 500;
+}
+.ar-card__missing {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+}
+
+/* ===========================================================
+   AT PEAK — round seasonal produce
+   =========================================================== */
+.peak {
+  margin-bottom: var(--s-xl);
+}
+
+.peak__scroll {
+  display: flex;
+  gap: 14px;
+  padding: 4px var(--s-lg) 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.peak__scroll::-webkit-scrollbar { display: none; }
+
+.peak-item {
+  flex-shrink: 0;
+  width: 96px;
+  text-align: center;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+}
+.peak-item:hover, .peak-item:focus { color: inherit; text-decoration: none; }
+
+.peak-item__photo-wrap {
+  position: relative;
+  margin-bottom: 10px;
+  transition: transform 0.25s;
+}
+.peak-item:hover .peak-item__photo-wrap { transform: translateY(-2px); }
+
+.peak-item__photo {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--inset);
+  box-shadow: 0 4px 12px -6px rgba(61,50,30,0.25);
+}
+.peak-item__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.peak-item__dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  border: 2.5px solid var(--vellum);
+}
+.peak-item__dot.-sage { background: var(--sage); }
+
+.peak-item__name {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.1;
+}
+.peak-item__sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-muted);
+  margin-top: 4px;
+  letter-spacing: 0.08em;
+}
+
+/* ===========================================================
+   QUICK FILTERS — editorial chip row
+   =========================================================== */
+.filters {
+  padding: var(--s-md) 0 var(--s-md);
+  border-top: 1px solid var(--inset);
+  margin-bottom: 2px;
+}
+
+.filters__head {
+  padding: 0 var(--s-lg);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.filters__head .title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.filters__scroll {
+  display: flex;
+  gap: 8px;
+  padding: 0 var(--s-lg) 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filters__scroll::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  all: unset;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: var(--r-pill);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--inset);
+  color: var(--ink-soft);
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.filter-chip:hover { border-color: var(--ink-muted); color: var(--ink); }
+.filter-chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--vellum);
+  border-color: var(--ink);
+}
+.filter-chip .glyph {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.7;
+}
+
+/* ===========================================================
+   FEED — editorial cards, full bleed
+   =========================================================== */
+.feed {
+  padding: var(--s-md) 0 0;
+}
+
+.feed__count {
+  padding: 0 var(--s-lg) 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+.feed__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 0 var(--s-lg);
+}
+
+.feed-card {
+  position: relative;
+  cursor: pointer;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.feed-card:hover,
+.feed-card:focus { color: inherit; text-decoration: none; }
+
+.feed-card__photo {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--inset);
+  margin-bottom: 14px;
+}
+.feed-card__photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform 0.6s ease;
+}
+.feed-card:hover .feed-card__photo img { transform: scale(1.03); }
+
+.feed-card__overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(29,31,28,0.72), transparent 60%);
+  color: #fff;
+}
+
+.feed-card__save {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.feed-card__save.save-btn {
+  background: rgba(244,241,234,0.88);
+  backdrop-filter: blur(8px);
+  border: none;
+  width: 38px;
+  height: 38px;
+}
+
+.feed-card__match {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(244,241,234,0.94);
+  backdrop-filter: blur(8px);
+  padding: 5px 9px;
+  border-radius: 3px;
+}
+
+.feed-card__eyebrow-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.feed-card__title {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.feed-card__title em { font-style: italic; font-weight: 500; }
+
+.feed-card__sub {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-muted);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.feed-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+}
+.feed-card__foot .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-muted); }
+
+/* Editorial feature card (full-bleed essay) */
+.feed-card.-editorial .feed-card__photo { aspect-ratio: 16 / 10; }
+.feed-card.-editorial .feed-card__overlay {
+  padding: 20px;
+  background: linear-gradient(to top, rgba(29,31,28,0.78), transparent 55%);
+}
+.feed-card.-editorial .feed-card__overlay .title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.1;
+  color: #fff;
+  margin-top: 6px;
+}
+.feed-card.-editorial .feed-card__overlay .byline {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.78);
+  margin-top: 12px;
+}
+
+/* ===========================================================
+   COLOPHON
+   =========================================================== */
+.colophon {
+  padding: 40px var(--s-lg) 60px;
+  text-align: center;
+}
+.colophon__mark { margin: 0 auto 10px; display: block; opacity: 0.45; }
+.colophon__text {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-muted);
+  letter-spacing: 0.2em;
+}
+
+/* ===========================================================
+   TAB BAR
+   =========================================================== */
+.tabbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px 8px 22px;
+  background: linear-gradient(to top, rgba(244,241,234,0.97) 65%, rgba(244,241,234,0));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 30;
+  display: flex;
+  justify-content: space-around;
+}
+
+.tab {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  min-width: 48px;
+}
+
+.tab__glyph {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.tab[aria-current="page"] .tab__glyph { color: var(--sage); }
+.tab.-discover .tab__glyph { font-style: italic; }
+
+.tab__label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 400;
+}
+.tab[aria-current="page"] .tab__label {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.tab__marker {
+  position: absolute;
+  top: -4px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  opacity: 0;
+}
+.tab[aria-current="page"] .tab__marker { opacity: 1; }
+
+/* ===========================================================
+   Toast / tiny feedback
+   =========================================================== */
+.toast {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  background: var(--ink);
+  color: var(--vellum);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 50;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.4);
+}
+.toast.-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===========================================================
+   Pull-to-refresh subtle hint
+   =========================================================== */
+.refresh-hint {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ===========================================================
+   Keyframes
+   =========================================================== */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in { animation: fade-in-up 0.5s ease both; }
+.feed-card { animation: fade-in-up 0.45s ease both; }
+.feed-card:nth-child(1) { animation-delay: 0.02s; }
+.feed-card:nth-child(2) { animation-delay: 0.08s; }
+.feed-card:nth-child(3) { animation-delay: 0.14s; }
+.feed-card:nth-child(4) { animation-delay: 0.2s; }
+.feed-card:nth-child(5) { animation-delay: 0.26s; }
+
+/* ===========================================================
+   Utilities
+   =========================================================== */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ===== SIDE NOTES ===== -->
+  <aside class="stage__notes" aria-label="Design notes">
+    <div class="kicker">Season · Home Refresh</div>
+    <h1>An <span>editorial</span> home, <em>not</em> a database.</h1>
+    <p>A prototype of <strong>HomeView</strong> in the new <em>Editorial Organicism</em> direction. Preserved sections: Tonight's Dispatch (hero), Ready to Cook, Almost Ready, At Peak, Quick Filters, Weekly Dispatch feed.</p>
+    <p>The layout trades density for breathing space: full-bleed images, overlap cards, a serif display voice, and mono eyebrow labels that read like a printed magazine.</p>
+
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button id="lang-en" aria-pressed="true">EN</button>
+      <button id="lang-it" aria-pressed="false">IT</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <span class="dot" style="background: var(--terracotta)"></span>
+        <div><strong>Terracotta</strong>Peak-season & fridge-match highlights</div>
+      </div>
+      <div class="legend-item">
+        <span class="dot" style="background: var(--sage)"></span>
+        <div><strong>Sage</strong>Primary CTAs, fresh/in-stock signals</div>
+      </div>
+      <div class="legend-item">
+        <span class="dot" style="background: var(--ink)"></span>
+        <div><strong>Ink on Vellum</strong>High-contrast editorial palette</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== DEVICE ===== -->
+  <div class="device" aria-label="iPhone 14 prototype">
+    <div class="device__screen">
+      <div class="device__island"></div>
+
+      <div class="screen" id="screen">
+
+        <!-- Status bar (inside scroll so it scrolls naturally; iOS handles the real thing) -->
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="statusbar__spacer"></span>
+          <span class="statusbar__icons">
+            <svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><rect x="0" y="6" width="2.5" height="4" rx="0.5" fill="currentColor"/><rect x="4" y="4" width="2.5" height="6" rx="0.5" fill="currentColor"/><rect x="8" y="2" width="2.5" height="8" rx="0.5" fill="currentColor"/><rect x="12" y="0" width="2.5" height="10" rx="0.5" fill="currentColor"/></svg>
+            <svg width="22" height="11" viewBox="0 0 22 11" aria-hidden="true"><rect x="0.5" y="0.5" width="19" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.4" fill="none"/><rect x="2" y="2" width="16" height="7" rx="1.5" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="refresh-hint" id="refresh-hint">Pull to refresh · Market opens 7am</div>
+
+        <div class="screen__inner">
+
+          <!-- ===== MASTHEAD ===== -->
+          <header class="masthead">
+            <div class="masthead__title">
+              <span class="eyebrow" data-i18n="dateline">SUNDAY · APRIL 19 · WEEK 16</span>
+              <span class="wordmark">Season</span>
+            </div>
+            <div class="masthead__actions">
+              <button class="icon-btn" aria-label="Fridge" title="Fridge">
+                <!-- snowflake -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                  <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+                  <path d="M9 4l3 2 3-2M9 20l3-2 3 2M4 9l2 3-2 3M20 9l-2 3 2 3"/>
+                </svg>
+                <span class="icon-btn__badge">6</span>
+              </button>
+              <button class="icon-btn" aria-label="Shopping list" title="Shopping list">
+                <!-- bag -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 8h16l-1.5 12.5a1.5 1.5 0 0 1-1.5 1.3H7a1.5 1.5 0 0 1-1.5-1.3L4 8z"/>
+                  <path d="M8 8V6a4 4 0 0 1 8 0v2"/>
+                </svg>
+                <span class="icon-btn__badge">3</span>
+              </button>
+              <div class="avatar" aria-label="Your profile">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&amp;q=80" alt="" />
+              </div>
+            </div>
+          </header>
+
+          <!-- ===== CONTEXTUAL GREETING ===== -->
+          <div class="greeting">
+            <span class="eyebrow -accent" data-i18n="greeting">GOOD AFTERNOON, ROCCO</span>
+            <span class="rule"></span>
+            <span class="eyebrow" data-i18n="weather">· SPRING · 18°C</span>
+          </div>
+
+          <!-- ===== HERO ===== -->
+          <section class="hero" aria-label="Tonight's dispatch">
+            <div class="hero__photo">
+              <img src="https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=900&amp;q=80" alt="Charred sage &amp; butternut risotto" />
+              <div class="hero__match">
+                <span class="eyebrow -accent" data-i18n="hero-match">IN YOUR FRIDGE · 5/5</span>
+              </div>
+              <div class="hero__stamp" aria-hidden="true">
+                <span data-i18n="hero-stamp">SPRING<br/>MMXXVI</span>
+              </div>
+            </div>
+
+            <div class="hero__card fade-in">
+              <span class="eyebrow -sage" data-i18n="hero-eyebrow">TONIGHT'S DISPATCH №47</span>
+              <h2 class="hero__title" id="hero-title">
+                Charred Sage<br/>
+                <span>&amp; Butternut</span><br/>
+                <em style="font-style: italic;">Risotto</em>
+              </h2>
+
+              <div class="hero__meta">
+                <span data-i18n="hero-time">45 MIN</span>
+                <span class="sep"></span>
+                <span data-i18n="hero-serves">4 SERVE</span>
+                <span class="sep"></span>
+                <span data-i18n="hero-level">INTERMEDIATE</span>
+              </div>
+
+              <div class="hero__ctas">
+                <button class="pill -dark" data-action="begin" data-i18n="hero-cta">
+                  <span>Begin</span>
+                  <span class="arrow">→</span>
+                </button>
+                <button class="save-btn" data-action="save" aria-label="Save recipe" title="Save">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ===== READY TO COOK ===== -->
+          <section class="fridge-list" aria-label="Ready to cook">
+            <div class="section-head">
+              <div class="section-head__top">
+                <span class="eyebrow -accent" data-i18n="ready-eye">INVENTORY · 3 MATCHES</span>
+                <span class="section-head__rule"></span>
+                <button class="section-head__action" data-i18n="see-all">See all →</button>
+              </div>
+              <h3 class="section-head__title" data-i18n="ready-title">Ready to cook, <em>now.</em></h3>
+            </div>
+
+            <div id="fridge-list-items"></div>
+          </section>
+
+          <!-- ===== ALMOST READY ===== -->
+          <section class="almost-ready" aria-label="Almost ready">
+            <div class="almost-ready__head">
+              <span class="eyebrow" data-i18n="ar-eye">ONE INGREDIENT AWAY</span>
+              <span class="title" data-i18n="ar-title">a small trip to the market</span>
+            </div>
+            <div class="almost-ready__scroll" id="ar-scroll"></div>
+          </section>
+
+          <!-- ===== AT PEAK ===== -->
+          <section class="peak" aria-label="Peak season produce">
+            <div class="section-head">
+              <div class="section-head__top">
+                <span class="eyebrow -accent" data-i18n="peak-eye">THE HARVEST · APRIL</span>
+                <span class="section-head__rule"></span>
+                <button class="section-head__action" data-i18n="calendar">Calendar →</button>
+              </div>
+              <h3 class="section-head__title" data-i18n="peak-title">At peak, <em>right now.</em></h3>
+            </div>
+            <div class="peak__scroll" id="peak-scroll"></div>
+          </section>
+
+          <!-- ===== QUICK FILTERS + FEED ===== -->
+          <section class="filters" aria-label="Feed filters">
+            <div class="filters__head">
+              <span class="eyebrow" data-i18n="feed-eye">WEEKLY DISCOVERIES</span>
+              <span class="title" data-i18n="feed-title"> — the forager's desk</span>
+            </div>
+            <div class="filters__scroll" role="tablist" id="filter-chips"></div>
+          </section>
+
+          <div class="feed" id="feed">
+            <div class="feed__count" id="feed-count"></div>
+            <div class="feed__grid" id="feed-grid"></div>
+          </div>
+
+          <!-- ===== COLOPHON ===== -->
+          <footer class="colophon">
+            <svg class="colophon__mark" width="22" height="22" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <path d="M14 26 C14 14, 14 8, 14 2" stroke="#7a7c73" stroke-width="0.8" stroke-linecap="round"/>
+              <path d="M14 8 C9 8, 6 5, 6 5" stroke="#7a7c73" stroke-width="0.8" stroke-linecap="round"/>
+              <path d="M14 12 C19 12, 22 9, 22 9" stroke="#7a7c73" stroke-width="0.8" stroke-linecap="round"/>
+              <path d="M14 16 C9 16, 6 13, 6 13" stroke="#7a7c73" stroke-width="0.8" stroke-linecap="round"/>
+              <path d="M14 20 C19 20, 22 17, 22 17" stroke="#7a7c73" stroke-width="0.8" stroke-linecap="round"/>
+              <ellipse cx="6" cy="5" rx="3" ry="1.2" fill="#7a7c73" opacity="0.55" transform="rotate(-30 6 5)"/>
+              <ellipse cx="22" cy="9" rx="3" ry="1.2" fill="#7a7c73" opacity="0.55" transform="rotate(30 22 9)"/>
+              <ellipse cx="6" cy="13" rx="3" ry="1.2" fill="#7a7c73" opacity="0.55" transform="rotate(-30 6 13)"/>
+              <ellipse cx="22" cy="17" rx="3" ry="1.2" fill="#7a7c73" opacity="0.55" transform="rotate(30 22 17)"/>
+            </svg>
+            <div class="colophon__text" data-i18n="colophon">SEASON · ISSUE 47 · SPRING MMXXVI</div>
+          </footer>
+
+        </div>
+      </div>
+
+      <!-- ===== TAB BAR (outside scroll container — always pinned) ===== -->
+      <nav class="tabbar" aria-label="Primary">
+          <button class="tab" aria-current="page" data-tab="home">
+            <span class="tab__marker"></span>
+            <span class="tab__glyph">◐</span>
+            <span class="tab__label" data-i18n="tab-home">Home</span>
+          </button>
+          <button class="tab -discover" data-tab="discover">
+            <span class="tab__marker"></span>
+            <span class="tab__glyph">✦</span>
+            <span class="tab__label" data-i18n="tab-discover">Discover</span>
+          </button>
+          <button class="tab" data-tab="create">
+            <span class="tab__marker"></span>
+            <span class="tab__glyph">＋</span>
+            <span class="tab__label" data-i18n="tab-create">Create</span>
+          </button>
+          <button class="tab" data-tab="list">
+            <span class="tab__marker"></span>
+            <span class="tab__glyph">≡</span>
+            <span class="tab__label" data-i18n="tab-list">List</span>
+          </button>
+          <button class="tab" data-tab="profile">
+            <span class="tab__marker"></span>
+            <span class="tab__glyph">○</span>
+            <span class="tab__label" data-i18n="tab-profile">Profile</span>
+          </button>
+        </nav>
+
+      <div class="toast" id="toast">Saved to cookbook</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================
+   Season Home Prototype — interactions
+   ========================================================== */
+
+/* --- MOCK DATA (mirrors data.jsx, adjusted for April 2026) --- */
+const I18N = {
+  en: {
+    dateline: 'SUNDAY · APRIL 19 · WEEK 16',
+    greeting: "GOOD AFTERNOON, ROCCO",
+    weather: '· SPRING · 18°C',
+    'hero-match': 'IN YOUR FRIDGE · 5/5',
+    'hero-stamp': 'SPRING<br/>MMXXVI',
+    'hero-eyebrow': "TONIGHT'S DISPATCH №47",
+    'hero-time': '45 MIN',
+    'hero-serves': '4 SERVE',
+    'hero-level': 'INTERMEDIATE',
+    'hero-cta': 'Begin',
+    'ready-eye': 'INVENTORY · 3 MATCHES',
+    'ready-title': ['Ready to cook, ', 'now.'],
+    'see-all': 'See all →',
+    'ar-eye': 'ONE INGREDIENT AWAY',
+    'ar-title': 'a small trip to the market',
+    'peak-eye': 'THE HARVEST · APRIL',
+    'peak-title': ['At peak, ', 'right now.'],
+    calendar: 'Calendar →',
+    'feed-eye': 'WEEKLY DISCOVERIES',
+    'feed-title': ' — the forager\'s desk',
+    colophon: 'SEASON · ISSUE 47 · SPRING MMXXVI',
+    'tab-home': 'Home', 'tab-discover': 'Discover', 'tab-create': 'Create', 'tab-list': 'List', 'tab-profile': 'Profile',
+    toastSaved: 'SAVED TO COOKBOOK',
+    toastUnsaved: 'REMOVED',
+    toastBegin: 'OPENING RECIPE…',
+  },
+  it: {
+    dateline: 'DOMENICA · 19 APRILE · SETTIMANA 16',
+    greeting: 'BUON POMERIGGIO, ROCCO',
+    weather: '· PRIMAVERA · 18°C',
+    'hero-match': 'NEL TUO FRIGO · 5/5',
+    'hero-stamp': 'PRIMAVERA<br/>MMXXVI',
+    'hero-eyebrow': 'DISPACCIO DELLA SERA №47',
+    'hero-time': '45 MIN',
+    'hero-serves': '4 PORZIONI',
+    'hero-level': 'INTERMEDIO',
+    'hero-cta': 'Inizia',
+    'ready-eye': 'DISPENSA · 3 CORRISPONDENZE',
+    'ready-title': ['Da cucinare, ', 'ora.'],
+    'see-all': 'Vedi tutte →',
+    'ar-eye': 'A UN INGREDIENTE',
+    'ar-title': 'una piccola spesa al mercato',
+    'peak-eye': 'IL RACCOLTO · APRILE',
+    'peak-title': ['Nel pieno della stagione, ', 'adesso.'],
+    calendar: 'Calendario →',
+    'feed-eye': 'SCOPERTE DELLA SETTIMANA',
+    'feed-title': ' — il taccuino del foraging',
+    colophon: 'SEASON · NUMERO 47 · PRIMAVERA MMXXVI',
+    'tab-home': 'Casa', 'tab-discover': 'Scopri', 'tab-create': 'Crea', 'tab-list': 'Lista', 'tab-profile': 'Profilo',
+    toastSaved: 'SALVATA NEL RICETTARIO',
+    toastUnsaved: 'RIMOSSA',
+    toastBegin: 'APRO LA RICETTA…',
+  }
+};
+
+const RECIPES = [
+  {
+    id: 'r1', en: { title: 'Charred Sage & Butternut Risotto', sub: 'Riso Carnaroli, salvia bruciata, burro nocciola' },
+    it: { title: 'Risotto alla Zucca con Salvia', sub: 'Riso Carnaroli, salvia bruciata, burro nocciola' },
+    minutes: 45, serves: 4, match: '5/5', matchLabel: 'IN YOUR FRIDGE',
+    tags: ['Vegetarian','Comfort','Slow'], tagsIt: ['Vegetariano','Comfort','Slow'],
+    image: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=900&q=80',
+    ings: [ {n:'Arborio', s:'in-stock'}, {n:'Squash', s:'in-stock'}, {n:'Sage', s:'in-stock'}, {n:'Parmesan', s:'in-stock'} ],
+    filters: ['ready-now','peak-season','trending']
+  },
+  {
+    id: 'r2', en: { title: 'Wild Asparagus & Pecorino', sub: 'with lemon, olive oil, black pepper' },
+    it: { title: 'Asparagi Selvatici e Pecorino', sub: 'con limone, olio d\'oliva, pepe nero' },
+    minutes: 18, serves: 2, match: '4/5', matchLabel: 'IN YOUR FRIDGE',
+    tags: ['Quick','Spring','Vegetarian'], tagsIt: ['Veloce','Primavera','Vegetariano'],
+    image: 'https://images.unsplash.com/photo-1515543904379-3d757abe62f3?w=900&q=80',
+    ings: [ {n:'Asparagus', s:'in-stock'}, {n:'Pecorino', s:'in-stock'}, {n:'Lemon', s:'in-stock'} ],
+    filters: ['ready-now','under-15','peak-season']
+  },
+  {
+    id: 'r3', en: { title: 'Slow Pea & Mint Soup', sub: 'with crème fraîche, toasted bread' },
+    it: { title: 'Vellutata di Piselli e Menta', sub: 'con crème fraîche, pane tostato' },
+    minutes: 35, serves: 4, match: '3/5', matchLabel: 'IN YOUR FRIDGE',
+    tags: ['Comfort','Vegetarian'], tagsIt: ['Comfort','Vegetariano'],
+    image: 'https://images.unsplash.com/photo-1547496502-affa22d38842?w=900&q=80',
+    ings: [ {n:'Peas', s:'in-stock'}, {n:'Mint', s:'in-stock'}, {n:'Onion', s:'missing'} ],
+    filters: ['ready-now']
+  },
+  {
+    id: 'r4', en: { title: 'Ricotta Gnudi', sub: 'with brown butter & lemon zest' },
+    it: { title: 'Gnudi di Ricotta', sub: 'con burro nocciola e scorza di limone' },
+    minutes: 50, serves: 3, match: '4/5', matchLabel: 'ALMOST READY',
+    tags: ['Intermediate','Italian'], tagsIt: ['Intermedio','Italiano'],
+    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80',
+    ings: [], missing: 1, filters: ['trending']
+  },
+  {
+    id: 'r5', en: { title: 'Fava & Burrata Toast', sub: 'with crushed mint, flake salt' },
+    it: { title: 'Toast con Fave e Burrata', sub: 'con menta pestata, sale in fiocchi' },
+    minutes: 12, serves: 2, match: '4/5', matchLabel: 'ALMOST READY',
+    tags: ['Quick','No-cook'], tagsIt: ['Veloce','Senza cottura'],
+    image: 'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=600&q=80',
+    ings: [], missing: 1, filters: ['under-15']
+  },
+  {
+    id: 'r6', en: { title: 'Artichoke & Lemon Carpaccio', sub: 'shaved raw artichokes, parmigiano' },
+    it: { title: 'Carpaccio di Carciofi', sub: 'carciofi crudi al limone, parmigiano' },
+    minutes: 14, serves: 2, match: '3/5', matchLabel: 'ALMOST READY',
+    tags: ['Raw','Spring'], tagsIt: ['Crudo','Primavera'],
+    image: 'https://images.unsplash.com/photo-1604908177225-2d5bfba82395?w=600&q=80',
+    ings: [], missing: 1, filters: ['under-15','peak-season']
+  },
+  {
+    id: 'r7', en: { title: 'Slow Sunday Brunch', sub: 'a long, editorial read' },
+    it: { title: 'Brunch della Domenica', sub: 'un lungo racconto editoriale' },
+    minutes: 75, editorial: true, author: 'Elena Vance', authorRole: 'CHEF · FORAGER',
+    image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=900&q=80',
+    tags:['Editorial'], tagsIt:['Editoriale'], filters: ['following','trending']
+  },
+  {
+    id: 'r8', en: { title: 'Herb & Egg Frittata', sub: 'chives, parsley, dill — green & fast' },
+    it: { title: 'Frittata alle Erbe', sub: 'erba cipollina, prezzemolo, aneto — verde e veloce' },
+    minutes: 14, serves: 4, match: '5/5',
+    tags: ['High protein','Quick'], tagsIt: ['Proteico','Veloce'],
+    image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=900&q=80',
+    filters: ['ready-now','under-15','high-protein','following']
+  },
+  {
+    id: 'r9', en: { title: 'Roasted Cod & New Potatoes', sub: 'capers, lemon, dill' },
+    it: { title: 'Merluzzo al Forno e Patate Novelle', sub: 'capperi, limone, aneto' },
+    minutes: 30, serves: 2, match: '4/5',
+    tags: ['High protein','Fish'], tagsIt: ['Proteico','Pesce'],
+    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=900&q=80',
+    filters: ['ready-now','high-protein','trending']
+  },
+];
+
+const PRODUCE = [
+  { id: 'asparagus', en: 'Asparagus', it: 'Asparagi', recipes: 18, peak: true, img: 'https://images.unsplash.com/photo-1515543904379-3d757abe62f3?w=400&q=80' },
+  { id: 'artichoke', en: 'Artichokes', it: 'Carciofi', recipes: 22, peak: true, img: 'https://images.unsplash.com/photo-1604908177225-2d5bfba82395?w=400&q=80' },
+  { id: 'peas', en: 'Peas', it: 'Piselli', recipes: 14, peak: true, img: 'https://images.unsplash.com/photo-1583662748050-7d1edf6f24ff?w=400&q=80' },
+  { id: 'fava', en: 'Fava Beans', it: 'Fave', recipes: 9, peak: true, img: 'https://images.unsplash.com/photo-1621789098261-aa0c0b8d99a5?w=400&q=80' },
+  { id: 'strawberry', en: 'Strawberries', it: 'Fragole', recipes: 27, peak: true, img: 'https://images.unsplash.com/photo-1543158181-e6f9f6712055?w=400&q=80' },
+  { id: 'rhubarb', en: 'Rhubarb', it: 'Rabarbaro', recipes: 7, peak: true, img: 'https://images.unsplash.com/photo-1588165171080-c89acfa5ee83?w=400&q=80' },
+  { id: 'radish', en: 'Radishes', it: 'Ravanelli', recipes: 11, peak: false, img: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=400&q=80' },
+];
+
+const FILTERS = [
+  { id: 'all',         en: 'All',         it: 'Tutto',       glyph: '✦' },
+  { id: 'following',   en: 'Following',   it: 'Seguiti',     glyph: '♡' },
+  { id: 'ready-now',   en: 'Ready now',   it: 'Pronto ora',  glyph: '◉' },
+  { id: 'under-15',    en: 'Under 15',    it: 'Sotto 15\'',  glyph: '⏱' },
+  { id: 'high-protein',en: 'High protein',it: 'Proteico',    glyph: '◎' },
+  { id: 'peak-season', en: 'Peak season', it: 'Di stagione', glyph: '◐' },
+  { id: 'trending',    en: 'Trending',    it: 'Trending',    glyph: '↑' },
+];
+
+/* ==========================================================
+   STATE
+   ========================================================== */
+let lang = 'en';
+let activeFilter = 'all';
+const saved = new Set();
+
+/* ==========================================================
+   RENDERERS
+   ========================================================== */
+function renderAll() {
+  applyI18n();
+  renderFridgeList();
+  renderAlmostReady();
+  renderPeak();
+  renderFilters();
+  renderFeed();
+}
+
+function applyI18n() {
+  const t = I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const v = t[key];
+    if (v == null) return;
+    if (Array.isArray(v)) {
+      // Title with an italic span inside
+      el.innerHTML = `${v[0]}<em>${v[1]}</em>`;
+    } else if (typeof v === 'string' && v.includes('<br')) {
+      el.innerHTML = v;
+    } else {
+      el.textContent = v;
+    }
+  });
+  // Hero title — hand assembled
+  const hero = document.getElementById('hero-title');
+  if (lang === 'it') {
+    hero.innerHTML = 'Risotto<br/><span>alla Zucca</span><br/><em style="font-style: italic;">con Salvia</em>';
+  } else {
+    hero.innerHTML = 'Charred Sage<br/><span>&amp; Butternut</span><br/><em style="font-style: italic;">Risotto</em>';
+  }
+  // Language toggle pressed state
+  document.getElementById('lang-en').setAttribute('aria-pressed', lang === 'en');
+  document.getElementById('lang-it').setAttribute('aria-pressed', lang === 'it');
+}
+
+function renderFridgeList() {
+  const host = document.getElementById('fridge-list-items');
+  const items = RECIPES.filter(r => r.match && r.matchLabel === 'IN YOUR FRIDGE').slice(0, 3);
+  host.innerHTML = items.map((r, i) => {
+    const title = lang === 'it' ? r.it.title : r.en.title;
+    const tags = (lang === 'it' ? r.tagsIt : r.tags).join(' · ');
+    const ings = (r.ings || []).slice(0, 4).map(x =>
+      `<span class="ing-chip${x.s==='missing' ? ' -missing' : ''}">${x.n}</span>`
+    ).join('');
+    return `
+      <div class="fridge-item" data-recipe="${r.id}">
+        <div class="fridge-item__photo">
+          <img src="${r.image}" alt="" loading="lazy"/>
+          <span class="fridge-item__num">№ ${String(i+1).padStart(2,'0')}</span>
+        </div>
+        <div class="fridge-item__body">
+          <div class="fridge-item__head">
+            <span class="eyebrow -accent">${r.match} · MATCH</span>
+          </div>
+          <div class="fridge-item__title">${title}</div>
+          <div class="fridge-item__meta">
+            <span class="mono">${String(r.minutes).padStart(2,'0')} MIN</span>
+            <span class="dot"></span>
+            <span class="tags">${tags}</span>
+          </div>
+          <div class="fridge-item__ings">${ings}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderAlmostReady() {
+  const host = document.getElementById('ar-scroll');
+  const items = RECIPES.filter(r => r.matchLabel === 'ALMOST READY');
+  host.innerHTML = items.map(r => {
+    const title = lang === 'it' ? r.it.title : r.en.title;
+    const missingLabel = lang === 'it' ? `+${r.missing||1} AL MERCATO` : `+${r.missing||1} AT MARKET`;
+    return `
+      <div class="ar-card" data-recipe="${r.id}">
+        <img class="ar-card__photo" src="${r.image}" alt="" loading="lazy"/>
+        <div class="ar-card__body">
+          <div class="ar-card__title">${title}</div>
+          <div class="ar-card__missing">${missingLabel}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPeak() {
+  const host = document.getElementById('peak-scroll');
+  host.innerHTML = PRODUCE.map(p => {
+    const name = lang === 'it' ? p.it : p.en;
+    const subLabel = lang === 'it' ? 'RICETTE' : 'RECIPES';
+    return `
+      <a class="peak-item" data-produce="${p.id}" href="#">
+        <div class="peak-item__photo-wrap">
+          <div class="peak-item__photo"><img src="${p.img}" alt="" loading="lazy"/></div>
+          <span class="peak-item__dot${p.peak ? '' : ' -sage'}"></span>
+        </div>
+        <div class="peak-item__name">${name}</div>
+        <div class="peak-item__sub">${String(p.recipes).padStart(2,'0')} ${subLabel}</div>
+      </a>
+    `;
+  }).join('');
+}
+
+function renderFilters() {
+  const host = document.getElementById('filter-chips');
+  host.innerHTML = FILTERS.map(f => `
+    <button class="filter-chip" role="tab" aria-pressed="${f.id === activeFilter}" data-filter="${f.id}">
+      <span class="glyph">${f.glyph}</span>
+      <span>${lang === 'it' ? f.it : f.en}</span>
+    </button>
+  `).join('');
+}
+
+function renderFeed() {
+  const host = document.getElementById('feed-grid');
+  const countEl = document.getElementById('feed-count');
+  // Build feed — include editorials + recipes
+  let items = RECIPES.filter(r => {
+    if (activeFilter === 'all') return true;
+    return r.filters && r.filters.includes(activeFilter);
+  });
+  // Guarantee editorial shows if available & no filter / matching
+  if (activeFilter !== 'all' && activeFilter !== 'following' && activeFilter !== 'trending') {
+    items = items.filter(r => !r.editorial);
+  }
+
+  const countLabel = lang === 'it'
+    ? `${String(items.length).padStart(2,'0')} STORIE`
+    : `${String(items.length).padStart(2,'0')} STORIES`;
+  countEl.textContent = countLabel;
+
+  if (!items.length) {
+    host.innerHTML = `<div style="padding:24px; text-align:center; font-family: var(--serif); font-style: italic; color: var(--ink-muted);">${lang === 'it' ? 'Nessuna storia per questo filtro.' : 'No stories for this filter.'}</div>`;
+    return;
+  }
+
+  host.innerHTML = items.map(r => {
+    if (r.editorial) {
+      const title = lang === 'it' ? r.it.title : r.en.title;
+      return `
+        <a class="feed-card -editorial" href="#" data-recipe="${r.id}">
+          <div class="feed-card__photo">
+            <img src="${r.image}" alt="" loading="lazy"/>
+            <button class="save-btn feed-card__save${saved.has(r.id) ? ' -saved':''}" data-save="${r.id}" aria-label="Save">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="${saved.has(r.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            </button>
+            <div class="feed-card__overlay">
+              <span class="eyebrow" style="color: rgba(255,255,255,0.78)">${lang==='it' ? 'LETTURA · 7 MIN · 19 APR' : '7 MIN READ · APR 19'}</span>
+              <div class="title">"${lang==='it' ? 'Il brunch è il pasto più lento della settimana. Merita tutta la tua attenzione.' : 'Brunch is the slowest meal of the week. It deserves your full attention.'}"</div>
+              <div class="byline">— ${r.author.toUpperCase()} · ${r.authorRole}</div>
+            </div>
+          </div>
+        </a>
+      `;
+    }
+    const title = lang === 'it' ? r.it.title : r.en.title;
+    const sub = lang === 'it' ? r.it.sub : r.en.sub;
+    const tags = (lang === 'it' ? r.tagsIt : r.tags);
+    return `
+      <a class="feed-card" href="#" data-recipe="${r.id}">
+        <div class="feed-card__photo">
+          <img src="${r.image}" alt="" loading="lazy"/>
+          ${r.match ? `<div class="feed-card__match"><span class="eyebrow -accent">${r.match} · MATCH</span></div>` : ''}
+          <button class="save-btn feed-card__save${saved.has(r.id) ? ' -saved':''}" data-save="${r.id}" aria-label="Save">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="${saved.has(r.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+          </button>
+        </div>
+        <div class="feed-card__eyebrow-row">
+          <span class="eyebrow">${String(r.minutes).padStart(2,'0')} MIN · ${lang==='it'?'PORZIONI':'SERVES'} ${r.serves||2}</span>
+        </div>
+        <div class="feed-card__title">${title}</div>
+        <div class="feed-card__sub">${sub || ''}</div>
+        <div class="feed-card__foot">
+          <span>${tags[0] || ''}</span>
+          ${tags[1] ? `<span class="dot"></span><span>${tags[1]}</span>` : ''}
+          ${tags[2] ? `<span class="dot"></span><span>${tags[2]}</span>` : ''}
+        </div>
+      </a>
+    `;
+  }).join('');
+}
+
+/* ==========================================================
+   INTERACTIONS
+   ========================================================== */
+document.addEventListener('click', (e) => {
+  // Language toggle
+  if (e.target.closest('#lang-en')) { lang = 'en'; renderAll(); return; }
+  if (e.target.closest('#lang-it')) { lang = 'it'; renderAll(); return; }
+
+  // Tabs (main tab bar)
+  const tab = e.target.closest('.tab');
+  if (tab) {
+    document.querySelectorAll('.tab').forEach(t => t.removeAttribute('aria-current'));
+    tab.setAttribute('aria-current', 'page');
+    showToast(tab.querySelector('.tab__label').textContent.toUpperCase());
+    return;
+  }
+
+  // Filter chip
+  const chip = e.target.closest('.filter-chip');
+  if (chip) {
+    activeFilter = chip.dataset.filter;
+    renderFilters();
+    renderFeed();
+    // Scroll the feed into view smoothly
+    document.getElementById('feed').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  // Save toggle (stop event propagation for card click)
+  const saveBtn = e.target.closest('[data-save]');
+  if (saveBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = saveBtn.dataset.save;
+    const wasSaved = saved.has(id);
+    if (wasSaved) saved.delete(id); else saved.add(id);
+    saveBtn.classList.toggle('-saved', !wasSaved);
+    const svg = saveBtn.querySelector('svg');
+    if (svg) svg.setAttribute('fill', !wasSaved ? 'currentColor' : 'none');
+    showToast(I18N[lang][wasSaved ? 'toastUnsaved' : 'toastSaved']);
+    return;
+  }
+
+  // Hero save
+  if (e.target.closest('[data-action="save"]')) {
+    const btn = e.target.closest('[data-action="save"]');
+    const isSaved = btn.classList.toggle('-saved');
+    showToast(I18N[lang][isSaved ? 'toastSaved' : 'toastUnsaved']);
+    return;
+  }
+
+  // Hero begin
+  if (e.target.closest('[data-action="begin"]')) {
+    showToast(I18N[lang].toastBegin);
+    return;
+  }
+
+  // Feed / fridge / ar card click → subtle feedback
+  const card = e.target.closest('.feed-card, .fridge-item, .ar-card, .peak-item');
+  if (card) {
+    e.preventDefault();
+    const id = card.dataset.recipe || card.dataset.produce;
+    const name = card.querySelector('.feed-card__title, .fridge-item__title, .ar-card__title, .peak-item__name');
+    if (name) {
+      const label = lang === 'it' ? 'APRO' : 'OPENING';
+      showToast(`${label} · ${name.textContent.trim().toUpperCase()}`);
+    }
+  }
+});
+
+function showToast(text) {
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.classList.add('-visible');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(() => t.classList.remove('-visible'), 1400);
+}
+
+/* --- Pull-to-refresh hint on scroll-top --- */
+const screen = document.getElementById('screen');
+const hint = document.getElementById('refresh-hint');
+let hintTimer = null;
+screen.addEventListener('scroll', () => {
+  if (screen.scrollTop < -4) {
+    hint.style.opacity = 1;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { hint.style.opacity = 0; }, 800);
+  }
+}, { passive: true });
+
+/* Subtle hero parallax on scroll */
+screen.addEventListener('scroll', () => {
+  const img = document.querySelector('.hero__photo img');
+  if (!img) return;
+  const y = Math.min(Math.max(screen.scrollTop, 0), 300);
+  img.style.transform = `translateY(${y * 0.12}px) scale(${1 + y * 0.0004})`;
+}, { passive: true });
+
+/* ==========================================================
+   BOOT
+   ========================================================== */
+renderAll();
+</script>
+</body>
+</html>

@@ -32,6 +32,18 @@
 	<string>$(INFOPLIST_KEY_SUPABASE_URL)</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(INFOPLIST_KEY_SUPABASE_ANON_KEY)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Newsreader-Regular.ttf</string>
+		<string>Newsreader-Medium.ttf</string>
+		<string>Newsreader-Italic.ttf</string>
+		<string>Inter-Regular.ttf</string>
+		<string>Inter-Medium.ttf</string>
+		<string>Inter-SemiBold.ttf</string>
+		<string>Inter-Bold.ttf</string>
+		<string>JetBrainsMono-Regular.ttf</string>
+		<string>JetBrainsMono-Medium.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

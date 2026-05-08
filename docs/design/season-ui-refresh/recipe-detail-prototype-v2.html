@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Season · Recipe Detail v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared/season-v2.css" />
+<style>
+/* =========================
+   Recipe Detail — view-specific
+   ========================= */
+
+/* Hero */
+.rd-hero {
+  position: relative;
+  width: 100%;
+  padding-bottom: 92%;
+  background: #e6e1d4;
+  overflow: hidden;
+}
+.rd-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rd-hero::after {
+  content: '';
+  position: absolute; inset: auto 0 0 0; height: 40%;
+  background: linear-gradient(to bottom, rgba(250,249,246,0) 0%, rgba(250,249,246,0.85) 70%, var(--bg) 100%);
+  pointer-events: none;
+}
+.rd-hero__badge {
+  position: absolute;
+  top: 110px; left: 16px;
+  background: rgba(26, 28, 24, 0.75);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  display: flex; align-items: center; gap: 6px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.rd-hero__badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--fresh); }
+
+/* Hero floating actions (over image) */
+.rd-hero__actions {
+  position: absolute;
+  bottom: 64px; right: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 5;
+}
+
+/* Body content */
+.rd-body {
+  margin-top: -60px; /* pull up into hero curve */
+  position: relative;
+  z-index: 4;
+  padding: 0 22px 20px;
+}
+.rd-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.rd-eyebrow .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--fresh);
+  box-shadow: 0 0 0 3px rgba(95, 138, 63, 0.18);
+}
+.rd-title {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+.rd-stats {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+  margin-bottom: 20px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rd-stats__item { display: flex; align-items: center; gap: 5px; }
+.rd-stats__item strong { color: var(--ink); font-weight: 600; }
+.rd-stats__item svg { color: var(--ink-muted); }
+.rd-stats__divider { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-faint); }
+.rd-stats__crispy {
+  background: var(--ochre-soft);
+  color: #6b4817;
+  padding: 5px 10px 5px 8px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-variant-numeric: tabular-nums;
+  border: none; cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+.rd-stats__crispy svg { color: #b37a30; }
+.rd-stats__crispy.is-crispied { background: rgba(255, 180, 120, 0.32); color: #c0621f; }
+.rd-stats__crispy.is-crispied svg { color: #e2801c; }
+
+/* Creator bar */
+.rd-creator {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.rd-creator__avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background-size: cover; background-position: center;
+  background-color: #d8cfbc;
+  flex-shrink: 0;
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.rd-creator__info { flex: 1; min-width: 0; }
+.rd-creator__name {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.rd-creator__meta {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* Intelligence card — fridge + season + status */
+.rd-intel {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  padding: 14px;
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.rd-intel__col {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 4px;
+  position: relative;
+}
+.rd-intel__col + .rd-intel__col::before {
+  content: '';
+  position: absolute; left: -6px; top: 4px; bottom: 4px;
+  width: 1px;
+  background: var(--border);
+}
+.rd-intel__label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.rd-intel__title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+.rd-intel__detail {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  line-height: 1.3;
+}
+.rd-intel__col--ready .rd-intel__title { color: var(--fresh); }
+.rd-intel__col--peak .rd-intel__title { color: var(--sage-deep); }
+
+/* Why this recipe — reasons */
+.rd-why {
+  margin-bottom: 18px;
+}
+.rd-why__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+.rd-why__list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+
+/* Primary CTA (SmartCTA) */
+.rd-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--sage-deep);
+  color: #fff;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-family: var(--sans);
+  text-align: left;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.rd-cta:hover { background: #35412a; }
+.rd-cta:active { transform: scale(0.99); }
+.rd-cta__icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.16);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rd-cta__icon svg { stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rd-cta__body { flex: 1; min-width: 0; }
+.rd-cta__title { font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -0.005em; }
+.rd-cta__subtitle { font-size: 11.5px; color: rgba(255,255,255,0.78); margin-top: 2px; }
+.rd-cta__arrow { opacity: 0.6; }
+
+/* Dietary pills + classification note */
+.rd-dietary {
+  margin-bottom: 18px;
+}
+.rd-dietary__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+.rd-dietary__row {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.rd-dietary__row::-webkit-scrollbar { display: none; }
+.dietary-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--sage-soft);
+  color: var(--sage-deep);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid rgba(88, 106, 74, 0.18);
+}
+.dietary-pill svg { width: 11px; height: 11px; }
+.rd-dietary__note {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* Prep row */
+.rd-prep {
+  display: flex; justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--bg-sub);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+  font-family: var(--sans);
+  font-size: 13px;
+}
+.rd-prep__label { color: var(--ink-muted); }
+.rd-prep__value { color: var(--ink); font-weight: 600; }
+
+/* Serves stepper */
+.rd-serves {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.rd-serves__label {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.rd-serves__stepper {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg-sub);
+  padding: 4px;
+  border-radius: var(--r-pill);
+}
+.rd-serves__btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+.rd-serves__btn:active { transform: scale(0.9); }
+.rd-serves__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.rd-serves__count {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ingredient summary */
+.rd-ing-sum {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+}
+.rd-ing-sum strong { color: var(--sage-deep); font-weight: 700; }
+
+/* Ingredients list */
+.rd-ings {
+  display: flex; flex-direction: column;
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+.rd-ing {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.rd-ing:last-child { border-bottom: none; }
+.rd-ing:hover { background: var(--card-soft); }
+.rd-ing__thumb {
+  width: 40px; height: 40px; border-radius: var(--r-sm);
+  background: #e6e1d4;
+  background-size: cover; background-position: center;
+  flex-shrink: 0;
+}
+.rd-ing__body { flex: 1; min-width: 0; }
+.rd-ing__name {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.rd-ing__qty {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.rd-ing__state {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 9px;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.rd-ing__state--fridge {
+  background: var(--rc-fridge-bg);
+  color: var(--rc-fridge-fg);
+}
+.rd-ing__state--in-list {
+  background: var(--rc-creator-bg);
+  color: var(--rc-creator-fg);
+}
+.rd-ing__state--add {
+  background: transparent;
+  color: var(--ink);
+  border: 1.2px solid var(--border-s);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rd-ing__state--add:hover { background: var(--bg-sub); }
+.rd-ing__state svg { width: 11px; height: 11px; }
+
+/* Nutrition card */
+.rd-nutri {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  padding: 16px;
+  margin-bottom: 22px;
+}
+.rd-nutri__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px;
+}
+.rd-nutri__title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.rd-nutri__unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+.rd-nutri__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.rd-nutri__cell {
+  display: flex; flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.rd-nutri__val {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.rd-nutri__lbl {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+.rd-nutri__goal {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--sage-deep);
+  margin-top: 3px;
+}
+
+/* Steps / Method */
+.rd-steps__title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 6px 0 14px;
+}
+.rd-steps__list {
+  display: flex; flex-direction: column; gap: 14px;
+}
+.rd-step {
+  display: flex; gap: 14px;
+}
+.rd-step__num {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--sage-soft);
+  color: var(--sage-deep);
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.rd-step__body { flex: 1; min-width: 0; padding-top: 2px; }
+.rd-step__text {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* Media & source */
+.rd-media {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.rd-media__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+}
+.rd-media__list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.rd-media__item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-sub);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.rd-media__item:hover { background: #e9e5dc; }
+.rd-media__item svg { flex-shrink: 0; color: var(--ink-soft); }
+.rd-media__item span { flex: 1; }
+.rd-media__item .arrow { color: var(--ink-muted); }
+
+/* Floating topbar (detail pattern) */
+.rd-topbar {
+  position: absolute;
+  left: 0; right: 0; top: 54px;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 30;
+}
+.rd-topbar__actions {
+  display: flex; gap: 8px;
+}
+
+/* Caption */
+.caption { max-width: 420px; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="device__notch"></div>
+  <div class="device__screen">
+    <div class="screen" id="screen">
+      <!-- Status bar will be injected -->
+      <div id="statusbar-slot"></div>
+
+      <!-- Floating topbar: back + share + save -->
+      <div class="rd-topbar">
+        <button class="icon-btn__circle" id="rd-back" aria-label="Indietro">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,6 9,12 15,18"/></svg>
+        </button>
+        <div class="rd-topbar__actions">
+          <button class="icon-btn__circle" id="rd-share" aria-label="Condividi">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
+          </button>
+          <button class="icon-btn__circle" id="rd-save" aria-label="Salva">
+            <svg id="rd-save-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hero image -->
+      <div class="rd-hero">
+        <img src="_assets/hero_risotto.jpg" alt="" />
+        <div class="rd-hero__badge">
+          <span class="dot"></span>
+          <span data-i18n="rd-hero-badge">Di stagione · Aprile</span>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="rd-body">
+        <div class="rd-eyebrow">
+          <span class="dot"></span>
+          <span data-i18n="rd-eyebrow">Stasera · ingredienti nel tuo frigo</span>
+        </div>
+
+        <h1 class="rd-title" data-i18n="rd-title">Risotto Carnaroli ai Carciofi e Limone</h1>
+
+        <!-- Stats row: time + serves + difficulty + crispy + views -->
+        <div class="rd-stats">
+          <span class="rd-stats__item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg>
+            <strong>40</strong><span data-i18n="min">min</span>
+          </span>
+          <span class="rd-stats__divider"></span>
+          <span class="rd-stats__item"><strong>4</strong><span data-i18n="serves">porzioni</span></span>
+          <span class="rd-stats__divider"></span>
+          <span class="rd-stats__item" data-i18n="rd-difficulty">Intermedio</span>
+          <button class="rd-stats__crispy" id="rd-crispy" style="margin-left:auto;" aria-label="Crispy">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2c0 4-4 5-4 9a4 4 0 1 0 8 0c0-1.5-1-2.5-1-4 2 1 3 3 3 5a6 6 0 1 1-12 0c0-4 4-6 6-10z"/></svg>
+            <span id="rd-crispy-count">128</span>
+          </button>
+          <span class="rd-stats__item" style="color:var(--ink-faint);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="5.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+            1,2k
+          </span>
+        </div>
+
+        <!-- Creator bar -->
+        <a href="#" class="rd-creator" id="rd-creator">
+          <div class="rd-creator__avatar" style="background-image:url('_assets/av_elena.png')"></div>
+          <div class="rd-creator__info">
+            <div class="rd-creator__name">Elena Vanzi</div>
+            <div class="rd-creator__meta" data-i18n="rd-creator-meta">12,3k follower · 47 ricette</div>
+          </div>
+          <button class="follow-btn is-following" id="rd-follow">
+            <span data-i18n="following">Segui già</span>
+          </button>
+        </a>
+
+        <!-- Intelligence card: fridge / season / status -->
+        <div class="rd-intel">
+          <div class="rd-intel__col">
+            <div class="rd-intel__label" data-i18n="rd-intel-fridge">Frigo</div>
+            <div class="rd-intel__title">5/7</div>
+            <div class="rd-intel__detail" data-i18n="rd-intel-fridge-detail">2 mancanti: carciofi, limone</div>
+          </div>
+          <div class="rd-intel__col rd-intel__col--peak">
+            <div class="rd-intel__label" data-i18n="rd-intel-season">Stagione</div>
+            <div class="rd-intel__title">92%</div>
+            <div class="rd-intel__detail" data-i18n="rd-intel-season-detail">Carciofi al picco ad aprile</div>
+          </div>
+          <div class="rd-intel__col rd-intel__col--ready">
+            <div class="rd-intel__label" data-i18n="rd-intel-status">Status</div>
+            <div class="rd-intel__title" data-i18n="rd-intel-ready">Quasi pronto</div>
+            <div class="rd-intel__detail" data-i18n="rd-intel-ready-detail">Aggiungi 2 ingredienti</div>
+          </div>
+        </div>
+
+        <!-- Why this recipe -->
+        <div class="rd-why">
+          <div class="rd-why__label" data-i18n="rd-why-label">Perché questa ricetta</div>
+          <div class="rd-why__list">
+            <span class="reason" data-why="fridge">
+              <span class="reason__glyph"></span>
+              <span data-i18n="rd-why-fridge">5 su 7 nel tuo frigo</span>
+            </span>
+            <span class="reason" data-why="peak">
+              <span class="reason__glyph"></span>
+              <span data-i18n="rd-why-peak">carciofi al picco ora</span>
+            </span>
+            <span class="reason" data-why="creator">
+              <span class="reason__glyph"></span>
+              <span data-i18n="rd-why-creator">da Elena · segui</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Primary CTA (SmartCTAButton) -->
+        <button class="rd-cta" id="rd-cta">
+          <span class="rd-cta__icon">
+            <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 3h2l2.5 12h12l2-8H6"/><line x1="17" y1="4" x2="17" y2="10"/><line x1="14" y1="7" x2="20" y2="7"/></svg>
+          </span>
+          <span class="rd-cta__body">
+            <div class="rd-cta__title" data-i18n="rd-cta-title">Aggiungi alla lista (2)</div>
+            <div class="rd-cta__subtitle" data-i18n="rd-cta-sub">carciofi · limone non biologico</div>
+          </span>
+          <span class="rd-cta__arrow">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+          </span>
+        </button>
+
+        <!-- Dietary tags -->
+        <div class="rd-dietary">
+          <div class="rd-dietary__label" data-i18n="rd-dietary-label">Dieta</div>
+          <div class="rd-dietary__row">
+            <span class="dietary-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20a7 7 0 0 1-7-7V4h9a7 7 0 0 1 7 7v2a7 7 0 0 1-7 7z"/></svg>
+              <span data-i18n="rd-dietary-veg">Vegetariana</span>
+            </span>
+            <span class="dietary-pill">
+              <span data-i18n="rd-dietary-gf">Senza glutine</span>
+            </span>
+            <span class="dietary-pill">
+              <span data-i18n="rd-dietary-low-sugar">Basso zucchero</span>
+            </span>
+          </div>
+          <div class="rd-dietary__note" data-i18n="rd-dietary-note">
+            Tag classificati automaticamente dagli ingredienti. Verifica sempre l'etichetta dei prodotti.
+          </div>
+        </div>
+
+        <!-- Preparation row -->
+        <div class="rd-prep">
+          <div>
+            <div class="rd-prep__label" data-i18n="rd-prep-prep">Preparazione</div>
+            <div class="rd-prep__value"><strong>15</strong> <span data-i18n="min">min</span></div>
+          </div>
+          <div>
+            <div class="rd-prep__label" data-i18n="rd-prep-cook">Cottura</div>
+            <div class="rd-prep__value"><strong>25</strong> <span data-i18n="min">min</span></div>
+          </div>
+          <div>
+            <div class="rd-prep__label" data-i18n="rd-prep-diff">Difficoltà</div>
+            <div class="rd-prep__value" data-i18n="rd-difficulty">Intermedio</div>
+          </div>
+        </div>
+
+        <!-- Serves stepper -->
+        <div class="rd-serves">
+          <div class="rd-serves__label">
+            <span id="rd-serves-text">Per 4 persone</span>
+          </div>
+          <div class="rd-serves__stepper">
+            <button class="rd-serves__btn" id="rd-serves-minus" aria-label="meno">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span class="rd-serves__count" id="rd-serves-count">4</span>
+            <button class="rd-serves__btn" id="rd-serves-plus" aria-label="più">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Ingredient summary -->
+        <div class="rd-ing-sum" id="rd-ing-sum">
+          <strong>7</strong> ingredienti · <strong>5</strong> nel tuo frigo · <strong>2</strong> mancanti
+        </div>
+
+        <!-- Ingredients list -->
+        <div class="rd-ings" id="rd-ings"><!-- populated by JS --></div>
+
+        <!-- Nutrition card -->
+        <div class="rd-nutri">
+          <div class="rd-nutri__head">
+            <div class="rd-nutri__title" data-i18n="rd-nutri-title">Valori per porzione</div>
+            <div class="rd-nutri__unit" data-i18n="rd-nutri-unit">su 4 porzioni</div>
+          </div>
+          <div class="rd-nutri__grid">
+            <div class="rd-nutri__cell">
+              <div class="rd-nutri__val">420</div>
+              <div class="rd-nutri__lbl">kcal</div>
+            </div>
+            <div class="rd-nutri__cell">
+              <div class="rd-nutri__val">12<span style="font-size:12px;color:var(--ink-muted);">g</span></div>
+              <div class="rd-nutri__lbl" data-i18n="rd-nutri-prot">Proteine</div>
+              <div class="rd-nutri__goal" data-i18n="rd-nutri-prot-goal">· 18% goal</div>
+            </div>
+            <div class="rd-nutri__cell">
+              <div class="rd-nutri__val">68<span style="font-size:12px;color:var(--ink-muted);">g</span></div>
+              <div class="rd-nutri__lbl" data-i18n="rd-nutri-carbs">Carbo</div>
+            </div>
+            <div class="rd-nutri__cell">
+              <div class="rd-nutri__val">9<span style="font-size:12px;color:var(--ink-muted);">g</span></div>
+              <div class="rd-nutri__lbl" data-i18n="rd-nutri-fat">Grassi</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Steps / Method -->
+        <h2 class="rd-steps__title" data-i18n="rd-steps-title">Metodo</h2>
+        <div class="rd-steps__list" id="rd-steps"><!-- populated by JS --></div>
+
+        <!-- Media & source -->
+        <div class="rd-media">
+          <div class="rd-media__label" data-i18n="rd-media-label">Fonte</div>
+          <div class="rd-media__list">
+            <div class="rd-media__item" data-media="instagram">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.7" fill="currentColor"/></svg>
+              <span data-i18n="rd-media-ig">Vedi il reel di Elena su Instagram</span>
+              <span class="arrow">↗</span>
+            </div>
+            <div class="rd-media__item" data-media="original">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+              <span data-i18n="rd-media-original">Apri ricetta originale · elena-vanzi.it</span>
+              <span class="arrow">↗</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tab bar (shared, 'home' active since detail is pushed from home) -->
+    <div id="tabbar-slot"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-text">Crispy!</span>
+    </div>
+  </div>
+</div>
+
+<div class="caption">
+  <strong>Season · Recipe Detail v2</strong> — Hero · Intelligence card · Why · Ingredient list fridge-aware · Nutrition · Method · Source
+</div>
+
+<script src="_shared/season-v2.js"></script>
+<script>
+(function() {
+  const S = window.Season;
+  const { $, $$, t, registerDict, applyI18N, SVG, CREATORS, toast } = S;
+
+  // ---------- i18n ----------
+  registerDict({
+    it: {
+      'rd-hero-badge': 'Di stagione · Aprile',
+      'rd-eyebrow': 'Stasera · ingredienti nel tuo frigo',
+      'rd-title': 'Risotto Carnaroli ai Carciofi e Limone',
+      'rd-difficulty': 'Intermedio',
+      'rd-creator-meta': '12,3k follower · 47 ricette',
+      'rd-intel-fridge': 'Frigo',
+      'rd-intel-fridge-detail': '2 mancanti: carciofi, limone',
+      'rd-intel-season': 'Stagione',
+      'rd-intel-season-detail': 'Carciofi al picco ad aprile',
+      'rd-intel-status': 'Status',
+      'rd-intel-ready': 'Quasi pronto',
+      'rd-intel-ready-detail': 'Aggiungi 2 ingredienti',
+      'rd-why-label': 'Perché questa ricetta',
+      'rd-why-fridge': '5 su 7 nel tuo frigo',
+      'rd-why-peak': 'carciofi al picco ora',
+      'rd-why-creator': 'da Elena · segui',
+      'rd-cta-title': 'Aggiungi alla lista (2)',
+      'rd-cta-sub': 'carciofi · limone non biologico',
+      'rd-dietary-label': 'Dieta',
+      'rd-dietary-veg': 'Vegetariana',
+      'rd-dietary-gf': 'Senza glutine',
+      'rd-dietary-low-sugar': 'Basso zucchero',
+      'rd-dietary-note': "Tag classificati automaticamente dagli ingredienti. Verifica sempre l'etichetta dei prodotti.",
+      'rd-prep-prep': 'Preparazione',
+      'rd-prep-cook': 'Cottura',
+      'rd-prep-diff': 'Difficoltà',
+      'rd-serves-format': 'Per {n} persone',
+      'rd-ing-sum-format': '<strong>{t}</strong> ingredienti · <strong>{f}</strong> nel tuo frigo · <strong>{m}</strong> mancanti',
+      'rd-nutri-title': 'Valori per porzione',
+      'rd-nutri-unit': 'su {n} porzioni',
+      'rd-nutri-prot': 'Proteine',
+      'rd-nutri-prot-goal': '· 18% goal',
+      'rd-nutri-carbs': 'Carbo',
+      'rd-nutri-fat': 'Grassi',
+      'rd-steps-title': 'Metodo',
+      'rd-media-label': 'Fonte',
+      'rd-media-ig': 'Vedi il reel di Elena su Instagram',
+      'rd-media-original': 'Apri ricetta originale · elena-vanzi.it',
+      // ingredient states
+      'ing-in-fridge': 'Nel frigo',
+      'ing-in-list': 'In lista',
+      'ing-add': 'Aggiungi',
+      // toasts
+      'toast-added-list-n': 'Aggiunti {n} alla lista',
+      'toast-saved-recipe': 'Ricetta salvata',
+      'toast-unsaved-recipe': 'Rimossa dai salvati',
+    },
+    en: {
+      'rd-hero-badge': 'In season · April',
+      'rd-eyebrow': 'Tonight · ingredients in your fridge',
+      'rd-title': 'Carnaroli Risotto with Artichoke & Lemon',
+      'rd-difficulty': 'Intermediate',
+      'rd-creator-meta': '12.3k followers · 47 recipes',
+      'rd-intel-fridge': 'Fridge',
+      'rd-intel-fridge-detail': '2 missing: artichoke, lemon',
+      'rd-intel-season': 'Season',
+      'rd-intel-season-detail': 'Artichokes at peak in April',
+      'rd-intel-status': 'Status',
+      'rd-intel-ready': 'Almost ready',
+      'rd-intel-ready-detail': 'Add 2 ingredients',
+      'rd-why-label': 'Why this recipe',
+      'rd-why-fridge': '5 of 7 in your fridge',
+      'rd-why-peak': 'artichokes at peak now',
+      'rd-why-creator': 'from Elena · following',
+      'rd-cta-title': 'Add to list (2)',
+      'rd-cta-sub': 'artichoke · non-organic lemon',
+      'rd-dietary-label': 'Diet',
+      'rd-dietary-veg': 'Vegetarian',
+      'rd-dietary-gf': 'Gluten-free',
+      'rd-dietary-low-sugar': 'Low sugar',
+      'rd-dietary-note': 'Tags classified automatically from ingredients. Always check product labels.',
+      'rd-prep-prep': 'Prep',
+      'rd-prep-cook': 'Cook',
+      'rd-prep-diff': 'Difficulty',
+      'rd-serves-format': 'Serves {n}',
+      'rd-ing-sum-format': '<strong>{t}</strong> ingredients · <strong>{f}</strong> in your fridge · <strong>{m}</strong> missing',
+      'rd-nutri-title': 'Per-serving nutrition',
+      'rd-nutri-unit': 'based on {n} servings',
+      'rd-nutri-prot': 'Protein',
+      'rd-nutri-prot-goal': '· 18% goal',
+      'rd-nutri-carbs': 'Carbs',
+      'rd-nutri-fat': 'Fat',
+      'rd-steps-title': 'Method',
+      'rd-media-label': 'Source',
+      'rd-media-ig': 'See Elena\'s reel on Instagram',
+      'rd-media-original': 'Open original recipe · elena-vanzi.it',
+      'ing-in-fridge': 'In fridge',
+      'ing-in-list': 'In list',
+      'ing-add': 'Add',
+      'toast-added-list-n': 'Added {n} to list',
+      'toast-saved-recipe': 'Recipe saved',
+      'toast-unsaved-recipe': 'Removed from saved',
+    },
+  });
+
+  // ---------- Data ----------
+  const INGREDIENTS = [
+    { id: 'riso',     name_it: 'Riso Carnaroli',       name_en: 'Carnaroli rice',     qty_it: '320 g', qty_en: '320 g',    img: '_assets/p_riso.jpg',     state: 'fridge' },
+    { id: 'carciofi', name_it: 'Carciofi',             name_en: 'Artichokes',         qty_it: '4',      qty_en: '4',       img: '_assets/p_carciofi.jpg', state: 'add' },
+    { id: 'limone',   name_it: 'Limone non biologico', name_en: 'Non-organic lemon',  qty_it: '1',      qty_en: '1',       img: '_assets/p_limone.jpg',   state: 'list' },
+    { id: 'brodo',    name_it: 'Brodo vegetale',       name_en: 'Vegetable broth',    qty_it: '1,2 L',  qty_en: '1.2 L',   img: '_assets/p_brodo.jpg',    state: 'fridge' },
+    { id: 'scalogno', name_it: 'Scalogno',             name_en: 'Shallot',            qty_it: '1',      qty_en: '1',       img: '_assets/p_scalogno.jpg',state: 'fridge' },
+    { id: 'burro',    name_it: 'Burro',                name_en: 'Butter',             qty_it: '40 g',   qty_en: '40 g',    img: '_assets/p_burro.jpg',    state: 'fridge' },
+    { id: 'parmigiano', name_it: 'Parmigiano Reggiano', name_en: 'Parmigiano Reggiano', qty_it: '60 g', qty_en: '60 g',    img: '_assets/p_parmigiano.jpg', state: 'fridge' },
+  ];
+  const STEPS_IT = [
+    "Pulisci i carciofi eliminando le foglie esterne più dure, tagliali a fette sottili e tuffali in acqua acidulata con il succo di mezzo limone.",
+    "Tosta il riso a secco in casseruola finché i chicchi diventano translucidi sui bordi. Sfuma con un mestolo di brodo caldo.",
+    "Aggiungi lo scalogno tritato e i carciofi scolati, continuando a bagnare con brodo caldo un mestolo alla volta.",
+    "A metà cottura aggiungi la scorza del limone grattugiata e metà del succo. Assaggia e regola di sale.",
+    "Quando il riso è al dente (circa 15 minuti), spegni il fuoco e manteca con burro freddo a cubetti e parmigiano grattugiato.",
+    "Copri e lascia riposare 2 minuti. Servi con un filo d'olio, pepe macinato al momento e un'ultima grattugiata di scorza di limone.",
+  ];
+  const STEPS_EN = [
+    "Clean the artichokes by removing the tough outer leaves, slice them thin, and drop them into acidulated water with half a lemon's juice.",
+    "Toast the rice dry in a saucepan until the grains turn translucent at the edges. Deglaze with a ladle of hot broth.",
+    "Add the chopped shallot and the drained artichokes, continuing to moisten with hot broth one ladle at a time.",
+    "Halfway through cooking add the grated lemon zest and half the juice. Taste and adjust salt.",
+    "When the rice is al dente (about 15 minutes), turn off the heat and stir in cold cubed butter and grated parmigiano.",
+    "Cover and let rest 2 minutes. Serve with a drizzle of olive oil, freshly ground pepper, and one last grating of lemon zest.",
+  ];
+
+  // ---------- Mount status bar + tab bar ----------
+  $('#statusbar-slot').innerHTML = S.statusBarHTML();
+  $('#tabbar-slot').innerHTML = S.tabBarHTML('home'); // detail view is pushed from home
+  S.wireTabBar(key => {
+    if (key !== 'home') toast(t('toast-crispied').replace('Crispata!', (S.LANG === 'it' ? 'Torno a ' : 'Going to ') + key));
+  });
+
+  // ---------- Ingredient rendering ----------
+  function renderIngredients() {
+    const lang = S.getLang();
+    const el = $('#rd-ings');
+    el.innerHTML = INGREDIENTS.map(ing => {
+      const name = lang === 'it' ? ing.name_it : ing.name_en;
+      const qty  = lang === 'it' ? ing.qty_it  : ing.qty_en;
+      let stateHTML = '';
+      if (ing.state === 'fridge') {
+        stateHTML = `<span class="rd-ing__state rd-ing__state--fridge">${SVG.check(11)}<span data-i18n="ing-in-fridge">${t('ing-in-fridge')}</span></span>`;
+      } else if (ing.state === 'list') {
+        stateHTML = `<span class="rd-ing__state rd-ing__state--in-list">${SVG.check(11)}<span data-i18n="ing-in-list">${t('ing-in-list')}</span></span>`;
+      } else {
+        stateHTML = `<button class="rd-ing__state rd-ing__state--add" data-add-ing="${ing.id}">${SVG.plus(11, 11)}<span>${t('ing-add')}</span></button>`;
+      }
+      return `
+        <div class="rd-ing" data-ing="${ing.id}">
+          <div class="rd-ing__thumb" style="background-image:url('${ing.img}'), linear-gradient(140deg, #e6ebdd, #dcd2ba)"></div>
+          <div class="rd-ing__body">
+            <div class="rd-ing__name">${name}</div>
+            <div class="rd-ing__qty">${qty}</div>
+          </div>
+          ${stateHTML}
+        </div>
+      `;
+    }).join('');
+    // Wire Add buttons
+    $$('.rd-ing__state--add').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        const id = btn.dataset.addIng;
+        const ing = INGREDIENTS.find(i => i.id === id);
+        if (!ing) return;
+        ing.state = 'list';
+        renderIngredients();
+        updateIngredientSummary();
+        toast(t('toast-added-list-n', { n: 1 }));
+      });
+    });
+  }
+
+  // ---------- Steps rendering ----------
+  function renderSteps() {
+    const lang = S.getLang();
+    const steps = lang === 'it' ? STEPS_IT : STEPS_EN;
+    $('#rd-steps').innerHTML = steps.map((step, i) => `
+      <div class="rd-step">
+        <div class="rd-step__num">${i + 1}</div>
+        <div class="rd-step__body"><div class="rd-step__text">${step}</div></div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- Serves stepper ----------
+  let servings = 4;
+  const baseServings = 4; // recipe's default
+  function updateServes() {
+    $('#rd-serves-count').textContent = servings;
+    const lang = S.getLang();
+    $('#rd-serves-text').textContent = t('rd-serves-format', { n: servings });
+    $('#rd-serves-minus').disabled = servings <= 1;
+    $('#rd-serves-plus').disabled = servings >= 12;
+  }
+  $('#rd-serves-minus').addEventListener('click', () => { if (servings > 1) { servings--; updateServes(); } });
+  $('#rd-serves-plus').addEventListener('click',  () => { if (servings < 12) { servings++; updateServes(); } });
+
+  // ---------- Ingredient summary ----------
+  function updateIngredientSummary() {
+    const total  = INGREDIENTS.length;
+    const fridge = INGREDIENTS.filter(i => i.state === 'fridge').length;
+    const miss   = INGREDIENTS.filter(i => i.state === 'add').length;
+    $('#rd-ing-sum').innerHTML = t('rd-ing-sum-format', { t: total, f: fridge, m: miss });
+    // Update CTA label
+    const title = miss > 0
+      ? (S.LANG === 'it' ? `Aggiungi alla lista (${miss})` : `Add to list (${miss})`)
+      : (S.LANG === 'it' ? 'Vedi lista della spesa' : 'View shopping list');
+    $('#rd-cta .rd-cta__title').textContent = title;
+  }
+
+  // ---------- Crispy (hero-stats pill) ----------
+  $('#rd-crispy').addEventListener('click', e => {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const countEl = $('#rd-crispy-count');
+    const current = parseInt(countEl.textContent, 10) || 0;
+    if (btn.classList.contains('is-crispied')) {
+      btn.classList.remove('is-crispied');
+      countEl.textContent = Math.max(0, current - 1);
+      toast(t('toast-uncrispied'));
+    } else {
+      btn.classList.add('is-crispied');
+      countEl.textContent = current + 1;
+      toast(t('toast-crispied'));
+    }
+  });
+
+  // ---------- Save (top-right bookmark) ----------
+  let isSaved = false;
+  $('#rd-save').addEventListener('click', e => {
+    e.preventDefault();
+    isSaved = !isSaved;
+    const svg = $('#rd-save-icon');
+    if (isSaved) {
+      svg.setAttribute('fill', 'currentColor');
+      svg.setAttribute('stroke-width', '0');
+      toast(t('toast-saved-recipe'));
+    } else {
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke-width', '1.8');
+      toast(t('toast-unsaved-recipe'));
+    }
+  });
+
+  // ---------- Follow button ----------
+  let isFollowing = true;
+  $('#rd-follow').addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    isFollowing = !isFollowing;
+    const btn = e.currentTarget;
+    btn.classList.toggle('is-following', isFollowing);
+    btn.querySelector('span').textContent = isFollowing ? t('following') : t('follow');
+    toast(t(isFollowing ? 'toast-followed' : 'toast-unfollowed', { name: 'Elena' }));
+  });
+
+  // ---------- Primary CTA ----------
+  $('#rd-cta').addEventListener('click', () => {
+    const miss = INGREDIENTS.filter(i => i.state === 'add').length;
+    if (miss > 0) {
+      INGREDIENTS.forEach(i => { if (i.state === 'add') i.state = 'list'; });
+      renderIngredients();
+      updateIngredientSummary();
+      toast(t('toast-added-list-n', { n: miss }));
+    } else {
+      toast(S.LANG === 'it' ? 'Apro la lista…' : 'Opening list…');
+    }
+  });
+
+  // ---------- Media links ----------
+  $$('.rd-media__item').forEach(m => {
+    m.addEventListener('click', () => {
+      const kind = m.dataset.media;
+      const msg = {
+        instagram: S.LANG === 'it' ? 'Apro Instagram…' : 'Opening Instagram…',
+        original:  S.LANG === 'it' ? 'Apro ricetta originale…' : 'Opening original recipe…',
+      }[kind];
+      toast(msg);
+    });
+  });
+
+  // ---------- Back button ----------
+  $('#rd-back').addEventListener('click', () => toast(S.LANG === 'it' ? 'Torno alla Home' : 'Back to Home'));
+  $('#rd-share').addEventListener('click', () => toast(S.LANG === 'it' ? 'Condividi…' : 'Share…'));
+
+  // ---------- Initial render ----------
+  renderIngredients();
+  renderSteps();
+  updateServes();
+  updateIngredientSummary();
+  applyI18N();
+})();
+</script>
+</body>
+</html>

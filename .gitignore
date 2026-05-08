@@ -5,6 +5,12 @@ scripts/generate_produce_images.py
 scripts/resize_produce_images.py
 
 .env
-.env.local.agents/
+.env.local
+.agents/
 .images_backup/
 skills-lock.json
+
+xcuserdata/
+*.xcuserstate
+Season/Debug/
+smart-import-batch-input.json

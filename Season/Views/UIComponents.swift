@@ -155,6 +155,186 @@ enum SeasonMotion {
     static let pressAnimation: Animation = .easeOut(duration: 0.16)
 }
 
+enum SeasonTopBarLeading {
+    case none
+    case back
+    case close(action: () -> Void)
+}
+
+struct SeasonTopBar: View {
+    @ObservedObject var produceViewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
+    var leading: SeasonTopBarLeading = .none
+    var trailingAccessory: AnyView? = nil
+
+    @EnvironmentObject private var fridgeViewModel: FridgeViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            leadingControl
+
+            wordmark
+                .padding(.leading, hasLeadingControl ? 2 : 0)
+
+            Spacer(minLength: 8)
+
+            if let trailingAccessory {
+                trailingAccessory
+                    .padding(.trailing, 4)
+            }
+
+            topRightActions
+        }
+        .padding(.top, 8)
+        .padding(.horizontal, DS.Spacing.xl)
+        .padding(.bottom, DS.Spacing.sm)
+        .background(DS.Color.bg)
+    }
+
+    private var hasLeadingControl: Bool {
+        switch leading {
+        case .none:
+            return false
+        case .back, .close:
+            return true
+        }
+    }
+
+    @ViewBuilder
+    private var leadingControl: some View {
+        switch leading {
+        case .none:
+            EmptyView()
+        case .back:
+            Button {
+                dismiss()
+            } label: {
+                topBarIcon(systemName: "chevron.left", accessibilityLabel: "Back")
+            }
+            .buttonStyle(.plain)
+        case .close(let action):
+            Button(action: action) {
+                topBarIcon(systemName: "xmark", accessibilityLabel: "Close")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var wordmark: some View {
+        Text("\(Text("Season").font(DS.Font.wordmark).foregroundStyle(DS.Color.ink))\(Text(".").font(DS.Font.serif(22, weight: .medium, italic: true)).foregroundStyle(DS.Color.sage))")
+            .kerning(-0.22)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var topRightActions: some View {
+        HStack(spacing: 4) {
+            NavigationLink {
+                FridgeView(
+                    produceViewModel: produceViewModel,
+                    fridgeViewModel: fridgeViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
+                topBarIcon(
+                    systemName: "snowflake",
+                    accessibilityLabel: produceViewModel.localizer.text(.fridgeTab)
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                ShoppingListView(
+                    produceViewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } label: {
+                topBarIcon(
+                    systemName: "bag",
+                    accessibilityLabel: produceViewModel.localizer.text(.listTab),
+                    showIndicator: !shoppingListViewModel.items.isEmpty
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                print("[SEASON_TOPBAR] phase=notifications_stub action=tap")
+            } label: {
+                topBarIcon(
+                    systemName: "bell",
+                    accessibilityLabel: produceViewModel.localizer.localized("home.topbar.notifications")
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func topBarIcon(
+        systemName: String,
+        accessibilityLabel: String,
+        showIndicator: Bool = false
+    ) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .regular))
+                .foregroundStyle(DS.Color.ink)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+
+            if showIndicator {
+                Circle()
+                    .fill(DS.Color.terracotta)
+                    .frame(width: 7, height: 7)
+                    .overlay(
+                        Circle().stroke(DS.Color.bg, lineWidth: 2)
+                    )
+                    .offset(x: -10, y: 10)
+                    .allowsHitTesting(false)
+            }
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct SeasonTopBarModifier: ViewModifier {
+    @ObservedObject var produceViewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
+    var leading: SeasonTopBarLeading
+    var trailingAccessory: AnyView?
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                SeasonTopBar(
+                    produceViewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel,
+                    leading: leading,
+                    trailingAccessory: trailingAccessory
+                )
+            }
+    }
+}
+
+extension View {
+    func seasonTopBar(
+        produceViewModel: ProduceViewModel,
+        shoppingListViewModel: ShoppingListViewModel,
+        leading: SeasonTopBarLeading = .none,
+        trailingAccessory: AnyView? = nil
+    ) -> some View {
+        modifier(
+            SeasonTopBarModifier(
+                produceViewModel: produceViewModel,
+                shoppingListViewModel: shoppingListViewModel,
+                leading: leading,
+                trailingAccessory: trailingAccessory
+            )
+        )
+    }
+}
+
 struct SeasonPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -1391,41 +1571,5 @@ final class RecipeLocalImageLoader {
         }
 
         return UIImage(cgImage: cgImage)
-    }
-}
-
-struct CartToolbarItems: ToolbarContent {
-    @ObservedObject var produceViewModel: ProduceViewModel
-    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
-    @EnvironmentObject private var fridgeViewModel: FridgeViewModel
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            NavigationLink {
-                ShoppingListView(
-                    produceViewModel: produceViewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-            } label: {
-                Image(systemName: "bag")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(produceViewModel.localizer.text(.listTab))
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            NavigationLink {
-                FridgeView(
-                    produceViewModel: produceViewModel,
-                    fridgeViewModel: fridgeViewModel
-                )
-            } label: {
-                Image(systemName: "snowflake")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(produceViewModel.localizer.text(.fridgeTab))
-        }
     }
 }

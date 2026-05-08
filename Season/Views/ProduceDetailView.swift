@@ -54,17 +54,11 @@ struct ProduceDetailView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
-        .toolbarColorScheme(.light, for: .navigationBar)
-        .toolbar {
-            CartToolbarItems(
-                produceViewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        }
+        .seasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel,
+            leading: .back
+        )
     }
 
     @ViewBuilder
@@ -153,7 +147,7 @@ struct ProduceDetailView: View {
                 pulseShoppingButton()
             } label: {
                 primaryActionLabel(
-                    text: isInShoppingList ? "In List" : "Add to List",
+                    text: isInShoppingList ? viewModel.localizer.text(.inShoppingList) : viewModel.localizer.text(.addToList),
                     systemImage: isInShoppingList ? "checkmark" : "plus"
                 )
             }
@@ -168,7 +162,7 @@ struct ProduceDetailView: View {
                     pulseFridgeButton()
                 } label: {
                     secondaryActionLabel(
-                        text: isInFridge ? "In Fridge" : "Add to Fridge",
+                        text: isInFridge ? viewModel.localizer.text(.inFridge) : viewModel.localizer.text(.addToFridge),
                         systemImage: isInFridge ? "snowflake" : "plus",
                         foreground: isInFridge ? Color(red: 0.15, green: 0.55, blue: 0.72) : .primary,
                         background: isInFridge
@@ -268,7 +262,7 @@ struct ProduceDetailView: View {
         SeasonCardContainer(
             content: {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Nutrition highlights")
+                    Text(viewModel.localizer.localized("detail.nutrition.highlights"))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.secondary)
 
@@ -299,7 +293,7 @@ struct ProduceDetailView: View {
                         )
                     }
 
-                    Text("Nutrition (per 100 g)")
+                    Text(viewModel.localizer.text(.nutrition))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.secondary)
 
@@ -500,19 +494,6 @@ struct ProduceDetailView: View {
     }
 
     @ViewBuilder
-    private func statusChip(text: String, systemImage: String, isActive: Bool) -> some View {
-        SeasonBadge(
-            text: text,
-            icon: systemImage,
-            horizontalPadding: SeasonSpacing.xs,
-            verticalPadding: 5,
-            cornerRadius: SeasonRadius.small,
-            foreground: isActive ? Color.green.opacity(0.95) : .secondary,
-            background: isActive ? Color.green.opacity(0.13) : SeasonColors.subtleSurface
-        )
-    }
-
-    @ViewBuilder
     private func basicHeroImage(for ingredient: BasicIngredient) -> some View {
         IngredientVisualView(
             name: ingredient.displayName(languageCode: viewModel.localizer.languageCode),
@@ -581,7 +562,7 @@ struct ProduceDetailView: View {
         if !rankedRelatedRecipes.isEmpty {
             VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
                 HStack {
-                    Text("What to cook with this")
+                    Text(viewModel.localizer.localized("detail.related_recipes.title"))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -698,11 +679,11 @@ struct ProduceDetailView: View {
         guard let difficulty = recipe.difficulty else { return nil }
         switch difficulty {
         case .easy:
-            return "Easy"
+            return viewModel.localizer.recipeDifficultyTitle(.easy)
         case .medium:
-            return "Medium"
+            return viewModel.localizer.recipeDifficultyTitle(.medium)
         case .hard:
-            return "Hard"
+            return viewModel.localizer.recipeDifficultyTitle(.hard)
         }
     }
 

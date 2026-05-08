@@ -13,29 +13,45 @@ struct HomeView: View {
     @State private var fridgeMatchesCache: [FridgeMatchedRecipe] = []
     @State private var ingredientUsageCountByID: [String: Int] = [:]
     @State private var appliedCacheSignature: String?
-    private let homeQuickFilters: [HomeQuickFilter] = [.following, .readyNow, .under15, .highProtein, .peakSeason, .trending]
+    @State private var selectedRecipeRoute: HomeRecipeRoute?
+    private let homeQuickFilters: [HomeQuickFilter] = [.readyNow, .under15, .highProtein, .peakSeason, .trending]
+    private let homeContentGutter: CGFloat = DS.Spacing.xl
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                SeasonColors.primarySurface
+                DS.Color.bg
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     fixedHeaderRow(safeAreaTopInset: proxy.safeAreaInsets.top)
+                        .zIndex(20)
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-                            alwaysOnHeroSection
-                            if hasFridgeMatches {
-                                readyToCookNowSection
+                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                            greetingHeroSection
+                                .padding(.horizontal, homeContentGutter)
+                                .padding(.bottom, DS.Spacing.md)
+
+                            cookNowHeroSection
+
+                            freshCreatorStripSection
+
+                            seasonalNowSection
+
+                            Section {
+                                feedHeadingSection
+
+                                mixedFeedSection
+                                    .padding(.top, DS.Spacing.sm)
+                                    .padding(.bottom, DS.Spacing.md)
+                            } header: {
+                                stickyFilterSection
                             }
-                            belowFoldSections
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.horizontal, SeasonSpacing.lg)
-                        .padding(.top, SeasonSpacing.sm)
-                        .padding(.bottom, SeasonLayout.bottomBarContentClearance + SeasonSpacing.sm)
+                        .padding(.top, DS.Spacing.xs)
+                        .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
                     }
                     .refreshable {
                         await viewModel.refreshHomeFeed()
@@ -47,49 +63,126 @@ struct HomeView: View {
             await refreshHomeFeedCache(for: cacheSignature)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(item: $selectedRecipeRoute) { route in
+            RecipeDetailView(
+                rankedRecipe: route.rankedRecipe,
+                viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel
+            )
+        }
         .safeAreaInset(edge: .bottom) {
             Color.clear
-                .frame(height: SeasonLayout.bottomBarContentClearance)
+                .frame(height: SeasonLayout.bottomBarContentClearance + DS.Spacing.md)
         }
     }
 
+    /// Greeting editoriale della home v2.
+    /// Due righe: eyebrow mono uppercase ("APRILE · SETTIMANA 16" + dot fresh)
+    /// e un titolo serif balanced con una porzione in italic/sage-deep.
     @ViewBuilder
-    private var alwaysOnHeroSection: some View {
-        // Keep hero permanently visible regardless of feed state.
-        cookNowHeroSection
-    }
+    private var greetingHeroSection: some View {
+        VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(DS.Color.fresh)
+                    .frame(width: 5, height: 5)
+                    .overlay(
+                        Circle()
+                            .stroke(DS.Color.fresh.opacity(0.18), lineWidth: 3)
+                    )
+                    .padding(.trailing, 2)
 
-    @ViewBuilder
-    private var belowFoldSections: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-            seasonalNowSection
-                .padding(.top, 0)
-
-            demotedHomeSections
-                .padding(.top, SeasonSpacing.sm)
-        }
-    }
-
-    private func fixedHeaderRow(safeAreaTopInset: CGFloat) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.localizer.text(.homeTab))
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(.primary)
-
-                Text(homeMastheadLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(greetingEyebrow)
+                    .font(DS.Font.eyebrow)
+                    .kerning(1.05) // ~0.10em on 10.5px
+                    .textCase(.uppercase)
+                    .foregroundStyle(DS.Color.inkMuted)
             }
 
-            Spacer(minLength: 8)
-
-            topRightActions
+            greetingTitle
         }
-        .padding(.top, safeAreaTopInset + 6)
-        .padding(.horizontal, SeasonSpacing.md)
-        .padding(.bottom, SeasonSpacing.sm)
-        .background(SeasonColors.primarySurface)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, DS.Spacing.xxs)
+        .padding(.bottom, DS.Spacing.xs)
+    }
+
+    /// Titolo serif del greeting. Composto da tre parti:
+    /// "Buongiorno {nome}, " + *cosa cuciniamo* (italic sage-deep) + " con quello che hai?"
+    private var greetingTitle: Text {
+        let prefix = Text(String(format: greetingOpeningFormat, greetingName) + " ")
+            .font(DS.Font.serif(28, weight: .medium))
+            .foregroundStyle(DS.Color.ink)
+        let middle = Text(greetingEmphasis)
+            .font(DS.Font.serif(28, weight: .medium, italic: true))
+            .foregroundStyle(DS.Color.sageDeep)
+        let suffix = Text(" " + greetingClosing)
+            .font(DS.Font.serif(28, weight: .medium))
+            .foregroundStyle(DS.Color.ink)
+        return Text("\(prefix)\(middle)\(suffix)")
+    }
+
+    /// "APRILE · SETTIMANA 16" formattato con la locale corrente.
+    private var greetingEyebrow: String {
+        let calendar = Calendar.current
+        let now = Date()
+        let monthFormatter = DateFormatter()
+        monthFormatter.locale = Locale.current
+        monthFormatter.setLocalizedDateFormatFromTemplate("LLLL")
+        let monthName = monthFormatter.string(from: now)
+        let weekOfYear = calendar.component(.weekOfYear, from: now)
+        let format = viewModel.localizer.localized("home.eyebrow.month_week_format")
+        return String(format: format, monthName, weekOfYear)
+    }
+
+    /// Saluto contestuale all'ora (buongiorno / buon pomeriggio / buonasera).
+    /// Ritorna il formato con placeholder %@ per il nome utente.
+    private var greetingOpeningFormat: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let key: String
+        switch hour {
+        case 5..<12:  key = "home.greeting.morning_format"
+        case 12..<18: key = "home.greeting.afternoon_format"
+        default:       key = "home.greeting.evening_format"
+        }
+        return viewModel.localizer.localized(key)
+    }
+
+    /// "cosa cuciniamo" — porzione con emphasis italic.
+    private var greetingEmphasis: String {
+        viewModel.localizer.localized("home.greeting.emphasis")
+    }
+
+    /// "con quello che hai?" — chiusura del titolo.
+    private var greetingClosing: String {
+        viewModel.localizer.localized("home.greeting.closing")
+    }
+
+    /// Primo nome dell'utente (fallback "tu" se non disponibile).
+    private var greetingName: String {
+        let raw = CurrentUser.shared.creator.displayName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let firstToken = raw.split(separator: " ").first.map(String.init) ?? ""
+        let cleanedToken = firstToken
+            .filter { $0.isLetter }
+            .map(String.init)
+            .joined()
+        if !cleanedToken.isEmpty,
+           cleanedToken.count >= 2,
+           !firstToken.contains("@"),
+           cleanedToken.lowercased() != "you" {
+            return cleanedToken.prefix(1).uppercased() + cleanedToken.dropFirst()
+        }
+        return viewModel.localizer.localized("home.greeting.fallback_name")
+    }
+
+    /// Top bar v2 — wordmark "Season." (serif, punto sage italic) + icone
+    /// frigo/lista/notifiche a destra. Sostituisce la masthead precedente
+    /// ("Home" + data) che viveva qui prima del refresh v2.
+    private func fixedHeaderRow(safeAreaTopInset: CGFloat) -> some View {
+        SeasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel
+        )
     }
 
     private var homeHeroState: HomeHeroState {
@@ -118,210 +211,599 @@ struct HomeView: View {
         return prep + cook
     }
 
-    private var topRightActions: some View {
-        HStack(spacing: 10) {
-            NavigationLink {
-                FridgeView(
-                    produceViewModel: viewModel,
-                    fridgeViewModel: fridgeViewModel
-                )
-            } label: {
-                Image(systemName: "snowflake")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 34, height: 34)
-                    .background(
-                        Circle()
-                            .fill(SeasonColors.secondarySurface.opacity(0.95))
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.7)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(Rectangle())
-            .buttonStyle(.plain)
-
-            NavigationLink {
-                ShoppingListView(
-                    produceViewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-            } label: {
-                Image(systemName: "bag")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 34, height: 34)
-                    .background(
-                        Circle()
-                            .fill(SeasonColors.secondarySurface.opacity(0.95))
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.7)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(Rectangle())
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(SeasonColors.secondarySurface.opacity(0.7))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-        )
-    }
-
     private var heroContextLabel: String {
         switch homeHeroState {
         case .readyNow:
-            return "Use up your ingredients"
+            return viewModel.localizer.localized("home.hero.context.ready_now")
         case .almostReady:
-            return "One ingredient away"
+            return viewModel.localizer.localized("home.hero.context.almost_ready")
         case .seasonal:
-            return "Peak season pick"
+            return viewModel.localizer.localized("home.hero.context.seasonal")
         }
     }
 
-    private var bestMatchBadgeText: String {
-        if let topMatch = fridgeMatches.first {
-            return "(\(topMatch.matchingCount)/\(topMatch.totalCount))"
-        }
-        if let featured = featuredRecipe {
-            return "(\(featured.seasonalMatchPercent)%)"
-        }
-        return ""
+    private func openRecipe(_ rankedRecipe: RankedRecipe) {
+        selectedRecipeRoute = HomeRecipeRoute(rankedRecipe: rankedRecipe)
     }
 
     @ViewBuilder
     private var cookNowHeroSection: some View {
-        NavigationLink {
-            if let topRecipe = cookNowTopRecipe {
-                RecipeDetailView(
-                    rankedRecipe: topRecipe,
-                    viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-            } else {
-                FridgeView(
-                    produceViewModel: viewModel,
-                    fridgeViewModel: fridgeViewModel
-                )
-            }
-        } label: {
-            VStack(spacing: 0) {
+        let topRecipe = cookNowTopRecipe
+
+        VStack(spacing: 0) {
+            if let topRecipe {
                 ZStack(alignment: .topTrailing) {
-                    Group {
-                        if let topRecipe = cookNowTopRecipe {
-                            recipeImage(
-                                for: topRecipe.recipe,
-                                height: hasFridgeMatches ? 214 : 184
-                            )
-                        } else {
-                            RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color(red: 0.36, green: 0.44, blue: 0.31),
-                                            Color(red: 0.29, green: 0.35, blue: 0.25)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(height: hasFridgeMatches ? 214 : 184)
-                        }
+                    Button {
+                        openRecipe(topRecipe)
+                    } label: {
+                        heroMedia(for: topRecipe)
                     }
+                    .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
 
-                    if !bestMatchBadgeText.isEmpty {
-                        Text(bestMatchBadgeText)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color(red: 0.24, green: 0.29, blue: 0.20))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.white.opacity(0.92))
-                            )
-                            .padding(12)
-                    }
+                    heroCrispyButton(for: topRecipe.recipe)
+                        .padding(14)
                 }
+            } else {
+                NavigationLink {
+                    FridgeView(
+                        produceViewModel: viewModel,
+                        fridgeViewModel: fridgeViewModel,
+                        shoppingListViewModel: shoppingListViewModel,
+                        initialMode: hasFridgeMatches ? .recipes : .inventory
+                        )
+                } label: {
+                    heroEmptyMedia
+                }
+                .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+            }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(heroContextLabel.uppercased())
-                        .font(.caption2.weight(.bold))
-                        .tracking(0.9)
-                        .foregroundStyle(Color(red: 0.35, green: 0.42, blue: 0.30))
+            heroBody(for: topRecipe)
+        }
+        .background(DS.Color.card)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .stroke(DS.Color.border, lineWidth: 1)
+        )
+        .dsShadow(.s2)
+        .padding(.horizontal, homeContentGutter)
+        .padding(.bottom, DS.Spacing.xxl)
+    }
 
-                    Text(cookNowTopRecipe?.recipe.title ?? cookNowHeroTitle)
-                        .font(.system(size: hasFridgeMatches ? 31 : 28, weight: .bold, design: .serif))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
+    @ViewBuilder
+    private func heroMedia(for ranked: RankedRecipe) -> some View {
+        ZStack(alignment: .topLeading) {
+            recipeImage(for: ranked.recipe, height: 246)
 
-                    Text(cookNowHeroSubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-
-                    HStack(spacing: 6) {
-                        Text(cookNowHeroCTA)
-                            .font(.subheadline.weight(.semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.semibold))
-                    }
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(DS.Color.fresh)
+                    .frame(width: 5, height: 5)
+                Text(heroContextLabel)
+                    .font(DS.Font.mono(10, weight: .medium))
+                    .kerning(0.8)
+                    .textCase(.uppercase)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.black.opacity(0.74))
+            )
+            .padding(14)
+        }
+    }
+
+    private var heroEmptyMedia: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [DS.Color.sageSoft, DS.Color.bgSub],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(height: 212)
+
+            Image(systemName: "leaf")
+                .font(.system(size: 48, weight: .light))
+                .foregroundStyle(DS.Color.sageDeep.opacity(0.62))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(DS.Color.fresh)
+                    .frame(width: 5, height: 5)
+                Text(heroContextLabel)
+                    .font(DS.Font.mono(10, weight: .medium))
+                    .kerning(0.8)
+                    .textCase(.uppercase)
+                    .foregroundStyle(DS.Color.sageDeep)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DS.Color.card.opacity(0.86))
+            )
+            .padding(14)
+        }
+    }
+
+    @ViewBuilder
+    private func heroBody(for ranked: RankedRecipe?) -> some View {
+        VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+            if let ranked {
+                ReasonChip(kind: .fridge, text: heroReasonText(for: ranked))
+
+                heroCreatorRow(for: ranked.recipe)
+                    .padding(.top, 2)
+
+                Text(ranked.recipe.title)
+                    .font(DS.Font.serif(26, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.84)
+                    .multilineTextAlignment(.leading)
+                    .padding(.top, 2)
+
+                heroMetaRow(for: ranked.recipe)
+
+                HStack(spacing: DS.Spacing.sm) {
+                    Button {
+                        openRecipe(ranked)
+                    } label: {
+                        heroPrimaryCTA(label: heroCTA(for: ranked))
+                    }
+                    .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+
+                    Button {
+                        viewModel.toggleSavedRecipe(ranked.recipe)
+                    } label: {
+                        heroSecondaryIcon(
+                            systemName: viewModel.isRecipeSaved(ranked.recipe) ? "bookmark.fill" : "bookmark",
+                            isActive: viewModel.isRecipeSaved(ranked.recipe)
+                        )
+                    }
+                    .buttonStyle(PressableCardButtonStyle(pressedScale: 0.96))
+                    .accessibilityLabel(viewModel.localizer.text(.saveRecipe))
+                }
+                .padding(.top, DS.Spacing.xs)
+
+                if hasFridgeMatches {
+                    NavigationLink {
+                        FridgeView(
+                            produceViewModel: viewModel,
+                            fridgeViewModel: fridgeViewModel,
+                            shoppingListViewModel: shoppingListViewModel,
+                            initialMode: .recipes
+                        )
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(viewModel.localizer.localized("home.section.from_fridge.cta"))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .font(DS.Font.sans(13, weight: .semibold))
+                        .foregroundStyle(DS.Color.sageDeep)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                Text(cookNowHeroTitle)
+                    .font(DS.Font.serif(26, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
+                    .lineLimit(2)
+
+                Text(cookNowHeroSubtitle)
+                    .font(DS.Font.sans(13))
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .lineLimit(2)
+
+                NavigationLink {
+                    FridgeView(
+                        produceViewModel: viewModel,
+                        fridgeViewModel: fridgeViewModel,
+                        shoppingListViewModel: shoppingListViewModel,
+                        initialMode: hasFridgeMatches ? .recipes : .inventory
+                        )
+                } label: {
+                    heroPrimaryCTA(label: cookNowHeroCTA)
+                }
+                .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+                .padding(.top, DS.Spacing.xs)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func heroPrimaryCTA(label: String) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(DS.Font.sans(14, weight: .semibold))
+            Image(systemName: "arrow.right")
+                .font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
+        .frame(height: 48)
+        .background(
+            RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                .fill(DS.Color.ink)
+        )
+    }
+
+    private func heroSecondaryIcon(systemName: String, isActive: Bool) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(isActive ? DS.Color.sageDeep : DS.Color.ink)
+            .frame(width: 48, height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                    .fill(DS.Color.bgSub)
+            )
+    }
+
+    @ViewBuilder
+    private func heroCrispyButton(for recipe: Recipe) -> some View {
+        let crispyCount = viewModel.crispyCount(for: recipe)
+        let isActive = viewModel.isRecipeCrispied(recipe)
+        if crispyCount > 0 || isActive {
+            Button {
+                viewModel.toggleRecipeCrispy(recipe)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(crispyCount.compactFormatted())
+                        .font(DS.Font.sans(12, weight: .bold))
+                    Text("crispy")
+                        .font(DS.Font.sans(11, weight: .medium))
+                        .opacity(0.78)
+                }
+                .foregroundStyle(isActive ? DS.Color.Crispy.inkActive : DS.Color.Crispy.inkInactive)
+                .padding(.horizontal, 11)
+                .frame(height: 34)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isActive ? DS.Color.Crispy.bgActive : DS.Color.card.opacity(0.92))
+                )
+                .dsShadow(.s1)
+            }
+            .buttonStyle(PressableCardButtonStyle(pressedScale: 0.94))
+            .accessibilityLabel("Crispy")
+        }
+    }
+
+    private func heroCreatorRow(for recipe: Recipe) -> some View {
+        HStack(spacing: 10) {
+            if isImportedRecipe(recipe) {
+                Circle()
+                    .fill(DS.Color.ochreSoft.opacity(0.72))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(DS.Color.terracotta.opacity(0.72))
+                    )
+                    .overlay(Circle().stroke(DS.Color.borderS, lineWidth: 1))
+            } else {
+                RemoteImageView(
+                    url: recipe.creatorAvatarURL
+                        .flatMap { URL(string: $0.trimmingCharacters(in: .whitespacesAndNewlines)) },
+                    fallbackAssetName: nil
+                )
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(DS.Color.borderS, lineWidth: 1))
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(primaryIdentityLabel(for: recipe))
+                    .font(DS.Font.sans(13, weight: .semibold))
+                    .foregroundStyle(DS.Color.ink)
+                    .lineLimit(1)
+
+                Text(heroCreatorMeta(for: recipe))
+                    .font(DS.Font.sans(11))
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let creatorID = recipe.canonicalCreatorID {
+                Button {
+                    followStore.toggleFollow(creatorID)
+                } label: {
+                    Text(followStore.followingIds.contains(creatorID) ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                        .font(DS.Font.sans(12, weight: .semibold))
+                        .foregroundStyle(followStore.followingIds.contains(creatorID) ? DS.Color.card : DS.Color.ink)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(followStore.followingIds.contains(creatorID) ? DS.Color.ink : Color.clear)
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(DS.Color.borderS, lineWidth: 1.4)
+                        )
+                }
+                .buttonStyle(PressableCardButtonStyle(pressedScale: 0.96))
+            }
+        }
+    }
+
+    private func heroMetaRow(for recipe: Recipe) -> some View {
+        HStack(spacing: 14) {
+            heroMetaItem(value: featuredTimeText(for: recipe), label: nil)
+            heroMetaItem(value: String(format: viewModel.localizer.text(.servesFormat), recipe.servings), label: nil)
+            if let difficulty = recipe.difficulty {
+                Text(viewModel.localizer.recipeDifficultyTitle(difficulty))
+                    .font(DS.Font.sans(12))
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private func heroMetaItem(value: String, label: String?) -> some View {
+        HStack(spacing: 5) {
+            Text(value)
+                .font(DS.Font.sans(12, weight: .semibold))
+                .foregroundStyle(DS.Color.ink)
+            if let label {
+                Text(label)
+                    .font(DS.Font.sans(12))
+                    .foregroundStyle(DS.Color.inkMuted)
+            }
+        }
+    }
+
+    private func heroReasonText(for ranked: RankedRecipe) -> String {
+        if let match = fridgeMatchByRecipeID[ranked.recipe.id] {
+            return String(
+                format: viewModel.localizer.text(.ingredientMatchCountFormat),
+                match.matchingCount,
+                match.totalCount
+            )
+        }
+        return primaryHook(for: ranked).text
+    }
+
+    private func heroCreatorMeta(for recipe: Recipe) -> String {
+        if isImportedRecipe(recipe) {
+            return importedRecipeSubtitle
+        }
+        let followers = viewModel.followerCount(
+            for: recipe.author,
+            isFollowedByCurrentUser: recipe.canonicalCreatorID.map { followStore.followingIds.contains($0) } ?? false
+        )
+        let authoredCount = viewModel.activeRecipes(for: recipe.author).count
+        return "\(followers.compactFormatted()) \(viewModel.localizer.text(.followers)) · \(authoredCount.compactFormatted()) \(viewModel.localizer.text(.recipes))"
+    }
+
+    @ViewBuilder
+    private var freshCreatorStripSection: some View {
+        let stripData = creatorStripData
+        if stripData.count >= 2 {
+            VStack(alignment: .leading, spacing: DS.Spacing.sm) {
+                sectionHeader(
+                    kicker: localizedCreatorStripKicker,
+                    title: localizedCreatorStripSectionTitle,
+                    trailing: viewModel.localizer.localized("home.common.see_all")
+                )
+
+                Button {
+                    withAnimation(quickFilterSelectionAnimation) {
+                        selectedQuickFilter = .following
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        HStack(spacing: -10) {
+                            ForEach(Array(stripData.prefix(4).enumerated()), id: \.offset) { _, entry in
+                                RemoteImageView(url: entry.avatar.url, fallbackAssetName: entry.avatar.fallbackAssetName)
+                                    .frame(width: 34, height: 34)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(DS.Color.card, lineWidth: 2))
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(creatorStripTitle(count: stripData.count))
+                                .font(DS.Font.sans(13, weight: .semibold))
+                                .foregroundStyle(DS.Color.ink)
+                                .lineLimit(1)
+                            Text(creatorStripMeta(from: stripData))
+                                .font(DS.Font.sans(11))
+                                .foregroundStyle(DS.Color.inkMuted)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text(stripData.count.compactFormatted())
+                            .font(DS.Font.mono(10, weight: .medium))
+                            .foregroundStyle(DS.Color.sageDeep)
+                            .padding(.horizontal, 8)
+                            .frame(height: 22)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(DS.Color.sageSoft)
+                            )
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DS.Color.inkMuted)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                     .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(SeasonColors.seasonGreen)
+                        RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
+                            .fill(DS.Color.card)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
+                            .stroke(DS.Color.border, lineWidth: 1)
                     )
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 0, style: .continuous)
-                        .fill(SeasonColors.secondarySurface.opacity(0.95))
-                )
+                .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
-            )
-            .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+            .padding(.horizontal, homeContentGutter)
+            .padding(.bottom, DS.Spacing.xxl)
         }
-        .buttonStyle(PressableCardButtonStyle())
+    }
+
+    @ViewBuilder
+    private func sectionHeader(kicker: String?, title: String, trailing: String?) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                if let kicker, !kicker.isEmpty {
+                    Text(kicker)
+                        .font(DS.Font.eyebrow)
+                        .kerning(1.05)
+                        .textCase(.uppercase)
+                        .foregroundStyle(DS.Color.inkMuted)
+                }
+                Text(title)
+                    .font(DS.Font.cardTitle)
+                    .foregroundStyle(DS.Color.ink)
+            }
+            Spacer(minLength: 12)
+            if let trailing, !trailing.isEmpty {
+                Text(trailing)
+                    .font(DS.Font.sans(13, weight: .medium))
+                    .foregroundStyle(DS.Color.inkMuted)
+            }
+        }
+    }
+
+    private var localizedCreatorStripKicker: String {
+        viewModel.languageCode == "it"
+            ? "Dalla tua rete"
+            : "From your network"
+    }
+
+    private var localizedCreatorStripSectionTitle: String {
+        viewModel.languageCode == "it"
+            ? "Pubblicato questa settimana"
+            : "Posted this week"
+    }
+
+    private var creatorStripData: [(name: String, avatar: FeedImageSource)] {
+        var seen: Set<String> = []
+        var result: [(name: String, avatar: FeedImageSource)] = []
+        for item in activeMiniFeedItems + remainingFeedItems {
+            guard case .recipe(let card) = item else { continue }
+            let recipe = card.ranked.recipe
+            guard recipe.canonicalCreatorID != nil else { continue }
+            let key = recipe.canonicalCreatorID ?? recipe.displayCreatorName
+            guard seen.insert(key).inserted else { continue }
+            result.append((recipe.displayCreatorName, creatorAvatarSource(for: recipe)))
+            if result.count == 6 { break }
+        }
+        return result
+    }
+
+    private func creatorStripTitle(count: Int) -> String {
+        if viewModel.languageCode == "it" {
+            return "\(count) ricette nuove da creator che segui"
+        }
+        return "\(count) new recipes from creators you follow"
+    }
+
+    private func creatorStripMeta(from data: [(name: String, avatar: FeedImageSource)]) -> String {
+        let names = data.prefix(3).map(\.name)
+        if data.count > 3 {
+            return names.joined(separator: " · ") + " · +\(data.count - 3)"
+        }
+        return names.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var stickyFilterSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            quickHorizontalStrip
+                .padding(.horizontal, homeContentGutter)
+                .padding(.top, DS.Spacing.xxs)
+                .padding(.bottom, DS.Spacing.sm)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.Color.bg.opacity(0.94))
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [
+                    DS.Color.bg.opacity(0.0),
+                    DS.Color.bg.opacity(0.44)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 18)
+            .allowsHitTesting(false)
+        }
+        .zIndex(10)
+    }
+
+    @ViewBuilder
+    private var feedHeadingSection: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(feedKicker)
+                    .font(DS.Font.eyebrow)
+                    .kerning(1.05)
+                    .textCase(.uppercase)
+                    .foregroundStyle(DS.Color.inkMuted)
+                Text(feedTitle)
+                    .font(DS.Font.cardTitle)
+                    .foregroundStyle(DS.Color.ink)
+            }
+            Spacer(minLength: 12)
+        }
+        .padding(.horizontal, homeContentGutter)
+        .padding(.top, DS.Spacing.sm)
+        .padding(.bottom, DS.Spacing.lg)
+    }
+
+    private var feedKicker: String {
+        selectedQuickFilter?.title(using: viewModel.localizer)
+            ?? homeCopyWeeklyLabel
+    }
+
+    private var feedTitle: String {
+        selectedQuickFilter == nil
+            ? homeCopyWeeklyTitle
+            : localizedFilteredFeedTitle
+    }
+
+    private var localizedFilteredFeedTitle: String {
+        viewModel.languageCode == "it"
+            ? "Ricette per il tuo momento"
+            : "Recipes for your moment"
     }
 
     private var cookNowTopRecipe: RankedRecipe? {
-        guard !fridgeMatches.isEmpty else { return nil }
-        return fridgeMatches.first?.rankedRecipe
+        let feedPool = mainContinuousFeedItems.compactMap { item -> RankedRecipe? in
+            if case .recipe(let card) = item { return card.ranked }
+            return nil
+        }
+        let priorityPool = fridgeMatches.map(\.rankedRecipe)
+            + [featuredRecipe].compactMap { $0 }
+            + feedPool
+            + viewModel.homeRankedRecipes(limit: 24)
+        if let socialVisualLead = priorityPool.first(where: {
+            recipeHasEditorialMedia($0.recipe) && !isImportedRecipe($0.recipe)
+        }) {
+            return socialVisualLead
+        }
+        if let visualLead = priorityPool.first(where: { recipeHasEditorialMedia($0.recipe) }) {
+            return visualLead
+        }
+        return priorityPool.first
     }
 
     private var hasFridgeMatches: Bool {
         !fridgeMatches.isEmpty
-    }
-
-    private var homeCopyFromYourFridgeTitle: String {
-        viewModel.localizer.localized("home.section.from_fridge.title")
-    }
-
-    private var homeCopyFridgeSubtitle: String {
-        viewModel.localizer.localized("home.section.from_fridge.subtitle")
-    }
-
-    private var homeCopySeeAllMatches: String {
-        viewModel.localizer.localized("home.section.from_fridge.cta")
     }
 
     private var homeCopySeasonalTitle: String {
@@ -336,10 +818,6 @@ struct HomeView: View {
         viewModel.localizer.localized("home.section.seasonal.cta")
     }
 
-    private var homeCopyMoreIdeas: String {
-        viewModel.localizer.localized("home.section.more_ideas")
-    }
-
     private var homeCopyWeeklyLabel: String {
         viewModel.localizer.localized("home.section.weekly.label")
     }
@@ -348,19 +826,8 @@ struct HomeView: View {
         viewModel.localizer.localized("home.section.weekly.title")
     }
 
-    private var homeCopyInStockBadge: String {
-        viewModel.localizer.localized("home.badge.in_stock")
-    }
-
     private var homeCopyRecipesCountSuffix: String {
         viewModel.localizer.localized("home.badge.recipes")
-    }
-
-    private var homeMastheadLabel: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.setLocalizedDateFormatFromTemplate("EEEE d MMM")
-        return formatter.string(from: Date())
     }
 
     private var topLaneRecipeIDs: Set<String> {
@@ -400,153 +867,46 @@ struct HomeView: View {
         return viewModel.localizer.localized("home.hero.cta.add_ingredients")
     }
 
-    @ViewBuilder
-    private var readyToCookNowSection: some View {
-        let heroRecipeID = cookNowTopRecipe?.recipe.id
-        let fridgeMatchesExcludingHero = fridgeMatches.filter { match in
-            guard let heroRecipeID else { return true }
-            return match.rankedRecipe.recipe.id != heroRecipeID
-        }
-
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(homeCopyFromYourFridgeTitle)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(homeCopyFridgeSubtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 10)
-                NavigationLink {
-                    FridgeRecipeMatchesView(
-                        produceViewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel,
-                        fridgeViewModel: fridgeViewModel
-                    )
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(homeCopySeeAllMatches)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(SeasonColors.secondarySurface.opacity(0.8))
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
-                }
-                .buttonStyle(.plain)
-                .layoutPriority(1)
-            }
-
-            if fridgeMatchesExcludingHero.isEmpty {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "snowflake")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 1)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(viewModel.localizer.text(.quickActionNoMatchesYet))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text(viewModel.localizer.text(.quickActionAddIngredientsHint))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(fridgeMatchesExcludingHero.prefix(4)).indices, id: \.self) { index in
-                        let match = fridgeMatchesExcludingHero[index]
-                        NavigationLink {
-                            RecipeDetailView(
-                                rankedRecipe: match.rankedRecipe,
-                                viewModel: viewModel,
-                                shoppingListViewModel: shoppingListViewModel
-                            )
-                        } label: {
-                            HStack(spacing: 10) {
-                                recipeImage(for: match.rankedRecipe.recipe, height: 66, width: 82)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(match.rankedRecipe.recipe.title)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(2)
-
-                                    Text(fridgePrimaryMessage(for: match))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-
-                                    Text("\(match.matchingCount)/\(match.totalCount) \(homeCopyInStockBadge)")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(Color(red: 0.34, green: 0.42, blue: 0.30))
-                                        .lineLimit(1)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressableCardButtonStyle())
-
-                        if index < min(3, fridgeMatchesExcludingHero.prefix(4).count - 1) {
-                            Divider()
-                                .overlay(Color.primary.opacity(0.07))
-                                .padding(.leading, 92)
-                        }
-                    }
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(SeasonColors.secondarySurface.opacity(0.74))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
-                )
-            }
-        }
+    private func heroCTA(for ranked: RankedRecipe) -> String {
+        viewModel.localizer.localized("home.hero.cta.start")
     }
 
     private var seasonalNowSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-            HStack(alignment: .center) {
-                Text(homeCopySeasonalTitle)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Spacer()
+        VStack(alignment: .leading, spacing: DS.Spacing.md) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(homeCopySeasonalSubtitle)
+                        .font(DS.Font.eyebrow)
+                        .kerning(1.05)
+                        .textCase(.uppercase)
+                        .foregroundStyle(DS.Color.inkMuted)
+                    Text(homeCopySeasonalTitle)
+                        .font(DS.Font.cardTitle)
+                        .foregroundStyle(DS.Color.ink)
+                }
+
+                Spacer(minLength: 12)
+
                 NavigationLink {
                     InSeasonTodayView(
                         viewModel: viewModel,
                         shoppingListViewModel: shoppingListViewModel
                     )
                 } label: {
-                    Text(homeCopySeasonalCTA)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(homeCopySeasonalCTA)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .font(DS.Font.sans(13, weight: .medium))
+                    .foregroundStyle(DS.Color.inkMuted)
                 }
                 .buttonStyle(.plain)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(Array(seasonalSpotlightItems.prefix(8)), id: \.item.id) { ranked in
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(Array(seasonalSpotlightItems.prefix(10)), id: \.item.id) { ranked in
                         NavigationLink {
                             ProduceDetailView(
                                 item: ranked.item,
@@ -555,240 +915,141 @@ struct HomeView: View {
                             )
                             .environmentObject(fridgeViewModel)
                         } label: {
-                            VStack(alignment: .center, spacing: 3) {
-                                ProduceThumbnailView(item: ranked.item, size: 44)
-                                    .frame(width: 44, height: 44)
+                            VStack(alignment: .center, spacing: 6) {
+                                ZStack {
+                                    Circle()
+                                        .fill(DS.Color.bgSub)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(DS.Color.sageSoft, lineWidth: 2)
+                                                .padding(1)
+                                        )
+
+                                    ProduceThumbnailView(item: ranked.item, size: 78)
+                                        .clipShape(Circle())
+
+                                    if ranked.item.seasonalityPhase(month: viewModel.currentMonth) == .inSeason {
+                                        Circle()
+                                            .fill(DS.Color.sage)
+                                            .frame(width: 14, height: 14)
+                                            .overlay(Circle().stroke(DS.Color.bg, lineWidth: 2))
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                                            .offset(x: -2, y: -2)
+                                    }
+                                }
+                                .frame(width: 78, height: 78)
 
                                 Text(ranked.item.displayName(languageCode: viewModel.languageCode))
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.primary)
+                                    .font(DS.Font.sans(11, weight: .semibold))
+                                    .foregroundStyle(DS.Color.ink)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
 
                                 Text("\(ingredientUsageCountByID[ranked.item.id] ?? 0) \(homeCopyRecipesCountSuffix)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(DS.Font.mono(9, weight: .regular))
+                                    .kerning(0.45)
+                                    .foregroundStyle(DS.Color.inkMuted)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                             }
-                            .frame(width: 72)
+                            .frame(width: 78)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableCardButtonStyle(pressedScale: 0.96))
                     }
                 }
-                .padding(.horizontal, 1)
+                .padding(.horizontal, homeContentGutter)
+                .padding(.vertical, 4)
             }
+            .padding(.horizontal, -homeContentGutter)
         }
-        .padding(.top, 2)
-        .padding(.bottom, SeasonSpacing.xs)
+        .padding(.horizontal, homeContentGutter)
+        .padding(.bottom, DS.Spacing.xxl)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var demotedHomeSections: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-            Text(homeCopyMoreIdeas)
-                .font(.caption.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(0.7)
-                .foregroundStyle(.secondary)
-
-            weeklyDiscoveriesSection
-            if hasSmartSuggestionContent {
-                smartSuggestionsFeedArea
-            }
-        }
-        .padding(.top, SeasonSpacing.sm)
-        .opacity(0.94)
     }
 
     private var seasonalSpotlightItems: [RankedInSeasonItem] {
         buildSeasonalSpotlight(usageCountByID: ingredientUsageCountByID)
     }
 
-    private var discoveryCards: [HookedRecipeCard] {
-        var seen: Set<String> = []
-        let combined = (activeMiniFeedItems + remainingFeedItems)
-            .compactMap { item -> HookedRecipeCard? in
-                if case .recipe(let card, _) = item { return card }
-                return nil
-            }
-            .filter { card in
-                if seen.contains(card.ranked.recipe.id) {
-                    return false
-                }
-                if topLaneRecipeIDs.contains(card.ranked.recipe.id) {
-                    return false
-                }
-                seen.insert(card.ranked.recipe.id)
-                return true
-            }
-        return Array(combined.prefix(8))
-    }
-
-    private var hasSmartSuggestionContent: Bool {
-        if selectedQuickFilter != nil {
-            return !activeFilteredFeedItems.isEmpty
-        }
-        return !(activeMiniFeedItems.isEmpty && remainingFeedItems.isEmpty)
-    }
-
-    @ViewBuilder
-    private var weeklyDiscoveriesSection: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
-            Text(homeCopyWeeklyLabel)
-                .font(.caption2.weight(.bold))
-                .textCase(.uppercase)
-                .tracking(1.1)
-                .foregroundStyle(Color(red: 0.32, green: 0.38, blue: 0.28))
-
-            Text(homeCopyWeeklyTitle)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primary)
-
-            if let lead = discoveryCards.first {
-                NavigationLink {
-                    RecipeDetailView(
-                        rankedRecipe: lead.ranked,
-                        viewModel: viewModel,
-                        shoppingListViewModel: shoppingListViewModel
-                    )
-                } label: {
-                    ZStack(alignment: .bottomLeading) {
-                        recipeImage(for: lead.ranked.recipe, height: 252)
-                            .opacity(0.97)
-                        LinearGradient(
-                            colors: [Color.black.opacity(0.72), .clear],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(lead.ranked.recipe.title)
-                                .font(.title2.weight(.bold))
-                                .foregroundStyle(.white.opacity(0.98))
-                                .lineLimit(2)
-                            Text(lead.ranked.recipe.author)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.84))
-                                .lineLimit(1)
-                        }
-                        .padding(16)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.primary.opacity(0.06), lineWidth: 0.7)
-                    )
-                }
-                .buttonStyle(PressableCardButtonStyle())
-            }
-
-            let secondaryCards = Array(discoveryCards.dropFirst().prefix(4))
-            if !secondaryCards.isEmpty {
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                    spacing: 10
-                ) {
-                    ForEach(secondaryCards, id: \.ranked.recipe.id) { card in
-                        NavigationLink {
-                            RecipeDetailView(
-                                rankedRecipe: card.ranked,
-                                viewModel: viewModel,
-                                shoppingListViewModel: shoppingListViewModel
-                            )
-                        } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                recipeImage(for: card.ranked.recipe, height: 110)
-                                    .opacity(0.96)
-
-                                Text(card.ranked.recipe.title)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .padding(8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                    .fill(SeasonColors.secondarySurface.opacity(0.62))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-                            )
-                        }
-                        .buttonStyle(PressableCardButtonStyle())
-                    }
-                }
-            }
-        }
-        .opacity(0.95)
-    }
-
+    /// Filter chips v2 — pillole con bordo, sfondo sottile e stato attivo
+    /// su `DS.Color.ink` (non più verde). Niente container esterno: è una
+    /// riga di scroll orizzontale minimale in linea col prototipo.
     @ViewBuilder
     private var quickHorizontalStrip: some View {
-        SeasonCardContainer(
-            content: {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: SeasonSpacing.xs) {
-                        ForEach(homeQuickFilters) { filter in
-                            Button {
-                                selectQuickFilter(filter)
-                            } label: {
-                                SeasonBadge(
-                                    text: filter.title(using: viewModel.localizer),
-                                    icon: filter.iconName,
-                                    horizontalPadding: SeasonSpacing.xs + 2,
-                                    verticalPadding: SeasonSpacing.xs,
-                                    cornerRadius: SeasonRadius.small,
-                                    foreground: selectedQuickFilter == filter ? .white : .primary,
-                                    background: selectedQuickFilter == filter
-                                    ? SeasonColors.seasonGreen.opacity(0.92)
-                                    : SeasonColors.subtleSurface
-                                )
-                                .contentShape(Rectangle())
-                            }
-                            .frame(minHeight: 34)
-                            .contentShape(Rectangle())
-                            .buttonStyle(.plain)
-                        }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                if selectedQuickFilter == .following {
+                    HStack(spacing: 5) {
+                        Image(systemName: HomeQuickFilter.following.iconName)
+                            .font(.system(size: 11, weight: .medium))
+                        Text(HomeQuickFilter.following.title(using: viewModel.localizer))
+                            .font(DS.Font.chip)
                     }
-                    .padding(.horizontal, SeasonSpacing.xs + 2)
-                    .padding(.vertical, SeasonSpacing.xs + 2)
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(DS.Color.ink)
+                    )
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            },
-            cornerRadius: SeasonRadius.large,
-            background: SeasonColors.subtleSurface,
-            backgroundOpacity: 0.72,
-            borderOpacity: 0.06,
-            shadowOpacity: 0.01,
-            shadowRadius: 5,
-            shadowY: 2
-        )
-        .padding(.top, 2)
-        .padding(.bottom, 0)
-        .background(Color(.systemGroupedBackground))
-        .contentShape(Rectangle())
-        .allowsHitTesting(true)
+
+                Button {
+                    withAnimation(quickFilterSelectionAnimation) {
+                        selectedQuickFilter = nil
+                    }
+                } label: {
+                    Text(localizedAllFilterTitle)
+                        .font(DS.Font.chip)
+                        .foregroundStyle(selectedQuickFilter == nil ? Color.white : DS.Color.ink)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(selectedQuickFilter == nil ? DS.Color.ink : DS.Color.card)
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(selectedQuickFilter == nil ? Color.clear : DS.Color.borderM, lineWidth: 1)
+                        )
+                        .contentShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                ForEach(homeQuickFilters) { filter in
+                    let isActive = selectedQuickFilter == filter
+                    Button {
+                        selectQuickFilter(filter)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: filter.iconName)
+                                .font(.system(size: 11, weight: .medium))
+                            Text(filter.title(using: viewModel.localizer))
+                                .font(DS.Font.chip)
+                        }
+                        .foregroundStyle(isActive ? Color.white : DS.Color.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isActive ? DS.Color.ink : DS.Color.card)
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(isActive ? Color.clear : DS.Color.borderM, lineWidth: 1)
+                        )
+                        .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        }
     }
 
-    private var smartSuggestionsFeedArea: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                SeasonSectionHeader(title: viewModel.localizer.text(.smartSuggestionsTitle))
-                Spacer()
-                Text(viewModel.localizer.localized("home.smart_suggestions.filter_hint"))
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            quickHorizontalStrip
-            mixedFeedSection
-        }
+    private var localizedAllFilterTitle: String {
+        viewModel.languageCode == "it" ? "Tutte" : "All"
     }
 
     @ViewBuilder
@@ -796,77 +1057,580 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
             if let selectedQuickFilter {
                 filterContextHeader(for: selectedQuickFilter)
+                    .padding(.horizontal, homeContentGutter)
+                    .padding(.bottom, DS.Spacing.xs)
 
                 if selectedQuickFilter == .following && activeFilteredFeedItems.isEmpty {
                     followingFeedEmptyState
                 }
 
-                VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(Array(activeFilteredFeedItems.enumerated()), id: \.element.id) { index, item in
-                        switch item {
-                        case .recipe(let card, let style):
-                            homeRecipeItem(card: card, style: style)
-                                .padding(.top, style == .large ? SeasonSpacing.xs : 0)
-                                .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
-                                .onAppear {
-                                    let nearEndThreshold = max(0, activeFilteredFeedItems.count - 3)
-                                    viewModel.loadNextRecipePageIfNeeded(isNearEnd: index >= nearEndThreshold)
-                                }
-                        case .followingFallbackSeparator:
-                            followingFallbackSeparatorLabel
-                                .padding(.top, SeasonSpacing.xs)
-                        case .fridge:
-                            EmptyView()
-                        case .spotlight:
-                            EmptyView()
-                        }
-                    }
-                }
+                // Filtered branch: rhythm-styled cards, no editorial bands.
+                rhythmFeedBody(
+                    items: activeFilteredFeedItems,
+                    includeEditorialBands: false
+                )
             } else {
-                VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-                    ForEach(Array(activeMiniFeedItems.enumerated()), id: \.element.id) { _, item in
-                        switch item {
-                        case .recipe(let card, let style):
-                            homeRecipeItem(card: card, style: style)
-                                .padding(.bottom, style == .large ? SeasonSpacing.xs : 0)
-                        case .followingFallbackSeparator:
-                            EmptyView()
-                        case .fridge(let match):
-                            fridgeSuggestionCard(match)
-                                .padding(.top, SeasonSpacing.xs)
-                                .padding(.bottom, SeasonSpacing.xs)
-                        case .spotlight(let ingredient):
-                            spotlightCard(for: ingredient)
-                                .padding(.top, SeasonSpacing.xs)
-                                .padding(.bottom, SeasonSpacing.xs)
-                        }
-                    }
-                }
+                // Default branch: full v2b rhythm with editorial injections.
+                rhythmFeedBody(
+                    items: activeMiniFeedItems + remainingFeedItems,
+                    includeEditorialBands: true
+                )
+            }
+        }
+    }
 
-                ForEach(Array(remainingFeedItems.enumerated()), id: \.element.id) { index, item in
-                    switch item {
-                    case .recipe(let card, let style):
-                        homeRecipeItem(card: card, style: style)
-                            .padding(.top, style == .large ? SeasonSpacing.sm : 0)
-                            .padding(.bottom, style == .large ? SeasonSpacing.sm : 0)
-                            .onAppear {
-                                let nearEndThreshold = max(0, remainingFeedItems.count - 3)
-                                viewModel.loadNextRecipePageIfNeeded(isNearEnd: index >= nearEndThreshold)
-                            }
-                    case .followingFallbackSeparator:
-                        EmptyView()
-                    case .fridge(let match):
-                        fridgeSuggestionCard(match)
+    /// Shared rendering for the mixed feed. Iterates the domain items, maps
+    /// each `.recipe` to a rhythm slot (classic/split/compact) and inserts
+    /// full-bleed editorial bands between recipes when `includeEditorialBands`
+    /// is true.
+    @ViewBuilder
+    private func rhythmFeedBody(items: [HomeFeedItem], includeEditorialBands: Bool) -> some View {
+        let indexed = indexedFeedItems(items)
+        let paginationTotal = indexed.count
+
+        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+            ForEach(indexed) { entry in
+                switch entry.item {
+                case .recipe(let card):
+                    let slot = rhythmSlot(for: entry.recipeIndex ?? 0)
+                    rhythmRecipeItem(card: card, slot: slot)
+                        .padding(.horizontal, homeContentGutter)
+                        .padding(.top, slot == .classic ? SeasonSpacing.xs : 0)
+                        .padding(.bottom, slot == .classic ? SeasonSpacing.sm : 0)
+                        .onAppear {
+                            let nearEndThreshold = max(0, paginationTotal - 3)
+                            viewModel.loadNextRecipePageIfNeeded(isNearEnd: entry.position >= nearEndThreshold)
+                        }
+
+                    if includeEditorialBands,
+                       let recipeIdx = entry.recipeIndex,
+                       let injection = editorialInjection(afterRecipeAt: recipeIdx) {
+                        editorialInjectionView(for: injection)
+                    }
+
+                case .followingFallbackSeparator:
+                    if selectedQuickFilter == .following {
+                        followingFallbackSeparatorLabel
+                            .padding(.horizontal, homeContentGutter)
                             .padding(.top, SeasonSpacing.xs)
-                            .padding(.bottom, SeasonSpacing.xs)
-                    case .spotlight(let ingredient):
-                        spotlightCard(for: ingredient)
-                            .padding(.top, SeasonSpacing.xs)
-                            .padding(.bottom, SeasonSpacing.xs)
                     }
                 }
             }
         }
+    }
+
+    /// Walk `items` once and compute, for every `.recipe`, its position in
+    /// the recipe-only sub-sequence. Other cases get `recipeIndex == nil`.
+    private func indexedFeedItems(_ items: [HomeFeedItem]) -> [IndexedHomeFeedItem] {
+        var result: [IndexedHomeFeedItem] = []
+        result.reserveCapacity(items.count)
+        var recipeCounter = 0
+        for (position, item) in items.enumerated() {
+            if item.isRecipe {
+                result.append(IndexedHomeFeedItem(item: item, recipeIndex: recipeCounter, position: position))
+                recipeCounter += 1
+            } else {
+                result.append(IndexedHomeFeedItem(item: item, recipeIndex: nil, position: position))
+            }
+        }
+        return result
+    }
+
+    // MARK: - Rhythm slot resolution
+
+    /// Rhythm pattern pulled from `home-prototype-v2b.html`. Twelve-slot cycle
+    /// so the cadence repeats visibly even on very long feeds.
+    private func rhythmSlot(for recipeIndex: Int) -> HomeFeedRhythmSlot {
+        // classic → split → classic → compact → split → compact →
+        // classic → compact → split → compact → classic → compact
+        let pattern: [HomeFeedRhythmSlot] = [
+            .classic, .split, .classic, .compact,
+            .split,   .compact, .classic, .compact,
+            .split,   .compact, .classic, .compact,
+        ]
+        let safeIndex = max(0, recipeIndex)
+        return pattern[safeIndex % pattern.count]
+    }
+
+    /// Inject each editorial module once, matching the v2b cadence: recipe
+    /// rhythm first, then one seasonal recipe band, one tip, one nudge, one
+    /// collection and one community pulse.
+    private func editorialInjection(afterRecipeAt recipeIndex: Int) -> HomeFeedEditorialInjection? {
+        guard recipeIndex >= 0 else { return nil }
+        let ordinal = recipeIndex + 1 // "after the Nth recipe"
+        switch ordinal {
+        case 2:  return .peakCarousel
+        case 4:  return .tipBand
+        case 5:  return .nudgeCard
+        case 7:  return .collectionTile
+        case 9:  return .pulseBand
+        default: return nil
+        }
+    }
+
+    // MARK: - Rhythm recipe rendering
+
+    @ViewBuilder
+    private func rhythmRecipeItem(card: HookedRecipeCard, slot: HomeFeedRhythmSlot) -> some View {
+        let followed = isFollowedCreator(card.ranked.recipe.canonicalCreatorID)
+        let showFollowingSignal = selectedQuickFilter == .following && followed
+        let resolvedSlot = resolvedRhythmSlot(for: card, proposed: slot)
+
+        switch resolvedSlot {
+        case .classic:
+            largeRecipeCard(
+                ranked: card.ranked,
+                hook: card.hook,
+                showFollowingSignal: showFollowingSignal
+            )
+        case .split:
+            ZStack(alignment: .topLeading) {
+                Button {
+                    openRecipe(card.ranked)
+                } label: {
+                    FeedCardSplit(
+                        image: feedImageSource(for: card.ranked.recipe),
+                        reasonKind: reasonKind(for: card),
+                        reasonText: card.hook,
+                        title: card.ranked.recipe.title,
+                        creatorName: feedCreatorLabel(for: card.ranked.recipe),
+                        creatorAvatar: creatorAvatarSource(for: card.ranked.recipe),
+                        identityKind: identityKind(for: card.ranked.recipe),
+                        meta: metaLine(for: card.ranked.recipe)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                feedCrispyButton(for: card.ranked.recipe)
+                    .padding(.top, 108)
+                    .padding(.leading, 86)
+                    .zIndex(2)
+            }
+        case .compact:
+            Button {
+                openRecipe(card.ranked)
+            } label: {
+                FeedCardCompact(
+                    image: feedImageSource(for: card.ranked.recipe),
+                    reasonKind: reasonKind(for: card),
+                    reasonText: card.hook,
+                    title: card.ranked.recipe.title,
+                    creatorName: feedCreatorLabel(for: card.ranked.recipe),
+                    thumbnailSymbolName: thumbnailSymbolName(for: card.ranked.recipe),
+                    meta: metaLine(for: card.ranked.recipe)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Reason / image / meta mapping for atoms
+
+    private func reasonKind(for card: HookedRecipeCard) -> ReasonKind {
+        if fridgeMatchByRecipeID[card.ranked.recipe.id] != nil { return .fridge }
+        switch card.hookKind {
+        case .readyNow, .almostReady: return .fridge
+        case .trending:               return .trending
+        case .peakSeason:             return .peak
+        case .quickMeal:              return .fresh
+        }
+    }
+
+    private func feedImageSource(for recipe: Recipe) -> FeedImageSource {
+        let trimmedRemote = recipe.imageURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedRemote.isEmpty, let url = URL(string: trimmedRemote) {
+            return FeedImageSource(url: url, fallbackAssetName: nil)
+        }
+        if let cover = resolvedRecipeCoverImage(for: recipe),
+           let remoteURLString = cover.remoteURL,
+           let url = URL(string: remoteURLString) {
+            return FeedImageSource(url: url, fallbackAssetName: nil)
+        }
+        return FeedImageSource(url: nil, fallbackAssetName: nil)
+    }
+
+    private func recipeHasEditorialMedia(_ recipe: Recipe) -> Bool {
+        let trimmedRemote = recipe.imageURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedRemote.isEmpty, URL(string: trimmedRemote) != nil {
+            return true
+        }
+        if let cover = resolvedRecipeCoverImage(for: recipe) {
+            if recipeImageFileURL(for: cover.localPath) != nil {
+                return true
+            }
+            if let remoteURLString = cover.remoteURL,
+               !remoteURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               URL(string: remoteURLString) != nil {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func resolvedRhythmSlot(for card: HookedRecipeCard, proposed: HomeFeedRhythmSlot) -> HomeFeedRhythmSlot {
+        guard !recipeHasEditorialMedia(card.ranked.recipe) else { return proposed }
+        switch proposed {
+        case .classic, .split:
+            return .compact
+        case .compact:
+            return .compact
+        }
+    }
+
+    private func creatorAvatarSource(for recipe: Recipe) -> FeedImageSource {
+        if isImportedRecipe(recipe) {
+            return FeedImageSource(url: nil, fallbackAssetName: nil)
+        }
+        let trimmed = recipe.creatorAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmed.isEmpty, let url = URL(string: trimmed) {
+            return FeedImageSource(url: url, fallbackAssetName: nil)
+        }
+        return FeedImageSource(url: nil, fallbackAssetName: nil)
+    }
+
+    private func identityKind(for recipe: Recipe) -> FeedIdentityKind {
+        isImportedRecipe(recipe) ? .source : .creator
+    }
+
+    private func thumbnailSymbolName(for recipe: Recipe) -> String {
+        isImportedRecipe(recipe) ? "doc.text" : "fork.knife"
+    }
+
+    private func feedCreatorLabel(for recipe: Recipe) -> String {
+        if let sourceName = importedSourceName(for: recipe) {
+            return sourceName
+        }
+        let displayName = recipe.displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !displayName.isEmpty, displayName.lowercased() != "unknown" {
+            return displayName
+        }
+        if let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !sourceName.isEmpty {
+            return sourceName
+        }
+        return viewModel.languageCode == "it" ? "Season" : "Season"
+    }
+
+    private func metaLine(for recipe: Recipe) -> FeedMetaLine {
+        let time = displayableTimeText(for: recipe)
+        let totalMinutes = recipeTotalMinutes(recipe)
+        let secondary: String?
+        if totalMinutes > 0, let difficulty = recipe.difficulty {
+            secondary = viewModel.localizer.recipeDifficultyTitle(difficulty)
+        } else {
+            secondary = nil
+        }
+        let fallback = isImportedRecipe(recipe) ? importedRecipeMetaFallback : localizedRecipeMetaFallback
+        return FeedMetaLine(primary: time ?? secondary ?? fallback, secondary: time == nil ? nil : secondary)
+    }
+
+    private func isImportedRecipe(_ recipe: Recipe) -> Bool {
+        recipe.canonicalCreatorID == nil && importedSourceName(for: recipe) != nil
+    }
+
+    private func importedSourceName(for recipe: Recipe) -> String? {
+        guard let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !sourceName.isEmpty else {
+            return nil
+        }
+        return sourceName
+    }
+
+    private var importedRecipeSubtitle: String {
+        viewModel.languageCode == "it" ? "Fonte esterna" : "External source"
+    }
+
+    private var importedRecipeMetaFallback: String {
+        viewModel.languageCode == "it" ? "Ricetta esterna" : "External recipe"
+    }
+
+    private func primaryIdentityLabel(for recipe: Recipe) -> String {
+        if let sourceName = importedSourceName(for: recipe) {
+            return sourceName
+        }
+        let displayName = recipe.displayCreatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !displayName.isEmpty, displayName.lowercased() != "unknown" {
+            return displayName
+        }
+        return "Season"
+    }
+
+    // MARK: - Editorial injections
+
+    @ViewBuilder
+    private func editorialInjectionView(for injection: HomeFeedEditorialInjection) -> some View {
+        switch injection {
+        case .peakCarousel:    peakCarouselBandView
+        case .tipBand:        tipBandView
+        case .nudgeCard:      nudgeCardView
+        case .collectionTile: collectionTileView
+        case .pulseBand:      pulseBandView
+        }
+    }
+
+    @ViewBuilder
+    private var peakCarouselBandView: some View {
+        let cards = peakRecipeCards()
+        if !cards.isEmpty {
+            PeakCarouselBand(
+                kicker: viewModel.localizer.localized("home.band.peak.kicker"),
+                title: viewModel.localizer.localized("home.band.peak.title"),
+                titleEmphasis: viewModel.localizer.localized("home.band.peak.title_em"),
+                cards: cards,
+                onSelect: { selected in
+                    if let ranked = rankedRecipe(forID: selected.id) {
+                        openRecipe(ranked)
+                    }
+                }
+            )
+        }
+    }
+
+    private var tipBandView: some View {
+        TipCardBand(
+            kicker: viewModel.localizer.localized("home.tip.kicker"),
+            text: viewModel.localizer.localized("home.tip.text"),
+            textEmphasis: viewModel.localizer.localized("home.tip.text_em"),
+            ctaText: viewModel.localizer.localized("home.tip.cta"),
+            isInteractive: false
+        )
+    }
+
+    @ViewBuilder
+    private var collectionTileView: some View {
+        let recipes = collectionRecipes()
+        let thumbs = recipes.prefix(3).map { feedImageSource(for: $0.recipe) }
+        if thumbs.count >= 3 {
+            let readyCount = recipes.reduce(into: 0) { partial, ranked in
+                if let match = fridgeMatchByRecipeID[ranked.recipe.id], match.missingCount <= 1 {
+                    partial += 1
+                }
+            }
+            let meta = String(
+                format: viewModel.localizer.localized("home.collection.meta_format"),
+                readyCount
+            )
+            let kicker = String(
+                format: viewModel.localizer.localized("home.collection.kicker"),
+                recipes.count
+            )
+            CollectionTile(
+                kicker: kicker,
+                title: viewModel.localizer.localized("home.collection.title"),
+                meta: meta,
+                ctaText: viewModel.localizer.localized("home.collection.cta"),
+                thumbs: thumbs,
+                isInteractive: false
+            )
+        }
+    }
+
+    private var pulseBandView: some View {
+        let context = pulseContext()
+        return CommunityPulseBand(
+            liveLabel: viewModel.localizer.localized("home.pulse.live"),
+            headline: context.headline,
+            emphasis: context.emphasis,
+            subline: context.subline,
+            avatars: context.avatars
+        )
+    }
+
+    @ViewBuilder
+    private var nudgeCardView: some View {
+        if let suggestion = suggestedCreatorNudge() {
+            NudgeCard(
+                kicker: viewModel.localizer.localized("home.nudge.kicker"),
+                name: suggestion.name,
+                bio: suggestion.bio,
+                reason: viewModel.localizer.localized("home.nudge.reason_format"),
+                avatar: suggestion.avatar,
+                followLabel: suggestion.isFollowing
+                    ? viewModel.localizer.localized("home.nudge.following")
+                    : viewModel.localizer.localized("home.nudge.follow"),
+                isFollowing: suggestion.isFollowing,
+                onFollow: { suggestion.toggleFollow() }
+            )
+        }
+    }
+
+    // MARK: - Editorial helper data
+
+    private func collectionRecipes() -> [RankedRecipe] {
+        let pool = (activeMiniFeedItems + remainingFeedItems)
+            .compactMap { item -> RankedRecipe? in
+                if case .recipe(let card) = item { return card.ranked }
+                return nil
+            }
+        var seen: Set<String> = []
+        var recipes: [RankedRecipe] = []
+        for ranked in pool where ranked.seasonalMatchPercent >= 72 && recipeHasEditorialMedia(ranked.recipe) {
+            guard seen.insert(ranked.recipe.id).inserted else { continue }
+            recipes.append(ranked)
+            if recipes.count == 5 { break }
+        }
+        return recipes
+    }
+
+    private func peakRecipeCards() -> [PeakIngredientCard] {
+        let pool = (activeMiniFeedItems + remainingFeedItems)
+            .compactMap { item -> RankedRecipe? in
+                if case .recipe(let card) = item { return card.ranked }
+                return nil
+            }
+
+        var seen: Set<String> = []
+        let seasonal = pool
+            .filter { $0.seasonalMatchPercent >= 70 && recipeHasEditorialMedia($0.recipe) }
+            .filter { ranked in
+                guard seen.insert(ranked.recipe.id).inserted else { return false }
+                return true
+            }
+            .prefix(8)
+
+        return seasonal.map { ranked in
+            PeakIngredientCard(
+                id: ranked.recipe.id,
+                title: ranked.recipe.title,
+                subtitle: displayableTimeText(for: ranked.recipe) ?? feedCreatorLabel(for: ranked.recipe),
+                image: feedImageSource(for: ranked.recipe)
+            )
+        }
+    }
+
+    private func rankedRecipe(forID recipeID: String) -> RankedRecipe? {
+        for item in activeMiniFeedItems + remainingFeedItems {
+            if case .recipe(let card) = item, card.ranked.recipe.id == recipeID {
+                return card.ranked
+            }
+        }
+        return viewModel.rankedRecipe(forID: recipeID)
+    }
+
+    private func pulseAvatarSources() -> [FeedImageSource] {
+        let pool = (activeMiniFeedItems + remainingFeedItems)
+            .compactMap { item -> Recipe? in
+                if case .recipe(let card) = item { return card.ranked.recipe }
+                return nil
+            }
+        var seen: Set<String> = []
+        var sources: [FeedImageSource] = []
+        for recipe in pool {
+            let avatarRaw = recipe.creatorAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !avatarRaw.isEmpty, let url = URL(string: avatarRaw) else { continue }
+            let key = recipe.canonicalCreatorID ?? avatarRaw
+            if seen.contains(key) { continue }
+            seen.insert(key)
+            sources.append(FeedImageSource(url: url, fallbackAssetName: nil))
+            if sources.count == 4 { break }
+        }
+        if !sources.isEmpty {
+            return sources
+        }
+        return creatorStripData.prefix(4).map(\.avatar)
+    }
+
+    private struct PulseContext {
+        let emphasis: String?
+        let headline: String
+        let subline: String
+        let avatars: [FeedImageSource]
+    }
+
+    private func pulseContext() -> PulseContext {
+        let recipes = (activeMiniFeedItems + remainingFeedItems)
+            .compactMap { item -> Recipe? in
+                if case .recipe(let card) = item { return card.ranked.recipe }
+                return nil
+            }
+        let crispyTotal = recipes.prefix(6).reduce(0) { $0 + viewModel.crispyCount(for: $1) }
+        let creatorNames = Array(NSOrderedSet(array: recipes.map(primaryIdentityLabel(for:)).filter { !$0.isEmpty })) as? [String] ?? []
+        let activeCreatorCount = max(creatorNames.count, pulseAvatarSources().count)
+        let headline: String
+        let subline: String
+
+        if viewModel.languageCode == "it" {
+            headline = activeCreatorCount == 1
+                ? "voce attiva su Season"
+                : "voci attive su Season"
+            let names = creatorNames.prefix(3).joined(separator: " · ")
+            let crispyLine = crispyTotal > 0
+                ? "\(crispyTotal.compactFormatted()) crispy oggi"
+                : "Ricette e fonti in movimento oggi"
+            subline = names.isEmpty
+                ? crispyLine
+                : "\(names) — \(crispyLine)"
+        } else {
+            headline = activeCreatorCount == 1
+                ? "active voice on Season"
+                : "active voices on Season"
+            let names = creatorNames.prefix(3).joined(separator: " · ")
+            let crispyLine = crispyTotal > 0
+                ? "\(crispyTotal.compactFormatted()) crispies today"
+                : "Recipes and sources moving today"
+            subline = names.isEmpty
+                ? crispyLine
+                : "\(names) — \(crispyLine)"
+        }
+
+        return PulseContext(
+            emphasis: activeCreatorCount > 0 ? activeCreatorCount.compactFormatted() : nil,
+            headline: headline,
+            subline: subline,
+            avatars: pulseAvatarSources()
+        )
+    }
+
+    private struct NudgeSuggestion {
+        let id: String
+        let name: String
+        let bio: String
+        let avatar: FeedImageSource
+        let isFollowing: Bool
+        let toggleFollow: () -> Void
+    }
+
+    private func suggestedCreatorNudge() -> NudgeSuggestion? {
+        let pool = (activeMiniFeedItems + remainingFeedItems)
+            .compactMap { item -> Recipe? in
+                if case .recipe(let card) = item { return card.ranked.recipe }
+                return nil
+            }
+        var seenNames: Set<String> = []
+        for recipe in pool {
+            let creatorID = recipe.canonicalCreatorID
+            if let creatorID, followStore.followingIds.contains(creatorID) { continue }
+            if seenNames.contains(recipe.author) { continue }
+            seenNames.insert(recipe.author)
+
+            let avatarRaw = recipe.creatorAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let avatarURL = avatarRaw.isEmpty ? nil : URL(string: avatarRaw)
+            let source = FeedImageSource(url: avatarURL, fallbackAssetName: nil)
+
+            let id = creatorID ?? "author:\(recipe.author)"
+            let isFollowing = creatorID.map { followStore.followingIds.contains($0) } ?? false
+            let capturedCreatorID = creatorID
+            let followers = viewModel.followerCount(for: recipe.author, isFollowedByCurrentUser: isFollowing)
+            let authoredCount = max(1, viewModel.activeRecipes(for: recipe.author).count)
+            let bio = "\(followers.compactFormatted()) \(viewModel.localizer.text(.followers)) · \(authoredCount.compactFormatted()) \(viewModel.localizer.text(.recipes))"
+            return NudgeSuggestion(
+                id: id,
+                name: recipe.author,
+                bio: bio,
+                avatar: source,
+                isFollowing: isFollowing,
+                toggleFollow: {
+                    guard let creatorID = capturedCreatorID else { return }
+                    let store = FollowStore.shared
+                    if store.followingIds.contains(creatorID) {
+                        store.unfollow(creatorID)
+                    } else {
+                        store.follow(creatorID)
+                    }
+                }
+            )
+        }
+        return nil
     }
 
     private var followingFeedEmptyState: some View {
@@ -883,13 +1647,17 @@ struct HomeView: View {
                 }
             } label: {
                 Text(viewModel.localizer.text(.followingFeedEmptyCTA))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .font(DS.Font.sans(14, weight: .semibold))
+                    .foregroundStyle(DS.Color.ink)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(SeasonColors.subtleSurface)
+                            .fill(DS.Color.card)
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(DS.Color.borderM, lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
@@ -1034,17 +1802,8 @@ struct HomeView: View {
             }
             let followingRecipeItems = filtered.flatMap { item -> [HookedRecipeCard] in
                 switch item {
-                case .recipe(let card, _):
+                case .recipe(let card):
                     return [card]
-                case .fridge(let match):
-                    let card = HookedRecipeCard(
-                        ranked: match.rankedRecipe,
-                        hook: fridgePrimaryMessage(for: match),
-                        hookKind: .almostReady
-                    )
-                    return [card]
-                case .spotlight:
-                    return []
                 case .followingFallbackSeparator:
                     return []
                 }
@@ -1072,7 +1831,7 @@ struct HomeView: View {
         guard selectedQuickFilter == .following else { return 0 }
         let followedIDs = followStore.followingIds
         return activeFilteredFeedItems.reduce(into: 0) { partial, item in
-            guard case .recipe(let card, _) = item else { return }
+            guard case .recipe(let card) = item else { return }
             if let creatorID = card.ranked.recipe.canonicalCreatorID,
                followedIDs.contains(creatorID) {
                 partial += 1
@@ -1102,7 +1861,7 @@ struct HomeView: View {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
         let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
         // Rebuild feed only on semantic data/version changes, not raw recipe count churn.
-        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.rankingDataVersion)|\(followingIDs)"
+        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)"
     }
 
     private func refreshHomeFeedCache(for signature: String) async {
@@ -1138,7 +1897,6 @@ struct HomeView: View {
         let ingredientUsageCount = computeIngredientUsageCount(from: homeRecipes)
         let featured = pickFeaturedRecipe(from: homeRecipes, fridgeItemIDs: fridgeIDs)
         let fridgeMatches = buildFridgeSection(featuredID: featured?.recipe.id, fridgeItemIDs: fridgeIDs)
-        let spotlight = buildSeasonalSpotlight(usageCountByID: ingredientUsageCount)
         debugHomeFeed("featured=\(featured?.recipe.id ?? "nil") fridge=\(fridgeMatches.map { $0.rankedRecipe.recipe.id })")
 
         let usedTopIDs = Set(
@@ -1191,8 +1949,6 @@ struct HomeView: View {
         let defaultFeedTargetCount = max(14, min(70, (mergedCards.count / 2) + 8))
         let defaultFeedItems = buildSimpleFeed(
             cards: mergedCards,
-            spotlightItems: spotlight,
-            fridgeMatches: fridgeMatches,
             targetCount: defaultFeedTargetCount
         )
         debugHomeFeed("default feed count=\(defaultFeedItems.count)")
@@ -1275,7 +2031,7 @@ struct HomeView: View {
 
             let primaryRecipeIDs: Set<String> = Set(
                 primaryItems.compactMap { item -> String? in
-                    guard case .recipe(let card, _) = item else { return nil }
+                    guard case .recipe(let card) = item else { return nil }
                     return card.ranked.recipe.id
                 }
             )
@@ -1305,7 +2061,7 @@ struct HomeView: View {
                     trendingCards: [],
                     targetCount: fallbackTarget
                 )
-                let fallbackItems = fallbackCards.prefix(fallbackTarget).map { HomeFeedItem.recipe($0, style: .compact) }
+                let fallbackItems = fallbackCards.prefix(fallbackTarget).map { HomeFeedItem.recipe($0) }
                 return deduplicatedFollowingFeedItems(primaryItems + [.followingFallbackSeparator] + fallbackItems)
             }
             return deduplicatedFollowingFeedItems(primaryItems)
@@ -1389,8 +2145,8 @@ struct HomeView: View {
     ) -> [HomeFeedItem] {
         guard !cards.isEmpty else { return [] }
         var items: [HomeFeedItem] = []
-        for (index, card) in cards.prefix(targetCount).enumerated() {
-            items.append(.recipe(card, style: index == 0 ? .large : .compact))
+        for card in cards.prefix(targetCount) {
+            items.append(.recipe(card))
         }
 
         return items
@@ -1442,15 +2198,13 @@ struct HomeView: View {
 
         for item in items {
             switch item {
-            case .recipe(let card, _):
+            case .recipe(let card):
                 guard !seenRecipeIDs.contains(card.ranked.recipe.id) else { continue }
                 seenRecipeIDs.insert(card.ranked.recipe.id)
                 deduplicated.append(item)
             case .followingFallbackSeparator:
                 guard separatorIndex == nil else { continue }
                 separatorIndex = deduplicated.count
-                deduplicated.append(item)
-            case .fridge, .spotlight:
                 deduplicated.append(item)
             }
         }
@@ -1470,7 +2224,7 @@ struct HomeView: View {
 
     private func firstRecipeID(in items: [HomeFeedItem]) -> String? {
         for item in items {
-            if case .recipe(let card, _) = item {
+            if case .recipe(let card) = item {
                 return card.ranked.recipe.id
             }
         }
@@ -1501,7 +2255,7 @@ struct HomeView: View {
                 trendingIDs: trendingIDs,
                 previousHook: nil
             )
-            return cards.prefix(3).map { HomeFeedItem.recipe($0, style: .compact) }
+            return cards.prefix(3).map { HomeFeedItem.recipe($0) }
         }
 
         let mergedCandidates = mergedCandidateRecipes(
@@ -1533,7 +2287,7 @@ struct HomeView: View {
         )
 
         let miniItems = cards.prefix(3).map { card in
-            HomeFeedItem.recipe(card, style: .compact)
+            HomeFeedItem.recipe(card)
         }
         return guaranteedMiniBlock(from: Array(miniItems))
     }
@@ -1547,13 +2301,13 @@ struct HomeView: View {
         if mini.count >= 3 { return mini }
 
         var existingRecipeIDs = Set(mini.compactMap { item -> String? in
-            if case .recipe(let card, _) = item { return card.ranked.recipe.id }
+            if case .recipe(let card) = item { return card.ranked.recipe.id }
             return nil
         })
         for item in mainContinuousFeedItems where mini.count < 3 {
-            guard case .recipe(let card, _) = item else { continue }
+            guard case .recipe(let card) = item else { continue }
             guard !existingRecipeIDs.contains(card.ranked.recipe.id) else { continue }
-            mini.append(.recipe(card, style: .compact))
+            mini.append(.recipe(card))
             existingRecipeIDs.insert(card.ranked.recipe.id)
         }
 
@@ -1565,7 +2319,7 @@ struct HomeView: View {
                 previousHook: nil
             )
             for card in backupCards where mini.count < 3 {
-                let item = HomeFeedItem.recipe(card, style: .compact)
+                let item = HomeFeedItem.recipe(card)
                 if !existingRecipeIDs.contains(card.ranked.recipe.id) {
                     mini.append(item)
                     existingRecipeIDs.insert(card.ranked.recipe.id)
@@ -1576,26 +2330,11 @@ struct HomeView: View {
         return Array(mini.prefix(3))
     }
 
-    private func feedIdentityKey(for item: HomeFeedItem) -> String {
-        switch item {
-        case .recipe(let card, _):
-            return "recipe-\(card.ranked.recipe.id)"
-        case .fridge(let match):
-            return "fridge-\(match.rankedRecipe.recipe.id)"
-        case .spotlight(let ingredient):
-            return "spotlight-\(ingredient.item.id)"
-        case .followingFallbackSeparator:
-            return "following-fallback-separator"
-        }
-    }
-
     private func recipeIDs(in item: HomeFeedItem) -> Set<String> {
         switch item {
-        case .recipe(let card, _):
+        case .recipe(let card):
             return [card.ranked.recipe.id]
-        case .fridge(let match):
-            return [match.rankedRecipe.recipe.id]
-        case .spotlight, .followingFallbackSeparator:
+        case .followingFallbackSeparator:
             return []
         }
     }
@@ -1871,89 +2610,10 @@ struct HomeView: View {
 
     private func buildSimpleFeed(
         cards: [HookedRecipeCard],
-        spotlightItems: [RankedInSeasonItem],
-        fridgeMatches: [FridgeMatchedRecipe],
         targetCount: Int
     ) -> [HomeFeedItem] {
         guard !cards.isEmpty else { return [] }
-
-        var result: [HomeFeedItem] = []
-        var cardIndex = 0
-        var spotlightIndex = 0
-        var fridgeIndex = 0
-        var breakCycle = 0
-
-        while result.count < targetCount && cardIndex < cards.count {
-            let rowsBeforeBreak = (breakCycle % 2 == 0) ? 3 : 4
-            var rowsAdded = 0
-
-            while rowsAdded < rowsBeforeBreak, cardIndex < cards.count, result.count < targetCount {
-                result.append(.recipe(cards[cardIndex], style: .compact))
-                cardIndex += 1
-                rowsAdded += 1
-            }
-
-            guard result.count < targetCount else { break }
-
-            // Editorial cadence:
-            // first break is a large highlight, then spotlight/fridge,
-            // then large appears again occasionally (every 3 cycles).
-            let prefersLargeBreak = (breakCycle == 0 || breakCycle.isMultiple(of: 3))
-            var insertedBreak = false
-
-            if prefersLargeBreak, cardIndex < cards.count {
-                result.append(.recipe(cards[cardIndex], style: .large))
-                cardIndex += 1
-                insertedBreak = true
-            } else if spotlightIndex < spotlightItems.count {
-                result.append(.spotlight(spotlightItems[spotlightIndex]))
-                spotlightIndex += 1
-                insertedBreak = true
-            } else if fridgeIndex < fridgeMatches.count {
-                result.append(.fridge(fridgeMatches[fridgeIndex]))
-                fridgeIndex += 1
-                insertedBreak = true
-            } else if spotlightIndex < spotlightItems.count {
-                result.append(.spotlight(spotlightItems[spotlightIndex]))
-                spotlightIndex += 1
-                insertedBreak = true
-            } else if fridgeIndex < fridgeMatches.count {
-                result.append(.fridge(fridgeMatches[fridgeIndex]))
-                fridgeIndex += 1
-                insertedBreak = true
-            } else if cardIndex < cards.count, prefersLargeBreak {
-                result.append(.recipe(cards[cardIndex], style: .large))
-                cardIndex += 1
-                insertedBreak = true
-            }
-
-            if !insertedBreak {
-                break
-            }
-            breakCycle += 1
-        }
-
-        return result
-    }
-
-    @ViewBuilder
-    private func homeRecipeItem(card: HookedRecipeCard, style: HomeRecipeCardStyle) -> some View {
-        let followedCreator = isFollowedCreator(card.ranked.recipe.canonicalCreatorID)
-        if style == .large {
-            largeRecipeCard(
-                ranked: card.ranked,
-                hook: card.hook,
-                showFollowingSignal: selectedQuickFilter == .following && followedCreator
-            )
-                .padding(.top, SeasonSpacing.sm)
-                .padding(.bottom, SeasonSpacing.sm)
-        } else {
-            compactRecipeCard(
-                ranked: card.ranked,
-                hook: card.hook,
-                showFollowingSignal: selectedQuickFilter == .following && followedCreator
-            )
-        }
+        return cards.prefix(targetCount).map { HomeFeedItem.recipe($0) }
     }
 
     private func isFollowedCreator(_ creatorID: String?) -> Bool {
@@ -2085,6 +2745,16 @@ struct HomeView: View {
     }
 
     private func featuredTimeText(for recipe: Recipe) -> String {
+        if let time = displayableTimeText(for: recipe) {
+            return time
+        }
+        if isImportedRecipe(recipe) {
+            return importedRecipeMetaFallback
+        }
+        return localizedRecipeMetaFallback
+    }
+
+    private func displayableTimeText(for recipe: Recipe) -> String? {
         let prep = recipe.prepTimeMinutes ?? 0
         let cook = recipe.cookTimeMinutes ?? 0
         let total = prep + cook
@@ -2097,228 +2767,196 @@ struct HomeView: View {
         if let cookOnly = recipe.cookTimeMinutes {
             return "\(cookOnly) \(viewModel.localizer.text(.minutesShort))"
         }
-        return "--"
+        return nil
     }
 
-    private func featuredHook(for ranked: RankedRecipe) -> String {
-        if let fridgeMatch = fridgeMatchByRecipeID[ranked.recipe.id] {
-            if fridgeMatch.missingCount > 0 {
-                return viewModel.localizer.text(.bestWithWhatYouHave)
-            }
-            return viewModel.localizer.text(.quickActionReadyToCook)
-        }
-
-        if ranked.seasonalMatchPercent >= 85 {
-            return viewModel.localizer.recipeTimingTitle(.perfectNow)
-        }
-
-        let total = (ranked.recipe.prepTimeMinutes ?? 0) + (ranked.recipe.cookTimeMinutes ?? 0)
-        if total > 0 {
-            return String(format: viewModel.localizer.text(.readyInMinutesFormat), total)
-        }
-        return viewModel.localizer.text(.readyNow)
-    }
-
-    private func featuredHookIncludesMinutes(for ranked: RankedRecipe) -> Bool {
-        featuredHook(for: ranked).contains(viewModel.localizer.text(.minutesShort))
+    private var localizedRecipeMetaFallback: String {
+        viewModel.localizer.localized("home.meta.recipe")
     }
 
     @ViewBuilder
     private func largeRecipeCard(ranked: RankedRecipe, hook: String, showFollowingSignal: Bool) -> some View {
-        NavigationLink {
-            RecipeDetailView(
-                rankedRecipe: ranked,
-                viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        } label: {
-            VStack(alignment: .leading, spacing: SeasonSpacing.xs + 2) {
-                recipeImage(for: ranked.recipe, height: 172)
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 0) {
+                feedCreatorHeader(for: ranked.recipe, showFollowingSignal: showFollowingSignal)
 
-                Text(ranked.recipe.title)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
+                recipeImage(for: ranked.recipe, height: 188)
+                    .clipShape(Rectangle())
 
-                HStack(spacing: 8) {
-                    Text(ranked.recipe.author)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 8) {
+                    ReasonChip(kind: reasonKind(for: HookedRecipeCard(ranked: ranked, hook: hook, hookKind: primaryHook(for: ranked).kind)), text: hook)
 
-                    if showFollowingSignal {
-                        Text("·")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                        Text(viewModel.localizer.text(.following))
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
+                    Text(ranked.recipe.title)
+                        .font(DS.Font.serif(20, weight: .medium))
+                        .foregroundStyle(DS.Color.ink)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        feedMetaLabel(featuredTimeText(for: ranked.recipe))
+
+                        if let difficulty = ranked.recipe.difficulty {
+                            feedMetaDot
+                            feedMetaLabel(viewModel.localizer.recipeDifficultyTitle(difficulty))
+                        }
+
+                        Spacer(minLength: 0)
                     }
-
-                    SeasonBadge(
-                        text: hook,
-                        horizontalPadding: SeasonSpacing.xs,
-                        verticalPadding: 4,
-                        cornerRadius: SeasonRadius.small,
-                        foreground: .secondary,
-                        background: SeasonColors.subtleSurface
-                    )
-
-                    Spacer(minLength: 0)
-
-                    SeasonalStatusBadge(score: ranked.seasonalityScore, localizer: viewModel.localizer)
                 }
+                .padding(14)
             }
+            .background(DS.Color.card)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 1)
+            )
+            .dsShadow(.s1)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 
-    @ViewBuilder
-    private func compactRecipeCard(ranked: RankedRecipe, hook: String, showFollowingSignal: Bool) -> some View {
-        let emphasizeAuthor = selectedQuickFilter == .following
-        NavigationLink {
-            RecipeDetailView(
-                rankedRecipe: ranked,
-                viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        } label: {
-            HomeEditorialRecipeRow(
-                recipe: ranked.recipe,
-                hook: hook,
-                seasonalityScore: ranked.seasonalityScore,
-                localizer: viewModel.localizer,
-                emphasizeAuthor: emphasizeAuthor,
-                showFollowingSignal: showFollowingSignal
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func fridgeSuggestionCard(_ match: FridgeMatchedRecipe, emphasize: Bool = false) -> some View {
-        NavigationLink {
-            RecipeDetailView(
-                rankedRecipe: match.rankedRecipe,
-                viewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        } label: {
-            RecipeCardView(
-                recipe: match.rankedRecipe.recipe,
-                title: match.rankedRecipe.recipe.title,
-                subtitle: emphasize ? nil : match.rankedRecipe.recipe.author,
-                metadataText: fridgePrimaryMessage(for: match),
-                seasonalityScore: emphasize ? match.rankedRecipe.seasonalityScore : nil,
-                localizer: emphasize ? viewModel.localizer : nil,
-                variant: .feedCompact,
-                cardBackground: SeasonColors.secondarySurface,
-                cardBackgroundOpacity: emphasize ? 0.88 : 0.84,
-                cardBorderOpacity: 0.055,
-                cardShadowOpacity: emphasize ? 0.018 : 0.013,
-                cardShadowRadius: emphasize ? 6 : 5,
-                cardShadowY: 2
-            )
-            .padding(.vertical, emphasize ? 1 : 0)
-        }
-        .buttonStyle(PressableCardButtonStyle())
-    }
-
-    private func fridgePrimaryMessage(for match: FridgeMatchedRecipe) -> String {
-        if match.missingCount == 0 {
-            return viewModel.localizer.text(.quickActionYouHaveEverything)
-        }
-        if match.missingCount == 1 {
-            return viewModel.localizer.text(.quickActionOnlyOneIngredientMissing)
-        }
-        if match.missingCount == 2 {
-            return viewModel.localizer.text(.almostReady)
-        }
-        return String(
-            format: viewModel.localizer.text(.quickActionOnlyIngredientsMissingFormat),
-            match.missingCount
-        )
-    }
-
-    @ViewBuilder
-    private func spotlightCard(for ranked: RankedInSeasonItem) -> some View {
-        SeasonCardContainer(
-            content: {
-            NavigationLink {
-                ProduceDetailView(
-                    item: ranked.item,
-                    viewModel: viewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-                .environmentObject(fridgeViewModel)
+            Button {
+                openRecipe(ranked)
             } label: {
-                HStack(alignment: .top, spacing: 10) {
-                    ProduceThumbnailView(item: ranked.item, size: 54)
-                        .frame(width: 54, height: 54)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(ranked.item.displayName(languageCode: viewModel.languageCode))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-
-                        HStack(spacing: 4) {
-                            Image(systemName: "leaf.fill")
-                                .font(.caption2.weight(.semibold))
-                            Text(seasonalSpotlightStateText(for: ranked.item))
-                                .font(.caption2.weight(.semibold))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(.secondary)
-
-                        Text(viewModel.shortBenefitText(for: ranked))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-
-                        if let relevance = ingredientRelevanceText(for: ranked.item) {
-                            Text(relevance)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal, SeasonSpacing.sm)
-                .padding(.vertical, SeasonSpacing.xs + 2)
+                Color.clear
+                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous))
             }
-            .buttonStyle(PressableCardButtonStyle())
-            },
-            cornerRadius: SeasonRadius.large,
-            background: Color(red: 0.95, green: 0.94, blue: 0.90),
-            backgroundOpacity: 0.72,
-            borderOpacity: 0.04,
-            shadowOpacity: 0.008,
-            shadowRadius: 3,
-            shadowY: 1
+            .buttonStyle(PressableCardButtonStyle(pressedScale: 0.985))
+            .zIndex(1)
+
+            if ranked.recipe.canonicalCreatorID != nil {
+                feedFollowButton(for: ranked.recipe)
+                    .padding(.top, 10)
+                    .padding(.trailing, 12)
+                    .zIndex(2)
+            }
+
+            if let crispyPill = feedCrispyButton(for: ranked.recipe) {
+                crispyPill
+                    .padding(.top, 198)
+                    .padding(.trailing, 12)
+                    .zIndex(2)
+            }
+        }
+    }
+
+    private func feedCreatorHeader(for recipe: Recipe, showFollowingSignal: Bool) -> some View {
+        HStack(spacing: 10) {
+            if isImportedRecipe(recipe) {
+                Circle()
+                    .fill(DS.Color.ochreSoft.opacity(0.72))
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.Color.terracotta.opacity(0.72))
+                    )
+                    .overlay(Circle().stroke(DS.Color.border, lineWidth: 1))
+            } else {
+                RemoteImageView(
+                    url: recipe.creatorAvatarURL
+                        .flatMap { URL(string: $0.trimmingCharacters(in: .whitespacesAndNewlines)) },
+                    fallbackAssetName: nil
+                )
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(DS.Color.border, lineWidth: 1))
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(primaryIdentityLabel(for: recipe))
+                    .font(DS.Font.sans(12, weight: .semibold))
+                    .foregroundStyle(DS.Color.ink)
+                    .lineLimit(1)
+                Text(feedCreatorSubtitle(for: recipe, showFollowingSignal: showFollowingSignal))
+                    .font(DS.Font.sans(10.5))
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if recipe.canonicalCreatorID != nil {
+                Color.clear
+                    .frame(width: 76, height: 1)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
+    private func feedFollowButton(for recipe: Recipe) -> some View {
+        if let creatorID = recipe.canonicalCreatorID {
+            let isFollowing = followStore.followingIds.contains(creatorID)
+            Button {
+                followStore.toggleFollow(creatorID)
+            } label: {
+                Text(isFollowing ? viewModel.localizer.text(.following) : viewModel.localizer.text(.follow))
+                    .font(DS.Font.sans(11, weight: .semibold))
+                    .foregroundStyle(isFollowing ? DS.Color.inkMuted : DS.Color.ink)
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isFollowing ? Color.clear : DS.Color.card.opacity(0.92))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(isFollowing ? Color.clear : DS.Color.borderS, lineWidth: 1.2)
+                    )
+            }
+            .buttonStyle(PressableCardButtonStyle(pressedScale: 0.96))
+        }
+    }
+
+    private func feedCrispyButton(for recipe: Recipe) -> AnyView? {
+        let crispyCount = viewModel.crispyCount(for: recipe)
+        let isActive = viewModel.isRecipeCrispied(recipe)
+        guard crispyCount > 0 || isActive else { return nil }
+        return AnyView(
+            Button {
+                viewModel.toggleRecipeCrispy(recipe)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(crispyCount.compactFormatted())
+                        .font(DS.Font.mono(10.5, weight: .semibold))
+                }
+                .foregroundStyle(isActive ? DS.Color.Crispy.inkActive : DS.Color.Crispy.inkInactive)
+                .padding(.horizontal, 9)
+                .frame(height: 30)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isActive ? DS.Color.Crispy.bgActive : DS.Color.card.opacity(0.92))
+                )
+                .dsShadow(.s1)
+            }
+            .buttonStyle(PressableCardButtonStyle(pressedScale: 0.94))
+            .accessibilityLabel("Crispy")
         )
     }
 
-    private func ingredientRelevanceText(for item: ProduceItem) -> String? {
-        let usageCount = ingredientUsageCountByID[item.id] ?? 0
-        guard usageCount > 0 else { return nil }
-        return String(format: viewModel.localizer.text(.usedInRecipesFormat), usageCount)
+    private func feedCreatorSubtitle(for recipe: Recipe, showFollowingSignal: Bool) -> String {
+        if showFollowingSignal {
+            return viewModel.localizer.text(.following)
+        }
+        if isImportedRecipe(recipe) {
+            return importedRecipeSubtitle
+        }
+        return heroCreatorMeta(for: recipe)
     }
 
-    private func seasonalSpotlightStateText(for item: ProduceItem) -> String {
-        switch item.seasonalityPhase(month: viewModel.currentMonth) {
-        case .inSeason:
-            return viewModel.localizer.text(.seasonPeakNow)
-        case .earlySeason:
-            return viewModel.localizer.text(.seasonPhaseEarlySeason)
-        case .endingSoon:
-            return viewModel.localizer.text(.seasonPhaseEndingSoon)
-        case .outOfSeason:
-            return viewModel.localizer.text(.seasonOutOfSeason)
-        }
+    private func feedMetaLabel(_ text: String) -> some View {
+        Text(text)
+            .font(DS.Font.sans(11.5))
+            .foregroundStyle(DS.Color.inkMuted)
+            .lineLimit(1)
+    }
+
+    private var feedMetaDot: some View {
+        Circle()
+            .fill(DS.Color.inkFaint)
+            .frame(width: 3, height: 3)
     }
 
     private func primaryHook(for ranked: RankedRecipe) -> RecipePrimaryHook {
@@ -2406,7 +3044,7 @@ struct HomeView: View {
                let remoteURL = URL(string: remoteURLString) {
                 RemoteImageView(
                     url: remoteURL,
-                    fallbackAssetName: trimmedFallbackAssetName(for: recipe)
+                    fallbackAssetName: nil
                 )
             } else if let cover = resolvedRecipeCoverImage(for: recipe),
                       recipeImageFileURL(for: cover.localPath) != nil {
@@ -2422,13 +3060,8 @@ struct HomeView: View {
                       let remoteURL = URL(string: remoteURLString) {
                 RemoteImageView(
                     url: remoteURL,
-                    fallbackAssetName: trimmedFallbackAssetName(for: recipe)
+                    fallbackAssetName: nil
                 )
-            } else if let imageName = recipe.coverImageName,
-                      UIImage(named: imageName) != nil {
-                Image(imageName)
-                    .resizable()
-                    .scaledToFill()
             } else {
                 recipeFallbackImage
             }
@@ -2445,93 +3078,33 @@ struct HomeView: View {
            let remoteURL = URL(string: remoteURLString) {
             RemoteImageView(
                 url: remoteURL,
-                fallbackAssetName: trimmedFallbackAssetName(for: recipe)
+                fallbackAssetName: nil
             )
-        } else if let imageName = recipe.coverImageName,
-                  UIImage(named: imageName) != nil {
-            Image(imageName)
-                .resizable()
-                .scaledToFill()
         } else {
             recipeFallbackImage
         }
     }
 
-    private func trimmedFallbackAssetName(for recipe: Recipe) -> String? {
-        let trimmed = recipe.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !trimmed.isEmpty, hasAsset(named: trimmed) else { return nil }
-        return trimmed
-    }
-
     private var recipeFallbackImage: some View {
-        RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(.systemGray6),
-                        Color(.systemGray5)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-    }
-}
-
-private struct HomeEditorialRecipeRow: View {
-    let recipe: Recipe
-    let hook: String
-    let seasonalityScore: Double
-    let localizer: AppLocalizer
-    let emphasizeAuthor: Bool
-    let showFollowingSignal: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RecipeThumbnailView(recipe: recipe, size: 72)
-                .frame(width: 72, height: 72)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(recipe.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-
-                Text(recipe.author)
-                    .font(emphasizeAuthor ? .caption.weight(.semibold) : .caption.weight(.medium))
-                    .foregroundStyle(
-                        emphasizeAuthor
-                        ? AnyShapeStyle(.primary.opacity(0.88))
-                        : AnyShapeStyle(.secondary)
+        ZStack {
+            RoundedRectangle(cornerRadius: SeasonRadius.medium, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            DS.Color.bgSub,
+                            DS.Color.sageSoft.opacity(0.72)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .lineLimit(1)
+                )
 
-                HStack(spacing: 4) {
-                    Text(hook)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-
-                    if showFollowingSignal {
-                        Text("•")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                        Text(localizer.text(.following))
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            SeasonalStatusBadge(score: seasonalityScore, localizer: localizer)
+            Image(systemName: "fork.knife")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(DS.Color.sageDeep.opacity(0.42))
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
     }
 }
-
 private enum HomeQuickFilter: String, CaseIterable, Identifiable {
     case following
     case readyNow
@@ -2564,15 +3137,15 @@ private enum HomeQuickFilter: String, CaseIterable, Identifiable {
         case .following:
             return localizer.text(.fromPeopleYouFollow)
         case .readyNow:
-            return localizer.text(.quickActionReadyToCook)
+            return localizer.localized("home.filter.ready_now")
         case .under15:
             return "15 \(localizer.text(.minutesShort))"
         case .highProtein:
-            return localizer.text(.reasonHighProtein)
+            return localizer.localized("home.filter.high_protein")
         case .peakSeason:
-            return localizer.text(.seasonPeakNow)
+            return localizer.localized("home.filter.peak_season")
         case .trending:
-            return localizer.text(.trendingNowTitle)
+            return localizer.localized("home.filter.trending")
         }
     }
 
@@ -2592,30 +3165,66 @@ private struct HomeFeedBuild {
     let filteredFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let ingredientUsageCountByID: [String: Int]
 }
-
-private enum HomeRecipeCardStyle {
-    case compact
-    case large
-}
-
 private enum HomeFeedItem: Identifiable {
-    case recipe(HookedRecipeCard, style: HomeRecipeCardStyle)
-    case fridge(FridgeMatchedRecipe)
-    case spotlight(RankedInSeasonItem)
+    case recipe(HookedRecipeCard)
     case followingFallbackSeparator
 
     var id: String {
         switch self {
-        case .recipe(let card, let style):
-            return "recipe-\(style)-\(card.ranked.recipe.id)"
-        case .fridge(let match):
-            return "fridge-\(match.rankedRecipe.recipe.id)"
-        case .spotlight(let item):
-            return "spotlight-\(item.item.id)"
+        case .recipe(let card):
+            return "recipe-\(card.ranked.recipe.id)"
         case .followingFallbackSeparator:
             return "following-fallback-separator"
         }
     }
+
+    var isRecipe: Bool {
+        if case .recipe = self { return true }
+        return false
+    }
+}
+
+/// Rhythm slot for a recipe in the v2b mixed feed. Derived from the card's
+/// position in the combined feed list by `HomeView.rhythmSlot(for:)`.
+private enum HomeFeedRhythmSlot {
+    case classic
+    case split
+    case compact
+}
+
+/// Editorial module injected between recipe cards to break the off-white
+/// wash and give the feed visible rhythm.
+private enum HomeFeedEditorialInjection {
+    case peakCarousel
+    case tipBand
+    case nudgeCard
+    case collectionTile
+    case pulseBand
+}
+
+private struct HomeRecipeRoute: Identifiable, Hashable {
+    let rankedRecipe: RankedRecipe
+    var id: String { rankedRecipe.recipe.id }
+
+    static func == (lhs: HomeRecipeRoute, rhs: HomeRecipeRoute) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+/// Feed item + its position in the "recipe-only" sub-sequence. Non-recipe
+/// items (fridge, spotlight, separator) get `recipeIndex == nil`. Used by
+/// `HomeView.rhythmFeedBody` to render the rhythm without mutating state
+/// inside a `ForEach` body.
+private struct IndexedHomeFeedItem: Identifiable {
+    let item: HomeFeedItem
+    let recipeIndex: Int?
+    let position: Int
+
+    var id: String { "\(position)-\(item.id)" }
 }
 
 private struct HookedRecipeCard: Identifiable {
@@ -2642,573 +3251,11 @@ private struct RecipePrimaryHook {
 private extension Array where Element == HomeFeedItem {
     var lastRecipeHookKind: HookKind? {
         for item in reversed() {
-            if case .recipe(let card, _) = item {
+            if case .recipe(let card) = item {
                 return card.hookKind
             }
         }
         return nil
-    }
-}
-
-private struct QuickActionTile: View {
-    let icon: String
-    let title: String
-    let value: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 26, height: 26)
-                    .background(
-                        RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
-                            .fill(Color(.systemBackground))
-                    )
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-
-            Text(title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .allowsTightening(true)
-
-            Text(value)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .allowsTightening(true)
-
-            Text(subtitle)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .allowsTightening(true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 112, alignment: .topLeading)
-        .padding(SeasonSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                .fill(Color(.tertiarySystemGroupedBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                        .stroke(Color(.separator).opacity(0.25), lineWidth: 0.5)
-                )
-        )
-    }
-}
-
-private struct FridgeRecipeMatchesView: View {
-    @ObservedObject var produceViewModel: ProduceViewModel
-    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
-    @ObservedObject var fridgeViewModel: FridgeViewModel
-    @State private var feedbackMessage = ""
-    @State private var showingFeedbackAlert = false
-
-    var body: some View {
-        let recommendationData = fridgeRecommendationData
-
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: SeasonSpacing.lg) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(produceViewModel.localizer.text(.fromYourFridge))
-                        .font(.title2.weight(.bold))
-                    Text(headerSubtitle(recommendations: recommendationData.recommendations))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(SeasonSpacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.9))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.primary.opacity(0.05), lineWidth: 0.7)
-                )
-
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionTitleCountRow(
-                        title: produceViewModel.localizer.text(.fridgePreviewTitle),
-                        countText: fridgePreviewItems.count.compactFormatted()
-                    )
-
-                    if fridgeViewModel.allItemCount == 0 {
-                        Text(produceViewModel.localizer.text(.fromFridgeSubtitleEmpty))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(fridgePreviewItems) { item in
-                                    HStack(spacing: 6) {
-                                        fridgePreviewIcon(item: item, size: 22)
-                                        Text(item.title)
-                                            .font(.caption.weight(.semibold))
-                                            .lineLimit(1)
-                                    }
-                                    .padding(.horizontal, 11)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(Color(.tertiarySystemGroupedBackground).opacity(0.96))
-                                    )
-                                    .overlay(
-                                        Capsule(style: .continuous)
-                                            .stroke(SeasonColors.seasonGreen.opacity(0.1), lineWidth: 0.5)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    NavigationLink {
-                        FridgeView(
-                            produceViewModel: produceViewModel,
-                            fridgeViewModel: fridgeViewModel
-                        )
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.caption.weight(.semibold))
-                            Text(produceViewModel.localizer.text(.editFridge))
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 13)
-                        .padding(.vertical, 9)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(SeasonColors.secondarySurface)
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(SeasonColors.seasonGreen.opacity(0.12), lineWidth: 0.7)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                        .fill(Color(.systemBackground).opacity(0.86))
-                )
-
-                VStack(alignment: .leading, spacing: 10) {
-                    bestMatchesHeader(count: recommendationData.bestMatches.count)
-
-                    if recommendationData.bestMatches.isEmpty {
-                        EmptyStateCard(
-                            symbol: "fork.knife",
-                            title: produceViewModel.localizer.text(.noMatchingRecipesYetTitle),
-                            subtitle: produceViewModel.localizer.text(.noMatchingRecipesYetSubtitle)
-                        )
-                    } else {
-                        ForEach(recommendationData.bestMatches) { match in
-                            fridgeRecipeRow(match, emphasize: true)
-                        }
-                    }
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                        .fill(Color(.systemBackground).opacity(0.86))
-                )
-
-                if !recommendationData.quickOptions.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionTitleCountRow(
-                            title: produceViewModel.localizer.text(.quickOptions),
-                            countText: recommendationData.quickOptions.count.compactFormatted()
-                        )
-                        ForEach(recommendationData.quickOptions) { match in
-                            fridgeRecipeRow(match, emphasize: false)
-                        }
-                    }
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                            .fill(Color(.systemBackground).opacity(0.84))
-                    )
-                }
-
-                if !recommendationData.needsIngredients.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(produceViewModel.localizer.text(.needsIngredients))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        ForEach(recommendationData.needsIngredients) { match in
-                            fridgeRecipeRow(match, emphasize: false)
-                        }
-                    }
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                            .fill(Color(.systemBackground).opacity(0.82))
-                    )
-                }
-
-                if recommendationData.recommendations.isEmpty {
-                    EmptyStateCard(
-                        symbol: "snowflake",
-                        title: produceViewModel.localizer.text(.cookWithWhatYouHave),
-                        subtitle: produceViewModel.localizer.text(.fromFridgeSubtitleEmpty)
-                    )
-                    .padding(.top, 4)
-                }
-            }
-            .padding(.horizontal, SeasonSpacing.md)
-            .padding(.top, SeasonSpacing.md)
-            .padding(.bottom, SeasonLayout.bottomBarContentClearance)
-        }
-        .background(SeasonColors.primarySurface)
-        .navigationTitle(produceViewModel.localizer.text(.fromYourFridge))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            CartToolbarItems(
-                produceViewModel: produceViewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        }
-        .alert(feedbackMessage, isPresented: $showingFeedbackAlert) {
-            Button(produceViewModel.localizer.text(.commonOK), role: .cancel) {}
-        }
-    }
-
-    private func bestMatchesHeader(count: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            SectionTitleCountRow(
-                title: produceViewModel.localizer.text(.bestMatches),
-                countText: count.compactFormatted()
-            )
-            Text(produceViewModel.localizer.localized("home.best_matches.subtitle"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private func fridgeRecipeRow(_ match: FridgeMatchedRecipe, emphasize: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            NavigationLink {
-                RecipeDetailView(
-                    rankedRecipe: match.rankedRecipe,
-                    viewModel: produceViewModel,
-                    shoppingListViewModel: shoppingListViewModel
-                )
-            } label: {
-                HStack(spacing: 10) {
-                    RecipeThumbnailView(recipe: match.rankedRecipe.recipe, size: 44)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(match.rankedRecipe.recipe.title)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-                        Text(match.rankedRecipe.recipe.author)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    if emphasize {
-                        VStack(alignment: .trailing, spacing: 5) {
-                            if missingIngredientNames(for: match).isEmpty {
-                                SeasonBadge(
-                                    text: produceViewModel.localizer.text(.readyNow),
-                                    semantic: .positive,
-                                    horizontalPadding: 7,
-                                    verticalPadding: 4
-                                )
-                            }
-                        }
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            HStack(spacing: 8) {
-                Text(String(
-                    format: produceViewModel.localizer.text(.ingredientMatchCountFormat),
-                    match.matchingCount,
-                    match.totalCount
-                ))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(emphasize ? Color.secondary : Color.primary.opacity(0.86))
-
-                if emphasize, match.rankedRecipe.seasonalityScore >= 0.55 {
-                    SeasonBadge(
-                        text: "In season",
-                        semantic: .positive,
-                        horizontalPadding: 7,
-                        verticalPadding: 3,
-                        foreground: SeasonColors.seasonGreen.opacity(0.78),
-                        background: SeasonColors.seasonGreenSoft.opacity(0.26)
-                    )
-                }
-
-                if !emphasize {
-                    Text(produceViewModel.recipeTimingTitle(for: match.rankedRecipe))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if !missingIngredientNames(for: match).isEmpty {
-                HStack(alignment: .center, spacing: 8) {
-                    Text("\(produceViewModel.localizer.text(.missingIngredients)): \(missingIngredientNames(for: match).joined(separator: ", "))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary.opacity(0.75))
-                        .lineLimit(2)
-
-                    Spacer(minLength: 0)
-
-                    Button {
-                        addMissingIngredients(for: match)
-                    } label: {
-                        Text(produceViewModel.localizer.text(.addMissingAction))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(emphasize ? Color(red: 0.22, green: 0.49, blue: 0.24) : .secondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(emphasize ? SeasonColors.seasonGreenSoft.opacity(0.52) : Color(.tertiarySystemGroupedBackground))
-                            )
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(
-                                        emphasize ? SeasonColors.seasonGreen.opacity(0.22) : Color.primary.opacity(0.08),
-                                        lineWidth: 0.6
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(
-                    emphasize
-                    ? SeasonColors.seasonGreenSoft.opacity(0.34)
-                    : Color(.systemBackground).opacity(0.82)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(
-                    emphasize ? SeasonColors.seasonGreen.opacity(0.14) : Color.primary.opacity(0.045),
-                    lineWidth: 0.6
-                )
-        )
-    }
-
-    private var fridgeRecommendationData: FridgeRecommendationData {
-        let recommendations = produceViewModel.rankedFridgeRecommendations(
-            fridgeItemIDs: fridgeViewModel.allIngredientIDSet
-        )
-        .prefix(30)
-        .map { $0 }
-
-        let matchingRecommendations = recommendations.filter { $0.matchingCount > 0 }
-        let bestMatches: [FridgeMatchedRecipe]
-        let preferred = matchingRecommendations.filter { match in
-            match.matchRatio >= 0.66 && match.missingCount <= 2
-        }
-        if preferred.isEmpty {
-            bestMatches = Array(matchingRecommendations.prefix(4))
-        } else {
-            bestMatches = Array(preferred.prefix(4))
-        }
-
-        let excludedIDs = Set(bestMatches.map(\.id))
-        let quickOptions = matchingRecommendations.filter { match in
-            !excludedIDs.contains(match.id)
-        }
-
-        let needsIngredients = recommendations.filter { $0.matchingCount == 0 }
-        return FridgeRecommendationData(
-            recommendations: recommendations,
-            bestMatches: bestMatches,
-            quickOptions: quickOptions,
-            needsIngredients: needsIngredients
-        )
-    }
-
-    private var fridgePreviewItems: [FridgePreviewItem] {
-        let produce = fridgeViewModel.produceItems.prefix(4).map {
-            FridgePreviewItem.produce($0, languageCode: produceViewModel.languageCode, localizer: produceViewModel.localizer)
-        }
-        let basic = fridgeViewModel.basicItems.prefix(4).map {
-            FridgePreviewItem.basic($0, languageCode: produceViewModel.languageCode, localizer: produceViewModel.localizer)
-        }
-        return Array((produce + basic).prefix(8))
-    }
-
-    private func headerSubtitle(recommendations: [FridgeMatchedRecipe]) -> String {
-        guard fridgeViewModel.allItemCount > 0 else {
-            return produceViewModel.localizer.text(.fromFridgeSubtitleEmpty)
-        }
-        let readyNowCount = recommendations.filter { $0.matchingCount > 0 && $0.missingCount == 0 }.count
-        let completableCount = recommendations.filter { $0.matchingCount > 0 && $0.missingCount > 0 }.count
-
-        switch (readyNowCount, completableCount) {
-        case (0, 0):
-            return produceViewModel.localizer.text(.fromFridgeSubtitleEmpty)
-        case (_, 0):
-            return String(
-                format: produceViewModel.localizer.localized("home.fridge.header.ready_now_format"),
-                readyNowCount
-            )
-        case (0, _):
-            return String(
-                format: produceViewModel.localizer.localized("home.fridge.header.completable_format"),
-                completableCount
-            )
-        default:
-            return String(
-                format: produceViewModel.localizer.localized("home.fridge.header.ready_and_completable_format"),
-                readyNowCount,
-                completableCount
-            )
-        }
-    }
-
-    private struct FridgeRecommendationData {
-        let recommendations: [FridgeMatchedRecipe]
-        let bestMatches: [FridgeMatchedRecipe]
-        let quickOptions: [FridgeMatchedRecipe]
-        let needsIngredients: [FridgeMatchedRecipe]
-    }
-
-    private func missingIngredientNames(for match: FridgeMatchedRecipe) -> [String] {
-        var names: [String] = []
-        for ingredient in match.rankedRecipe.recipe.ingredients {
-            if produceViewModel.isRecipeIngredientAvailable(
-                ingredient,
-                fridgeIngredientIDs: fridgeViewModel.allIngredientIDSet
-            ) {
-                continue
-            }
-            names.append(produceViewModel.recipeIngredientDisplayName(ingredient))
-        }
-        return Array(names.prefix(4))
-    }
-
-    private func addMissingIngredients(for match: FridgeMatchedRecipe) {
-        var added = 0
-        for ingredient in match.rankedRecipe.recipe.ingredients {
-            if produceViewModel.isRecipeIngredientAvailable(
-                ingredient,
-                fridgeIngredientIDs: fridgeViewModel.allIngredientIDSet
-            ) {
-                continue
-            }
-            if let produceID = ingredient.produceID,
-               let item = produceViewModel.produceItem(forID: produceID) {
-                if shoppingListViewModel.contains(item) {
-                    continue
-                }
-                shoppingListViewModel.add(item, sourceRecipeID: match.rankedRecipe.recipe.id, sourceRecipeTitle: match.rankedRecipe.recipe.title)
-                added += 1
-            } else if let basicID = ingredient.basicIngredientID,
-                      let basic = produceViewModel.basicIngredient(forID: basicID) {
-                if shoppingListViewModel.contains(basic) {
-                    continue
-                }
-                shoppingListViewModel.add(
-                    basic,
-                    quantity: ingredient.quantity,
-                    sourceRecipeID: match.rankedRecipe.recipe.id,
-                    sourceRecipeTitle: match.rankedRecipe.recipe.title
-                )
-                added += 1
-            } else {
-                let name = produceViewModel.recipeIngredientDisplayName(ingredient)
-                if shoppingListViewModel.containsCustom(named: name) {
-                    continue
-                }
-                shoppingListViewModel.addCustom(
-                    name: name,
-                    quantity: ingredient.quantity,
-                    sourceRecipeID: match.rankedRecipe.recipe.id,
-                    sourceRecipeTitle: match.rankedRecipe.recipe.title
-                )
-                added += 1
-            }
-        }
-
-        if added == 0 {
-            feedbackMessage = produceViewModel.localizer.text(.ingredientsAlreadyInList)
-        } else {
-            feedbackMessage = String(format: produceViewModel.localizer.text(.addedMissingItemsFormat), added)
-        }
-        showingFeedbackAlert = true
-    }
-
-    @ViewBuilder
-    private func fridgePreviewIcon(item: FridgePreviewItem, size: CGFloat) -> some View {
-        switch item.source {
-        case .produce(let produce):
-            ProduceThumbnailView(item: produce, size: size)
-        case .basic:
-            Circle()
-                .fill(Color(.tertiarySystemGroupedBackground))
-                .frame(width: size, height: size)
-                .overlay(
-                    Image(systemName: "leaf")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                )
-        }
-    }
-
-}
-
-private struct FridgePreviewItem: Identifiable {
-    enum Source {
-        case produce(ProduceItem)
-        case basic(BasicIngredient)
-    }
-
-    let id: String
-    let title: String
-    let source: Source
-
-    static func produce(_ item: ProduceItem, languageCode: String, localizer: AppLocalizer) -> FridgePreviewItem {
-        FridgePreviewItem(
-            id: "produce-\(item.id)",
-            title: item.displayName(languageCode: languageCode),
-            source: .produce(item)
-        )
-    }
-
-    static func basic(_ item: BasicIngredient, languageCode: String, localizer: AppLocalizer) -> FridgePreviewItem {
-        FridgePreviewItem(
-            id: "basic-\(item.id)",
-            title: item.displayName(languageCode: languageCode),
-            source: .basic(item)
-        )
     }
 }
 

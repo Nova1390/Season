@@ -165,25 +165,12 @@ struct ShoppingListView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
         }
-        .navigationTitle(produceViewModel.localizer.text(.listTab))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if !shoppingListViewModel.items.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(isSelectionMode ? produceViewModel.localizer.text(.done) : produceViewModel.localizer.text(.select)) {
-                        if isSelectionMode {
-                            selectedIngredientIDs.removeAll()
-                        }
-                        isSelectionMode.toggle()
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isSelectionMode ? Color.accentColor : .primary)
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 1)
-                    .buttonStyle(.plain)
-                }
-            }
-        }
+        .seasonTopBar(
+            produceViewModel: produceViewModel,
+            shoppingListViewModel: shoppingListViewModel,
+            leading: .back,
+            trailingAccessory: shoppingSelectionTopBarAction
+        )
         .onAppear {
             syncExpandedRecipeGroups()
         }
@@ -195,6 +182,27 @@ struct ShoppingListView: View {
             }
             syncExpandedRecipeGroups()
         }
+    }
+
+    private var shoppingSelectionTopBarAction: AnyView? {
+        guard !shoppingListViewModel.items.isEmpty else { return nil }
+        return AnyView(
+            Button(isSelectionMode ? produceViewModel.localizer.text(.done) : produceViewModel.localizer.text(.select)) {
+                if isSelectionMode {
+                    selectedIngredientIDs.removeAll()
+                }
+                isSelectionMode.toggle()
+            }
+            .font(DS.Font.sans(12, weight: .semibold))
+            .foregroundStyle(isSelectionMode ? DS.Color.sageDeep : DS.Color.ink)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DS.Color.card.opacity(0.86))
+            )
+            .buttonStyle(.plain)
+        )
     }
 
     private var shoppingHeaderSection: some View {

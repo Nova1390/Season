@@ -97,6 +97,7 @@ struct CreateRecipeView: View {
     }
 
     @ObservedObject var viewModel: ProduceViewModel
+    @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     private let prefillDraft: PrefillDraft?
     private let initialDraftRecipeID: String?
     private let enableDraftMode: Bool
@@ -138,11 +139,13 @@ struct CreateRecipeView: View {
 
     init(
         viewModel: ProduceViewModel,
+        shoppingListViewModel: ShoppingListViewModel = ShoppingListViewModel(),
         prefillDraft: PrefillDraft? = nil,
         initialDraftRecipeID: String? = nil,
         enableDraftMode: Bool = false
     ) {
         self._viewModel = ObservedObject(wrappedValue: viewModel)
+        self._shoppingListViewModel = ObservedObject(wrappedValue: shoppingListViewModel)
         self.initialDraftRecipeID = initialDraftRecipeID
         self.enableDraftMode = enableDraftMode
         self.prefillDraft = prefillDraft
@@ -209,12 +212,13 @@ struct CreateRecipeView: View {
                     .padding()
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 24) {
                             composerStateSummary
                             heroComposerSection
                             importFromLinkSection
                             titleSection
                             servingsSection
+                            smartImportReviewSummary
                             ingredientsSection
                             stepsSection
                             socialLinksSection
@@ -222,28 +226,19 @@ struct CreateRecipeView: View {
                             Color.clear.frame(height: 12)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 12)
+                        .padding(.top, 14)
+                        .padding(.bottom, 24)
                     }
                 }
             }
             .background(SeasonColors.primarySurface)
-            .navigationTitle(localizer.text(.createRecipe))
-            .navigationBarTitleDisplayMode(.inline)
+            .seasonTopBar(
+                produceViewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel,
+                leading: .close(action: closeComposer)
+            )
             .safeAreaInset(edge: .bottom) {
                 publishBar
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        if enableDraftMode {
-                            persistDraftIfNeeded()
-                        }
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
             }
             .alert(localizer.text(.publishFailedTitle), isPresented: $showPublishError) {
                 Button(localizer.text(.commonOK), role: .cancel) {}
@@ -279,33 +274,20 @@ struct CreateRecipeView: View {
         }
     }
 
+    private func closeComposer() {
+        if enableDraftMode {
+            persistDraftIfNeeded()
+        }
+        dismiss()
+    }
+
     private var heroComposerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        CreateComposerHeroSection(
+            title: localizer.localized("create.composer.title")
+        ) {
+            heroImageContent
+        } actions: {
             HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text(localizer.localized("create.composer.title"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                composerStateBadge
-            }
-
-            ZStack(alignment: .bottomLeading) {
-                heroImageContent
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 208)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                LinearGradient(
-                    colors: [.clear, Color.black.opacity(0.34)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                HStack(spacing: 8) {
                     PhotosPicker(
                         selection: $selectedPhotoItems,
                         maxSelectionCount: 8,
@@ -325,15 +307,14 @@ struct CreateRecipeView: View {
                     }
                     .buttonStyle(SeasonSecondaryButtonStyle())
                 }
-                .padding(12)
-            }
-
+        } footer: {
             TextField(localizer.text(.mediaExternalLink), text: $mediaLink)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
                 .font(.subheadline)
+                .createInputField()
                 .onChange(of: mediaLink) { _, newValue in
                     detectedSourcePlatform = detectedPlatform(for: newValue)
                 }
@@ -355,24 +336,25 @@ struct CreateRecipeView: View {
                 }
             }
         }
-        .padding(14)
         .background(createSectionContainer(priority: .primary))
     }
 
     private var importFromLinkSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             DisclosureGroup(isExpanded: $showImportTools) {
                 VStack(alignment: .leading, spacing: 10) {
                     TextField(localizer.text(.mediaExternalLink), text: $importSourceURL)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .createInputField()
 
                     TextField(localizer.text(.socialCaptionImportPrompt), text: $importCaptionRaw, axis: .vertical)
                         .lineLimit(3...5)
                         .textInputAutocapitalization(.sentences)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .createInputField(minHeight: 86, alignment: .topLeading)
                         .overlay {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .stroke(showCaptionImportHint ? Color.orange.opacity(0.6) : .clear, lineWidth: 1)
@@ -441,28 +423,41 @@ struct CreateRecipeView: View {
                     }
                     Spacer()
                     Image(systemName: "wand.and.stars")
-                    .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(red: 0.33, green: 0.38, blue: 0.28))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(SeasonColors.seasonGreen)
+                        .padding(9)
+                        .background(
+                            Circle()
+                                .fill(SeasonColors.seasonGreenSoft.opacity(0.38))
+                        )
                 }
                 .padding(.vertical, 2)
             }
         }
-        .padding(14)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
         .background(createSectionContainer(priority: .secondary))
         .tint(SeasonColors.seasonGreen)
     }
 
     private var titleSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             sectionTitle(localizer.text(.titleSectionTitle))
             TextField(recipeTitlePlaceholder, text: $title, axis: .vertical)
-                .font(.system(size: 34, weight: .bold, design: .default))
+                .font(.system(size: 36, weight: .bold, design: .serif))
                 .lineLimit(2...3)
                 .textFieldStyle(.plain)
-                .padding(.vertical, 6)
+                .foregroundStyle(.primary)
+                .padding(.vertical, 8)
+                .overlay(
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(height: 0.7),
+                    alignment: .bottom
+                )
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 6)
     }
 
     private var socialLinksSection: some View {
@@ -476,39 +471,95 @@ struct CreateRecipeView: View {
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .createInputField()
 
             TextField(localizer.recipeTikTokURLField, text: $tiktokURL)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .createInputField()
         }
-        .padding(14)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
         .background(createSectionContainer(priority: .tertiary))
     }
 
     private var servingsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionTitle(localizer.localized("create.servings.title"))
-            HStack {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                sectionTitle(localizer.localized("create.servings.title"))
                 Text(String(format: localizer.text(.servesFormat), selectedServings))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                Spacer()
-                Stepper(value: $selectedServings, in: 1...12) {
-                    EmptyView()
-                }
-                .labelsHidden()
             }
+            Spacer()
+            Stepper(value: $selectedServings, in: 1...12) {
+                EmptyView()
+            }
+            .labelsHidden()
         }
-        .padding(14)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
         .background(createSectionContainer(priority: .secondary))
+    }
+
+    @ViewBuilder
+    private var smartImportReviewSummary: some View {
+        if let importConfidence {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Bozza importata")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(smartImportReviewStatusMessage(for: importConfidence))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                }
+
+                HStack(spacing: 8) {
+                    smartImportReviewMetric(
+                        value: "\(smartImportReviewIngredientCount)",
+                        label: smartImportReviewIngredientCount == 1 ? "ingrediente" : "ingredienti"
+                    )
+                    smartImportReviewMetric(
+                        value: "\(smartImportReviewNeedsConfirmationCount)",
+                        label: "da confermare"
+                    )
+                    smartImportReviewMetric(
+                        value: "\(smartImportReviewStepCount)",
+                        label: smartImportReviewStepCount == 1 ? "passaggio" : "passaggi"
+                    )
+                }
+            }
+            .padding(12)
+            .background(createSectionContainer(priority: .tertiary))
+        }
+    }
+
+    private func smartImportReviewMetric(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var ingredientsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(localizer.text(.ingredientsSectionTitle))
+            sectionHeader(
+                title: localizer.text(.ingredientsSectionTitle),
+                detail: "\(smartImportReviewIngredientCount)"
+            )
 
             ForEach($ingredientDrafts) { $ingredient in
                 let isSubsectionHeader = isSubsectionHeaderDraft(ingredient)
@@ -521,20 +572,21 @@ struct CreateRecipeView: View {
                                 localizer.text(.ingredientName),
                                 text: bindingForIngredientSearch(id: ingredient.id)
                             )
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
                             .focused($focusedIngredientID, equals: ingredient.id)
                             .font(isSubsectionHeader ? .subheadline.weight(.semibold) : .body)
+                            .createInputField()
 
-                            if ingredientIsCustom(ingredient) && !isSubsectionHeader {
-                                Text(localizer.text(.customIngredient))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .fill(Color(.secondarySystemGroupedBackground))
-                                    )
+                            let reviewBadges = ingredientReviewBadges(for: ingredient)
+                            if !reviewBadges.isEmpty && !isSubsectionHeader {
+                                HStack(spacing: 6) {
+                                    ForEach(reviewBadges, id: \.self) { badge in
+                                        ingredientReviewBadge(badge)
+                                    }
+                                    if ingredientNeedsConfirmation(ingredient) {
+                                        ingredientMatchCTA(for: ingredient)
+                                    }
+                                }
                             }
 
                             let matches = ingredientMatches(for: ingredient)
@@ -601,7 +653,8 @@ struct CreateRecipeView: View {
                         HStack(spacing: 8) {
                             TextField(localizer.text(.quantity), text: $ingredient.quantityValue)
                                 .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
+                                .textFieldStyle(.plain)
+                                .createInputField(horizontalPadding: 10, verticalPadding: 8)
                                 .frame(width: 96)
 
                             Picker(localizer.text(.quantity), selection: $ingredient.quantityUnit) {
@@ -614,7 +667,7 @@ struct CreateRecipeView: View {
                         }
                     }
                 }
-                .padding(.vertical, 6)
+                .modifier(CreateBuilderRowModifier())
             }
 
             Button {
@@ -633,18 +686,46 @@ struct CreateRecipeView: View {
     }
 
     private var stepsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle(localizer.text(.stepsSectionTitle))
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(
+                title: localizer.text(.stepsSectionTitle),
+                detail: "\(stepTextsForPublish.count)"
+            )
+
+            if importConfidence != nil && !hasMeaningfulStepsForComposer {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "text.badge.plus")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 1)
+                    Text("Passaggi non trovati: aggiungi almeno un passaggio per pubblicare.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color(.secondarySystemGroupedBackground).opacity(0.58))
+                )
+            }
 
             ForEach(Array(stepDrafts.enumerated()), id: \.element.id) { index, step in
                 HStack(alignment: .top, spacing: 8) {
-                    Text("\(index + 1).")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, alignment: .leading)
+                    Text("\(index + 1)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(SeasonColors.seasonGreen)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(SeasonColors.seasonGreenSoft.opacity(0.34))
+                        )
+                        .padding(.top, 2)
 
                     TextField(localizer.text(.stepPlaceholder), text: bindingForStep(step.id), axis: .vertical)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
+                        .createInputField(minHeight: 44, alignment: .topLeading)
 
                     Button(role: .destructive) {
                         removeStep(id: step.id)
@@ -653,7 +734,7 @@ struct CreateRecipeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.vertical, 6)
+                .modifier(CreateBuilderRowModifier())
             }
 
             Button {
@@ -697,68 +778,18 @@ struct CreateRecipeView: View {
     }
 
     private var publishBar: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                if enableDraftMode {
-                    HStack(spacing: 10) {
-                        Button {
-                            persistDraftIfNeeded(showFeedback: true)
-                        } label: {
-                            Text(localizer.text(.saveDraft))
-                                .frame(maxWidth: .infinity)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .buttonStyle(SeasonSecondaryButtonStyle())
-                        .disabled(!canSaveDraft)
-
-                        Button {
-                            publish()
-                        } label: {
-                            Text(localizer.text(.publishRecipe))
-                                .frame(maxWidth: .infinity)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .buttonStyle(SeasonPrimaryButtonStyle())
-                        .disabled(!canPublish || isPublishing)
-                    }
-                } else {
-                    HStack {
-                        Button {
-                            publish()
-                        } label: {
-                            Text(localizer.text(.publishRecipe))
-                                .frame(maxWidth: .infinity)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .buttonStyle(SeasonPrimaryButtonStyle())
-                        .disabled(!canPublish || isPublishing)
-                    }
-                }
-                if enableDraftMode && showDraftSavedFeedback {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                        Text(localizer.text(.saved))
-                            .font(.caption.weight(.semibold))
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
-            .background(
-                SeasonColors.primarySurface.opacity(0.94)
-                    .overlay(
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.05))
-                            .frame(height: 0.6),
-                        alignment: .top
-                    )
-            )
-        }
+        CreatePublishBar(
+            enableDraftMode: enableDraftMode,
+            canSaveDraft: canSaveDraft,
+            canPublish: canPublish,
+            isPublishing: isPublishing,
+            showDraftSavedFeedback: showDraftSavedFeedback,
+            saveDraftTitle: localizer.text(.saveDraft),
+            publishTitle: localizer.text(.publishRecipe),
+            savedTitle: localizer.text(.saved),
+            onSaveDraft: { persistDraftIfNeeded(showFeedback: true) },
+            onPublish: publish
+        )
     }
 
     private var composerStateSummary: some View {
@@ -774,11 +805,11 @@ struct CreateRecipeView: View {
             Spacer()
             composerStateBadge
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(SeasonColors.secondarySurface.opacity(0.64))
+                .fill(Color.clear)
         )
     }
 
@@ -812,14 +843,23 @@ struct CreateRecipeView: View {
         } else {
             ZStack {
                 LinearGradient(
-                    colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
+                    colors: [
+                        SeasonColors.seasonGreenSoft.opacity(0.34),
+                        Color(.secondarySystemGroupedBackground).opacity(0.84),
+                        Color(.tertiarySystemGroupedBackground)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                VStack(spacing: 6) {
+                Circle()
+                    .fill(Color.white.opacity(0.38))
+                    .frame(width: 116, height: 116)
+                    .blur(radius: 18)
+                    .offset(x: 86, y: -54)
+                VStack(spacing: 7) {
                     Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(SeasonColors.seasonGreen.opacity(0.74))
                     Text(localizer.text(.mediaNoImagesYet))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -837,14 +877,18 @@ struct CreateRecipeView: View {
         } else {
             ZStack {
                 LinearGradient(
-                    colors: [Color(.secondarySystemGroupedBackground), Color(.tertiarySystemGroupedBackground)],
+                    colors: [
+                        SeasonColors.seasonGreenSoft.opacity(0.34),
+                        Color(.secondarySystemGroupedBackground).opacity(0.84),
+                        Color(.tertiarySystemGroupedBackground)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 VStack(spacing: 6) {
                     Image(systemName: "photo.badge.plus")
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SeasonColors.seasonGreen.opacity(0.74))
                     Text(localizer.text(.mediaNoImagesYet))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -1034,6 +1078,23 @@ struct CreateRecipeView: View {
         !stepTextsForPublish.isEmpty
     }
 
+    private var smartImportReviewIngredientCount: Int {
+        ingredientDrafts.filter { draft in
+            !ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !isSubsectionHeaderDraft(draft)
+        }.count
+    }
+
+    private var smartImportReviewNeedsConfirmationCount: Int {
+        ingredientDrafts.filter { draft in
+            ingredientNeedsConfirmation(draft)
+        }.count
+    }
+
+    private var smartImportReviewStepCount: Int {
+        stepTextsForPublish.count
+    }
+
     private var hasLoadedDraftForComposer: Bool {
         enableDraftMode && currentDraftRecipeID != nil && !draftLoadFailed
     }
@@ -1087,6 +1148,17 @@ struct CreateRecipeView: View {
             return Color(red: 0.84, green: 0.58, blue: 0.18)
         case .start:
             return Color(red: 0.33, green: 0.38, blue: 0.28)
+        }
+    }
+
+    private func smartImportReviewStatusMessage(for confidence: SocialImportConfidence) -> String {
+        switch confidence {
+        case .high:
+            return "Controlla e pubblica quando vuoi"
+        case .medium:
+            return "Controlla gli ingredienti evidenziati"
+        case .low:
+            return "Rivedi ingredienti e passaggi"
         }
     }
 
@@ -3180,6 +3252,24 @@ struct CreateRecipeView: View {
             .foregroundStyle(.secondary)
     }
 
+    private func sectionHeader(title: String, detail: String? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            sectionTitle(title)
+            if let detail {
+                Text(detail)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(SeasonColors.seasonGreen.opacity(0.78))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(SeasonColors.seasonGreenSoft.opacity(0.32))
+                    )
+            }
+            Spacer()
+        }
+    }
+
     private enum CreateSectionPriority {
         case primary
         case secondary
@@ -3191,21 +3281,15 @@ struct CreateRecipeView: View {
         switch priority {
         case .primary:
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.93))
+                .fill(Color(.systemBackground).opacity(0.88))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.primary.opacity(0.055), lineWidth: 0.65)
+                        .stroke(Color.primary.opacity(0.04), lineWidth: 0.55)
                 )
         case .secondary:
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground).opacity(0.5))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.primary.opacity(0.035), lineWidth: 0.6)
-                )
+            Color.clear
         case .tertiary:
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground).opacity(0.34))
+            Color.clear
         }
     }
 
@@ -3217,6 +3301,74 @@ struct CreateRecipeView: View {
             return basic.unitProfile.supportedUnits
         }
         return [.g, .piece]
+    }
+
+    private func ingredientReviewBadges(for draft: CreateIngredientDraft) -> [String] {
+        var badges: [String] = []
+        let hasCatalogID = !draft.produceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !draft.basicIngredientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasCustomName = !draft.customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasDisplayName = !ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        if hasCatalogID && !hasCustomName {
+            badges.append("Catalogo")
+        }
+        if !hasCatalogID && hasCustomName {
+            badges.append("Da confermare")
+        }
+        if hasDisplayName && draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            badges.append("Senza quantità")
+        }
+        return badges
+    }
+
+    private func ingredientNeedsConfirmation(_ draft: CreateIngredientDraft) -> Bool {
+        let hasCatalogID = !draft.produceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !draft.basicIngredientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasCustomName = !draft.customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return !hasCatalogID && hasCustomName
+    }
+
+    private func ingredientReviewBadge(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(ingredientReviewBadgeColor(text))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(ingredientReviewBadgeColor(text).opacity(0.12))
+            )
+    }
+
+    private func ingredientMatchCTA(for draft: CreateIngredientDraft) -> some View {
+        Button {
+            focusedIngredientID = draft.id
+        } label: {
+            Label("Abbina", systemImage: "link")
+                .font(.caption2.weight(.semibold))
+                .labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color(red: 0.24, green: 0.58, blue: 0.25))
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(red: 0.24, green: 0.58, blue: 0.25).opacity(0.12))
+        )
+        .accessibilityLabel("Abbina ingrediente")
+    }
+
+    private func ingredientReviewBadgeColor(_ text: String) -> Color {
+        switch text {
+        case "Catalogo":
+            return Color(red: 0.24, green: 0.58, blue: 0.25)
+        case "Da confermare":
+            return Color(red: 0.84, green: 0.58, blue: 0.18)
+        default:
+            return .secondary
+        }
     }
 
     private func ingredientMatches(for draft: CreateIngredientDraft) -> [IngredientSearchResult] {
@@ -5641,5 +5793,184 @@ private struct CameraImagePicker: UIViewControllerRepresentable {
             onImagePicked(image)
             dismiss()
         }
+    }
+}
+
+private struct CreateComposerHeroSection<MediaContent: View, ActionsContent: View, FooterContent: View>: View {
+    let title: String
+    @ViewBuilder var mediaContent: () -> MediaContent
+    @ViewBuilder var actions: () -> ActionsContent
+    @ViewBuilder var footer: () -> FooterContent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(SeasonColors.seasonGreen.opacity(0.78))
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .textCase(.uppercase)
+                    .tracking(1.1)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
+            ZStack(alignment: .bottomLeading) {
+                mediaContent()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 224)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                LinearGradient(
+                    colors: [.clear, Color.black.opacity(0.26), Color.black.opacity(0.42)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                actions()
+                    .padding(12)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color.white.opacity(0.42), lineWidth: 0.6)
+                    .blendMode(.overlay)
+            )
+            .shadow(color: SeasonColors.seasonGreen.opacity(0.08), radius: 18, y: 10)
+
+            footer()
+        }
+        .padding(14)
+    }
+}
+
+private struct CreatePublishBar: View {
+    let enableDraftMode: Bool
+    let canSaveDraft: Bool
+    let canPublish: Bool
+    let isPublishing: Bool
+    let showDraftSavedFeedback: Bool
+    let saveDraftTitle: String
+    let publishTitle: String
+    let savedTitle: String
+    let onSaveDraft: () -> Void
+    let onPublish: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                if enableDraftMode {
+                    HStack(spacing: 10) {
+                        saveDraftButton
+                        publishButton
+                    }
+                } else {
+                    publishButton
+                }
+
+                if enableDraftMode && showDraftSavedFeedback {
+                    savedFeedback
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+            .background(
+                SeasonColors.primarySurface.opacity(0.9)
+                    .background(.ultraThinMaterial)
+                    .overlay(
+                        Rectangle()
+                            .fill(Color.white.opacity(0.42))
+                            .frame(height: 0.6),
+                        alignment: .top
+                    )
+            )
+        }
+    }
+
+    private var saveDraftButton: some View {
+        Button(action: onSaveDraft) {
+            Text(saveDraftTitle)
+                .frame(maxWidth: .infinity)
+                .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(SeasonSecondaryButtonStyle())
+        .disabled(!canSaveDraft)
+        .opacity(canSaveDraft ? 1.0 : 0.54)
+    }
+
+    private var publishButton: some View {
+        Button(action: onPublish) {
+            Text(publishTitle)
+                .frame(maxWidth: .infinity)
+                .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(SeasonPrimaryButtonStyle())
+        .disabled(!canPublish || isPublishing)
+        .opacity((canPublish && !isPublishing) ? 1.0 : 0.58)
+    }
+
+    private var savedFeedback: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+            Text(savedTitle)
+                .font(.caption.weight(.semibold))
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.top, 6)
+    }
+}
+
+private struct CreateBuilderRowModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(SeasonColors.secondarySurface.opacity(0.42))
+            )
+    }
+}
+
+private struct CreateInputFieldModifier: ViewModifier {
+    var horizontalPadding: CGFloat = 12
+    var verticalPadding: CGFloat = 10
+    var minHeight: CGFloat? = nil
+    var alignment: Alignment = .center
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(minHeight: minHeight, alignment: alignment)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.72))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.primary.opacity(0.045), lineWidth: 0.6)
+            )
+    }
+}
+
+private extension View {
+    func createInputField(
+        horizontalPadding: CGFloat = 12,
+        verticalPadding: CGFloat = 10,
+        minHeight: CGFloat? = nil,
+        alignment: Alignment = .center
+    ) -> some View {
+        modifier(
+            CreateInputFieldModifier(
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                minHeight: minHeight,
+                alignment: alignment
+            )
+        )
     }
 }

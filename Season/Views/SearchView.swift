@@ -11,7 +11,7 @@ struct SearchView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: SeasonSpacing.lg) {
+            VStack(alignment: .leading, spacing: DS.Spacing.xl) {
                 searchHeaderArea
 
                 if isSearching {
@@ -20,19 +20,15 @@ struct SearchView: View {
                     idleDiscoveryContent
                 }
             }
-            .padding(.horizontal, SeasonSpacing.md)
-            .padding(.top, SeasonSpacing.sm)
-            .padding(.bottom, SeasonSpacing.xl)
+            .padding(.horizontal, DS.Spacing.xl)
+            .padding(.top, DS.Spacing.md)
+            .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xl)
         }
-        .background(SeasonColors.primarySurface)
-        .navigationTitle(viewModel.localizer.localized("search.screen.title"))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            CartToolbarItems(
-                produceViewModel: viewModel,
-                shoppingListViewModel: shoppingListViewModel
-            )
-        }
+        .background(DS.Color.bg)
+        .seasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel
+        )
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
@@ -68,33 +64,63 @@ struct SearchView: View {
     }
 
     private var searchHeaderArea: some View {
-        VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .lastTextBaseline) {
+                Text(viewModel.localizer.localized("search.screen.title"))
+                    .font(DS.Font.displayTitle)
+                    .foregroundStyle(DS.Color.ink)
+
+                Spacer()
+
+                Text(viewModel.currentMonthName.uppercased())
+                    .font(DS.Font.mono(10, weight: .medium))
+                    .kerning(0.8)
+                    .foregroundStyle(DS.Color.inkMuted)
+                    .lineLimit(1)
+            }
+
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DS.Color.inkMuted)
                 TextField(viewModel.localizer.localized("search.input.placeholder"), text: $searchQuery)
+                    .font(DS.Font.sans(15, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
+
+                if isSearching {
+                    Button {
+                        searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(DS.Color.inkMuted)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                Circle()
+                                    .fill(DS.Color.bgSub)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .frame(height: 56)
             .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                    .fill(SeasonColors.subtleSurface)
+                RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
+                    .fill(DS.Color.card)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                    .stroke(Color.primary.opacity(isSearching ? 0.14 : 0.06), lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
+                    .stroke(isSearching ? DS.Color.sage.opacity(0.32) : DS.Color.border, lineWidth: 1)
             )
+            .dsShadow(.s1)
 
-            Picker(viewModel.localizer.localized("search.mode.picker.title"), selection: $selectedMode) {
-                Text(viewModel.localizer.localized("search.scope.recipes")).tag(SearchMode.recipes)
-                Text(viewModel.localizer.localized("search.scope.ingredients")).tag(SearchMode.ingredients)
-            }
-            .pickerStyle(.segmented)
+            searchScopeSelector
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: SeasonSpacing.xs) {
+                HStack(spacing: 8) {
                     ForEach(availableFilters(for: selectedMode)) { filter in
                         filterChip(title: filterTitle(for: filter), filter: filter)
                     }
@@ -102,6 +128,47 @@ struct SearchView: View {
                 .padding(.horizontal, 2)
             }
         }
+    }
+
+    private var searchScopeSelector: some View {
+        HStack(spacing: 8) {
+            searchScopeButton(
+                title: viewModel.localizer.localized("search.scope.recipes"),
+                mode: .recipes,
+                icon: "fork.knife"
+            )
+            searchScopeButton(
+                title: viewModel.localizer.localized("search.scope.ingredients"),
+                mode: .ingredients,
+                icon: "leaf"
+            )
+        }
+    }
+
+    private func searchScopeButton(title: String, mode: SearchMode, icon: String) -> some View {
+        let isSelected = selectedMode == mode
+        return Button {
+            selectedMode = mode
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(title)
+                    .font(DS.Font.sans(13, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? DS.Color.sageDeep : DS.Color.inkSoft)
+            .frame(maxWidth: .infinity)
+            .frame(height: 38)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? DS.Color.sageSoft.opacity(0.82) : DS.Color.cardSoft)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(isSelected ? DS.Color.sage.opacity(0.24) : DS.Color.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableCardButtonStyle())
     }
 
     @ViewBuilder
@@ -197,46 +264,68 @@ struct SearchView: View {
     }
 
     private func searchResultsHeader(query: String) -> some View {
-        Text(
-            String(
-                format: viewModel.localizer.localized("search.results_for_format"),
-                query
+        HStack(alignment: .firstTextBaseline) {
+            Text(
+                String(
+                    format: viewModel.localizer.localized("search.results_for_format"),
+                    query
+                )
             )
-        )
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+            .font(DS.Font.serif(22, weight: .medium))
+            .foregroundStyle(DS.Color.ink)
+            .lineLimit(2)
+
+            Spacer()
+
+            Text(selectedMode == .recipes
+                 ? viewModel.localizer.localized("search.scope.recipes")
+                 : viewModel.localizer.localized("search.scope.ingredients"))
+                .font(DS.Font.mono(10, weight: .medium))
+                .kerning(0.7)
+                .textCase(.uppercase)
+                .foregroundStyle(DS.Color.inkMuted)
+        }
     }
 
     @ViewBuilder
     private var idleDiscoveryContent: some View {
-        switch selectedMode {
-        case .recipes:
-            let fridgeRecipes = Array(recipesFromFridge(limit: 1))
-            VStack(alignment: .leading, spacing: SeasonSpacing.md) {
+        let fridgeRecipes = Array(recipesFromFridge(limit: 1))
+        VStack(alignment: .leading, spacing: DS.Spacing.xl) {
+            if selectedMode == .ingredients {
+                peakSeasonNowSection
                 if !fridgeRecipes.isEmpty {
                     fromYourFridgeSection(fridgeRecipes: fridgeRecipes)
                 }
                 trendingNowSection
+            } else {
+                if !fridgeRecipes.isEmpty {
+                    fromYourFridgeSection(fridgeRecipes: fridgeRecipes)
+                }
+                peakSeasonNowSection
+                trendingNowSection
             }
-        case .ingredients:
-            peakSeasonNowSection
         }
     }
 
     private func filterChip(title: String, filter: SearchFilterChip) -> some View {
-        Button {
-            selectedFilter = selectedFilter == filter ? nil : filter
+        let isSelected = selectedFilter == filter
+        return Button {
+            selectedFilter = isSelected ? nil : filter
         } label: {
             Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(selectedFilter == filter ? Color.white : .secondary)
+                .font(DS.Font.sans(12, weight: .semibold))
+                .foregroundStyle(isSelected ? DS.Color.sageDeep : DS.Color.inkSoft)
                 .seasonCapsuleChipStyle(
-                    horizontalPadding: 14,
-                    verticalPadding: 9,
-                    background: selectedFilter == filter ? SeasonColors.seasonGreen : SeasonColors.subtleSurface
+                    horizontalPadding: 12,
+                    verticalPadding: 8,
+                    background: isSelected ? DS.Color.sageSoft.opacity(0.78) : DS.Color.card
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(isSelected ? DS.Color.sage.opacity(0.24) : DS.Color.borderM, lineWidth: 1)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableCardButtonStyle())
     }
 
     private func availableFilters(for mode: SearchMode) -> [SearchFilterChip] {
@@ -264,16 +353,17 @@ struct SearchView: View {
         return VStack(alignment: .leading, spacing: SeasonSpacing.md) {
             HStack {
                 Text(viewModel.localizer.localized("search.discovery.peak_season_now"))
-                    .font(.title3.weight(.bold))
+                    .font(DS.Font.serif(24, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
                 Spacer()
                 Text(viewModel.currentMonthName.uppercased())
-                    .font(.caption.weight(.bold))
-                    .tracking(1)
-                    .foregroundStyle(Color(red: 0.33, green: 0.38, blue: 0.28))
+                    .font(DS.Font.mono(10, weight: .medium))
+                    .kerning(0.9)
+                    .foregroundStyle(DS.Color.inkMuted)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: SeasonSpacing.md) {
+                HStack(spacing: 8) {
                     ForEach(rankedIngredients) { ranked in
                         NavigationLink {
                             ProduceDetailView(
@@ -282,33 +372,39 @@ struct SearchView: View {
                                 shoppingListViewModel: shoppingListViewModel
                             )
                         } label: {
-                            VStack(spacing: 7) {
+                            VStack(spacing: 6) {
                                 peakSeasonIngredientThumbnail(for: ranked.item)
                                 Text(ranked.item.displayName(languageCode: viewModel.localizer.languageCode))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.primary)
+                                    .font(DS.Font.sans(11.5, weight: .semibold))
+                                    .foregroundStyle(DS.Color.ink)
                                     .lineLimit(1)
+                                    .minimumScaleFactor(0.78)
                                 Text(
                                     String(
                                         format: viewModel.localizer.localized("search.discovery.recipes_count_format"),
                                         recipeCountForIngredient(ranked.item.id)
                                     )
                                 )
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(DS.Font.mono(9, weight: .regular))
+                                    .kerning(0.3)
+                                    .foregroundStyle(DS.Color.inkMuted)
                             }
-                            .frame(width: 82)
+                            .frame(width: 80)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableCardButtonStyle())
                     }
                 }
                 .padding(.horizontal, 2)
             }
         }
-        .padding(SeasonSpacing.sm)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.84))
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .fill(DS.Color.sageSoft.opacity(0.32))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .stroke(DS.Color.sage.opacity(0.12), lineWidth: 1)
         )
     }
 
@@ -331,18 +427,15 @@ struct SearchView: View {
             }
 
             if hasImage {
-                ProduceThumbnailView(item: item, size: 68)
+                ProduceThumbnailView(item: item, size: 66)
             } else {
                 VStack(spacing: 4) {
                     CategoryIconView(category: item.category, size: 24)
-                        .foregroundStyle(Color(red: 0.38, green: 0.42, blue: 0.34))
-                    Text(viewModel.localizer.localized("search.discovery.season_pick"))
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.44, green: 0.47, blue: 0.40))
+                        .foregroundStyle(DS.Color.sageDeep.opacity(0.72))
                 }
             }
         }
-        .frame(width: 74, height: 74)
+        .frame(width: 72, height: 72)
         .overlay(
             Circle()
                 .stroke(Color.primary.opacity(0.08), lineWidth: 0.8)
@@ -352,8 +445,11 @@ struct SearchView: View {
 
     private func fromYourFridgeSection(fridgeRecipes: [RankedRecipe]) -> some View {
         return VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-            Text(viewModel.localizer.localized("search.discovery.from_fridge"))
-                .font(.title3.weight(.bold))
+            sectionHeader(
+                title: viewModel.localizer.localized("search.discovery.from_fridge"),
+                countText: viewModel.localizer.localized("search.badge.from_fridge"),
+                subtitle: nil
+            )
 
             if let ranked = fridgeRecipes.first {
                 NavigationLink {
@@ -382,10 +478,13 @@ struct SearchView: View {
     private var trendingNowSection: some View {
         let trending = presentableRecipes(from: viewModel.rankedTrendingNowRecipes(limit: 6))
         return VStack(alignment: .leading, spacing: SeasonSpacing.md) {
-            Text(viewModel.localizer.text(.trendingNowTitle))
-                .font(.title3.weight(.bold))
+            sectionHeader(
+                title: viewModel.localizer.text(.trendingNowTitle),
+                countText: recipeCountText(trending.count),
+                subtitle: viewModel.localizer.localized("search.section.recipes.subtitle")
+            )
 
-            VStack(spacing: SeasonSpacing.xs) {
+            VStack(spacing: 10) {
                 ForEach(trending) { ranked in
                     NavigationLink {
                         RecipeDetailView(
@@ -400,14 +499,18 @@ struct SearchView: View {
                             bestMatch: false
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardButtonStyle())
                 }
             }
         }
-        .padding(SeasonSpacing.sm)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.84))
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .fill(DS.Color.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .stroke(DS.Color.border, lineWidth: 1)
         )
     }
 
@@ -592,42 +695,50 @@ struct SearchView: View {
                 )
                 ForEach(results) { result in
                     HStack(alignment: .center, spacing: 12) {
-                        ingredientThumbnail(for: result)
-
                         NavigationLink {
                             ingredientDestination(for: result)
                         } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(result.title)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                Text(result.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                            HStack(alignment: .center, spacing: 12) {
+                                ingredientThumbnail(for: result)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(result.title)
+                                        .font(DS.Font.sans(14, weight: .semibold))
+                                        .foregroundStyle(DS.Color.ink)
+                                    Text(result.subtitle)
+                                        .font(DS.Font.sans(11.5))
+                                        .foregroundStyle(DS.Color.inkMuted)
+                                        .lineLimit(1)
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
 
-                        Spacer()
-
                         if case .produce(let item) = result.source {
-                            SeasonalStatusBadge(
-                                score: item.seasonalityScore(month: viewModel.currentMonth),
-                                delta: item.seasonalityDelta(month: viewModel.currentMonth),
-                                localizer: viewModel.localizer
-                            )
+                            searchIngredientSeasonBadge(for: item)
                         }
 
                         quickAddIngredientButton(for: result)
                     }
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                            .fill(DS.Color.cardSoft)
+                    )
+                    .contentShape(Rectangle())
                 }
             }
-            .padding(SeasonSpacing.sm)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.84))
+                RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                    .fill(DS.Color.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 1)
             )
         }
     }
@@ -656,14 +767,14 @@ struct SearchView: View {
                                 bestMatch: false
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableCardButtonStyle())
 
-                        let confirmedDietaryTags = viewModel.confirmedDietaryTags(for: ranked.recipe)
+                        let confirmedDietaryTags = Array(viewModel.confirmedDietaryTags(for: ranked.recipe).prefix(2))
                         if !confirmedDietaryTags.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 6) {
                                     ForEach(confirmedDietaryTags) { tag in
-                                        RecipeDietaryTagPill(tag: tag, localizer: viewModel.localizer)
+                                        SearchDietaryTagMiniPill(tag: tag, localizer: viewModel.localizer)
                                     }
                                 }
                             }
@@ -672,29 +783,35 @@ struct SearchView: View {
                     .padding(.vertical, 6)
                 }
             }
-            .padding(SeasonSpacing.sm)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.84))
+                RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                    .fill(DS.Color.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 1)
             )
         }
     }
 
     private func sectionHeader(title: String, countText: String, subtitle: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.primary)
+                    .font(DS.Font.serif(23, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
                 Spacer()
                 Text(countText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.mono(10, weight: .medium))
+                    .kerning(0.7)
+                    .textCase(.uppercase)
+                    .foregroundStyle(DS.Color.inkMuted)
             }
             if let subtitle {
                 Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(12))
+                    .foregroundStyle(DS.Color.inkMuted)
             }
         }
     }
@@ -705,6 +822,32 @@ struct SearchView: View {
 
     private func ingredientCountText(_ count: Int) -> String {
         "\(count.compactFormatted()) \(viewModel.localizer.text(.ingredients).lowercased())"
+    }
+
+    private func recipeSeasonBadgeText(percent: Int) -> String {
+        percent >= 70
+            ? viewModel.localizer.localized("home.filter.peak_season")
+            : viewModel.localizer.localized("search.filter.seasonal")
+    }
+
+    @ViewBuilder
+    private func searchIngredientSeasonBadge(for item: ProduceItem) -> some View {
+        let score = item.seasonalityScore(month: viewModel.currentMonth)
+        let delta = item.seasonalityDelta(month: viewModel.currentMonth)
+        let phase = ProduceItem.seasonalityPhase(score: score, delta: delta)
+
+        if phase != .outOfSeason {
+            SeasonBadge(
+                text: viewModel.localizer.seasonalityPhaseTitle(phase),
+                semantic: .positive,
+                horizontalPadding: 7,
+                verticalPadding: 4,
+                cornerRadius: 8,
+                foreground: DS.Color.sageDeep,
+                background: DS.Color.sageSoft.opacity(0.58)
+            )
+            .fixedSize(horizontal: true, vertical: false)
+        }
     }
 
     @ViewBuilder
@@ -719,17 +862,17 @@ struct SearchView: View {
                 shoppingListViewModel.add(basic)
             }
         } label: {
-            Image(systemName: isInList ? "checkmark" : "plus")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(isInList ? Color.green : .secondary)
-                .frame(width: 28, height: 28)
+            Image(systemName: isInList ? "checkmark" : "bag.badge.plus")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(isInList ? DS.Color.sageDeep : DS.Color.inkSoft)
+                .frame(width: 30, height: 30)
                 .background(
                     Circle()
-                        .fill(SeasonColors.subtleSurface)
+                        .fill(isInList ? DS.Color.sageSoft.opacity(0.7) : DS.Color.card)
                 )
                 .overlay(
                     Circle()
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 0.6)
+                        .stroke(DS.Color.border, lineWidth: 0.8)
                 )
         }
         .frame(minWidth: 44, minHeight: 44)
@@ -773,11 +916,11 @@ struct SearchView: View {
         case .basic:
             Image(systemName: "leaf")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DS.Color.sageDeep.opacity(0.74))
                 .frame(width: 46, height: 46)
                 .background(
                     Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
+                        .fill(DS.Color.sageSoft.opacity(0.48))
                 )
         }
     }
@@ -817,25 +960,48 @@ private enum SearchFilterChip: String, CaseIterable, Identifiable, Hashable {
     var id: String { rawValue }
 }
 
+private struct SearchDietaryTagMiniPill: View {
+    let tag: RecipeDietaryTag
+    let localizer: AppLocalizer
+
+    var body: some View {
+        Text(localizer.dietaryTagTitle(tag))
+            .font(DS.Font.sans(10.5, weight: .medium))
+            .foregroundStyle(DS.Color.inkMuted)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DS.Color.bgSub.opacity(0.7))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(DS.Color.borderS, lineWidth: 0.6)
+            )
+    }
+}
+
 private struct SearchRecipeRow: View {
     let ranked: RankedRecipe
     let viewModel: ProduceViewModel
     let bestMatch: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 11) {
-            RecipeThumbnailView(recipe: ranked.recipe, size: 44)
-                .frame(width: 44, height: 44)
+        HStack(alignment: .center, spacing: 12) {
+            RecipeThumbnailView(recipe: ranked.recipe, size: 54)
+                .frame(width: 54, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(ranked.recipe.title)
-                    .font(.body.weight(.semibold))
+                    .font(DS.Font.sans(14.5, weight: .semibold))
                     .lineLimit(2)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(DS.Color.ink)
 
                 Text(ranked.recipe.author)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(11.5))
+                    .foregroundStyle(DS.Color.inkMuted)
                     .lineLimit(1)
             }
 
@@ -853,20 +1019,29 @@ private struct SearchRecipeRow: View {
                 }
 
                 SeasonBadge(
-                    text: String(
-                        format: viewModel.localizer.localized("search.badge.seasonal_format"),
-                        ranked.seasonalMatchPercent
-                    ),
+                    text: recipeSeasonBadgeText(percent: ranked.seasonalMatchPercent),
                     icon: "leaf.fill",
                     semantic: .positive,
                     horizontalPadding: 7,
                     verticalPadding: 4,
                     cornerRadius: 7
                 )
+                .fixedSize(horizontal: true, vertical: false)
             }
         }
-        .padding(.horizontal, 2)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                .fill(DS.Color.cardSoft)
+        )
+        .contentShape(Rectangle())
+    }
+
+    private func recipeSeasonBadgeText(percent: Int) -> String {
+        percent >= 70
+            ? viewModel.localizer.localized("home.filter.peak_season")
+            : viewModel.localizer.localized("search.filter.seasonal")
     }
 }
 
@@ -876,19 +1051,19 @@ private struct SearchFridgeRecipeCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RecipeThumbnailView(recipe: ranked.recipe, size: 96)
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            RecipeThumbnailView(recipe: ranked.recipe, size: 88)
+                .frame(width: 88, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(ranked.recipe.title)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .font(DS.Font.serif(21, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
                     .lineLimit(2)
 
                 Text(ranked.recipe.author)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(12))
+                    .foregroundStyle(DS.Color.inkMuted)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
@@ -901,10 +1076,7 @@ private struct SearchFridgeRecipeCard: View {
                         cornerRadius: SeasonRadius.small
                     )
                     SeasonBadge(
-                        text: String(
-                            format: viewModel.localizer.localized("search.badge.seasonal_format"),
-                            ranked.seasonalMatchPercent
-                        ),
+                        text: viewModel.localizer.localized("search.filter.seasonal"),
                         icon: "leaf.fill",
                         semantic: .positive,
                         horizontalPadding: 8,
@@ -917,12 +1089,12 @@ private struct SearchFridgeRecipeCard: View {
         }
         .padding(SeasonSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.88))
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .fill(DS.Color.sageSoft.opacity(0.34))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: SeasonRadius.xl, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
+            RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                .stroke(DS.Color.sage.opacity(0.14), lineWidth: 1)
         )
     }
 }

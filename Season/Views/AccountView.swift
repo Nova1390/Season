@@ -77,7 +77,7 @@ struct AccountView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 20) {
                 profileHeaderSection
                 librarySection
                 preferencesSection
@@ -90,9 +90,11 @@ struct AccountView: View {
             .padding(.top, 12)
             .padding(.bottom, 12)
         }
-        .background(SeasonColors.primarySurface)
-        .navigationTitle(viewModel.localizer.text(.accountTab))
-        .navigationBarTitleDisplayMode(.inline)
+        .background(DS.Color.bg)
+        .seasonTopBar(
+            produceViewModel: viewModel,
+            shoppingListViewModel: shoppingListViewModel
+        )
         .safeAreaInset(edge: .bottom) {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance)
@@ -159,6 +161,7 @@ struct AccountView: View {
         .fullScreenCover(item: $selectedDraftEditorRoute) { route in
             CreateRecipeView(
                 viewModel: viewModel,
+                shoppingListViewModel: shoppingListViewModel,
                 initialDraftRecipeID: route.id,
                 enableDraftMode: true
             )
@@ -166,7 +169,7 @@ struct AccountView: View {
     }
 
     private var profileHeaderSection: some View {
-        VStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .center, spacing: 13) {
             sectionHeader(viewModel.localizer.text(.profile))
 
             PhotosPicker(
@@ -174,13 +177,25 @@ struct AccountView: View {
                 matching: .images
             ) {
                 Circle()
-                    .fill(Color(.tertiarySystemGroupedBackground))
-                    .frame(width: 84, height: 84)
+                    .fill(DS.Color.sageSoft.opacity(0.62))
+                    .frame(width: 88, height: 88)
                     .overlay(profileAvatarContent)
                     .overlay(
                         Circle()
-                            .stroke(seasonGreen.opacity(0.16), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.82), lineWidth: 3)
                     )
+                    .shadow(color: DS.Color.ink.opacity(0.08), radius: 18, x: 0, y: 8)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 26, height: 26)
+                            .background(Circle().fill(DS.Color.ink))
+                            .overlay(
+                                Circle()
+                                    .stroke(DS.Color.bg, lineWidth: 2)
+                            )
+                    }
                     .overlay {
                         if avatarUploadRunning {
                             ProgressView()
@@ -193,15 +208,17 @@ struct AccountView: View {
 
             VStack(spacing: 3) {
                 Text(accountDisplayName)
-                    .font(.title2.weight(.bold))
+                    .font(DS.Font.serif(26, weight: .medium))
+                    .foregroundStyle(DS.Color.ink)
                     .multilineTextAlignment(.center)
                 Text(accountHandleLine)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.mono(11, weight: .medium))
+                    .tracking(0.5)
+                    .foregroundStyle(DS.Color.inkMuted)
                 if let cloudLanguageLine {
                     Text(cloudLanguageLine)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(DS.Font.sans(12))
+                        .foregroundStyle(DS.Color.inkMuted)
                 }
             }
 
@@ -214,14 +231,14 @@ struct AccountView: View {
                         } label: {
                             creatorSocialIcon(for: link.platform)
                                 .frame(width: 18, height: 18)
-                                .frame(minWidth: 36, minHeight: 36)
+                                .frame(minWidth: 40, minHeight: 34)
                                 .background(
-                                    Circle()
-                                        .fill(seasonGreen.opacity(0.10))
+                                    Capsule(style: .continuous)
+                                        .fill(DS.Color.card.opacity(0.86))
                                 )
                                 .overlay(
-                                    Circle()
-                                        .stroke(seasonGreen.opacity(0.14), lineWidth: 0.8)
+                                    Capsule(style: .continuous)
+                                        .stroke(DS.Color.borderM, lineWidth: 0.8)
                                 )
                         }
                         .buttonStyle(SoftPressButtonStyle())
@@ -238,11 +255,11 @@ struct AccountView: View {
                                 .padding(.vertical, 2)
                                 .background(
                                     Capsule(style: .continuous)
-                                        .fill(Color(.systemBackground).opacity(0.88))
+                                        .fill(DS.Color.card.opacity(0.82))
                                 )
                                 .overlay(
                                     Capsule(style: .continuous)
-                                        .stroke(seasonGreen.opacity(0.12), lineWidth: 0.7)
+                                        .stroke(DS.Color.sage.opacity(0.12), lineWidth: 0.7)
                                 )
                         }
                     }
@@ -250,30 +267,30 @@ struct AccountView: View {
                 }
             } else {
                 Text(viewModel.localizer.text(.noBadgesYet))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(DS.Font.sans(12))
+                    .foregroundStyle(DS.Color.inkMuted)
             }
 
             HStack(spacing: 0) {
                 profileStatColumn(value: "\(savedRecipes.count)", label: viewModel.localizer.text(.savedRecipes))
                 Rectangle()
-                    .fill(seasonGreen.opacity(0.12))
+                    .fill(DS.Color.borderM)
                     .frame(width: 1, height: 28)
                 profileStatColumn(value: "\(myActiveRecipes.count)", label: viewModel.localizer.text(.myRecipes))
                 Rectangle()
-                    .fill(seasonGreen.opacity(0.12))
+                    .fill(DS.Color.borderM)
                     .frame(width: 1, height: 28)
                 profileStatColumn(value: "\(myDraftRecipes.count)", label: viewModel.localizer.text(.draftRecipes))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.64))
+                Capsule(style: .continuous)
+                    .fill(DS.Color.card.opacity(0.72))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(seasonGreen.opacity(0.08), lineWidth: 0.6)
+                Capsule(style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 0.8)
             )
 
             NavigationLink {
@@ -295,40 +312,51 @@ struct AccountView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(seasonGreen.opacity(0.76))
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(DS.Color.ink)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(
                     RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                        .fill(seasonGreen.opacity(0.11))
+                        .fill(DS.Color.sageSoft.opacity(0.72))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                        .stroke(seasonGreen.opacity(0.16), lineWidth: 0.8)
+                        .stroke(DS.Color.sage.opacity(0.16), lineWidth: 0.8)
                 )
             }
             .buttonStyle(SoftPressButtonStyle())
         }
         .frame(maxWidth: .infinity)
-        .padding(SeasonSpacing.md)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.95))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            DS.Color.card.opacity(0.98),
+                            DS.Color.sageSoft.opacity(0.42)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(seasonGreen.opacity(0.10), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(DS.Color.borderM, lineWidth: 0.8)
         )
     }
 
     private func profileStatColumn(value: String, label: String) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.headline.weight(.bold))
-                .foregroundStyle(seasonGreen)
+                .font(DS.Font.sans(17, weight: .bold))
+                .foregroundStyle(DS.Color.ink)
             Text(label.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(DS.Font.mono(9.5, weight: .medium))
+                .tracking(0.5)
+                .foregroundStyle(DS.Color.inkMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -392,7 +420,7 @@ struct AccountView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressButtonStyle())
 
             librarySubheader(title: viewModel.localizer.text(.archivedRecipes), count: myArchivedRankedRecipes.count)
 
@@ -408,18 +436,18 @@ struct AccountView: View {
         }
             .padding(SeasonSpacing.md)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [seasonGreenSoft.opacity(0.54), seasonGreenSoft.opacity(0.34)],
+                            colors: [DS.Color.sageSoft.opacity(0.74), DS.Color.cardSoft.opacity(0.48)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(seasonGreen.opacity(0.12), lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(DS.Color.sage.opacity(0.12), lineWidth: 0.8)
             )
         }
     }
@@ -467,7 +495,7 @@ struct AccountView: View {
                         TextField(viewModel.localizer.localized("account.auth.choose_username"), text: $authUsernameInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(AccountTextFieldStyle())
 
                         Button {
                             saveUsername()
@@ -507,16 +535,16 @@ struct AccountView: View {
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(AccountTextFieldStyle())
 
                     SecureField(viewModel.localizer.localized("account.auth.password_placeholder"), text: $authPassword)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(AccountTextFieldStyle())
 
                     if authModeIsSignUp {
                         TextField(viewModel.localizer.localized("account.auth.username_placeholder"), text: $authUsernameInput)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(AccountTextFieldStyle())
                     }
 
                     Button {
@@ -548,16 +576,7 @@ struct AccountView: View {
                         .foregroundStyle(authStatusIsError ? .red : .secondary)
                 }
             }
-            .padding(.vertical, 2)
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-            )
+            .modifier(AccountPreferenceBlockModifier())
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.accountSocialProfilesTitle, systemImage: "link")
@@ -568,13 +587,13 @@ struct AccountView: View {
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(AccountTextFieldStyle())
 
                 TextField(viewModel.localizer.accountSocialProfilesTikTokUsername, text: $tiktokProfileURLInput)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(AccountTextFieldStyle())
 
                 Button {
                     saveProfileSocialLinks()
@@ -595,16 +614,7 @@ struct AccountView: View {
                         .foregroundStyle(socialProfilesSaveIsError ? .red : .secondary)
                 }
             }
-            .padding(.vertical, 2)
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-            )
+            .modifier(AccountPreferenceBlockModifier())
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 Label(viewModel.localizer.text(.language), systemImage: "globe")
@@ -620,16 +630,7 @@ struct AccountView: View {
                 .labelsHidden()
                 .pickerStyle(.segmented)
             }
-            .padding(.vertical, 2)
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-            )
+            .modifier(AccountPreferenceBlockModifier())
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 DisclosureGroup(isExpanded: $showNutritionPreferences) {
@@ -653,34 +654,25 @@ struct AccountView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 2)
-            .padding(SeasonSpacing.sm)
-            .background(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground).opacity(0.65))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.6)
-            )
+            .modifier(AccountPreferenceBlockModifier())
             }
             .padding(SeasonSpacing.md)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.92))
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(DS.Color.card.opacity(0.94))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.primary.opacity(0.05), lineWidth: 0.7)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(DS.Color.border, lineWidth: 0.8)
             )
         }
-        .tint(seasonGreen)
+        .tint(DS.Color.sage)
     }
 
     private var diagnosticsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("System Diagnostics")
-                .opacity(0.74)
+                .opacity(0.52)
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 NavigationLink {
@@ -703,10 +695,10 @@ struct AccountView: View {
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(AccountTextFieldStyle())
 
                         SecureField(viewModel.localizer.text(.supabasePasswordField), text: $supabaseTestPassword)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(AccountTextFieldStyle())
 
                         Button {
                             runSupabaseAuthTest()
@@ -966,13 +958,13 @@ struct AccountView: View {
             .padding(SeasonSpacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.52))
+                    .fill(DS.Color.cardSoft.opacity(0.40))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.primary.opacity(0.025), lineWidth: 0.6)
+                    .stroke(DS.Color.border.opacity(0.55), lineWidth: 0.6)
             )
-            .opacity(0.8)
+            .opacity(0.72)
         }
         .tint(.secondary)
     }
@@ -1064,37 +1056,37 @@ struct AccountView: View {
 
     private func recipeRowContent(recipe: Recipe) -> some View {
         HStack(spacing: 10) {
-            RecipeThumbnailView(recipe: recipe, size: 44)
+            RecipeThumbnailView(recipe: recipe, size: 48)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
                 let trimmedTitle = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines)
                 Text(trimmedTitle.isEmpty ? viewModel.localizer.text(.untitledDraft) : trimmedTitle)
-                    .font(.body.weight(.semibold))
+                    .font(DS.Font.serif(15.5, weight: .medium))
                     .lineLimit(2)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(DS.Color.ink)
 
-                Text(String(format: viewModel.localizer.text(.crispyCountFormat), recipe.crispy))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text(String(format: viewModel.localizer.text(.viewsCountFormat), viewModel.viewCount(for: recipe)))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(String(format: viewModel.localizer.text(.crispyCountFormat), recipe.crispy))
+                    Text("·")
+                    Text(String(format: viewModel.localizer.text(.viewsCountFormat), viewModel.viewCount(for: recipe)))
+                }
+                .font(DS.Font.sans(11))
+                .foregroundStyle(DS.Color.inkMuted)
             }
 
             Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.95))
+                .fill(DS.Color.card.opacity(0.86))
         )
         .overlay(
             RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                .stroke(seasonGreen.opacity(0.08), lineWidth: 0.7)
+                .stroke(DS.Color.border, lineWidth: 0.7)
         )
-        .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
+        .shadow(color: DS.Color.ink.opacity(0.025), radius: 10, y: 3)
     }
 
     private var myActiveRecipes: [Recipe] {
@@ -1121,10 +1113,6 @@ struct AccountView: View {
         viewModel.savedRecipesRanked()
     }
 
-    private var myRecipeTotalCount: Int {
-        myActiveRecipes.count + myArchivedRecipes.count + myDraftRecipes.count
-    }
-
     private var myBadges: [UserBadge] {
         viewModel.badges(for: accountUsername)
     }
@@ -1141,15 +1129,6 @@ struct AccountView: View {
         creatorSocialProfileLinks.map { link in
             AuthorProfileView.CreatorSocialLink(platform: link.platform, url: link.url)
         }
-    }
-
-    private var followedAuthorsCount: Int {
-        Set(
-            followedAuthorsRaw
-                .split(separator: "|")
-                .map(String.init)
-                .filter { !$0.isEmpty }
-        ).count
     }
 
     private var accountDisplayName: String {
@@ -1211,17 +1190,18 @@ struct AccountView: View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DS.Color.inkMuted)
                 .frame(width: 30, height: 30)
                 .background(
                     Circle()
-                        .fill(Color(.tertiarySystemGroupedBackground))
+                        .fill(DS.Color.card.opacity(0.7))
                 )
 
             Text(subtitle)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(DS.Font.sans(12))
+                .foregroundStyle(DS.Color.inkMuted)
         }
+        .padding(.vertical, 2)
     }
 
     private func preferenceRow(for dimension: NutritionPriorityDimension) -> some View {
@@ -1320,118 +1300,45 @@ struct AccountView: View {
         }
     }
 
-    private func cloudProviderTitle(_ provider: String) -> String {
-        switch provider.lowercased() {
-        case "instagram": return viewModel.localizer.localized("common.instagram")
-        case "tiktok": return viewModel.localizer.localized("common.tiktok")
-        case "apple": return viewModel.localizer.localized("common.apple")
-        default: return provider.capitalized
-        }
-    }
-
-    private func cloudLinkedAccountDescriptor(_ account: CloudLinkedSocialAccount) -> String? {
-        let handle = account.handle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !handle.isEmpty {
-            return handle.hasPrefix("@") ? handle : "@\(handle)"
-        }
-        let display = account.display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !display.isEmpty {
-            return display
-        }
-        let providerUserID = account.provider_user_id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !providerUserID.isEmpty {
-            return providerUserID
-        }
-        return nil
-    }
-
-    private func cloudLinkedAccount(for provider: SocialAuthProvider) -> CloudLinkedSocialAccount? {
-        cloudLinkedAccounts.first { $0.provider.caseInsensitiveCompare(provider.rawValue) == .orderedSame }
-    }
-
-    private var hasAnyConnectedSocialAccount: Bool {
-        SocialAuthProvider.allCases.contains { provider in
-            cloudLinkedAccount(for: provider) != nil || linkedAccount(for: provider) != nil
-        }
-    }
-
-    private func providerDescriptor(for provider: SocialAuthProvider) -> String? {
-        if let cloud = cloudLinkedAccount(for: provider),
-           let descriptor = cloudLinkedAccountDescriptor(cloud) {
-            return descriptor
-        }
-        if let local = linkedAccount(for: provider) {
-            let handle = local.handle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !handle.isEmpty {
-                return handle.hasPrefix("@") ? handle : "@\(handle)"
-            }
-            let displayName = local.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-            return displayName.isEmpty ? nil : displayName
-        }
-        return nil
-    }
-
-    private func socialLinkRow(for provider: SocialAuthProvider) -> some View {
-        let descriptor = providerDescriptor(for: provider)
-        let isConnected = descriptor != nil
-        let isLoading = linkingInProgressProvider == provider
-
-        return HStack(spacing: 10) {
-            Text(providerTitle(provider))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-
-            Spacer()
-
-            if let descriptor {
-                Text(descriptor)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            if isLoading {
-                ProgressView()
-                    .controlSize(.small)
-            } else if isConnected {
-                Button(viewModel.localizer.text(.unlinkAction), role: .destructive) {
-                    unlink(provider: provider)
-                }
-                .buttonStyle(.borderless)
-                .font(.caption.weight(.semibold))
-            } else {
-                Button(viewModel.localizer.text(.connectAction)) {
-                    link(provider: provider)
-                }
-                .buttonStyle(.borderless)
-                .font(.caption.weight(.semibold))
-            }
-        }
-    }
-
-    private func cloudLinkedAccountRow(_ account: CloudLinkedSocialAccount) -> some View {
-        HStack(spacing: 10) {
-            Text(cloudProviderTitle(account.provider))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-
-            Spacer()
-
-            if let descriptor = cloudLinkedAccountDescriptor(account) {
-                Text(descriptor)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-    }
-
     private func sectionHeader(_ text: String) -> some View {
         Text(text.uppercased())
-            .font(.caption.weight(.bold))
-            .tracking(1.0)
-            .foregroundStyle(.secondary)
+            .font(DS.Font.mono(10.5, weight: .semibold))
+            .tracking(1.3)
+            .foregroundStyle(DS.Color.inkMuted)
             .padding(.horizontal, 4)
+    }
+
+    private struct AccountTextFieldStyle: TextFieldStyle {
+        func _body(configuration: TextField<Self._Label>) -> some View {
+            configuration
+                .font(DS.Font.sans(14))
+                .foregroundStyle(DS.Color.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                        .fill(DS.Color.card.opacity(0.82))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                        .stroke(DS.Color.border, lineWidth: 0.8)
+                )
+        }
+    }
+
+    private struct AccountPreferenceBlockModifier: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .padding(SeasonSpacing.sm)
+                .background(
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                        .fill(DS.Color.cardSoft.opacity(0.54))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
+                        .stroke(DS.Color.border.opacity(0.72), lineWidth: 0.6)
+                )
+        }
     }
 
     private struct SoftPressButtonStyle: ButtonStyle {
@@ -1478,55 +1385,6 @@ struct AccountView: View {
         let name = sanitizedAccount.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !name.isEmpty {
             accountUsername = name
-        }
-    }
-
-    private func removeLinkedAccount(provider: SocialAuthProvider) {
-        if let existing = linkedAccount(for: provider) {
-            _ = SocialAccessTokenStore.deleteToken(
-                provider: existing.provider,
-                providerUserID: existing.providerUserID
-            )
-        }
-        let updated = linkedAccounts.filter { $0.provider != provider }
-        linkedSocialAccountsRaw = SocialAccountLinkStore.encode(updated)
-    }
-
-    private func unlink(provider: SocialAuthProvider) {
-        guard linkingInProgressProvider == nil else { return }
-        socialLinkStatusMessage = ""
-        socialLinkStatusIsError = false
-        linkingInProgressProvider = provider
-
-        Task {
-            defer { linkingInProgressProvider = nil }
-
-            removeLinkedAccount(provider: provider)
-            let hadCloudAccount = cloudLinkedAccount(for: provider) != nil
-
-            if hadCloudAccount {
-                do {
-                    try await supabaseService.deleteMyLinkedSocialAccount(provider: provider.rawValue)
-                    cloudLinkedAccounts.removeAll { $0.provider.caseInsensitiveCompare(provider.rawValue) == .orderedSame }
-                    socialLinkStatusMessage = String(
-                        format: viewModel.localizer.localized("account.social.link.disconnected_format"),
-                        providerTitle(provider)
-                    )
-                    socialLinkStatusIsError = false
-                } catch {
-                    socialLinkStatusMessage = String(
-                        format: viewModel.localizer.localized("account.social.link.disconnect_failed_format"),
-                        providerTitle(provider)
-                    )
-                    socialLinkStatusIsError = true
-                }
-            } else {
-                socialLinkStatusMessage = String(
-                    format: viewModel.localizer.localized("account.social.link.disconnected_format"),
-                    providerTitle(provider)
-                )
-                socialLinkStatusIsError = false
-            }
         }
     }
 
