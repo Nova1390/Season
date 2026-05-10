@@ -301,6 +301,20 @@ The first schema migration stores proposal lifecycle events in `catalog_agent_pr
 
 The agent should receive bounded snapshots only. It should not browse the database freely.
 
+Implemented first snapshot RPC:
+
+- `public.get_catalog_agent_triage_snapshot(limit integer, source_domain text, include_non_new boolean)`
+- Migration: `supabase/migrations/20260510131500_catalog_agent_triage_snapshot.sql`
+
+Snapshot status:
+
+- read-only
+- proposal-preparation only
+- development-only until explicitly promoted
+- no LLM call
+- no catalog mutation
+- no recipe mutation
+
 Allowed snapshot data:
 
 - normalized ingredient text
@@ -322,6 +336,25 @@ Disallowed snapshot data:
 - private profile metadata
 - unrelated recipe notes
 - unrelated user-generated content
+
+The snapshot returns:
+
+- `metadata`: generated timestamp, filters, effective limit, and item count.
+- `policy`: charter/contract references and escalation rules.
+- `work_items`: bounded catalog backlog items.
+
+Each work item includes:
+
+- observation data
+- priority signals
+- coverage blocker context
+- possible canonical matches
+- existing alias matches
+- previous catalog decisions
+- previous agent proposals
+- allowed/forbidden agent output hints
+
+The agent should treat each work item as a work assignment, not as permission to mutate data.
 
 ## 13. Documentation Contract
 

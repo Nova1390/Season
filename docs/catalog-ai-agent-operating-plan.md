@@ -17,6 +17,7 @@ Current implementation status:
 - Phase 0 contracts are documented in `docs/catalog-ai-agent-contracts.md`.
 - The agent operating identity and responsibility boundaries are documented in `docs/catalog-agent-responsibility-charter.md`.
 - Phase 1 starts with proposal-only persistence tables in `supabase/migrations/20260510130000_catalog_agent_proposal_foundation.sql`.
+- The first read-only daily work packet is `public.get_catalog_agent_triage_snapshot(...)` in `supabase/migrations/20260510131500_catalog_agent_triage_snapshot.sql`.
 - No LLM runtime, auto-apply, recipe mutation, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
 
