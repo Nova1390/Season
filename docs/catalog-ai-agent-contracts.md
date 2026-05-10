@@ -34,6 +34,7 @@ Out of scope for this phase:
 - Every agent run and proposal must be audit-readable by catalog admins.
 - Every proposal must be attributable to a run, agent version, model, prompt version, and input snapshot hash when available.
 - Service-role credentials must never be present in app code, repo files, or client-triggered payloads.
+- Mistakes, rejected proposals, validation failures, and recurring ambiguities must become documented learning artifacts.
 
 ## 3. Decision Vocabulary
 
@@ -256,7 +257,47 @@ Important limitation:
 
 The migration intentionally does not include an agent snapshot RPC, LLM Edge Function, validator, auto-apply worker, or review UI.
 
-## 11. Data Access Contract
+## 11. Continuous Improvement Contract
+
+The agent must leave a structured learning trail when it discovers or causes an error.
+
+Learning artifacts are required when:
+
+- a proposal fails validation
+- a human reviewer rejects or edits a proposal
+- auto-apply is later found to be wrong
+- a recurring ambiguity appears across multiple observations
+- a policy gap blocks a decision
+- a multilingual case cannot be safely classified
+- a duplicate or over-collapsed identity is discovered
+
+Minimum learning fields for future persistence:
+
+- source proposal/run reference
+- learning type
+- original recommendation
+- observed problem
+- corrected decision or recommended next action
+- policy implication
+- evaluation-set recommendation
+- snapshot/prompt/validator recommendation
+- severity
+- status
+
+Learning status vocabulary:
+
+- `draft`
+- `needs_review`
+- `accepted`
+- `rejected`
+- `implemented`
+- `superseded`
+
+Implementation note:
+
+The first schema migration stores proposal lifecycle events in `catalog_agent_proposal_events`. A dedicated learning table can be added once validator/review workflows exist. Until then, learning notes should be stored as proposal events with explicit event types such as `learning_needed`, `review_rejected`, `validator_failed`, or `policy_gap_found`.
+
+## 12. Data Access Contract
 
 The agent should receive bounded snapshots only. It should not browse the database freely.
 
@@ -282,7 +323,7 @@ Disallowed snapshot data:
 - unrelated recipe notes
 - unrelated user-generated content
 
-## 12. Documentation Contract
+## 13. Documentation Contract
 
 Every future implementation change must update documentation in the same commit:
 
@@ -291,5 +332,6 @@ Every future implementation change must update documentation in the same commit:
 - Runtime/devops changes: add or update `supabase/devops/*` runbooks.
 - UI changes: update functional/technical overview as needed.
 - Security changes: update `docs/security/supabase-security-findings-disposition.md` or add a linked security note.
+- Continuous-improvement changes: update evaluation sets, policy docs, or this contract when an accepted learning changes behavior.
 
 This prevents the agent system from becoming invisible infrastructure.
