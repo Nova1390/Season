@@ -112,6 +112,7 @@ Start here:
 - [Catalog architecture](docs/catalog-architecture.md): canonical ingredient identity contract.
 - [Smart Import + Catalog Intelligence](docs/smart-import-catalog-intelligence-pipeline.md): source of truth for import, enrichment, autopilot, and reconciliation.
 - [Catalog AI Agent Operating Plan](docs/catalog-ai-agent-operating-plan.md): proposal-first plan for adding an AI agent without bypassing Supabase/autopilot guardrails.
+- [Catalog AI Agent Contracts](docs/catalog-ai-agent-contracts.md): concrete Phase 0/1 contracts for proposal schema, statuses, risk, and documentation discipline.
 - [Data architecture](Season/Docs/DataArchitecture.md): per-domain source-of-truth and sync model.
 - [Security disposition](docs/security/supabase-security-findings-disposition.md): security findings and decisions.
 - [Catalog consolidation plan](docs/catalog-system-review-and-consolidation-plan.md): review snapshot and refactor roadmap for catalog operations.

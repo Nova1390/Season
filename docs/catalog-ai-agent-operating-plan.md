@@ -9,6 +9,13 @@ It complements:
 - `docs/catalog-architecture.md`
 - `docs/smart-import-catalog-intelligence-pipeline.md`
 - `docs/catalog-system-review-and-consolidation-plan.md`
+- `docs/catalog-ai-agent-contracts.md`
+
+Current implementation status:
+
+- Phase 0 contracts are documented in `docs/catalog-ai-agent-contracts.md`.
+- Phase 1 starts with proposal-only persistence tables in `supabase/migrations/20260510130000_catalog_agent_proposal_foundation.sql`.
+- No LLM runtime, auto-apply, recipe mutation, or iOS admin UI is implemented yet.
 
 ## 1. Executive Summary
 
