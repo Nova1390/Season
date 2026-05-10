@@ -307,8 +307,9 @@ Configurazione in Xcode:
 Stato TestFlight:
 
 - `CURRENT_PROJECT_VERSION = 2`.
-- `MARKETING_VERSION = 1.0`.
+- `MARKETING_VERSION = 1.0.1`.
 - Release compila contro staging.
+- TestFlight candidate `1.0.1 (2)` e stato archiviato/caricato da configurazione Release.
 - Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
 
 ## 13. Build e verifica
@@ -325,7 +326,7 @@ plutil -lint Season-Info.plist
 Nota:
 
 - `CODE_SIGNING_ALLOWED=NO` valida compilazione e bundle, non firma App Store/TestFlight.
-- Per TestFlight serve Archive firmato da Xcode o pipeline export/upload configurata.
+- Per TestFlight serve Archive firmato da Xcode o pipeline export/upload configurata; il candidato corrente e gia stato caricato e resta soggetto a processing/review su App Store Connect.
 
 ## 14. Asset e design system
 
@@ -406,7 +407,7 @@ Debiti noti:
 
 Prossimi step raccomandati:
 
-- Validare Archive firmato e upload TestFlight.
+- Completare processing/review App Store Connect e assegnazione build ai gruppi tester.
 - Monitorare staging con ricette Giallo Zafferano.
 - Eseguire `supabase/devops/staging_testflight_preflight.sql` prima di ogni build candidata.
 - Se l'autopilot deve girare anche su staging, usare solo gli script `staging_catalog_autopilot_v2_*` dedicati.

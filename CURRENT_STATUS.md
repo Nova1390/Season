@@ -1,7 +1,8 @@
 # Current Status
 
 ## Working Today
-- The app is in TestFlight preparation for an iOS 26+ release.
+- The app is in TestFlight rollout preparation for an iOS 26+ release.
+- TestFlight build `1.0.1 (2)` has been archived/uploaded from Release configuration.
 - Debug builds target the development Supabase environment; Release builds target the staging Supabase environment.
 - `Season/PrivacyInfo.xcprivacy` is present and lint-clean for app-level privacy manifest coverage.
 - Supabase auth path is integrated for app testing flows.
@@ -30,8 +31,8 @@
 - Supabase requests have instrumentation logs with trace IDs and failure categories.
 
 ## Known Technical Debt / Next Hardening Areas
-- A signed Archive/upload still needs to be produced and validated for TestFlight.
-- Staging preflight SQL should be run against the staging project before uploading a build.
+- App Store Connect processing, beta review, tester-group assignment, and external tester rollout remain operational release steps.
+- Staging preflight SQL should be run against the staging project before each release candidate and after catalog/security changes.
 - `OutboxStore` uses `UserDefaults`; scale/operability limits remain for long-lived high-volume queues.
 - `RecipeRepository` still carries schema-drift fallback branches for backward compatibility.
 - Cloud-to-local hydration is still incomplete for fridge, shopping list, and recipe state domains.
