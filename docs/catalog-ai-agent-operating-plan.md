@@ -1,6 +1,6 @@
 # Catalog AI Agent Operating Plan
 
-Status: planning document, no implementation yet.
+Status: planning document plus implementation roadmap. Phase 1 proposal-only runtime exists on dev; no auto-apply exists.
 
 This document describes how Season should introduce an AI agent for catalog governance without weakening the current deterministic, auditable autopilot architecture.
 
@@ -18,7 +18,10 @@ Current implementation status:
 - The agent operating identity and responsibility boundaries are documented in `docs/catalog-agent-responsibility-charter.md`.
 - Phase 1 starts with proposal-only persistence tables in `supabase/migrations/20260510130000_catalog_agent_proposal_foundation.sql`.
 - The first read-only daily work packet is `public.get_catalog_agent_triage_snapshot(...)` in `supabase/migrations/20260510131500_catalog_agent_triage_snapshot.sql`.
-- No LLM runtime, auto-apply, recipe mutation, or iOS admin UI is implemented yet.
+- The first proposal-only runtime is `supabase/functions/run-catalog-agent-triage`.
+- The first runtime calls the OpenAI Responses API through a bounded Edge Function, stores proposals only, logs token usage, and skips recent duplicate work.
+- It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
+- No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
 
 ## 1. Executive Summary
@@ -656,7 +659,7 @@ Deliverables:
 - snapshot RPC
 - proposal/audit tables
 - JSON validation
-- staging-only manual trigger
+- dev-only manual trigger until release-sensitive staging work is explicitly approved
 
 No catalog mutations.
 
@@ -796,11 +799,11 @@ Before implementation, decide:
 
 Recommended first implementation scope:
 
-- staging only
+- dev only until the TestFlight staging release is no longer sensitive
 - proposal-only
 - no auto-apply
-- top 50 unresolved observations
-- Giallo Zafferano source focus
+- small bounded unresolved observation batches
+- source-domain filter optional, with Giallo Zafferano supported but not hardcoded
 - output stored in proposal tables
 - admin-readable summary
 - evaluation against previously resolved decisions

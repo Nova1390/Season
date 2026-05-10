@@ -1,6 +1,6 @@
 # Catalog AI Agent Contracts
 
-Status: implementation contract for Phase 0 and Phase 1 foundation.
+Status: implementation contract for Phase 0 and Phase 1 proposal-only runtime.
 
 This document turns `docs/catalog-ai-agent-operating-plan.md` into concrete contracts for the first implementation steps. Every future agent feature must update this file or a linked runbook in the same change.
 
@@ -14,10 +14,10 @@ Current scope:
 - Define proposal JSON shape.
 - Define proposal-only database persistence.
 - Define safety rules for validation and future apply stages.
+- Define the first LLM-backed proposal-only Edge Function runtime.
 
 Out of scope for this phase:
 
-- Calling an LLM.
 - Scheduling an agent worker.
 - Auto-applying proposals.
 - Creating canonical ingredients autonomously.
@@ -128,6 +128,20 @@ Allowed run modes:
 Phase 1 mode:
 
 - `proposal_only`
+- Runtime: `supabase/functions/run-catalog-agent-triage`
+- Initial environment: `Season-dev` only while TestFlight staging remains release-sensitive.
+
+Budget controls required for proposal-only runtime:
+
+- agent must be disabled unless `CATALOG_AGENT_ENABLED=true`
+- item count must be bounded by `CATALOG_AGENT_MAX_ITEMS_PER_RUN`
+- run frequency must be bounded by `CATALOG_AGENT_MAX_RUNS_PER_DAY`
+- recent duplicate work must be skipped with `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`
+- provider calls must have a timeout
+- token usage must be logged in run summary
+- cost estimates must be recorded when cost env vars are configured
+- no cron/scheduler is allowed until explicitly documented
+- manual smoke tests must reset `CATALOG_AGENT_ENABLED=false` after verification unless the operator intentionally keeps dev callable
 
 ## 7. Proposal Contract
 
@@ -256,6 +270,12 @@ Persistence rules:
 Important limitation:
 
 The migration intentionally does not include an agent snapshot RPC, LLM Edge Function, validator, auto-apply worker, or review UI.
+
+The proposal-only Edge Function writes to these tables but still does not validate/apply catalog mutations:
+
+- `catalog_agent_runs`
+- `catalog_agent_proposals`
+- `catalog_agent_proposal_events`
 
 ## 11. Continuous Improvement Contract
 
