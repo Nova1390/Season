@@ -4,6 +4,8 @@ Status: implementation contract for Phase 0 and Phase 1 foundation.
 
 This document turns `docs/catalog-ai-agent-operating-plan.md` into concrete contracts for the first implementation steps. Every future agent feature must update this file or a linked runbook in the same change.
 
+The agent's operating identity and responsibility boundaries are defined in `docs/catalog-agent-responsibility-charter.md`. This contract implements those boundaries technically.
+
 ## 1. Scope
 
 Current scope:
@@ -24,6 +26,7 @@ Out of scope for this phase:
 
 ## 2. Non-Negotiable Rules
 
+- The agent behaves as a careful Season catalog operator, not as an unrestricted automation script.
 - Supabase remains the source of truth for catalog state.
 - The agent never writes directly to `public.ingredients`, `public.ingredient_aliases_v2`, `public.ingredient_localizations`, or recipe JSON.
 - Agent output is advisory until a backend validator and governed RPC accept it.
