@@ -1,7 +1,14 @@
 import Foundation
 import Supabase
 
+enum EmailSignUpResult {
+    case signedIn(UUID)
+    case needsEmailConfirmation
+}
+
 final class AuthRepository {
+    private static let emailConfirmationRedirectURL = URL(string: "season://auth/callback")
+
     private let client: SupabaseClient?
     private let configurationIssue: String?
 
@@ -63,7 +70,7 @@ final class AuthRepository {
         return userID
     }
 
-    func signUpWithEmail(email: String, password: String) async throws -> UUID {
+    func signUpWithEmail(email: String, password: String) async throws -> EmailSignUpResult {
         guard let supabaseClient = client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
@@ -74,14 +81,20 @@ final class AuthRepository {
             throw SupabaseServiceError.unauthenticated
         }
 
-        _ = try await supabaseClient.auth.signUp(email: normalizedEmail, password: normalizedPassword)
-        if supabaseClient.auth.currentUser == nil {
-            _ = try await supabaseClient.auth.signIn(email: normalizedEmail, password: normalizedPassword)
+        let response = try await supabaseClient.auth.signUp(
+            email: normalizedEmail,
+            password: normalizedPassword,
+            redirectTo: Self.emailConfirmationRedirectURL
+        )
+        if let session = response.session {
+            return .signedIn(session.user.id)
         }
-        guard let userID = supabaseClient.auth.currentUser?.id else {
-            throw SupabaseServiceError.unauthenticated
+
+        if let userID = supabaseClient.auth.currentUser?.id {
+            return .signedIn(userID)
         }
-        return userID
+
+        return .needsEmailConfirmation
     }
 
     func signOut() async throws {
@@ -91,7 +104,13 @@ final class AuthRepository {
         try await supabaseClient.auth.signOut()
     }
 
-    func signInWithAppleIDToken(_ idToken: String) async throws -> UUID {
+    func signInWithAppleIDToken(
+        _ idToken: String,
+        nonce: String,
+        fullName: String?,
+        givenName: String?,
+        familyName: String?
+    ) async throws -> UUID {
         guard let supabaseClient = client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
@@ -100,12 +119,17 @@ final class AuthRepository {
         guard !trimmedToken.isEmpty else {
             throw SupabaseServiceError.unauthenticated
         }
+        let trimmedNonce = nonce.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedNonce.isEmpty else {
+            throw SupabaseServiceError.unauthenticated
+        }
 
         print("[SEASON_AUTH] phase=apple_supabase_exchange_started")
         _ = try await supabaseClient.auth.signInWithIdToken(
             credentials: OpenIDConnectCredentials(
                 provider: .apple,
-                idToken: trimmedToken
+                idToken: trimmedToken,
+                nonce: trimmedNonce
             )
         )
 
@@ -114,8 +138,45 @@ final class AuthRepository {
             throw SupabaseServiceError.unauthenticated
         }
 
+        await updateAppleUserMetadataIfNeeded(
+            client: supabaseClient,
+            fullName: fullName,
+            givenName: givenName,
+            familyName: familyName
+        )
+
         print("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
         return userID
+    }
+
+    private func updateAppleUserMetadataIfNeeded(
+        client supabaseClient: SupabaseClient,
+        fullName: String?,
+        givenName: String?,
+        familyName: String?
+    ) async {
+        let normalizedFullName = fullName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedGivenName = givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedFamilyName = familyName?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var metadata: [String: AnyJSON] = [:]
+        if let normalizedFullName, !normalizedFullName.isEmpty {
+            metadata["full_name"] = .string(normalizedFullName)
+        }
+        if let normalizedGivenName, !normalizedGivenName.isEmpty {
+            metadata["given_name"] = .string(normalizedGivenName)
+        }
+        if let normalizedFamilyName, !normalizedFamilyName.isEmpty {
+            metadata["family_name"] = .string(normalizedFamilyName)
+        }
+        guard !metadata.isEmpty else { return }
+
+        do {
+            _ = try await supabaseClient.auth.update(user: UserAttributes(data: metadata))
+            print("[SEASON_AUTH] phase=apple_user_metadata_updated")
+        } catch {
+            print("[SEASON_AUTH] phase=apple_user_metadata_update_failed error=\(error.localizedDescription)")
+        }
     }
 
     func validateProfilePipeline(for userID: UUID) async throws -> Bool {

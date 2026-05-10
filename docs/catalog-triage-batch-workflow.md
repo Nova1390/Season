@@ -1,5 +1,7 @@
 # Catalog Triage Batch Workflow (Admin/Backoffice)
 
+Status: legacy/manual fallback. The primary operating path is the backend-native RPC described in `docs/catalog-candidate-batch-triage.md`. Keep this workflow only for controlled, explicit maintenance batches where the hardcoded input sets have been reviewed.
+
 This workflow automates **initial triage only** for unresolved imported ingredient candidates:
 - approve safe aliases
 - mark clear noise as ignore

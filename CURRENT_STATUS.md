@@ -1,6 +1,9 @@
 # Current Status
 
 ## Working Today
+- The app is in TestFlight preparation for an iOS 26+ release.
+- Debug builds target the development Supabase environment; Release builds target the staging Supabase environment.
+- `Season/PrivacyInfo.xcprivacy` is present and lint-clean for app-level privacy manifest coverage.
 - Supabase auth path is integrated for app testing flows.
 - `profiles` can be read for the authenticated user.
 - `linked_social_accounts` can be read for the authenticated user.
@@ -15,16 +18,22 @@
   - unfollow -> pending delete tombstone
   - `syncToBackend()` processes only pending rows.
 - Recipe persistence uses extracted `RecipeRepository` read/write layer.
+- Published recipe content is expected to come from Supabase. The local TheMealDB seed payload and loader have been removed from the app bundle path.
 - Recipe ingredient model/fetch now supports canonical `ingredient_id` (with legacy `produce_id`/`basic_ingredient_id` compatibility).
 - Catalog hierarchy fields are active (`parent_ingredient_id`, `specificity_rank`, `variant_kind`) with write-through in active catalog flow.
 - Recipe reconciliation now has two apply paths:
   - legacy apply (legacy mapping dependent)
   - modern safe apply (`apply_recipe_ingredient_reconciliation_modern`) for safe modern matches.
 - Catalog admin/debug operations are active in-app (`CatalogCandidatesDebugView` + `CatalogAdminOpsService`).
+- Staging-specific catalog autopilot schedule/verify/unschedule scripts live under `supabase/devops/`.
+- TestFlight staging preflight checks live in `supabase/devops/staging_testflight_preflight.sql`.
 - Supabase requests have instrumentation logs with trace IDs and failure categories.
 
 ## Known Technical Debt / Next Hardening Areas
+- A signed Archive/upload still needs to be produced and validated for TestFlight.
+- Staging preflight SQL should be run against the staging project before uploading a build.
 - `OutboxStore` uses `UserDefaults`; scale/operability limits remain for long-lived high-volume queues.
 - `RecipeRepository` still carries schema-drift fallback branches for backward compatibility.
+- Cloud-to-local hydration is still incomplete for fridge, shopping list, and recipe state domains.
 - Catalog/admin batch operations are client-triggered and require strict admin workflow discipline.
 - Architecture/status docs must be kept aligned with implementation as these flows evolve.

@@ -516,19 +516,21 @@ struct AccountView: View {
                     .buttonStyle(SeasonDestructiveButtonStyle())
                     .disabled(authActionRunning)
                 } else {
-                    Button {
-                        link(provider: .apple)
-                    } label: {
-                        Label(viewModel.localizer.localized("account.auth.sign_in_with_apple"), systemImage: "applelogo")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(SeasonPrimaryButtonStyle())
-                    .disabled(linkingInProgressProvider != nil)
+                    if FeatureFlags.appleAuthenticationEnabled {
+                        Button {
+                            link(provider: .apple)
+                        } label: {
+                            Label(viewModel.localizer.localized("account.auth.sign_in_with_apple"), systemImage: "applelogo")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(SeasonPrimaryButtonStyle())
+                        .disabled(linkingInProgressProvider != nil)
 
-                    if linkingInProgressProvider == .apple {
-                        Text(viewModel.localizer.localized("account.auth.signing_in"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if linkingInProgressProvider == .apple {
+                            Text(viewModel.localizer.localized("account.auth.signing_in"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     TextField(viewModel.localizer.localized("account.auth.email_placeholder"), text: $authEmail)
@@ -1438,7 +1440,18 @@ struct AccountView: View {
             do {
                 let userID: UUID
                 if authModeIsSignUp {
-                    userID = try await supabaseService.signUpWithEmail(email: email, password: password)
+                    let signUpResult = try await supabaseService.signUpWithEmail(email: email, password: password)
+                    guard case .signedIn(let signedUpUserID) = signUpResult else {
+                        await MainActor.run {
+                            authStatusMessage = "Check your email to confirm your account, then log in."
+                            authStatusIsError = false
+                            authPassword = ""
+                            authModeIsSignUp = false
+                        }
+                        print("[SEASON_AUTH] phase=email_sign_up_confirmation_required")
+                        return
+                    }
+                    userID = signedUpUserID
                     print("[SEASON_AUTH] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
                     let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: userID)
                     guard available else {

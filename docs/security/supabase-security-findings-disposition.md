@@ -15,6 +15,40 @@ This is not a blanket warning cleanup. Findings that remain are known, understoo
 
 ## What Has Been Fixed
 
+### Remote schema lint blockers
+
+`supabase db lint --linked` against `Season-dev` is clean after the latest pass.
+
+Fixed:
+
+- `public.is_catalog_admin`: removed the direct compile-time dependency on `profiles.is_admin`, because that column can be absent in some environments while admin access still works through `catalog_admin_allowlist`.
+- `public.upsert_legacy_ingredient_mapping`: qualified the `legacy_ingredient_mapping.ingredient_id` update predicate to remove PL/pgSQL ambiguity.
+- `public.upsert_legacy_ingredient_mapping`: explicitly consumes the reserved `p_reviewer_note` parameter so the public function signature stays stable without lint noise.
+
+Applied migrations:
+
+- `supabase/migrations/20260510103000_fix_security_lint_blockers.sql`
+- `supabase/migrations/20260510104500_clear_legacy_mapping_lint_warning.sql`
+
+### Security Advisor RLS / security definer view pass
+
+The critical dashboard findings shown for `ingredient_canonical_redirects` and catalog/reconciliation views are addressed in dev by:
+
+- enabling RLS on `public.ingredient_canonical_redirects`;
+- adding explicit public read policy for canonical redirects, because they are safe catalog metadata used to resolve deprecated duplicate ingredients;
+- converting runtime/admin catalog and reconciliation views to `security_invoker=true`;
+- adding catalog-admin-only SELECT policies for operational tables used by those invoker views.
+
+Applied migration:
+
+- `supabase/migrations/20260510110000_security_advisor_rls_and_invoker_views.sql`
+
+Verified on `Season-dev`:
+
+- `ingredient_canonical_redirects.relrowsecurity = true`;
+- affected views have `security_invoker=true`;
+- `supabase db lint --linked` returns `No schema errors found`.
+
 ### `public.recipes`
 
 `public.recipes` is considered resolved for the current pass.
@@ -131,6 +165,24 @@ Reason:
 - this is a Supabase Auth dashboard/configuration setting
 - it is not fixed through an app migration
 - enabling it is low risk but should be handled operationally in the dashboard
+
+### External Tester Signup And Link Guardrails
+
+Status: implemented for staging/TestFlight readiness.
+
+Implemented controls:
+
+- staging Auth requires email confirmation before sign-in
+- app signup handles the confirmation-required state without auto-login fallback
+- `season://auth/callback` is registered in the app and in Supabase Auth redirect allowlist
+- recipe/profile URL writes are constrained to HTTPS allowlisted hosts
+- current allowlist: Instagram, TikTok, Giallo Zafferano, and Season Supabase storage image hosts
+
+Operational note:
+
+- dev still permits autoconfirm for faster local iteration
+- staging should keep email confirmation enabled for external testers
+- custom SMTP and branded email templates remain recommended before a wider public beta
 
 ### Extension In Public Schema: `pg_net`
 

@@ -324,10 +324,6 @@ final class RecipeRepository {
         if lowercased.contains("giallozafferano") {
             return "Giallo Zafferano"
         }
-        if lowercased.contains("themealdb") {
-            return "TheMealDB"
-        }
-
         let withoutScheme = trimmed
             .replacingOccurrences(of: "https://", with: "")
             .replacingOccurrences(of: "http://", with: "")

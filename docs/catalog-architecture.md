@@ -164,9 +164,9 @@ Policy examples:
   - Goal: Ensure candidate/enrichment outputs include parent/specificity decisions.
   - Scope: Draft validation + admin review alignment.
   - Not included: autonomous ingredient creation without review.
-- Phase 4: Recipe alignment (future)
+- Phase 4: Recipe alignment (in progress)
   - Goal: Move recipe ingredient references toward canonical `ingredient_id` usage.
-  - Scope: Safe migration path with compatibility bridge retained during transition.
+  - Scope: Client fetch/model support for `ingredient_id`, safe reconciliation, and compatibility bridge retained during transition.
   - Not included: abrupt legacy contract removal.
 
 ## 8) Governance Rules
@@ -203,7 +203,7 @@ Policy examples:
 ## 10) Future Extensions (Not Implemented Yet)
 - Optional closure table for fast ancestor/descendant queries.
 - Optional non-tree ingredient relationships (substitution, pairing, processing relationships).
-- Future recipe storage alignment to canonical `ingredient_id` as primary reference.
+- Complete recipe storage alignment to canonical `ingredient_id` as primary reference after transition.
 
 Direction only:
 - These extensions are valid only if they preserve the principles in Section 1.

@@ -4,37 +4,36 @@ This document reflects the current behavior in code (`ProduceViewModel`, `Shoppi
 
 ### Produce
 
-**Source of Truth**  
+**Source of Truth**
 Local
 
-**Local Storage**  
+**Local Storage**
 - Bundled JSON (`produce.json`) loaded through `ProduceStore.loadFromBundle()`
 - In-memory cache in `ProduceViewModel`
 
-**Remote Storage (Supabase)**  
+**Remote Storage (Supabase)**
 none
 
-**Write Strategy**  
+**Write Strategy**
 Read-only domain (no write path)
 
-**Read Strategy**  
+**Read Strategy**
 Local bundle load on app startup
 
-**Sync Behavior**  
+**Sync Behavior**
 No sync (static catalog)
 
-**Current Limitations**  
+**Current Limitations**
 - Catalog updates require app update / bundled data refresh
 - No remote override path
 
 ### Recipes
 
 **Source of Truth**  
-Hybrid (local-first feed + remote merge)
+Supabase for published recipe content; local storage only for drafts/user-created immediate UX. Release/TestFlight must not depend on local recipe seed payloads.
 
 **Local Storage**  
 - `RecipeStore` cached in memory
-- Curated seed recipes in code + `seed_recipes.json`
 - User-created recipes in `UserDefaults` (`userCreatedRecipesData`)
 
 **Remote Storage (Supabase)**  
@@ -55,6 +54,7 @@ Best-effort merge on load; no authoritative reconciliation
 - Remote recipe mapping back to local model is lossy (e.g., author defaults to `"Season"`)
 - No conflict resolution if same `recipe.id` diverges
 - No remote draft model
+- Published recipe quality depends on staging data completeness and preflight validation
 
 ### Recipe States (saved / crispy)
 
@@ -181,6 +181,35 @@ Manual fetch on account screen lifecycle and debug actions; no formal profile sy
 - Mixed local/cloud account-linking paths coexist
 - Cloud linked account create/link write is not a complete dedicated pipeline in app-side architecture
 
+### Follows
+
+**Source of Truth**
+Local-first with Supabase delta sync for backend-syncable creator IDs.
+
+**Local Storage**
+- `FollowStore`
+- Encoded follow relations with pending sync metadata
+
+**Remote Storage (Supabase)**
+- `follows`
+
+**Write Strategy**
+- Follow: local active relation + pending create
+- Unfollow: local tombstone + pending delete
+- `FollowSyncManager.syncToBackend()` sends only pending deltas
+
+**Read Strategy**
+- `FollowSyncManager.syncFromBackend()` can hydrate/merge backend follows
+- UI reads local `FollowStore`
+
+**Sync Behavior**
+Delta-based best-effort sync with pending operation completion tracking.
+
+**Current Limitations**
+- Only backend-syncable creator IDs are eligible for remote sync
+- No full conflict-resolution policy beyond merge + pending operation replay
+- Follower counts remain approximate/product-level display signals
+
 ### Avatars / Media
 
 **Source of Truth**  
@@ -214,7 +243,7 @@ No media sync system beyond avatar URL update
 ### Ingredients
 
 **Source of Truth**  
-Hybrid foundational domain (catalog local; identity unification newly introduced but not adopted everywhere)
+Supabase canonical catalog for ingredient identity; bundled produce/basic JSON remains a compatibility and static UX fallback while the app migrates toward canonical `ingredient_id`.
 
 **Local Storage**  
 - Produce catalog from bundled JSON
@@ -222,20 +251,30 @@ Hybrid foundational domain (catalog local; identity unification newly introduced
 - New `IngredientReference` model + mapping extensions
 
 **Remote Storage (Supabase)**  
-Indirect via domain tables (`recipes.ingredients`, `shopping_list_items`, `fridge_items`)
+Canonical catalog tables:
+- `ingredients`
+- `ingredient_localizations`
+- `ingredient_aliases_v2`
+- `legacy_ingredient_mapping` for compatibility only
+
+Domain references:
+- `recipes.ingredients`
+- `shopping_list_items`
+- `fridge_items`
 
 **Write Strategy**  
-Domain-specific mapping per feature (shopping/fridge/recipe), no centralized ingredient write service
+Canonical mutations are backend-governed through catalog RPCs, enrichment drafts, alias approval, and automation workflows. App feature writes still use domain-specific references for shopping/fridge/recipe paths.
 
 **Read Strategy**  
-Domain-specific resolution in each view model
+Domain-specific resolution in each view model, with canonical `ingredient_id` support where available and legacy produce/basic fallback.
 
 **Sync Behavior**  
-No standalone ingredient sync domain
+No standalone app-side ingredient sync engine. Catalog quality is improved by backend automation and admin workflows.
 
 **Current Limitations**  
 - `IngredientReference` exists but is not yet fully adopted as cross-domain canonical identity
 - Ingredient mapping logic remains duplicated across view models/services
+- Legacy produce/basic identifiers still coexist with canonical ingredient IDs
 
 ## System Patterns
 
@@ -282,7 +321,6 @@ Current limitations:
 
 ## Known Gaps (CRITICAL)
 
-- No follow backend system (follow state remains local/AppStorage)
 - Recipe author/creator is not fully linked to profile identity in feed/detail data flow
 - Recipe media pipeline is incomplete (avatars supported; recipe media storage pipeline missing)
 - Ingredient domain unification is not fully adopted yet across all mutation/read paths
@@ -297,5 +335,6 @@ Current limitations:
 - **Shopping List**: keep local-first UX, but make outbox the single remote write path and add deterministic cloud hydration/reconciliation
 - **Fridge**: same direction as shopping list (single write path + hydration + reconciliation)
 - **Profiles**: backend-first for identity fields and linked accounts, with local cache as UI fallback only
+- **Follows**: keep delta sync, then add clearer cloud hydration/conflict rules and reliable follower-count semantics
 - **Avatars / Media**: keep avatars remote-first; add explicit recipe media upload/storage model (ownership + URL lifecycle)
-- **Ingredients**: adopt `IngredientReference` as canonical cross-domain identity surface to reduce mapping divergence
+- **Ingredients**: adopt canonical `ingredient_id` / `IngredientReference` as the cross-domain identity surface and keep produce/basic only as compatibility fallback

@@ -4,6 +4,13 @@ This document is the source of truth for the end-to-end pipeline that starts wit
 
 It complements `docs/catalog-architecture.md`. That document defines canonical ingredient identity. This document defines how import, observation, governance, creation, aliasing, automation, and reconciliation interact.
 
+Operational posture for TestFlight:
+
+- Supabase staging is the recipe/catalog source of truth for Release builds.
+- Local TheMealDB/seed recipe payloads must not feed Release/TestFlight content.
+- Staging preflight checks live in `supabase/devops/staging_testflight_preflight.sql`.
+- Staging catalog autopilot should be scheduled/verified with the `supabase/devops/staging_catalog_autopilot_v2_*` scripts, not the development scheduler.
+
 ## 1. Vision
 
 Season must make recipe import fast for creators without letting free-text input corrupt the canonical ingredient catalog.

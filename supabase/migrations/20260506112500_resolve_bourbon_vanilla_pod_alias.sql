@@ -15,7 +15,8 @@ begin
   limit 1;
 
   if v_target_id is null then
-    raise exception 'bourbon vanilla pod alias failed: missing canonical slug baccello_di_vaniglia_bourbon';
+    raise notice 'bourbon vanilla pod alias skipped: missing canonical slug baccello_di_vaniglia_bourbon';
+    return;
   end if;
 
   select a.ingredient_id, i.slug

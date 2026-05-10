@@ -25,7 +25,7 @@ begin
   limit 1;
 
   if v_semola_id is null then
-    raise exception 'semola canonical ingredient not found';
+    raise notice 'semola canonical ingredient not found; semolino alias cleanup will be skipped';
   end if;
 
   create temp table _review_create_terms (
@@ -189,51 +189,53 @@ begin
       and coalesce(a.is_active, true)
   );
 
-  insert into public.ingredient_aliases_v2 (
-    ingredient_id,
-    alias_text,
-    normalized_alias_text,
-    language_code,
-    source,
-    confidence,
-    confidence_score,
-    is_active,
-    status,
-    approval_source,
-    approved_at,
-    review_notes,
-    created_at,
-    updated_at
-  )
-  values (
-    v_semola_id,
-    'Semolino',
-    'semolino',
-    'it',
-    'manual_review',
-    0.88,
-    0.88,
-    true,
-    'approved',
-    'manual',
-    v_now,
-    'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
-    v_now,
-    v_now
-  )
-  on conflict (normalized_alias_text) where is_active = true do update
-  set
-    ingredient_id = excluded.ingredient_id,
-    alias_text = excluded.alias_text,
-    language_code = excluded.language_code,
-    source = excluded.source,
-    confidence = excluded.confidence,
-    confidence_score = excluded.confidence_score,
-    status = 'approved',
-    approval_source = excluded.approval_source,
-    approved_at = coalesce(public.ingredient_aliases_v2.approved_at, excluded.approved_at),
-    review_notes = excluded.review_notes,
-    updated_at = excluded.updated_at;
+  if v_semola_id is not null then
+    insert into public.ingredient_aliases_v2 (
+      ingredient_id,
+      alias_text,
+      normalized_alias_text,
+      language_code,
+      source,
+      confidence,
+      confidence_score,
+      is_active,
+      status,
+      approval_source,
+      approved_at,
+      review_notes,
+      created_at,
+      updated_at
+    )
+    values (
+      v_semola_id,
+      'Semolino',
+      'semolino',
+      'it',
+      'manual_review',
+      0.88,
+      0.88,
+      true,
+      'approved',
+      'manual',
+      v_now,
+      'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
+      v_now,
+      v_now
+    )
+    on conflict (normalized_alias_text) where is_active = true do update
+    set
+      ingredient_id = excluded.ingredient_id,
+      alias_text = excluded.alias_text,
+      language_code = excluded.language_code,
+      source = excluded.source,
+      confidence = excluded.confidence,
+      confidence_score = excluded.confidence_score,
+      status = 'approved',
+      approval_source = excluded.approval_source,
+      approved_at = coalesce(public.ingredient_aliases_v2.approved_at, excluded.approved_at),
+      review_notes = excluded.review_notes,
+      updated_at = excluded.updated_at;
+  end if;
 
   insert into public.custom_ingredient_observations (
     normalized_text,
@@ -262,11 +264,13 @@ begin
     status = 'ingredient_created',
     updated_at = excluded.updated_at;
 
-  update public.custom_ingredient_observations as o
-  set
-    status = 'resolved_alias',
-    updated_at = v_now
-  where o.normalized_text = 'semolino';
+  if v_semola_id is not null then
+    update public.custom_ingredient_observations as o
+    set
+      status = 'resolved_alias',
+      updated_at = v_now
+    where o.normalized_text = 'semolino';
+  end if;
 
   insert into public.catalog_candidate_decisions (
     normalized_text,
@@ -304,38 +308,40 @@ begin
       and existing.action in ('create_ingredient_from_candidate', 'create_ingredient_from_candidate_existing')
   );
 
-  insert into public.catalog_candidate_decisions (
-    normalized_text,
-    action,
-    ingredient_id,
-    alias_text,
-    language_code,
-    confidence_score,
-    reviewer_note,
-    resulting_observation_status,
-    resulting_alias_status,
-    created_at,
-    updated_at
-  )
-  select
-    'semolino',
-    'approve_alias',
-    v_semola_id,
-    'Semolino',
-    'it',
-    0.88,
-    'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
-    'resolved_alias',
-    'approved',
-    v_now,
-    v_now
-  where not exists (
-    select 1
-    from public.catalog_candidate_decisions d
-    where d.normalized_text = 'semolino'
-      and d.ingredient_id = v_semola_id
-      and d.action = 'approve_alias'
-  );
+  if v_semola_id is not null then
+    insert into public.catalog_candidate_decisions (
+      normalized_text,
+      action,
+      ingredient_id,
+      alias_text,
+      language_code,
+      confidence_score,
+      reviewer_note,
+      resulting_observation_status,
+      resulting_alias_status,
+      created_at,
+      updated_at
+    )
+    select
+      'semolino',
+      'approve_alias',
+      v_semola_id,
+      'Semolino',
+      'it',
+      0.88,
+      'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
+      'resolved_alias',
+      'approved',
+      v_now,
+      v_now
+    where not exists (
+      select 1
+      from public.catalog_candidate_decisions d
+      where d.normalized_text = 'semolino'
+        and d.ingredient_id = v_semola_id
+        and d.action = 'approve_alias'
+    );
+  end if;
 
   update public.catalog_ingredient_enrichment_drafts d
   set
@@ -351,18 +357,20 @@ begin
   where c.normalized_text = d.normalized_text
     and d.status = 'pending';
 
-  update public.catalog_ingredient_enrichment_drafts d
-  set
-    status = 'rejected',
-    needs_manual_review = false,
-    reviewer_note = coalesce(nullif(trim(d.reviewer_note), '') || E'\n', '')
-      || 'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
-    validated_ready = false,
-    validated_errors = '[]'::jsonb,
-    last_validated_at = v_now,
-    updated_at = v_now
-  where d.normalized_text = 'semolino'
-    and d.status = 'pending';
+  if v_semola_id is not null then
+    update public.catalog_ingredient_enrichment_drafts d
+    set
+      status = 'rejected',
+      needs_manual_review = false,
+      reviewer_note = coalesce(nullif(trim(d.reviewer_note), '') || E'\n', '')
+        || 'resolved_as_alias_to_existing_semola_from_giallozafferano_review',
+      validated_ready = false,
+      validated_errors = '[]'::jsonb,
+      last_validated_at = v_now,
+      updated_at = v_now
+    where d.normalized_text = 'semolino'
+      and d.status = 'pending';
+  end if;
 
   insert into public.catalog_ready_draft_creation_audit (
     batch_id,

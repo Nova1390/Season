@@ -1404,6 +1404,24 @@ final class SupabaseService {
         notifyAuthStateDidChange()
     }
 
+    func handleAuthCallbackURL(_ url: URL) {
+        guard let client else {
+            print("[SEASON_AUTH] phase=callback_ignored reason=missing_configuration url=\(url.absoluteString)")
+            return
+        }
+
+        Task {
+            do {
+                _ = try await client.auth.session(from: url)
+                invalidateCurrentProfileCache()
+                notifyAuthStateDidChange()
+                print("[SEASON_AUTH] phase=callback_session_loaded")
+            } catch {
+                print("[SEASON_AUTH] phase=callback_session_failed error=\(error.localizedDescription)")
+            }
+        }
+    }
+
     func signInWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithEmail") {
             let userID = try await authRepository.signInWithEmail(email: email, password: password)
@@ -1413,12 +1431,14 @@ final class SupabaseService {
         }
     }
 
-    func signUpWithEmail(email: String, password: String) async throws -> UUID {
+    func signUpWithEmail(email: String, password: String) async throws -> EmailSignUpResult {
         try await instrumentedRequest(name: "signUpWithEmail") {
-            let userID = try await authRepository.signUpWithEmail(email: email, password: password)
-            invalidateCurrentProfileCache()
-            notifyAuthStateDidChange()
-            return userID
+            let result = try await authRepository.signUpWithEmail(email: email, password: password)
+            if case .signedIn = result {
+                invalidateCurrentProfileCache()
+                notifyAuthStateDidChange()
+            }
+            return result
         }
     }
 
@@ -1430,9 +1450,21 @@ final class SupabaseService {
         }
     }
 
-    func signInWithAppleIDToken(_ idToken: String) async throws -> UUID {
+    func signInWithAppleIDToken(
+        _ idToken: String,
+        nonce: String,
+        fullName: String?,
+        givenName: String?,
+        familyName: String?
+    ) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithAppleIDToken") {
-            let userID = try await authRepository.signInWithAppleIDToken(idToken)
+            let userID = try await authRepository.signInWithAppleIDToken(
+                idToken,
+                nonce: nonce,
+                fullName: fullName,
+                givenName: givenName,
+                familyName: familyName
+            )
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID

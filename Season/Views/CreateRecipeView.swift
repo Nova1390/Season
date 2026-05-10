@@ -1323,6 +1323,13 @@ struct CreateRecipeView: View {
             return
         }
 
+        guard recipeLinksAreAllowedForPublish else {
+            print("[SEASON_RECIPE] phase=publish_blocked reason=disallowed_external_link")
+            publishErrorMessage = localizer.text(.invalidRecipeLinkMessage)
+            showPublishError = true
+            return
+        }
+
         let recipeID = currentDraftRecipeID ?? "recipe_\(UUID().uuidString.lowercased())"
         let existingRecipeImageURL = viewModel.recipe(forID: recipeID)?.imageURL
         var uploadedRecipeImageURL: String? = nil
@@ -1450,6 +1457,12 @@ struct CreateRecipeView: View {
         importServerNoticeText = ""
 
         let sourceURL = normalizedImportSourceURL ?? ""
+        if !sourceURL.isEmpty, !isAllowedRecipeURL(sourceURL, context: .importSource) {
+            importFeedbackText = localizer.text(.invalidRecipeLinkMessage)
+            print("[SEASON_IMPORT] phase=blocked reason=disallowed_external_link source_url=\(sourceURL)")
+            return
+        }
+
         let cleanedCaption = removingEmojis(from: importCaptionRaw)
         let localSuggestion = SocialImportParser.parse(
             sourceURLRaw: sourceURL,
@@ -4267,6 +4280,25 @@ struct CreateRecipeView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    private var recipeLinksAreAllowedForPublish: Bool {
+        if let normalizedMediaLink,
+           !isAllowedRecipeURL(normalizedMediaLink, context: .source) {
+            return false
+        }
+
+        if let normalizedInstagramURL,
+           !isAllowedRecipeURL(normalizedInstagramURL, context: .instagram) {
+            return false
+        }
+
+        if let normalizedTikTokURL,
+           !isAllowedRecipeURL(normalizedTikTokURL, context: .tiktok) {
+            return false
+        }
+
+        return true
+    }
+
     private var externalMediaForPublish: [RecipeExternalMedia] {
         if let normalizedMediaLink,
            let platform = recipeExternalPlatform(for: normalizedMediaLink) {
@@ -4429,6 +4461,46 @@ struct CreateRecipeView: View {
 
     private func isCoverImage(_ imageID: String) -> Bool {
         selectedCoverImageID == imageID
+    }
+
+    private enum RecipeURLContext {
+        case source
+        case importSource
+        case instagram
+        case tiktok
+    }
+
+    private func isAllowedRecipeURL(_ rawURL: String, context: RecipeURLContext) -> Bool {
+        let trimmed = rawURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count <= 2_048,
+              !trimmed.isEmpty,
+              trimmed.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
+              let components = URLComponents(string: trimmed),
+              components.scheme?.lowercased() == "https",
+              components.user == nil,
+              components.password == nil,
+              let host = components.host?.lowercased()
+        else {
+            return false
+        }
+
+        switch context {
+        case .instagram:
+            return hostMatches(host, domain: "instagram.com")
+        case .tiktok:
+            return hostMatches(host, domain: "tiktok.com")
+        case .source:
+            return hostMatches(host, domain: "instagram.com")
+                || hostMatches(host, domain: "tiktok.com")
+        case .importSource:
+            return hostMatches(host, domain: "instagram.com")
+                || hostMatches(host, domain: "tiktok.com")
+                || hostMatches(host, domain: "giallozafferano.it")
+        }
+    }
+
+    private func hostMatches(_ host: String, domain: String) -> Bool {
+        host == domain || host.hasSuffix(".\(domain)")
     }
 
     private func detectedPlatform(for url: String) -> SocialSourcePlatform? {

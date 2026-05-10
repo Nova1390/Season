@@ -24,31 +24,48 @@ revoke all on public.catalog_automation_invocation_tokens from anon, authenticat
 revoke all on public.catalog_automation_invocation_tokens from public;
 grant all on public.catalog_automation_invocation_tokens to service_role;
 
-insert into public.catalog_automation_invocation_tokens (
-  token_hash,
-  label,
-  is_active,
-  created_at,
-  updated_at
-)
-select
-  encode(extensions.digest(convert_to(token.service_key, 'UTF8'), 'sha256'), 'hex') as token_hash,
-  'dev_catalog_autopilot_v2_q6h_pg_net',
-  true,
-  now(),
-  now()
-from (
-  select (regexp_match(command, '''apikey'',\s*''([^'']+)'''))[1] as service_key
-  from cron.job
-  where jobname = 'dev_catalog_autopilot_v2_q6h'
-  limit 1
-) token
-where nullif(trim(token.service_key), '') is not null
-on conflict (token_hash) do update
-set
-  label = excluded.label,
-  is_active = true,
-  updated_at = now();
+do $$
+declare
+  v_service_key text;
+begin
+  if to_regclass('cron.job') is null then
+    raise notice 'cron.job relation not found; skipping existing autopilot cron token import';
+    return;
+  end if;
+
+  execute $query$
+    select (regexp_match(command, '''apikey'',\s*''([^'']+)'''))[1] as service_key
+    from cron.job
+    where jobname = 'dev_catalog_autopilot_v2_q6h'
+    limit 1
+  $query$
+  into v_service_key;
+
+  if nullif(trim(coalesce(v_service_key, '')), '') is null then
+    raise notice 'dev_catalog_autopilot_v2_q6h service key not found; skipping cron token import';
+    return;
+  end if;
+
+  insert into public.catalog_automation_invocation_tokens (
+    token_hash,
+    label,
+    is_active,
+    created_at,
+    updated_at
+  )
+  values (
+    encode(extensions.digest(convert_to(v_service_key, 'UTF8'), 'sha256'), 'hex'),
+    'dev_catalog_autopilot_v2_q6h_pg_net',
+    true,
+    now(),
+    now()
+  )
+  on conflict (token_hash) do update
+  set
+    label = excluded.label,
+    is_active = true,
+    updated_at = now();
+end $$;
 
 create or replace function public.is_catalog_automation_invocation_token(
   p_token text

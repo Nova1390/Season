@@ -945,7 +945,7 @@ struct HomeView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
 
-                                Text("\(ingredientUsageCountByID[ranked.item.id] ?? 0) \(homeCopyRecipesCountSuffix)")
+                                Text(seasonalUsageLabel(for: ranked.item.id))
                                     .font(DS.Font.mono(9, weight: .regular))
                                     .kerning(0.45)
                                     .foregroundStyle(DS.Color.inkMuted)
@@ -970,6 +970,14 @@ struct HomeView: View {
 
     private var seasonalSpotlightItems: [RankedInSeasonItem] {
         buildSeasonalSpotlight(usageCountByID: ingredientUsageCountByID)
+    }
+
+    private func seasonalUsageLabel(for ingredientID: String) -> String {
+        let count = ingredientUsageCountByID[ingredientID] ?? 0
+        guard count > 0 else {
+            return viewModel.localizer.text(.seasonPeakNow)
+        }
+        return "\(count) \(homeCopyRecipesCountSuffix)"
     }
 
     /// Filter chips v2 — pillole con bordo, sfondo sottile e stato attivo
@@ -2711,7 +2719,11 @@ struct HomeView: View {
     private func computeIngredientUsageCount(from recipes: [RankedRecipe]) -> [String: Int] {
         var counts: [String: Int] = [:]
         for ranked in recipes {
-            let uniqueIngredientIDs = Set(ranked.recipe.ingredients.compactMap(\.produceID))
+            let uniqueIngredientIDs = Set(
+                ranked.recipe.ingredients.flatMap { ingredient in
+                    viewModel.catalogIdentityIDs(for: ingredient)
+                }
+            )
             for id in uniqueIngredientIDs {
                 counts[id, default: 0] += 1
             }

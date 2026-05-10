@@ -16,6 +16,9 @@ struct SeasonApp: App {
     var body: some Scene {
         WindowGroup {
             AuthGateView()
+                .onOpenURL { url in
+                    SupabaseService.shared.handleAuthCallbackURL(url)
+                }
                 .task {
                     #if DEBUG
                     await runSmartImportBatchAuditIfRequested()

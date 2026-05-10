@@ -5,6 +5,14 @@ Season is a hybrid local-first app with targeted cloud sync/write-through:
 - local state remains the UX source for most interactive domains
 - Supabase is used for identity/auth, cloud reads, and selected mutation pipelines
 - request-level instrumentation and trace IDs are used across service writes
+- published recipe/catalog content is expected to come from Supabase, not local recipe seed payloads
+
+## Release & Environment Model
+- Debug is configured for the development Supabase environment.
+- Release is configured for the staging Supabase environment for TestFlight preparation.
+- The app no longer loads the removed TheMealDB `seed_recipes.json` payload; staging is the recipe catalog source of truth for release validation.
+- `Season/PrivacyInfo.xcprivacy` declares app-level accessed API usage for UserDefaults.
+- Staging operational scripts live under `supabase/devops/`, including TestFlight preflight and catalog autopilot schedule/verify/unschedule scripts.
 
 ## Write & Sync Model (Current)
 
@@ -28,6 +36,7 @@ Season is a hybrid local-first app with targeted cloud sync/write-through:
   - `is_saved`
   - `is_crispied`
 - Recipe cloud access is extracted behind `RecipeRepository` (create/fetch + compatibility fallbacks).
+- `RecipeStore` is now local-user/draft oriented. Published feed quality depends on Supabase hydration and repository merge behavior.
 
 ## Catalog & Reconciliation Model (Current)
 - Ingredient hierarchy is active in canonical catalog model:
@@ -42,7 +51,10 @@ Season is a hybrid local-first app with targeted cloud sync/write-through:
 - iOS recipe ingredient model/fetch now supports `ingredient_id` while retaining legacy compatibility (`produce_id`, `basic_ingredient_id`).
 
 ## Known Technical Debt / Next Hardening Areas
+- Signed Archive/TestFlight upload validation is still pending.
+- Staging preflight SQL should be run against the staging project before release upload.
 - `OutboxStore` on `UserDefaults` has long-term scalability limits.
 - `RecipeRepository` still uses schema-drift fallback branches that should be reduced over time.
+- Cloud-to-local hydration is incomplete for fridge/shopping/recipe states.
 - Some admin batch operations are client-triggered and rely on strict operational discipline.
 - This architecture document should be kept tightly synced with implementation changes.

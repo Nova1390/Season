@@ -10,6 +10,10 @@
 		A1B2C3D42F70000100AA0001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D32F70000100AA0001 /* Supabase */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXFileReference section */
+		DF9307112F695FDB00BB719F /* Season.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Season.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		C0DE00102F96000100AA0001 /* Exceptions for "Season" folder in "Season" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -22,17 +26,12 @@
 				"Debug/smart-import-synthetic-report-run1.json",
 				"Debug/smart-import-synthetic-report-run2.json",
 				"Debug/smart-import-synthetic-report.json",
-				"Data/seed_recipes.json",
-				"Docs/DataArchitecture.md",
-				"Support/Fonts/README.md",
+				Docs/DataArchitecture.md,
+				Support/Fonts/README.md,
 			);
 			target = DF9307102F695FDB00BB719F /* Season */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileReference section */
-		DF9307112F695FDB00BB719F /* Season.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Season.app; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DF9307132F695FDB00BB719F /* Season */ = {
@@ -308,7 +307,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.roccodaffuso.Season;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -352,7 +351,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.roccodaffuso.Season;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

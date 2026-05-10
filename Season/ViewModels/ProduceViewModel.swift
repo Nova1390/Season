@@ -2589,7 +2589,7 @@ final class ProduceViewModel: ObservableObject {
         return (score: score, availableWeight: availableWeight, totalWeight: totalWeight, matchingCount: matchingCount, totalCount: totalCount)
     }
 
-    private func catalogIdentityIDs(for ingredient: RecipeIngredient) -> Set<String> {
+    func catalogIdentityIDs(for ingredient: RecipeIngredient) -> Set<String> {
         var ids: Set<String> = []
         if let ingredientID = ingredient.ingredientID {
             ids.insert(ingredientID)

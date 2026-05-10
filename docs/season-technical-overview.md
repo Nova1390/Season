@@ -150,7 +150,7 @@ Stato tecnico:
 
 - `RecipeStore.loadRecipes()` oggi restituisce ricette utente persistite localmente.
 - I seed hardcoded storici sono disabilitati con `#if false`.
-- `seed_recipes.json` esiste nel repo ma viene escluso dal target Release.
+- `seed_recipes.json` e il loader legacy sono stati rimossi: i seed TheMealDB non sono più presenti nel repo app.
 - `ProduceViewModel` carica ricette locali e poi effettua merge con remote via `RecipeRepository`.
 
 ### Catalogo ingredienti
@@ -309,7 +309,7 @@ Stato TestFlight:
 - `CURRENT_PROJECT_VERSION = 2`.
 - `MARKETING_VERSION = 1.0`.
 - Release compila contro staging.
-- Bundle Release esclude debug JSON, docs tecnici e `seed_recipes.json`.
+- Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
 
 ## 13. Build e verifica
 
@@ -380,7 +380,6 @@ Documenti architetturali:
 - `CURRENT_STATUS.md`.
 - `Season/Docs/DataArchitecture.md`.
 - `docs/catalog-architecture.md`.
-- `docs/smart-import-catalog-pipeline.md`.
 - `docs/smart-import-catalog-intelligence-pipeline.md`.
 - `docs/catalog-system-review-and-consolidation-plan.md`.
 
@@ -409,6 +408,8 @@ Prossimi step raccomandati:
 
 - Validare Archive firmato e upload TestFlight.
 - Monitorare staging con ricette Giallo Zafferano.
+- Eseguire `supabase/devops/staging_testflight_preflight.sql` prima di ogni build candidata.
+- Se l'autopilot deve girare anche su staging, usare solo gli script `staging_catalog_autopilot_v2_*` dedicati.
 - Misurare ingredienti custom residui per ricetta.
 - Continuare autopilot su coverage generale, non solo batch mirati.
 - Migrare progressivamente ricette verso `ingredient_id` canonico.

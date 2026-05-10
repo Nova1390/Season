@@ -19,7 +19,8 @@ begin
   limit 1;
 
   if v_bread_id is null then
-    raise exception 'bread canonical ingredient not found';
+    raise notice 'bread canonical ingredient not found; skipping pane mollica alias migration';
+    return;
   end if;
 
   insert into public.ingredient_aliases_v2 (

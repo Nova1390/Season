@@ -1,4 +1,3 @@
-
 __pycache__/
 *.pyc
 scripts/generate_produce_images.py
@@ -14,3 +13,6 @@ xcuserdata/
 *.xcuserstate
 Season/Debug/
 smart-import-batch-input.json
+
+AuthKey_*.p8
+*.p8

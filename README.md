@@ -110,8 +110,10 @@ Start here:
 - [Architecture status](ARCHITECTURE.md): current local-first/cloud sync architecture.
 - [Current status](CURRENT_STATUS.md): what is working today and known hardening areas.
 - [Catalog architecture](docs/catalog-architecture.md): canonical ingredient identity contract.
+- [Smart Import + Catalog Intelligence](docs/smart-import-catalog-intelligence-pipeline.md): source of truth for import, enrichment, autopilot, and reconciliation.
 - [Data architecture](Season/Docs/DataArchitecture.md): per-domain source-of-truth and sync model.
 - [Security disposition](docs/security/supabase-security-findings-disposition.md): security findings and decisions.
+- [Catalog consolidation plan](docs/catalog-system-review-and-consolidation-plan.md): review snapshot and refactor roadmap for catalog operations.
 
 ## Build
 
@@ -123,6 +125,7 @@ Useful validation commands:
 xcodebuild -scheme Season -configuration Debug -sdk iphonesimulator build CODE_SIGNING_ALLOWED=NO
 xcodebuild -scheme Season -configuration Release -sdk iphoneos build CODE_SIGNING_ALLOWED=NO
 plutil -lint Season-Info.plist
+plutil -lint Season/PrivacyInfo.xcprivacy
 git diff --check
 ```
 
@@ -144,6 +147,8 @@ The Release bundle is expected to exclude:
 - Xcode user state.
 
 For TestFlight, staging should contain the selected recipe catalog. Local TheMealDB/seed recipes should not be used as the app's recipe source of truth.
+
+Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql`. If catalog autopilot should run on staging, use the dedicated `staging_catalog_autopilot_v2_*` scripts rather than the dev scheduler.
 
 ## Development Principles
 

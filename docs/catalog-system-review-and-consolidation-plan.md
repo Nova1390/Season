@@ -1,5 +1,7 @@
 # Catalog System Review and Consolidation Plan
 
+Status: review snapshot and roadmap, not the canonical implementation contract. Use `docs/catalog-architecture.md` for catalog identity rules and `docs/smart-import-catalog-intelligence-pipeline.md` for Smart Import, autopilot, enrichment, and reconciliation flow authority.
+
 ## 1. Current System Map
 
 ### Backend data model (current)
@@ -93,8 +95,8 @@ Admin flow today (effective):
 - Advisory only; not yet driving runtime matching behavior
 
 ### Where legacy logic still dominates
-- Recipe reconciliation apply still depends on `legacy_ingredient_mapping`
-- Safe apply count can be much lower than preview due to missing legacy bridge
+- The legacy reconciliation apply path still depends on `legacy_ingredient_mapping`
+- The modern safe apply path reduces that dependency, but legacy bridge gaps can still limit throughput in compatibility scenarios
 - Recipe ingredient storage remains legacy-compatible JSON shape
 
 ---

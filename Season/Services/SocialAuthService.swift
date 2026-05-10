@@ -3,6 +3,7 @@ import AuthenticationServices
 import UIKit
 import os
 import CryptoKit
+import Security
 
 struct SocialAuthResult {
     let provider: SocialAuthProvider
@@ -11,6 +12,31 @@ struct SocialAuthResult {
     let handle: String?
     let profileImageURL: String?
     let accessToken: String?
+    let appleRawNonce: String?
+    let appleGivenName: String?
+    let appleFamilyName: String?
+
+    init(
+        provider: SocialAuthProvider,
+        providerUserID: String,
+        displayName: String?,
+        handle: String?,
+        profileImageURL: String?,
+        accessToken: String?,
+        appleRawNonce: String? = nil,
+        appleGivenName: String? = nil,
+        appleFamilyName: String? = nil
+    ) {
+        self.provider = provider
+        self.providerUserID = providerUserID
+        self.displayName = displayName
+        self.handle = handle
+        self.profileImageURL = profileImageURL
+        self.accessToken = accessToken
+        self.appleRawNonce = appleRawNonce
+        self.appleGivenName = appleGivenName
+        self.appleFamilyName = appleFamilyName
+    }
 }
 
 enum SocialAuthError: LocalizedError {
@@ -297,10 +323,38 @@ private final class DefaultPresentationContextProvider: NSObject, ASAuthorizatio
     }
 }
 
+private enum AppleSignInNonce {
+    private static let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+
+    static func randomString(length: Int = 32) throws -> String {
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            var random: UInt8 = 0
+            let status = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+            guard status == errSecSuccess else {
+                throw SocialAuthError.appleAuthorizationFailed(details: "Could not generate Apple Sign In nonce.")
+            }
+
+            result.append(charset[Int(random) % charset.count])
+            remainingLength -= 1
+        }
+
+        return result
+    }
+
+    static func sha256Hex(_ input: String) -> String {
+        let digest = SHA256.hash(data: Data(input.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+}
+
 private final class AppleSignInCoordinator: NSObject,
     ASAuthorizationControllerDelegate,
     ASAuthorizationControllerPresentationContextProviding {
     private var continuation: CheckedContinuation<SocialAuthResult, Error>?
+    private var rawNonce: String?
     private let logger = Logger(subsystem: "Season", category: "SocialAuthService")
 
     @MainActor
@@ -313,14 +367,24 @@ private final class AppleSignInCoordinator: NSObject,
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
 
-            let request = ASAuthorizationAppleIDProvider().createRequest()
-            request.requestedScopes = [.fullName, .email]
+            do {
+                let rawNonce = try AppleSignInNonce.randomString()
+                self.rawNonce = rawNonce
 
-            let controller = ASAuthorizationController(authorizationRequests: [request])
-            controller.delegate = self
-            controller.presentationContextProvider = self
-            logger.debug("Starting Apple Sign In request")
-            controller.performRequests()
+                let request = ASAuthorizationAppleIDProvider().createRequest()
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = AppleSignInNonce.sha256Hex(rawNonce)
+
+                let controller = ASAuthorizationController(authorizationRequests: [request])
+                controller.delegate = self
+                controller.presentationContextProvider = self
+                logger.debug("Starting Apple Sign In request")
+                controller.performRequests()
+            } catch {
+                self.rawNonce = nil
+                self.continuation = nil
+                continuation.resume(throwing: error)
+            }
         }
     }
 
@@ -338,6 +402,8 @@ private final class AppleSignInCoordinator: NSObject,
         let formatter = PersonNameComponentsFormatter()
         let fullName = formatter.string(from: credentials.fullName ?? PersonNameComponents())
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        let givenName = credentials.fullName?.givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let familyName = credentials.fullName?.familyName?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let result = SocialAuthResult(
             provider: .apple,
@@ -345,11 +411,15 @@ private final class AppleSignInCoordinator: NSObject,
             displayName: fullName.isEmpty ? nil : fullName,
             handle: nil,
             profileImageURL: nil,
-            accessToken: String(data: credentials.identityToken ?? Data(), encoding: .utf8)
+            accessToken: String(data: credentials.identityToken ?? Data(), encoding: .utf8),
+            appleRawNonce: rawNonce,
+            appleGivenName: givenName?.isEmpty == false ? givenName : nil,
+            appleFamilyName: familyName?.isEmpty == false ? familyName : nil
         )
         continuation?.resume(returning: result)
         logger.debug("Apple Sign In success userID=\(credentials.user, privacy: .public)")
         continuation = nil
+        rawNonce = nil
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
@@ -362,6 +432,7 @@ private final class AppleSignInCoordinator: NSObject,
             continuation?.resume(throwing: SocialAuthError.appleAuthorizationFailed(details: message))
         }
         continuation = nil
+        rawNonce = nil
     }
 
     private static var presentationAnchor: UIWindow? {
@@ -395,9 +466,19 @@ private struct AppleSignInAuthenticator {
             print("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_identity_token")
             throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In did not return an identity token.")
         }
+        guard let rawNonce = result.appleRawNonce?.trimmingCharacters(in: .whitespacesAndNewlines), !rawNonce.isEmpty else {
+            print("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_nonce")
+            throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In did not return a nonce.")
+        }
 
         do {
-            let userID = try await SupabaseService.shared.signInWithAppleIDToken(idToken)
+            let userID = try await SupabaseService.shared.signInWithAppleIDToken(
+                idToken,
+                nonce: rawNonce,
+                fullName: result.displayName,
+                givenName: result.appleGivenName,
+                familyName: result.appleFamilyName
+            )
             print("[SEASON_AUTH] phase=apple_session_established has_session=true user_id=\(userID.uuidString.lowercased())")
             return result
         } catch {

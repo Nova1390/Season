@@ -261,17 +261,19 @@ private struct AuthEntryScreen: View {
 
                     VStack(spacing: 12) {
                         if mode == .entry {
-                            Button {
-                                continueWithApple()
-                            } label: {
-                                Label("Continue with Apple", systemImage: "applelogo")
-                                    .font(DS.Font.sans(16, weight: .semibold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.9)
-                                    .frame(maxWidth: .infinity, minHeight: 56)
+                            if FeatureFlags.appleAuthenticationEnabled {
+                                Button {
+                                    continueWithApple()
+                                } label: {
+                                    Label("Continue with Apple", systemImage: "applelogo")
+                                        .font(DS.Font.sans(16, weight: .semibold))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.9)
+                                        .frame(maxWidth: .infinity, minHeight: 56)
+                                }
+                                .buttonStyle(AuthGateAppleButtonStyle())
+                                .disabled(isLoading)
                             }
-                            .buttonStyle(AuthGateAppleButtonStyle())
-                            .disabled(isLoading)
 
                             Button {
                                 clearStatus()
@@ -440,7 +442,17 @@ private struct AuthEntryScreen: View {
             defer { isLoading = false }
             do {
                 if mode == .signUp {
-                    let userID = try await supabaseService.signUpWithEmail(email: normalizedEmail, password: normalizedPassword)
+                    let signUpResult = try await supabaseService.signUpWithEmail(email: normalizedEmail, password: normalizedPassword)
+                    guard case .signedIn(let userID) = signUpResult else {
+                        await MainActor.run {
+                            statusMessage = "Check your email to confirm your account, then log in."
+                            isError = false
+                            password = ""
+                            mode = .logIn
+                        }
+                        print("[SEASON_AUTH_GATE] phase=email_sign_up_confirmation_required")
+                        return
+                    }
                     let available = try await supabaseService.isUsernameAvailable(normalizedUsername, excludingUserID: userID)
                     guard available else {
                         throw NSError(domain: "SeasonAuth", code: 409, userInfo: [NSLocalizedDescriptionKey: "username_taken"])

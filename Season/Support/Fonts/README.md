@@ -1,37 +1,39 @@
 # Font bundle — Season v2
 
-Scarica i 3 font da Google Fonts e trascina i file `.ttf` elencati qui dentro questa cartella.
+I font richiesti dal design system sono gia presenti in questa cartella e registrati in `Season-Info.plist` tramite `UIAppFonts`.
 
-## 1. Newsreader
+Usa questa pagina come checklist di manutenzione: se un font viene rimosso, rinominato o aggiornato, mantieni allineati questa cartella, `Season-Info.plist` e `Season/Views/DesignSystem.swift`.
+
+## Font inclusi
+
+### 1. Newsreader
 https://fonts.google.com/specimen/Newsreader → "Get font" → scarica lo zip.
-Dallo zip, copia in questa cartella **solo** i file static (`Newsreader/static/`):
 
 - `Newsreader-Regular.ttf`
 - `Newsreader-Medium.ttf`
 - `Newsreader-Italic.ttf`
 
-## 2. Inter
+### 2. Inter
 https://fonts.google.com/specimen/Inter → "Get font".
-Dallo zip, copia (`Inter/static/`):
 
 - `Inter-Regular.ttf`
 - `Inter-Medium.ttf`
 - `Inter-SemiBold.ttf`
 - `Inter-Bold.ttf`
 
-## 3. JetBrains Mono
+### 3. JetBrains Mono
 https://fonts.google.com/specimen/JetBrains+Mono → "Get font".
-Dallo zip, copia (`JetBrains_Mono/static/`):
 
 - `JetBrainsMono-Regular.ttf`
 - `JetBrainsMono-Medium.ttf`
 
 ## Totale: 9 file .ttf, ~2 MB
 
-## Dopo aver trascinato i file
-1. Apri `Season.xcodeproj` in Xcode
-2. Seleziona la cartella `Support/Fonts` nel navigator → trascina i 9 `.ttf` nel progetto se non sono già visibili (target: Season, "Copy items if needed" NON spuntato, dato che sono già nella cartella)
-3. In `Season-Info.plist` i font verranno registrati automaticamente tramite `UIAppFonts` (lo aggiungo io al codice in `DesignSystem.swift`, vedi task successivo)
+## Verifica
+
+1. Controlla che i 9 file `.ttf` siano presenti in `Season/Support/Fonts`.
+2. Controlla che gli stessi file siano elencati in `Season-Info.plist` sotto `UIAppFonts`.
+3. Controlla che i nomi PostScript usati da `Season/Views/DesignSystem.swift` restino coerenti.
 
 ## Fallback
-`DesignSystem.swift` è scritto in modo che, se un font non è caricato, cade su `.system` — l'app continua a funzionare anche senza i file. Niente crash.
+`DesignSystem.swift` e scritto in modo che, se un font non e caricato, cade su `.system`; l'app continua a funzionare anche senza i file.

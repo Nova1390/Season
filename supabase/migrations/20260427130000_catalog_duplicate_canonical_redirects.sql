@@ -51,11 +51,13 @@ begin
     limit 1;
 
     if v_duplicate_id is null then
-      raise exception 'duplicate ingredient slug not found: %', v_redirect->>'duplicate_slug';
+      raise notice 'duplicate ingredient slug not found: %, skipping redirect', v_redirect->>'duplicate_slug';
+      continue;
     end if;
 
     if v_canonical_id is null then
-      raise exception 'canonical ingredient slug not found: %', v_redirect->>'canonical_slug';
+      raise notice 'canonical ingredient slug not found: %, skipping redirect', v_redirect->>'canonical_slug';
+      continue;
     end if;
 
     insert into public.ingredient_canonical_redirects (

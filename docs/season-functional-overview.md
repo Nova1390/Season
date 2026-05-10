@@ -287,7 +287,7 @@ Configurazione attuale desiderata:
 - Release iOS: punta allo staging.
 - Ricette su staging: solo contenuto selezionato, in particolare Giallo Zafferano.
 - TheMealDB e seed locali: non devono alimentare il catalogo ricette di staging/TestFlight.
-- `seed_recipes.json` e report debug non devono essere inclusi nel bundle Release.
+- `seed_recipes.json` non e piu presente nel repo app; report debug e fixture locali non devono essere inclusi nel bundle Release.
 
 ## 17. Metriche e segnali prodotto
 

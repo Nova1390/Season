@@ -8,6 +8,11 @@ declare
   v_command text;
   v_updated_command text;
 begin
+  if to_regclass('cron.job') is null then
+    raise notice 'cron.job relation not found; skipping dev autopilot timeout update';
+    return;
+  end if;
+
   select jobid, command
   into v_job_id, v_command
   from cron.job
