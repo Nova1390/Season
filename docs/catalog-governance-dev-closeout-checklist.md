@@ -77,6 +77,13 @@ Runtime fix discovered by this test:
 - Immediate cancelled/completed agent runs could violate `catalog_agent_runs_finished_after_started` because `finished_at` came from Edge runtime time while `started_at` used database default `now()`.
 - `run-catalog-agent-triage` now inserts both `started_at` and immediate `finished_at` from the same Edge timestamp.
 
+Tomato variant learning:
+
+- `catalog_agent_learnings.id = 4` records that `pomodorini`/small tomato terms must not be collapsed into base `tomato`.
+- `catalog_agent_blocks_base_tomato_alias(...)` blocks `pomodorini`, `ciliegini`, `datterini`, and `cherry tomato(es)` from validating as aliases of `tomato`.
+- The agent prompt now carries the same rule before the model proposes anything.
+- Expected future behavior: `pomodori` can resolve to base `tomato`; `pomodorini` requires an explicit child variant such as `cherry_tomatoes` or human review/catalog-gap handling.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
