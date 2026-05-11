@@ -12,7 +12,8 @@ const state = {
   session: null,
   isAdmin: false,
   inbox: null,
-  selected: null
+  selected: null,
+  learningMemory: null
 };
 
 const elements = {
@@ -101,6 +102,7 @@ function bindEvents() {
     state.isAdmin = false;
     state.inbox = null;
     state.selected = null;
+    state.learningMemory = null;
     setAuthMessage("");
     renderSession();
   });
@@ -145,6 +147,7 @@ async function openAdminSession() {
     state.isAdmin = false;
     state.inbox = null;
     state.selected = null;
+    state.learningMemory = null;
     renderSession();
     setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
     setStatus("Access denied.");
@@ -169,10 +172,11 @@ async function verifyCatalogAdminAccess() {
   return decodeAdminAccessResult(data);
 }
 
-async function loadInbox() {
+async function loadInbox(options = {}) {
   if (!state.session) return;
 
   setStatus("Loading review inbox...");
+  const previousSelectionId = Number(options.keepProposalId ?? state.selected?.proposal_id ?? 0);
   const statuses = parseCSV(elements.statusesInput.value);
   const limit = clampNumber(Number(elements.limitInput.value), 1, 100, config.defaultLimit ?? 25);
 
@@ -191,7 +195,11 @@ async function loadInbox() {
   }
 
   state.inbox = data;
-  state.selected = Array.isArray(data?.items) ? data.items[0] ?? null : null;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  state.selected = items.find((item) => Number(item.proposal_id) === previousSelectionId) ?? items[0] ?? null;
+  if (!state.selected || Number(state.selected.proposal_id) !== previousSelectionId) {
+    state.learningMemory = null;
+  }
   renderInbox();
   setStatus(`Loaded ${data?.items?.length ?? 0} proposals.`);
 }
@@ -339,8 +347,9 @@ async function reviewProposal(action) {
   }
 
   setStatus(`Review action: ${action}...`);
+  const proposalId = state.selected.proposal_id;
   const { error } = await state.client.rpc("review_catalog_agent_proposal", {
-    p_proposal_id: state.selected.proposal_id,
+    p_proposal_id: proposalId,
     p_action: action,
     p_reviewer_note: note || null
   });
@@ -350,7 +359,14 @@ async function reviewProposal(action) {
     return;
   }
 
-  await loadInbox();
+  state.learningMemory = null;
+  await loadInbox({ keepProposalId: proposalId });
+  if (action === "request_more_evidence") {
+    await loadLearningMemory({ silent: true });
+    setStatus("More evidence saved and learning memory updated.", "success");
+  } else {
+    setStatus(`Review action saved: ${action}.`, "success");
+  }
 }
 
 async function validateProposal() {
@@ -381,11 +397,13 @@ async function applyProposal() {
   await loadInbox();
 }
 
-async function loadLearningMemory() {
+async function loadLearningMemory(options = {}) {
   const text = state.selected?.proposal?.normalized_text;
   if (!text) return;
 
-  setStatus(`Loading learning memory for ${text}...`);
+  if (!options.silent) {
+    setStatus(`Loading learning memory for ${text}...`);
+  }
   const { data, error } = await state.client.rpc("get_catalog_agent_learning_context", {
     p_normalized_texts: [text],
     p_limit_per_term: 5
@@ -396,12 +414,15 @@ async function loadLearningMemory() {
     return;
   }
 
+  state.learningMemory = data;
   const panel = elements.proposalDetail.querySelector("#learningPanel");
   panel.innerHTML = `
     <h3>Learning memory</h3>
     ${jsonBlock(data)}
   `;
-  setStatus(`Loaded learning memory for ${text}.`);
+  if (!options.silent) {
+    setStatus(`Loaded learning memory for ${text}.`);
+  }
 }
 
 function detailCell(label, value) {
