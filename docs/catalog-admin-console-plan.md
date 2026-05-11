@@ -39,7 +39,9 @@ The console must be browser-safe:
 - use only Supabase anon key in frontend config;
 - never store service-role keys in the repo or browser;
 - require Supabase Auth login;
+- require a successful `is_current_user_catalog_admin()` check before rendering the admin workspace;
 - rely on `assert_catalog_admin(...)` and RLS/RPC authorization;
+- keep console RPC `EXECUTE` grants off `anon`; only `authenticated`, `service_role`, and owner roles should retain access;
 - call governed RPCs only;
 - avoid direct table writes from the frontend.
 

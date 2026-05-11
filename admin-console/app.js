@@ -10,6 +10,7 @@ const isConfigured = requiredConfig.every((key) => {
 const state = {
   client: null,
   session: null,
+  isAdmin: false,
   inbox: null,
   selected: null
 };
@@ -22,6 +23,7 @@ const elements = {
   loginForm: document.querySelector("#loginForm"),
   emailInput: document.querySelector("#emailInput"),
   passwordInput: document.querySelector("#passwordInput"),
+  authMessage: document.querySelector("#authMessage"),
   sessionEmail: document.querySelector("#sessionEmail"),
   signOutButton: document.querySelector("#signOutButton"),
   refreshButton: document.querySelector("#refreshButton"),
@@ -79,10 +81,11 @@ async function init() {
   }
 
   state.session = data.session;
-  renderSession();
 
   if (state.session) {
-    await loadInbox();
+    await openAdminSession();
+  } else {
+    renderSession();
   }
 }
 
@@ -95,8 +98,10 @@ function bindEvents() {
   elements.signOutButton.addEventListener("click", async () => {
     await state.client.auth.signOut();
     state.session = null;
+    state.isAdmin = false;
     state.inbox = null;
     state.selected = null;
+    setAuthMessage("");
     renderSession();
   });
 
@@ -115,16 +120,53 @@ async function signIn() {
   }
 
   state.session = data.session;
-  renderSession();
-  await loadInbox();
+  elements.passwordInput.value = "";
+  await openAdminSession();
 }
 
 function renderSession() {
+  const hasAdminSession = Boolean(state.session && state.isAdmin);
   const email = state.session?.user?.email ?? "Signed out";
   elements.sessionEmail.textContent = email;
-  elements.signOutButton.hidden = !state.session;
-  elements.authPanel.hidden = Boolean(state.session);
-  elements.appPanel.hidden = !state.session;
+  elements.signOutButton.hidden = !hasAdminSession;
+  elements.authPanel.hidden = hasAdminSession;
+  elements.appPanel.hidden = !hasAdminSession;
+}
+
+async function openAdminSession() {
+  renderSession();
+  setAuthMessage("Checking catalog admin access...");
+
+  const isAdmin = await verifyCatalogAdminAccess();
+  if (!isAdmin) {
+    const attemptedEmail = state.session?.user?.email ?? "this account";
+    await state.client.auth.signOut();
+    state.session = null;
+    state.isAdmin = false;
+    state.inbox = null;
+    state.selected = null;
+    renderSession();
+    setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
+    setStatus("Access denied.");
+    return;
+  }
+
+  state.isAdmin = true;
+  renderSession();
+  setAuthMessage("Catalog admin access confirmed.", "success");
+  await loadInbox();
+}
+
+async function verifyCatalogAdminAccess() {
+  if (!state.session) return false;
+
+  const { data, error } = await state.client.rpc("is_current_user_catalog_admin");
+  if (error) {
+    setStatus(error.message, "error");
+    return false;
+  }
+
+  return decodeAdminAccessResult(data);
 }
 
 async function loadInbox() {
@@ -385,9 +427,25 @@ function parseCSV(value) {
     .filter(Boolean);
 }
 
+function decodeAdminAccessResult(value) {
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.some(decodeAdminAccessResult);
+  if (value && typeof value === "object") {
+    if ("is_current_user_catalog_admin" in value) {
+      return value.is_current_user_catalog_admin === true;
+    }
+  }
+  return false;
+}
+
 function setStatus(message, level = "info") {
   elements.syncStatus.textContent = message;
   elements.syncStatus.dataset.level = level;
+}
+
+function setAuthMessage(message, level = "info") {
+  elements.authMessage.textContent = message;
+  elements.authMessage.dataset.level = level;
 }
 
 function clampNumber(value, min, max, fallback) {

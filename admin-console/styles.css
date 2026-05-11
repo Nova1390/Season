@@ -225,6 +225,18 @@ p {
   gap: 14px;
 }
 
+.auth-message {
+  min-height: 21px;
+}
+
+.auth-message[data-level="error"] {
+  color: var(--danger);
+}
+
+.auth-message[data-level="success"] {
+  color: var(--ok);
+}
+
 .app-panel {
   display: grid;
   gap: 18px;

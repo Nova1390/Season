@@ -17,6 +17,7 @@ The first version is a zero-build static web app:
 It currently supports:
 
 - email/password login through Supabase Auth;
+- explicit catalog-admin authorization check before the workspace opens;
 - loading the catalog agent review inbox;
 - filtering by proposal status and limit;
 - queueing proposals for validation;
@@ -83,5 +84,7 @@ Staging can be enabled later with explicit config and release-governance checks.
 - The browser may only use the Supabase anon key.
 - All privileged access must go through admin-only RPCs.
 - RLS and `assert_catalog_admin(...)` remain the real gate.
+- The console calls `is_current_user_catalog_admin()` immediately after login and signs out non-admin users before showing the workspace.
+- Console RPCs are not executable by `anon`; they are granted only to `authenticated` and `service_role`.
 - Do not add direct table writes from the frontend.
 - Do not store API keys, service-role keys, or Apple keys here.
