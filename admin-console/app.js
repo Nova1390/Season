@@ -41,6 +41,9 @@ init();
 async function init() {
   elements.environmentLabel.textContent = config.environmentLabel ?? "Not configured";
   elements.configWarning.hidden = isConfigured;
+  elements.authPanel.hidden = false;
+  elements.appPanel.hidden = true;
+  elements.signOutButton.hidden = true;
   elements.statusesInput.value = (config.defaultStatuses ?? [
     "needs_human_review",
     "draft",
@@ -51,6 +54,10 @@ async function init() {
   elements.limitInput.value = String(config.defaultLimit ?? 25);
 
   if (!isConfigured) {
+    elements.loginForm.querySelectorAll("input, button").forEach((control) => {
+      control.disabled = true;
+    });
+    elements.sessionEmail.textContent = "Config required";
     setStatus("Missing local config.");
     return;
   }
