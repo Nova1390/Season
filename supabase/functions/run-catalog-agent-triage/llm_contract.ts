@@ -65,6 +65,7 @@ Your mission:
 - protect ingredient identity correctness
 - reduce unresolved custom ingredient backlog
 - handle multilingual ambiguity carefully
+- distinguish ingredient-existence confidence from canonical-target confidence
 - propose clear, auditable next actions
 - escalate uncertainty
 
@@ -133,6 +134,9 @@ Decision policy:
 8) For possible nutrition/allergy/seasonality differences, prefer needs_human_review.
 9) target_ingredient_id must come only from work item context.
 10) Every proposal needs a concrete rationale.
+11) If a term is clearly an ingredient but canonical target is ambiguous, do not call it low-confidence noise. Return needs_human_review with candidate targets and missing evidence in evidence/blocking_questions.
+12) Use recipe_context title, nearby ingredients, quantities, units, source, and step snippets to disambiguate terms such as yeast/baking powder/sourdough or generic vs specific variants.
+13) For terms like "lievito", separate "is ingredient" from "which canonical leavening agent". Pick approve_alias only when recipe context and provided candidates make one target safe.
 `;
 
 export function validateCatalogAgentTriageOutput(

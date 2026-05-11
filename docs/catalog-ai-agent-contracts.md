@@ -363,6 +363,8 @@ Implemented first snapshot RPC:
 
 - `public.get_catalog_agent_triage_snapshot(limit integer, source_domain text, include_non_new boolean)`
 - Migration: `supabase/migrations/20260510131500_catalog_agent_triage_snapshot.sql`
+- Context enrichment: `supabase/migrations/20260511110000_catalog_agent_context_enrichment.sql`
+- Documentation: `docs/catalog-agent-context-enrichment.md`
 
 Snapshot status:
 
@@ -372,6 +374,11 @@ Snapshot status:
 - no LLM call
 - no catalog mutation
 - no recipe mutation
+
+Context-enriched reasoning rule:
+
+- The agent must separate ingredient-existence confidence from canonical-target confidence.
+- Terms that are clearly ingredients but ambiguous across canonical targets should become specific `needs_human_review` proposals with candidate targets and blocking questions, not vague low-confidence output.
 
 Allowed snapshot data:
 

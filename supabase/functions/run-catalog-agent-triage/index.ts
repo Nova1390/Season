@@ -617,6 +617,8 @@ function splitRecentProposalSkips(items: WorkItem[], recentDays: number): {
     const proposals = readNestedArray(item, ["context", "previous_agent_proposals"]);
     const hasRecentProposal = proposals.some((proposal) => {
       if (!isRecord(proposal) || typeof proposal.created_at !== "string") return false;
+      const status = normalizeText(proposal.status);
+      if (["failed_validation", "rejected", "superseded"].includes(status)) return false;
       const timestamp = Date.parse(proposal.created_at);
       return Number.isFinite(timestamp) && timestamp >= cutoff;
     });
@@ -641,13 +643,16 @@ function compactWorkItem(item: WorkItem): Record<string, unknown> {
       "raw_examples",
       "language_code",
       "source",
+      "latest_recipe_id",
       "status",
     ]),
     priority: readNestedRecord(item, ["priority"]),
     coverage_blocker: readNestedRecord(item, ["coverage_blocker"]),
     context: {
-      possible_canonical_matches: readNestedArray(item, ["context", "possible_canonical_matches"]).slice(0, 5),
-      existing_alias_matches: readNestedArray(item, ["context", "existing_alias_matches"]).slice(0, 5),
+      recipe_context: readNestedRecord(item, ["context", "recipe_context"]),
+      semantic_disambiguation: readNestedRecord(item, ["context", "semantic_disambiguation"]),
+      possible_canonical_matches: readNestedArray(item, ["context", "possible_canonical_matches"]).slice(0, 8),
+      existing_alias_matches: readNestedArray(item, ["context", "existing_alias_matches"]).slice(0, 8),
       previous_catalog_decisions: readNestedArray(item, ["context", "previous_catalog_decisions"]).slice(0, 3),
       previous_agent_proposals: readNestedArray(item, ["context", "previous_agent_proposals"]).slice(0, 3),
     },
