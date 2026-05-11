@@ -239,12 +239,12 @@ function renderWorkerRunResult(result) {
         </div>
       </header>
       <div class="run-metrics">
-        ${metricCell("Run", `#${runId}`)}
-        ${metricCell("Job", `#${jobId}`)}
-        ${metricCell("Eligible", total)}
-        ${metricCell("Applied", applied)}
-        ${metricCell("Failed", failed)}
-        ${metricCell("Duration", formatDuration(durationMs))}
+        ${metricCell("Run", `#${runId}`, "ID della run dell'agente manager. Raggruppa la richiesta e tutti gli eventi collegati.")}
+        ${metricCell("Job", `#${jobId}`, "ID del lavoro Autopilot delegato dall'agente. Utile per audit e debug.")}
+        ${metricCell("Eligible", total, "Quanti elementi erano pronti per questo worker secondo i controlli backend.")}
+        ${metricCell("Applied", applied, "Quanti elementi sono stati applicati. In dry-run deve restare sempre zero.")}
+        ${metricCell("Failed", failed, "Quanti elementi hanno fallito durante il worker. Se sale, va controllato prima di proseguire.")}
+        ${metricCell("Duration", formatDuration(durationMs), "Quanto tempo ha impiegato la run. Aiuta a capire se un worker sta rallentando.")}
       </div>
       ${result.details ? detailsBlock("Raw worker response", result.details) : ""}
     </article>
@@ -527,23 +527,23 @@ function renderAutoApplyDiagnostics(diagnostics) {
         <p>${escapeHTML(diagnostics.explanation ?? "No explanation available.")}</p>
       </div>
       <div class="pipeline-flow" aria-label="Low-risk apply pipeline">
-        ${pipelineNode("Draft", counts.draft)}
-        ${pipelineNode("Queued", counts.queued_for_validation)}
-        ${pipelineNode("Review", counts.needs_human_review)}
-        ${pipelineNode("Failed", counts.failed_validation, "warning")}
-        ${pipelineNode("Validated", counts.validated_total)}
-        ${pipelineNode("Ready", readyCount, readyCount > 0 ? "ok" : "neutral")}
-        ${pipelineNode("Handled", terminalCount, "ok")}
+        ${pipelineNode("Draft", counts.draft, "neutral", "Proposte create dall'agente ma non ancora mandate ai controlli deterministici.")}
+        ${pipelineNode("Queued", counts.queued_for_validation, "neutral", "Proposte in coda per il validatore backend.")}
+        ${pipelineNode("Review", counts.needs_human_review, "neutral", "Casi dove l'agente chiede aiuto umano o più evidenza.")}
+        ${pipelineNode("Failed", counts.failed_validation, "warning", "Proposte bloccate dal validatore perché non sicure o non complete.")}
+        ${pipelineNode("Validated", counts.validated_total, "neutral", "Proposte che hanno passato i controlli, ma non sono necessariamente applicabili automaticamente.")}
+        ${pipelineNode("Ready", readyCount, readyCount > 0 ? "ok" : "neutral", "Proposte low-risk pronte per dry-run o futuro apply controllato.")}
+        ${pipelineNode("Handled", terminalCount, "ok", "Proposte già chiuse: applicate, superate o scartate.")}
       </div>
       <div class="diagnostic-grid">
-        ${diagnosticCell("Ready", readyCount)}
-        ${diagnosticCell("Draft", counts.draft)}
-        ${diagnosticCell("Queued", counts.queued_for_validation)}
-        ${diagnosticCell("Needs review", counts.needs_human_review)}
-        ${diagnosticCell("Failed validation", counts.failed_validation)}
-        ${diagnosticCell("Validated total", counts.validated_total)}
-        ${diagnosticCell("Not eligible", counts.validated_not_auto_apply_eligible)}
-        ${diagnosticCell("Auto-applied", counts.auto_applied)}
+        ${diagnosticCell("Ready", readyCount, "Candidati che soddisfano tutti i criteri low-risk auto-apply.")}
+        ${diagnosticCell("Draft", counts.draft, "Proposte ancora grezze, da validare.")}
+        ${diagnosticCell("Queued", counts.queued_for_validation, "Proposte già pronte per essere validate.")}
+        ${diagnosticCell("Needs review", counts.needs_human_review, "Casi dove serve giudizio umano o altra evidenza.")}
+        ${diagnosticCell("Failed validation", counts.failed_validation, "Proposte che il backend ha rifiutato per sicurezza o conflitti.")}
+        ${diagnosticCell("Validated total", counts.validated_total, "Tutte le proposte validate, anche quelle non applicabili in automatico.")}
+        ${diagnosticCell("Not eligible", counts.validated_not_auto_apply_eligible, "Validate ma non marcate come auto-applicabili. Di solito richiedono review o policy.")}
+        ${diagnosticCell("Auto-applied", counts.auto_applied, "Proposte già applicate automaticamente e tracciate in audit.")}
       </div>
       ${readyPreview.length > 0 ? detailsBlock("Ready preview", { ready_preview: readyPreview }) : ""}
     </article>
@@ -846,28 +846,28 @@ function detailCell(label, value) {
   `;
 }
 
-function metricCell(label, value) {
+function metricCell(label, value, helpText = "") {
   return `
     <div>
-      <span>${escapeHTML(label)}</span>
+      <span>${escapeHTML(label)} ${helpTip(helpText)}</span>
       <strong>${escapeHTML(value ?? 0)}</strong>
     </div>
   `;
 }
 
-function diagnosticCell(label, value) {
+function diagnosticCell(label, value, helpText = "") {
   return `
     <div>
-      <span>${escapeHTML(label)}</span>
+      <span>${escapeHTML(label)} ${helpTip(helpText)}</span>
       <strong>${escapeHTML(value ?? 0)}</strong>
     </div>
   `;
 }
 
-function pipelineNode(label, value, tone = "neutral") {
+function pipelineNode(label, value, tone = "neutral", helpText = "") {
   return `
     <div class="pipeline-node ${escapeHTML(tone)}">
-      <span>${escapeHTML(label)}</span>
+      <span>${escapeHTML(label)} ${helpTip(helpText)}</span>
       <strong>${escapeHTML(value ?? 0)}</strong>
     </div>
   `;
@@ -986,6 +986,11 @@ function detailsBlock(label, value) {
       ${jsonBlock(value)}
     </details>
   `;
+}
+
+function helpTip(text) {
+  if (!text) return "";
+  return `<span class="help-tip" tabindex="0" aria-label="${escapeHTML(text)}" data-help="${escapeHTML(text)}">?</span>`;
 }
 
 function learningMemorySummary(value) {

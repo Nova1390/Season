@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260511-9">
+    <link rel="stylesheet" href="./styles.css?v=20260511-10">
     <script src="./config.local.js"></script>
   </head>
   <body>
@@ -69,30 +69,36 @@
 
           <section class="filters">
             <label>
-              Statuses
+              <span class="label-row">
+                Statuses
+                <span class="help-tip" tabindex="0" aria-label="Quali proposte vuoi vedere nella lista. Puoi lasciare i valori predefiniti per vedere il lavoro operativo aperto." data-help="Quali proposte vuoi vedere nella lista. Puoi lasciare i valori predefiniti per vedere il lavoro operativo aperto.">?</span>
+              </span>
               <input id="statusesInput" type="text" spellcheck="false">
             </label>
             <label>
-              Limit
+              <span class="label-row">
+                Limit
+                <span class="help-tip" tabindex="0" aria-label="Numero massimo di proposte caricate nella lista. Tenerlo basso rende la console più veloce e leggibile." data-help="Numero massimo di proposte caricate nella lista. Tenerlo basso rende la console più veloce e leggibile.">?</span>
+              </span>
               <input id="limitInput" type="number" min="1" max="100">
             </label>
           </section>
 
           <section class="summary" aria-label="Inbox summary">
             <div>
-              <span>Total</span>
+              <span>Total <span class="help-tip" tabindex="0" aria-label="Totale proposte trovate con i filtri attuali." data-help="Totale proposte trovate con i filtri attuali.">?</span></span>
               <strong id="totalCount">0</strong>
             </div>
             <div>
-              <span>Needs review</span>
+              <span>Needs review <span class="help-tip" tabindex="0" aria-label="Proposte dove l'agente non è abbastanza sicuro e serve una decisione umana o più evidenza." data-help="Proposte dove l'agente non è abbastanza sicuro e serve una decisione umana o più evidenza.">?</span></span>
               <strong id="needsReviewCount">0</strong>
             </div>
             <div>
-              <span>Validated</span>
+              <span>Validated <span class="help-tip" tabindex="0" aria-label="Proposte passate dai controlli deterministici del backend. Non significa per forza che siano già applicate." data-help="Proposte passate dai controlli deterministici del backend. Non significa per forza che siano già applicate.">?</span></span>
               <strong id="validatedCount">0</strong>
             </div>
             <div>
-              <span>Failed</span>
+              <span>Failed <span class="help-tip" tabindex="0" aria-label="Proposte bloccate dal validatore perché rischiose, incomplete o in conflitto con il catalogo." data-help="Proposte bloccate dal validatore perché rischiose, incomplete o in conflitto con il catalogo.">?</span></span>
               <strong id="failedCount">0</strong>
             </div>
           </section>
@@ -119,21 +125,30 @@
 
             <form id="workerRunForm" class="worker-run-form">
               <label>
-                Worker
+                <span class="label-row">
+                  Worker
+                  <span class="help-tip" tabindex="0" aria-label="Il tipo di lavoro che chiedi all'agente di delegare ad Autopilot. Per ora sono disponibili solo azioni controllate." data-help="Il tipo di lavoro che chiedi all'agente di delegare ad Autopilot. Per ora sono disponibili solo azioni controllate.">?</span>
+                </span>
                 <select id="workerNameInput">
                   <option value="low_risk_apply_batch">Low-risk apply dry-run</option>
                   <option value="enrichment_draft_batch">Enrichment draft batch</option>
                 </select>
               </label>
               <label>
-                Limit
+                <span class="label-row">
+                  Limit
+                  <span class="help-tip" tabindex="0" aria-label="Quanti elementi al massimo il worker può processare in questa run. Qui è volutamente basso per sicurezza." data-help="Quanti elementi al massimo il worker può processare in questa run. Qui è volutamente basso per sicurezza.">?</span>
+                </span>
                 <input id="workerLimitInput" type="number" min="1" max="3" value="1">
               </label>
               <label>
-                Source domain
+                <span class="label-row">
+                  Source domain
+                  <span class="help-tip" tabindex="0" aria-label="Filtro opzionale per lavorare su una fonte specifica, ad esempio giallozafferano.it. Se vuoto, usa tutto il backlog disponibile." data-help="Filtro opzionale per lavorare su una fonte specifica, ad esempio giallozafferano.it. Se vuoto, usa tutto il backlog disponibile.">?</span>
+                </span>
                 <input id="workerSourceDomainInput" type="text" placeholder="optional, e.g. giallozafferano.it" spellcheck="false">
               </label>
-              <button id="runWorkerButton" type="submit">Run worker</button>
+              <button id="runWorkerButton" type="submit" data-help="Avvia il worker selezionato. Il dry-run non modifica il catalogo; serve solo a vedere cosa sarebbe pronto.">Run worker</button>
               <p id="workerRunHint">Low-risk apply runs in dry-run only. Real apply stays disabled from the console.</p>
             </form>
 
@@ -142,38 +157,38 @@
 
             <section class="summary ops-summary" aria-label="Automation summary">
               <div>
-                <span>Agent runs today</span>
+                <span>Agent runs today <span class="help-tip" tabindex="0" aria-label="Quante volte oggi è stato avviato l'agente manager." data-help="Quante volte oggi è stato avviato l'agente manager.">?</span></span>
                 <strong id="agentRunsToday">0</strong>
               </div>
               <div>
-                <span>Worker jobs today</span>
+                <span>Worker jobs today <span class="help-tip" tabindex="0" aria-label="Quanti lavori Autopilot sono stati delegati oggi dall'agente." data-help="Quanti lavori Autopilot sono stati delegati oggi dall'agente.">?</span></span>
                 <strong id="workerJobsToday">0</strong>
               </div>
               <div>
-                <span>LLM tokens today</span>
+                <span>LLM tokens today <span class="help-tip" tabindex="0" aria-label="Token AI consumati oggi dai processi catalogo tracciati. Serve per monitorare i costi." data-help="Token AI consumati oggi dai processi catalogo tracciati. Serve per monitorare i costi.">?</span></span>
                 <strong id="llmTokensToday">0</strong>
               </div>
               <div>
-                <span>Est. cost today</span>
+                <span>Est. cost today <span class="help-tip" tabindex="0" aria-label="Costo stimato delle chiamate AI di oggi. È una stima operativa, non una fattura." data-help="Costo stimato delle chiamate AI di oggi. È una stima operativa, non una fattura.">?</span></span>
                 <strong id="llmCostToday">$0</strong>
               </div>
             </section>
 
             <section class="summary ops-summary" aria-label="Auto apply audit summary">
               <div>
-                <span>Auto-applies today</span>
+                <span>Auto-applies today <span class="help-tip" tabindex="0" aria-label="Quante modifiche low-risk sono state applicate automaticamente oggi." data-help="Quante modifiche low-risk sono state applicate automaticamente oggi.">?</span></span>
                 <strong id="autoAppliesToday">0</strong>
               </div>
               <div>
-                <span>Active applies</span>
+                <span>Active applies <span class="help-tip" tabindex="0" aria-label="Auto-apply ancora attivi, cioè non rollbackati." data-help="Auto-apply ancora attivi, cioè non rollbackati.">?</span></span>
                 <strong id="activeAppliesToday">0</strong>
               </div>
               <div>
-                <span>Reverted</span>
+                <span>Reverted <span class="help-tip" tabindex="0" aria-label="Auto-apply annullati con rollback riuscito." data-help="Auto-apply annullati con rollback riuscito.">?</span></span>
                 <strong id="revertedAppliesToday">0</strong>
               </div>
               <div>
-                <span>Failed reverts</span>
+                <span>Failed reverts <span class="help-tip" tabindex="0" aria-label="Rollback tentati ma bloccati, di solito perché il dato è cambiato dopo l'applicazione." data-help="Rollback tentati ma bloccati, di solito perché il dato è cambiato dopo l'applicazione.">?</span></span>
                 <strong id="failedRevertsToday">0</strong>
               </div>
             </section>
@@ -190,6 +205,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260511-10"></script>
+    <script type="module" src="./app.js?v=20260511-11"></script>
   </body>
 </html>

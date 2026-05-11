@@ -29,6 +29,7 @@ It currently supports:
 - running approved agent worker jobs from the Operations section;
 - explaining why low-risk dry-runs have zero eligible proposals;
 - showing worker runs and low-risk readiness as visual summaries before raw JSON;
+- inline help bubbles for dashboard fields, worker controls, pipeline steps, and run metrics;
 - viewing recent agent-orchestrated Autopilot worker jobs;
 - viewing today's catalog AI usage rollup.
 - viewing auto-apply audit and rollback summary.

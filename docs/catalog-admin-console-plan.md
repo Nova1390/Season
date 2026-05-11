@@ -89,6 +89,7 @@ Implemented dev follow-up:
 - real apply is intentionally not exposed as a console action.
 - low-risk dry-run zero-result states are explained through `get_catalog_agent_auto_apply_diagnostics()`, so operators can distinguish clean backlog from blocked proposals.
 - Operations should prioritize visual summaries and hide raw JSON behind details panels unless an operator needs debugging data.
+- Dashboard labels should include simple inline help bubbles so non-technical operators can understand each metric without reading backend documentation.
 
 ## Folder Ownership
 
