@@ -1,6 +1,6 @@
 # Catalog AI Agent Contracts
 
-Status: implementation contract for Phase 0 and Phase 1 proposal-only runtime.
+Status: implementation contract for Phase 0 and Phase 1 proposal-only runtime. Semantic profile output is implemented in `run-catalog-agent-triage` v3.
 
 This document turns `docs/catalog-ai-agent-operating-plan.md` into concrete contracts for the first implementation steps. Every future agent feature must update this file or a linked runbook in the same change.
 

@@ -1,6 +1,6 @@
 # Catalog Agent LLM Reasoning Loop Plan
 
-Status: planning contract. No runtime implementation yet.
+Status: planning contract. Step 1 prompt-contract expansion is implemented in `run-catalog-agent-triage` v3; remaining loop steps are not implemented yet.
 
 This document defines how the Season Catalog Governance Agent should use LLMs as controlled reasoning tools, not as a single-shot autopilot wrapper.
 
@@ -317,6 +317,8 @@ Bad review request:
 
 Add a semantic profile contract to `run-catalog-agent-triage`.
 
+Status: implemented in `supabase/functions/run-catalog-agent-triage`.
+
 Deliverables:
 
 - new TypeScript interfaces for semantic profile output;
@@ -329,6 +331,11 @@ Exit criteria:
 - LLM output includes structured semantic evidence;
 - existing proposal persistence still works;
 - invalid semantic fields fail validation.
+
+Implementation note:
+
+- The current implementation stores the semantic profile inside proposal `evidence` to avoid a DB schema change in Step 1.
+- Step 2 should promote that reasoning trace into a first-class persisted/read model if the shape proves useful in dev smoke tests.
 
 ### Step 2: Reasoning Trace Persistence
 

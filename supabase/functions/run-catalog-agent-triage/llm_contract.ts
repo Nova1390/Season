@@ -19,9 +19,47 @@ export const CATALOG_AGENT_ALLOWED_STATUSES = [
   "needs_human_review",
 ] as const;
 
+export const CATALOG_AGENT_ALLOWED_SUBSTITUTABILITY = [
+  "full",
+  "partial",
+  "unsafe",
+  "unknown",
+] as const;
+
+export const CATALOG_AGENT_ALLOWED_IMPLICATION_LEVELS = [
+  "none",
+  "possible",
+  "likely",
+  "material",
+  "unknown",
+] as const;
+
 export type CatalogAgentProposalType = (typeof CATALOG_AGENT_ALLOWED_PROPOSAL_TYPES)[number];
 export type CatalogAgentRiskLevel = (typeof CATALOG_AGENT_ALLOWED_RISK_LEVELS)[number];
 export type CatalogAgentProposalStatus = (typeof CATALOG_AGENT_ALLOWED_STATUSES)[number];
+export type CatalogAgentSubstitutability = (typeof CATALOG_AGENT_ALLOWED_SUBSTITUTABILITY)[number];
+export type CatalogAgentImplicationLevel = (typeof CATALOG_AGENT_ALLOWED_IMPLICATION_LEVELS)[number];
+
+export interface CatalogAgentSemanticProfileOutput {
+  product_family: string | null;
+  semantic_category: string | null;
+  variant_dimension: string | null;
+  variant_kind: string | null;
+  parent_candidate_slug: string | null;
+  is_identity_bearing_variant: boolean | null;
+  substitutability_with_parent: CatalogAgentSubstitutability;
+  attribute_implications: string[];
+  nutrition_implication: CatalogAgentImplicationLevel;
+  seasonality_implication: CatalogAgentImplicationLevel;
+  allergy_implication: CatalogAgentImplicationLevel;
+  fridge_matching_implication: CatalogAgentImplicationLevel;
+  shopping_matching_implication: CatalogAgentImplicationLevel;
+  filter_implication: CatalogAgentImplicationLevel;
+  market_or_language_notes: string | null;
+  confidence_score: number | null;
+  evidence: string[];
+  open_questions: string[];
+}
 
 export interface CatalogAgentProposalOutput {
   proposal_type: CatalogAgentProposalType;
@@ -36,6 +74,7 @@ export interface CatalogAgentProposalOutput {
   risk_level: CatalogAgentRiskLevel;
   auto_apply_eligible: boolean;
   status: CatalogAgentProposalStatus;
+  semantic_profile: CatalogAgentSemanticProfileOutput;
   rationale: string;
   evidence: unknown[];
   blocking_questions: string[];
@@ -117,6 +156,26 @@ Return exactly this JSON shape:
       "risk_level": "low" | "medium" | "high" | "critical" | "unknown",
       "auto_apply_eligible": boolean,
       "status": "draft" | "needs_human_review",
+      "semantic_profile": {
+        "product_family": string | null,
+        "semantic_category": string | null,
+        "variant_dimension": string | null,
+        "variant_kind": string | null,
+        "parent_candidate_slug": string | null,
+        "is_identity_bearing_variant": boolean | null,
+        "substitutability_with_parent": "full" | "partial" | "unsafe" | "unknown",
+        "attribute_implications": string[],
+        "nutrition_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "seasonality_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "allergy_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "fridge_matching_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "shopping_matching_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "filter_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "market_or_language_notes": string | null,
+        "confidence_score": number | null,
+        "evidence": string[],
+        "open_questions": string[]
+      },
       "rationale": string,
       "evidence": [],
       "blocking_questions": []
@@ -145,6 +204,14 @@ Decision policy:
 18) Treat learning memory as operational memory: implemented and accepted lessons are strong guidance; needs_review lessons are caution signals.
 19) Do not repeat a prior failed/rejected/ambiguous recommendation unless the current work item contains new evidence that resolves the recorded problem.
 20) When learning memory changes your decision, mention the learning_id in evidence.
+21) Always fill semantic_profile before writing the final proposal fields. The semantic_profile is analysis evidence, not catalog truth.
+22) product_family should describe the broad product family when clear, for example tomato, potato, yeast, onion, flour, cheese. Use null if unclear.
+23) variant_dimension should describe why this may be a variant, for example size, cultivar, processing_state, fat_level, freshness, protected_designation, shape, product_type, or null.
+24) is_identity_bearing_variant=true when the term can materially affect culinary use, substitutability, nutrition, seasonality, allergy, fridge matching, shopping matching, or filters.
+25) substitutability_with_parent="full" only when the term can safely use the parent ingredient for recipe/fridge/shopping semantics. Use "partial", "unsafe", or "unknown" when a child/specialized target or review may be needed.
+26) For terms such as "pomodorini" vs "pomodori", do not rely on a hardcoded example. Apply the general meaningful-variant rule: if the term is a recognized culinary/market variant with material matching or usage differences, do not auto-approve it as a base alias.
+27) If a semantic_profile suggests a meaningful variant but the catalog has no explicit safe child target, prefer create_canonical or needs_human_review over approve_alias to the base.
+28) Include concrete semantic_profile.evidence and proposal evidence that reference recipe context, catalog candidates, learning memory, or missing evidence.
 `;
 
 export function validateCatalogAgentTriageOutput(
@@ -211,6 +278,7 @@ function validateProposal(
     "risk_level",
     "auto_apply_eligible",
     "status",
+    "semantic_profile",
     "rationale",
     "evidence",
     "blocking_questions",
@@ -273,6 +341,8 @@ function validateProposal(
     errors.push(`${prefix}.status must be needs_human_review for non-low risk`);
   }
 
+  validateSemanticProfile(proposal.semantic_profile, `${prefix}.semantic_profile`, errors);
+
   if (typeof proposal.rationale !== "string" || proposal.rationale.trim().length < 12) {
     errors.push(`${prefix}.rationale must be a meaningful string`);
   }
@@ -298,6 +368,96 @@ function validateProposal(
     if (!normalizeString(proposal.proposed_localized_name)) {
       errors.push(`${prefix}.create_canonical requires proposed_localized_name`);
     }
+  }
+}
+
+function validateSemanticProfile(
+  value: unknown,
+  prefix: string,
+  errors: string[],
+) {
+  if (!isRecord(value)) {
+    errors.push(`${prefix} must be an object`);
+    return;
+  }
+
+  const expectedKeys = [
+    "product_family",
+    "semantic_category",
+    "variant_dimension",
+    "variant_kind",
+    "parent_candidate_slug",
+    "is_identity_bearing_variant",
+    "substitutability_with_parent",
+    "attribute_implications",
+    "nutrition_implication",
+    "seasonality_implication",
+    "allergy_implication",
+    "fridge_matching_implication",
+    "shopping_matching_implication",
+    "filter_implication",
+    "market_or_language_notes",
+    "confidence_score",
+    "evidence",
+    "open_questions",
+  ];
+
+  for (const key of expectedKeys) {
+    if (!(key in value)) {
+      errors.push(`${prefix} missing key: ${key}`);
+    }
+  }
+
+  for (const nullableStringKey of [
+    "product_family",
+    "semantic_category",
+    "variant_dimension",
+    "variant_kind",
+    "parent_candidate_slug",
+    "market_or_language_notes",
+  ]) {
+    if (!isNullableString(value[nullableStringKey])) {
+      errors.push(`${prefix}.${nullableStringKey} must be string or null`);
+    }
+  }
+
+  if (!(value.is_identity_bearing_variant === null || typeof value.is_identity_bearing_variant === "boolean")) {
+    errors.push(`${prefix}.is_identity_bearing_variant must be boolean or null`);
+  }
+
+  if (!CATALOG_AGENT_ALLOWED_SUBSTITUTABILITY.includes(value.substitutability_with_parent as CatalogAgentSubstitutability)) {
+    errors.push(`${prefix}.substitutability_with_parent unsupported`);
+  }
+
+  for (const implicationKey of [
+    "nutrition_implication",
+    "seasonality_implication",
+    "allergy_implication",
+    "fridge_matching_implication",
+    "shopping_matching_implication",
+    "filter_implication",
+  ]) {
+    if (!CATALOG_AGENT_ALLOWED_IMPLICATION_LEVELS.includes(value[implicationKey] as CatalogAgentImplicationLevel)) {
+      errors.push(`${prefix}.${implicationKey} unsupported`);
+    }
+  }
+
+  if (!Array.isArray(value.attribute_implications) || !value.attribute_implications.every((item) => typeof item === "string")) {
+    errors.push(`${prefix}.attribute_implications must be string[]`);
+  }
+
+  if (!Array.isArray(value.evidence) || !value.evidence.every((item) => typeof item === "string")) {
+    errors.push(`${prefix}.evidence must be string[]`);
+  }
+
+  if (!Array.isArray(value.open_questions) || !value.open_questions.every((item) => typeof item === "string")) {
+    errors.push(`${prefix}.open_questions must be string[]`);
+  }
+
+  if (!(value.confidence_score === null || (typeof value.confidence_score === "number" && Number.isFinite(value.confidence_score)))) {
+    errors.push(`${prefix}.confidence_score must be number or null`);
+  } else if (typeof value.confidence_score === "number" && (value.confidence_score < 0 || value.confidence_score > 1)) {
+    errors.push(`${prefix}.confidence_score must be within 0..1`);
   }
 }
 

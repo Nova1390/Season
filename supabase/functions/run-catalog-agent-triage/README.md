@@ -8,7 +8,7 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 - attaches compact learning memory for each candidate term;
 - skips items with recent agent proposals unless newer learning memory asks the agent to reconsider;
 - calls OpenAI Responses API with `gpt-5.4-mini` by default;
-- validates strict JSON output;
+- validates strict JSON output, including a structured `semantic_profile` for each proposal;
 - stores proposals in `catalog_agent_proposals`;
 - records run/proposal events;
 - records provider token usage in `catalog_ai_usage_events`;
@@ -27,6 +27,23 @@ The model receives:
 The memory is advisory. The model must still use only targets present in the current work item and every persisted proposal remains subject to deterministic validation before any apply step.
 
 Recent proposal dedupe happens after learning memory is attached. This prevents repeated LLM calls for unchanged work, but still lets an operator note or review outcome reopen a term when the new lesson was created after the last live proposal.
+
+## Semantic Profile
+
+Every proposal now carries a `semantic_profile` in the LLM contract.
+
+The profile captures:
+
+- product family;
+- semantic category;
+- possible variant dimension;
+- whether the term is an identity-bearing variant;
+- parent candidate slug, if any;
+- substitutability with the parent;
+- possible implications for nutrition, seasonality, allergy, fridge matching, shopping matching, and filters;
+- evidence and open questions.
+
+The semantic profile is not catalog truth. It is persisted inside proposal `evidence` as a structured item so reviewers and future validators can understand why the agent thinks a term is an alias, child variant, new canonical ingredient, or review case.
 
 ## Required Secrets
 

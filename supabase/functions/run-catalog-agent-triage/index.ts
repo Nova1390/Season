@@ -45,8 +45,8 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v2-learning-memory";
-const PROMPT_VERSION = "catalog-agent-triage-v2-learning-memory";
+const AGENT_VERSION = "proposal-only-v3-semantic-profile";
+const PROMPT_VERSION = "catalog-agent-triage-v3-semantic-profile";
 
 const SUPABASE_URL = env("SUPABASE_URL");
 const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
@@ -570,7 +570,7 @@ async function invokeProvider(
       },
     ],
     temperature: 0,
-    max_output_tokens: 4000,
+    max_output_tokens: 5000,
   };
 
   const controller = new AbortController();
@@ -645,7 +645,7 @@ async function insertProposals(
       risk_level: proposal.risk_level,
       auto_apply_eligible: proposal.auto_apply_eligible,
       rationale: proposal.rationale,
-      evidence: proposal.evidence,
+      evidence: evidenceWithSemanticProfile(proposal),
       blocking_questions: proposal.blocking_questions,
       raw_agent_output: rawAgentOutput,
       status: proposal.status,
@@ -800,6 +800,17 @@ function normalizeProposalStatuses(proposals: CatalogAgentProposalOutput[]): Cat
     auto_apply_eligible: proposal.risk_level === "low" ? proposal.auto_apply_eligible : false,
     status: proposal.risk_level === "low" ? proposal.status : "needs_human_review",
   }));
+}
+
+function evidenceWithSemanticProfile(proposal: CatalogAgentProposalOutput): unknown[] {
+  const existingEvidence = Array.isArray(proposal.evidence) ? proposal.evidence : [];
+  return [
+    {
+      type: "semantic_profile",
+      semantic_profile: proposal.semantic_profile,
+    },
+    ...existingEvidence,
+  ];
 }
 
 function observationIDsForItem(item: WorkItem | undefined): number[] {

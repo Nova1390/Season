@@ -28,6 +28,7 @@ Current implementation status:
 - Structured continuous-improvement memory is documented in `docs/catalog-agent-learning-memory.md`.
 - Runtime learning memory is now attached to proposal-only LLM packets through `public.get_catalog_agent_learning_context(...)`.
 - The next LLM architecture is documented in `docs/catalog-agent-llm-reasoning-loop-plan.md`: the agent should use bounded multi-pass reasoning roles instead of a single one-shot prompt when extra semantic confidence is needed.
+- Step 1 of that architecture is implemented: `run-catalog-agent-triage` now requires a structured `semantic_profile` in proposal output and persists it in proposal evidence.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
 - No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
