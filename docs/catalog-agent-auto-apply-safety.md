@@ -116,6 +116,13 @@ Rollback behavior:
 - audit status becomes `reverted`;
 - proposal event records the rollback.
 
+Rollback failures:
+
+- if the audited after-state no longer matches the current catalog row, rollback is blocked;
+- the audit row is marked `revert_failed`;
+- the failure event records the SQL error and rollback action;
+- the RPC returns a structured failure payload so the admin console can surface the problem without losing audit history.
+
 ## Worker Policy
 
 The `low_risk_apply_batch` worker is implemented by `catalog-low-risk-apply-batch`.
@@ -189,3 +196,12 @@ Production:
 - worker job: `catalog_agent_worker_jobs.id = 5`;
 - result: `1` applied, `0` failed;
 - disabled both feature flags and removed the temporary operator token after verification.
+
+## Dev Rollback Console Follow-Up
+
+2026-05-11:
+
+- added console rollback controls for active auto-apply audit rows;
+- rollback requires a human operator note;
+- the console calls only `rollback_catalog_agent_apply(...)`;
+- updated rollback failure semantics so failed rollback attempts remain visible in audit history.

@@ -371,6 +371,11 @@ p {
   background: #fbfaf6;
 }
 
+.audit-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .proposal-list,
 .proposal-detail {
   min-height: 520px;

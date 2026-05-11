@@ -127,6 +127,11 @@ function bindEvents() {
 
   elements.refreshButton.addEventListener("click", loadInbox);
   elements.refreshOpsButton.addEventListener("click", loadOperations);
+  elements.applyAuditList.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-rollback-audit-id]");
+    if (!button) return;
+    await rollbackApplyAudit(Number(button.dataset.rollbackAuditId));
+  });
 }
 
 async function signIn() {
@@ -352,6 +357,9 @@ function renderOperations() {
         <span>${escapeHTML(formatDate(audit.applied_at))}</span>
       </div>
       ${audit.revert_reason ? `<p>${escapeHTML(audit.revert_reason)}</p>` : ""}
+      <div class="audit-actions">
+        ${rollbackButton(audit)}
+      </div>
       ${jsonBlock({
         rollback_plan: audit.rollback_plan,
         worker_job_id: audit.worker_job_id,
@@ -360,6 +368,52 @@ function renderOperations() {
       })}
     </article>
   `).join("");
+}
+
+async function rollbackApplyAudit(applyAuditId) {
+  if (!Number.isFinite(applyAuditId) || applyAuditId <= 0) {
+    setStatus("Invalid audit id.", "error");
+    return;
+  }
+
+  const audit = state.operations.applyAudits.find((item) => Number(item.id) === applyAuditId);
+  if (!audit || audit.status !== "applied") {
+    setStatus("Only active applied audit records can be rolled back.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Rollback auto-apply audit #${applyAuditId}? This will revert only if the current catalog row still matches the audited after-state.`
+  );
+  if (!confirmed) return;
+
+  const reason = window.prompt("Rollback reason, required for audit history:");
+  const normalizedReason = String(reason ?? "").trim();
+  if (!normalizedReason) {
+    setStatus("Rollback cancelled: a reason is required.", "error");
+    return;
+  }
+
+  setStatus(`Rolling back audit #${applyAuditId}...`);
+  const { data, error } = await state.client.rpc("rollback_catalog_agent_apply", {
+    p_apply_audit_id: applyAuditId,
+    p_revert_reason: normalizedReason
+  });
+
+  if (error) {
+    setStatus(error.message, "error");
+    await loadOperations({ silent: true });
+    return;
+  }
+
+  if (data?.ok === false) {
+    setStatus(data.error ?? "Rollback failed and was recorded.", "error");
+  } else {
+    setStatus(`Rollback completed for audit #${applyAuditId}.`, "success");
+  }
+
+  await loadOperations({ silent: true });
+  await loadInbox({ keepProposalId: audit.proposal_id });
 }
 
 function renderInbox() {
@@ -689,6 +743,18 @@ function actionButton(action, label, state, variant = "") {
   const disabled = state.enabled ? "" : "disabled";
   const title = state.reason ? ` title="${escapeHTML(state.reason)}"` : "";
   return `<button type="button" data-action="${escapeHTML(action)}" class="${escapeHTML(classes)}" ${disabled}${title}>${escapeHTML(label)}</button>`;
+}
+
+function rollbackButton(audit) {
+  if (audit.status !== "applied") {
+    return `<button type="button" class="secondary" disabled>Rollback unavailable</button>`;
+  }
+
+  return `
+    <button type="button" class="danger" data-rollback-audit-id="${escapeHTML(audit.id)}">
+      Rollback
+    </button>
+  `;
 }
 
 function bindEnabledAction(action, handler) {

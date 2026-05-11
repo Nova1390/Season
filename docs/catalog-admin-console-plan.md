@@ -58,6 +58,7 @@ The first static console supports:
 - deterministic validation through `validate_catalog_agent_proposal(...)`;
 - manual governed apply through `apply_catalog_agent_proposal(...)`;
 - learning context through `get_catalog_agent_learning_context(...)`.
+- operations visibility for agent worker jobs, AI usage, auto-apply audit records, and guarded rollback.
 
 ## Rollout
 
@@ -77,6 +78,12 @@ Phase 3:
 - add staging config only after TestFlight release is stable;
 - add operational run history and agent invocation controls;
 - add richer learning-memory review.
+
+Implemented dev follow-up:
+
+- the Operations section shows agent-delegated worker jobs and auto-apply audit records;
+- active `applied` audit rows can be rolled back from the console only with an explicit operator reason;
+- rollback still goes through `rollback_catalog_agent_apply(...)`, which checks catalog-admin access and verifies the current row still matches the audited after-state before mutating anything.
 
 ## Folder Ownership
 
