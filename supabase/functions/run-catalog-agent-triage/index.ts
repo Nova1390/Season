@@ -390,6 +390,7 @@ async function insertRun(
     summary: Record<string, unknown>;
   },
 ): Promise<number> {
+  const now = new Date().toISOString();
   const { data, error } = await adminClient
     .from("catalog_agent_runs")
     .insert({
@@ -402,7 +403,8 @@ async function insertRun(
       source_domain: input.sourceDomain,
       input_summary: input.inputSummary,
       status: input.status,
-      finished_at: input.status === "started" ? null : new Date().toISOString(),
+      started_at: now,
+      finished_at: input.status === "started" ? null : now,
       summary: input.summary,
       created_by: input.authUserId,
     })

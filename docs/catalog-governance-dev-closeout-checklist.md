@@ -31,6 +31,51 @@ This checklist is for the current branch and dev environment only. It does not a
 - Tooltip rendering was moved to a page-level popover to avoid clipping.
 - Static console is deployed to `catalog.seasonapp.it`.
 - SSH deploy path and command are documented.
+- Smart Import training captions were imported into dev custom observations as a controlled catalog-agent exercise.
+- The agent triage run timestamp bug was fixed after the training import exposed it.
+
+## Dev Training Import
+
+2026-05-11 Smart Import caption batch:
+
+- Input file: `smart_import_training_captions.csv`.
+- Rows processed: 50.
+- Expected ingredient mentions analyzed: 288.
+- New dev observations inserted: 26.
+- New dev observation occurrences inserted: 43.
+- Observation source: `smart_import_training_captions`.
+- Staging was not touched.
+
+Top new signals:
+
+- `pepe`: 7 occurrences.
+- `pomodori`: 4 occurrences.
+- `pomodorini`: 4 occurrences.
+- `olive`: 3 occurrences.
+- `fiocchi d avena`: 2 occurrences.
+- `pane raffermo`: 2 occurrences.
+- `uovo`: 2 occurrences.
+
+Agent run:
+
+- `catalog_agent_runs.id = 18`.
+- Snapshot items: 5.
+- Items sent to LLM: 5.
+- Proposals created: 5.
+- Result: all 5 proposals were `needs_human_review`.
+- Terms: `pepe`, `pomodori`, `pomodorini`, `olive`, `fiocchi d avena`.
+
+Interpretation:
+
+- The agent did not create or apply catalog changes blindly.
+- `pomodori` and `pomodorini` show that the agent can infer likely tomato intent but needs a stronger actionable target context before approving aliases.
+- `olive` correctly remains high-risk because green/black/generic olive identity is ambiguous.
+- This is useful training data for improving context enrichment and deterministic alias validation, not a failure.
+
+Runtime fix discovered by this test:
+
+- Immediate cancelled/completed agent runs could violate `catalog_agent_runs_finished_after_started` because `finished_at` came from Edge runtime time while `started_at` used database default `now()`.
+- `run-catalog-agent-triage` now inserts both `started_at` and immediate `finished_at` from the same Edge timestamp.
 
 ## Final Dev Smoke Test
 
