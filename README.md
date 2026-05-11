@@ -119,6 +119,8 @@ Start here:
 - [Catalog Agent Responsibility Charter](docs/catalog-agent-responsibility-charter.md): operating charter for the autonomous catalog governance agent as a careful Season operator.
 - [Catalog AI Agent Contracts](docs/catalog-ai-agent-contracts.md): concrete Phase 0/1 contracts for proposal schema, statuses, risk, and documentation discipline.
 - [Catalog Admin Console Plan](docs/catalog-admin-console-plan.md): web-first internal console direction for catalog agent review, validation, apply, and learning memory.
+- [Catalog Admin Operator Runbook](docs/catalog-admin-operator-runbook.md): practical guide for using the dev console safely.
+- [Catalog Governance Dev Closeout Checklist](docs/catalog-governance-dev-closeout-checklist.md): final dev checks before promoting or reviewing the current catalog-governance branch.
 - [Data architecture](Season/Docs/DataArchitecture.md): per-domain source-of-truth and sync model.
 - [Security disposition](docs/security/supabase-security-findings-disposition.md): security findings and decisions.
 - [Catalog consolidation plan](docs/catalog-system-review-and-consolidation-plan.md): review snapshot and refactor roadmap for catalog operations.

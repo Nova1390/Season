@@ -4,6 +4,11 @@ Internal web console for Season catalog governance.
 
 This folder is intentionally separate from the iOS app and from the public website. It is the future home for admin/catalog workflows such as proposal review, deterministic validation, manual apply, and learning-memory inspection.
 
+Operator docs:
+
+- `docs/catalog-admin-operator-runbook.md`
+- `docs/catalog-governance-dev-closeout-checklist.md`
+
 ## Current Scope
 
 The first version is a zero-build static web app:
@@ -106,6 +111,8 @@ scp -i ~/.ssh/codex-season-website-deploy -P 65002 \
 ```
 
 Staging can be enabled later with explicit config and release-governance checks.
+
+Before enabling staging, follow `docs/catalog-governance-dev-closeout-checklist.md` and create a staging-specific console configuration. Do not reuse dev assumptions silently.
 
 ## Security Notes
 

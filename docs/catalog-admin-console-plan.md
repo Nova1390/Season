@@ -22,6 +22,14 @@ Current backend target:
 
 - `Season-dev`
 
+Operator runbook:
+
+- `docs/catalog-admin-operator-runbook.md`
+
+Dev closeout checklist:
+
+- `docs/catalog-governance-dev-closeout-checklist.md`
+
 ## Why Not In-App
 
 Mobile admin tooling would be awkward for review-heavy work:
