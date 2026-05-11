@@ -401,6 +401,15 @@ async function loadLearningMemory(options = {}) {
   const text = state.selected?.proposal?.normalized_text;
   if (!text) return;
 
+  const panel = elements.proposalDetail.querySelector("#learningPanel");
+  if (panel && !options.silent) {
+    panel.innerHTML = `
+      <h3>Learning memory</h3>
+      <p>Loading learning memory for ${escapeHTML(text)}...</p>
+    `;
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   if (!options.silent) {
     setStatus(`Loading learning memory for ${text}...`);
   }
@@ -410,16 +419,27 @@ async function loadLearningMemory(options = {}) {
   });
 
   if (error) {
+    if (panel && !options.silent) {
+      panel.innerHTML = `
+        <h3>Learning memory</h3>
+        <p class="inline-error">${escapeHTML(error.message)}</p>
+      `;
+    }
     setStatus(error.message, "error");
     return;
   }
 
   state.learningMemory = data;
-  const panel = elements.proposalDetail.querySelector("#learningPanel");
-  panel.innerHTML = `
-    <h3>Learning memory</h3>
-    ${jsonBlock(data)}
-  `;
+  if (panel) {
+    panel.innerHTML = `
+      <h3>Learning memory</h3>
+      ${learningMemorySummary(data)}
+      ${jsonBlock(data)}
+    `;
+    if (!options.silent) {
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
   if (!options.silent) {
     setStatus(`Loaded learning memory for ${text}.`);
   }
@@ -526,6 +546,19 @@ function badge(value) {
 
 function jsonBlock(value) {
   return `<pre class="json-block">${escapeHTML(JSON.stringify(value, null, 2))}</pre>`;
+}
+
+function learningMemorySummary(value) {
+  const metadata = value?.metadata ?? {};
+  const termLearnings = value?.term_learnings ?? {};
+  const totalTermLearnings = Object.values(termLearnings)
+    .filter(Array.isArray)
+    .reduce((total, items) => total + items.length, 0);
+  return `
+    <p class="learning-summary">
+      ${escapeHTML(totalTermLearnings)} term lessons, ${escapeHTML(metadata.terms_with_learning ?? 0)} terms with learning.
+    </p>
+  `;
 }
 
 function parseCSV(value) {

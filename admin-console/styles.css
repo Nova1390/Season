@@ -471,6 +471,14 @@ p {
   color: var(--muted);
 }
 
+.inline-error {
+  color: var(--danger);
+}
+
+.learning-summary {
+  color: var(--ok);
+}
+
 .action-row button:disabled {
   background: var(--surface-2);
   border-color: var(--line-strong);
