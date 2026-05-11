@@ -174,3 +174,18 @@ Production:
 - result: `1` eligible proposal previewed, `0` applied, `0` failed;
 - worker job: `catalog_agent_worker_jobs.id = 4`;
 - real apply remained disabled.
+
+## Dev Controlled Apply History
+
+2026-05-11:
+
+- enabled `CATALOG_AGENT_ORCHESTRATOR_ENABLED` and `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED` temporarily;
+- ran `low_risk_apply_batch` through the orchestrator with `limit=1`;
+- applied proposal `catalog_agent_proposals.id = 5`;
+- created alias `sale fino` for `sale_fino`;
+- marked observation `sale fino` as `resolved_alias`;
+- wrote audit row `catalog_agent_apply_audit.id = 3`;
+- rollback plan: `delete_inserted_alias` for alias id `168`;
+- worker job: `catalog_agent_worker_jobs.id = 5`;
+- result: `1` applied, `0` failed;
+- disabled both feature flags and removed the temporary operator token after verification.
