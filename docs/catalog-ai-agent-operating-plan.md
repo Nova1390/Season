@@ -23,6 +23,7 @@ Current implementation status:
 - The first context-enriched agent snapshot is documented in `docs/catalog-agent-context-enrichment.md`.
 - The first backend Review Inbox RPCs are documented in `docs/catalog-agent-review-inbox.md`.
 - The first deterministic validator RPCs are documented in `docs/catalog-agent-deterministic-validator.md`.
+- The first manual apply adapter is documented in `docs/catalog-agent-manual-apply-adapter.md`.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
 - No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.

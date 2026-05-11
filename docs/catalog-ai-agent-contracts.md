@@ -78,6 +78,7 @@ Supported proposal statuses:
 - `draft`: inserted but not yet validated.
 - `queued_for_validation`: ready for validator processing.
 - `validated`: validator accepted the proposal as structurally safe.
+- `applied`: manually applied through a governed RPC.
 - `auto_applied`: future state for low-risk proposals applied by governed RPCs.
 - `needs_human_review`: requires operator decision.
 - `rejected`: reviewer or validator rejected the proposal.
@@ -257,6 +258,29 @@ Validator RPCs:
 Important boundary:
 
 The validator can only update proposal status, validation errors, and proposal events. It cannot apply aliases, create canonical ingredients, update localizations, mutate recipes, or reconcile observations.
+
+## 10.2 Manual Apply Adapter Contract
+
+Implemented by:
+
+- `supabase/migrations/20260511113000_catalog_agent_manual_apply_adapter.sql`
+- `docs/catalog-agent-manual-apply-adapter.md`
+
+RPCs:
+
+- `public.apply_catalog_agent_proposal(...)`
+- `public.apply_catalog_agent_proposal_batch(...)`
+
+Allowed v1 apply scope:
+
+- `approve_alias`
+- `add_localization`
+- `status = validated`
+- `risk_level = low`
+
+Important boundary:
+
+The adapter must use existing governed RPCs only. It must not write directly to catalog identity, alias, localization, recipe, or reconciliation tables.
 
 ## 10. Proposal Persistence Contract
 

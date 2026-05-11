@@ -110,3 +110,13 @@ Non-actionable proposal rules:
 Level 2: deterministic validation.
 
 The system can now say "this proposal passes/fails deterministic checks", but still cannot apply catalog changes.
+
+## Next Stage
+
+Validated low-risk alias/localization proposals can be applied manually through:
+
+- `docs/catalog-agent-manual-apply-adapter.md`
+- `public.apply_catalog_agent_proposal(...)`
+- `public.apply_catalog_agent_proposal_batch(...)`
+
+The apply adapter still uses existing governed RPCs only.
