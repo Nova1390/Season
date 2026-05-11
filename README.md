@@ -91,6 +91,10 @@ Season/
   ViewModels/          Feature view models
   Views/               SwiftUI screens and design system
 
+admin-console/
+  *.html/js/css        Separate internal web console for catalog agent review
+  config.example.js    Browser-safe local config template
+
 supabase/
   functions/           Supabase Edge Functions
   migrations/          Database schema, policies, RPCs, and catalog automation
@@ -114,6 +118,7 @@ Start here:
 - [Catalog AI Agent Operating Plan](docs/catalog-ai-agent-operating-plan.md): proposal-first plan for adding an AI agent without bypassing Supabase/autopilot guardrails.
 - [Catalog Agent Responsibility Charter](docs/catalog-agent-responsibility-charter.md): operating charter for the autonomous catalog governance agent as a careful Season operator.
 - [Catalog AI Agent Contracts](docs/catalog-ai-agent-contracts.md): concrete Phase 0/1 contracts for proposal schema, statuses, risk, and documentation discipline.
+- [Catalog Admin Console Plan](docs/catalog-admin-console-plan.md): web-first internal console direction for catalog agent review, validation, apply, and learning memory.
 - [Data architecture](Season/Docs/DataArchitecture.md): per-domain source-of-truth and sync model.
 - [Security disposition](docs/security/supabase-security-findings-disposition.md): security findings and decisions.
 - [Catalog consolidation plan](docs/catalog-system-review-and-consolidation-plan.md): review snapshot and refactor roadmap for catalog operations.

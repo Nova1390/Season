@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Season Admin Console</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./config.local.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">S</span>
+          <div>
+            <strong>Season Admin</strong>
+            <span id="environmentLabel">Not configured</span>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Admin sections">
+          <a class="active" href="#review">Catalog agent</a>
+          <a href="#learning">Learning memory</a>
+          <a href="#ops">Operations</a>
+        </nav>
+
+        <div class="session">
+          <span id="sessionEmail">Signed out</span>
+          <button id="signOutButton" type="button" class="secondary" hidden>Sign out</button>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section id="configWarning" class="notice" hidden>
+          Configure `admin-console/config.local.js` before using the console.
+        </section>
+
+        <section id="authPanel" class="auth-panel">
+          <div>
+            <h1>Catalog governance console</h1>
+            <p>Sign in with a Supabase user that has catalog admin access.</p>
+          </div>
+
+          <form id="loginForm" class="login-form">
+            <label>
+              Email
+              <input id="emailInput" type="email" autocomplete="email" required>
+            </label>
+            <label>
+              Password
+              <input id="passwordInput" type="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign in</button>
+          </form>
+        </section>
+
+        <section id="appPanel" class="app-panel" hidden>
+          <header class="topbar">
+            <div>
+              <h1>Catalog agent review</h1>
+              <p id="syncStatus">Ready.</p>
+            </div>
+            <div class="topbar-actions">
+              <button id="refreshButton" type="button">Refresh inbox</button>
+            </div>
+          </header>
+
+          <section class="filters">
+            <label>
+              Statuses
+              <input id="statusesInput" type="text" spellcheck="false">
+            </label>
+            <label>
+              Limit
+              <input id="limitInput" type="number" min="1" max="100">
+            </label>
+          </section>
+
+          <section class="summary" aria-label="Inbox summary">
+            <div>
+              <span>Total</span>
+              <strong id="totalCount">0</strong>
+            </div>
+            <div>
+              <span>Needs review</span>
+              <strong id="needsReviewCount">0</strong>
+            </div>
+            <div>
+              <span>Validated</span>
+              <strong id="validatedCount">0</strong>
+            </div>
+            <div>
+              <span>Failed</span>
+              <strong id="failedCount">0</strong>
+            </div>
+          </section>
+
+          <section class="review-layout">
+            <div class="proposal-list" id="proposalList" aria-label="Agent proposals"></div>
+
+            <article class="proposal-detail" id="proposalDetail">
+              <div class="empty-state">
+                <h2>Select a proposal</h2>
+                <p>The detail panel will show rationale, target, evidence, events, and learning memory.</p>
+              </div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -16,3 +16,5 @@ smart-import-batch-input.json
 
 AuthKey_*.p8
 *.p8
+
+admin-console/config.local.js
