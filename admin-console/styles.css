@@ -366,6 +366,11 @@ p {
   font-size: 12px;
 }
 
+.audit-record {
+  border-color: rgba(77, 107, 61, 0.32);
+  background: #fbfaf6;
+}
+
 .proposal-list,
 .proposal-detail {
   min-height: 520px;

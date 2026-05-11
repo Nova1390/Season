@@ -16,7 +16,9 @@ const state = {
   learningMemory: null,
   operations: {
     summary: null,
-    workerJobs: []
+    autoApplySummary: null,
+    workerJobs: [],
+    applyAudits: []
   }
 };
 
@@ -46,7 +48,12 @@ const elements = {
   workerJobsToday: document.querySelector("#workerJobsToday"),
   llmTokensToday: document.querySelector("#llmTokensToday"),
   llmCostToday: document.querySelector("#llmCostToday"),
-  workerJobsList: document.querySelector("#workerJobsList")
+  autoAppliesToday: document.querySelector("#autoAppliesToday"),
+  activeAppliesToday: document.querySelector("#activeAppliesToday"),
+  revertedAppliesToday: document.querySelector("#revertedAppliesToday"),
+  failedRevertsToday: document.querySelector("#failedRevertsToday"),
+  workerJobsList: document.querySelector("#workerJobsList"),
+  applyAuditList: document.querySelector("#applyAuditList")
 };
 
 init();
@@ -113,7 +120,7 @@ function bindEvents() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
-    state.operations = { summary: null, workerJobs: [] };
+    state.operations = { summary: null, autoApplySummary: null, workerJobs: [], applyAudits: [] };
     setAuthMessage("");
     renderSession();
   });
@@ -160,7 +167,7 @@ async function openAdminSession() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
-    state.operations = { summary: null, workerJobs: [] };
+    state.operations = { summary: null, autoApplySummary: null, workerJobs: [], applyAudits: [] };
     renderSession();
     setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
     setStatus("Access denied.");
@@ -226,9 +233,14 @@ async function loadOperations(options = {}) {
 
   const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
 
-  const [summaryResult, jobsResult] = await Promise.all([
+  const [summaryResult, autoApplySummaryResult, jobsResult, applyAuditsResult] = await Promise.all([
     state.client
       .from("catalog_agent_daily_automation_summary")
+      .select("*")
+      .eq("day", todayISO)
+      .maybeSingle(),
+    state.client
+      .from("catalog_agent_auto_apply_audit_summary")
       .select("*")
       .eq("day", todayISO)
       .maybeSingle(),
@@ -236,6 +248,11 @@ async function loadOperations(options = {}) {
       .from("catalog_agent_worker_jobs")
       .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
       .order("created_at", { ascending: false })
+      .limit(10),
+    state.client
+      .from("catalog_agent_apply_audit")
+      .select("id,proposal_id,run_id,worker_job_id,mutation_type,mutation_scope,apply_mode,actor_role,target_ingredient_id,status,rollback_plan,apply_note,revert_reason,applied_at,reverted_at")
+      .order("applied_at", { ascending: false })
       .limit(10)
   ]);
 
@@ -243,14 +260,24 @@ async function loadOperations(options = {}) {
     setStatus(summaryResult.error.message, "error");
     return;
   }
+  if (autoApplySummaryResult.error) {
+    setStatus(autoApplySummaryResult.error.message, "error");
+    return;
+  }
   if (jobsResult.error) {
     setStatus(jobsResult.error.message, "error");
+    return;
+  }
+  if (applyAuditsResult.error) {
+    setStatus(applyAuditsResult.error.message, "error");
     return;
   }
 
   state.operations = {
     summary: summaryResult.data ?? null,
-    workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : []
+    autoApplySummary: autoApplySummaryResult.data ?? null,
+    workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : [],
+    applyAudits: Array.isArray(applyAuditsResult.data) ? applyAuditsResult.data : []
   };
   renderOperations();
   if (!options.silent) {
@@ -260,39 +287,77 @@ async function loadOperations(options = {}) {
 
 function renderOperations() {
   const summary = state.operations.summary ?? {};
+  const autoApplySummary = state.operations.autoApplySummary ?? {};
   const jobs = state.operations.workerJobs ?? [];
+  const applyAudits = state.operations.applyAudits ?? [];
 
   elements.agentRunsToday.textContent = String(summary.agent_runs ?? 0);
   elements.workerJobsToday.textContent = String(summary.worker_jobs ?? 0);
   elements.llmTokensToday.textContent = formatNumber(summary.total_tokens ?? 0);
   elements.llmCostToday.textContent = formatCurrency(summary.estimated_cost_usd ?? 0);
+  elements.autoAppliesToday.textContent = String(autoApplySummary.total_auto_apply_records ?? 0);
+  elements.activeAppliesToday.textContent = String(autoApplySummary.active_applies ?? 0);
+  elements.revertedAppliesToday.textContent = String(autoApplySummary.reverted_applies ?? 0);
+  elements.failedRevertsToday.textContent = String(autoApplySummary.failed_reverts ?? 0);
 
   if (jobs.length === 0) {
     elements.workerJobsList.innerHTML = "<p>No worker jobs yet. The agent has not delegated Autopilot work today.</p>";
+  } else {
+    elements.workerJobsList.innerHTML = jobs.map((job) => `
+      <article class="worker-job">
+        <header>
+          <div>
+            <strong>${escapeHTML(job.worker_name)}</strong>
+            <span>${escapeHTML(job.worker_function)}</span>
+          </div>
+          <div class="badge-line">
+            ${badge(job.status)}
+            ${badge(job.risk_ceiling)}
+            ${job.dry_run ? badge("dry_run") : ""}
+          </div>
+        </header>
+        <div class="worker-job-meta">
+          <span>Job #${escapeHTML(job.id)}</span>
+          <span>Run #${escapeHTML(job.agent_run_id ?? "none")}</span>
+          <span>Limit ${escapeHTML(job.item_limit)}</span>
+          <span>${escapeHTML(formatDate(job.created_at))}</span>
+        </div>
+        ${job.failure_reason ? `<p class="inline-error">${escapeHTML(job.failure_reason)}</p>` : ""}
+        ${jsonBlock(job.summary ?? {})}
+      </article>
+    `).join("");
+  }
+
+  if (applyAudits.length === 0) {
+    elements.applyAuditList.innerHTML = "<p>No auto-apply audit records yet. Autonomous apply is still gated.</p>";
     return;
   }
 
-  elements.workerJobsList.innerHTML = jobs.map((job) => `
-    <article class="worker-job">
+  elements.applyAuditList.innerHTML = applyAudits.map((audit) => `
+    <article class="worker-job audit-record">
       <header>
         <div>
-          <strong>${escapeHTML(job.worker_name)}</strong>
-          <span>${escapeHTML(job.worker_function)}</span>
+          <strong>${escapeHTML(audit.mutation_type)}</strong>
+          <span>${escapeHTML(audit.mutation_scope)}</span>
         </div>
         <div class="badge-line">
-          ${badge(job.status)}
-          ${badge(job.risk_ceiling)}
-          ${job.dry_run ? badge("dry_run") : ""}
+          ${badge(audit.status)}
+          ${badge(audit.apply_mode)}
         </div>
       </header>
       <div class="worker-job-meta">
-        <span>Job #${escapeHTML(job.id)}</span>
-        <span>Run #${escapeHTML(job.agent_run_id ?? "none")}</span>
-        <span>Limit ${escapeHTML(job.item_limit)}</span>
-        <span>${escapeHTML(formatDate(job.created_at))}</span>
+        <span>Audit #${escapeHTML(audit.id)}</span>
+        <span>Proposal #${escapeHTML(audit.proposal_id)}</span>
+        <span>Run #${escapeHTML(audit.run_id ?? "none")}</span>
+        <span>${escapeHTML(formatDate(audit.applied_at))}</span>
       </div>
-      ${job.failure_reason ? `<p class="inline-error">${escapeHTML(job.failure_reason)}</p>` : ""}
-      ${jsonBlock(job.summary ?? {})}
+      ${audit.revert_reason ? `<p>${escapeHTML(audit.revert_reason)}</p>` : ""}
+      ${jsonBlock({
+        rollback_plan: audit.rollback_plan,
+        worker_job_id: audit.worker_job_id,
+        target_ingredient_id: audit.target_ingredient_id,
+        reverted_at: audit.reverted_at
+      })}
     </article>
   `).join("");
 }

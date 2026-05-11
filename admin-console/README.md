@@ -28,6 +28,7 @@ It currently supports:
 - loading relevant learning memory for the selected proposal term;
 - viewing recent agent-orchestrated Autopilot worker jobs;
 - viewing today's catalog AI usage rollup.
+- viewing auto-apply audit and rollback summary.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
 
@@ -89,6 +90,7 @@ Staging can be enabled later with explicit config and release-governance checks.
 - All privileged access must go through admin-only RPCs.
 - RLS and `assert_catalog_admin(...)` remain the real gate.
 - Agent worker jobs and AI usage are read-only in the console.
+- Auto-apply audit rows are read-only in the console; rollback remains backend RPC controlled.
 - The console calls `is_current_user_catalog_admin()` immediately after login and signs out non-admin users before showing the workspace.
 - Console RPCs are not executable by `anon`; they are granted only to `authenticated` and `service_role`.
 - Do not add direct table writes from the frontend.

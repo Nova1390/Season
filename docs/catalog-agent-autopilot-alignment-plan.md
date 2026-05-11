@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 first worker, and Phase 4 first ledger implemented on dev. Low-risk apply and canonical creation remain intentionally gated.
+Status: Phase 1 complete; Phase 2, Phase 3 first worker, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Low-risk apply scheduling and canonical creation remain intentionally gated.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -212,7 +212,7 @@ Exit criteria:
 
 ### Phase 5: Low-Risk Autonomous Apply
 
-Status: planned, not enabled.
+Status: safety foundation implemented in `supabase/migrations/20260511174500_catalog_agent_auto_apply_audit_rollback.sql`; autonomous worker scheduling is not enabled.
 
 Let the agent authorize safe apply only for low-risk work.
 
@@ -236,6 +236,15 @@ Exit criteria:
 - founder review volume drops;
 - every auto-apply has validator proof and rollback/audit trail;
 - console becomes audit-first, not approval-first.
+
+Implemented safety primitives:
+
+- `apply_catalog_agent_low_risk_proposal(...)`;
+- `apply_catalog_agent_low_risk_proposal_batch(...)`;
+- `rollback_catalog_agent_apply(...)`;
+- `catalog_agent_apply_audit`;
+- `catalog_agent_auto_apply_audit_summary`;
+- detailed operating policy in `docs/catalog-agent-auto-apply-safety.md`.
 
 ### Phase 6: Policy-Based Canonical Creation
 
@@ -293,7 +302,7 @@ Implemented on dev:
 
 Next technical step:
 
-- enable a low-risk apply worker only after service-role-safe apply semantics and rollback/audit evidence are fully reviewed.
+- wire the `low_risk_apply_batch` worker behind the orchestrator only after dev smoke tests prove apply and rollback behavior on representative alias/localization cases.
 
 ## 7. Dev/Staging Policy
 

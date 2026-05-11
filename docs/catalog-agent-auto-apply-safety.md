@@ -1,0 +1,150 @@
+# Catalog Agent Auto-Apply Safety
+
+Status: dev foundation implemented, autonomous scheduling not enabled.
+
+This document defines how Season can safely let the Catalog Governance Agent apply a narrow class of catalog changes without human review.
+
+## Operating Principle
+
+The agent may act only when the backend has already proven that the action is low-risk, reversible, and limited to an existing canonical catalog item.
+
+The agent must not treat an LLM recommendation as catalog truth. The LLM can propose; deterministic validators and guarded SQL functions decide whether anything is mutable.
+
+## Service-Role Semantics
+
+The existing manual apply path stays admin-first:
+
+- a human catalog admin signs in;
+- the admin applies a validated proposal;
+- governed admin RPCs perform the mutation.
+
+The auto-apply path is separate:
+
+- service role may call `apply_catalog_agent_low_risk_proposal(...)`;
+- authenticated catalog admins may call it for controlled testing;
+- anonymous users cannot call it;
+- normal app users cannot call it;
+- service role bypass is allowed only inside the function after strict proposal checks.
+
+Required proposal state:
+
+- `status = 'validated'`;
+- `risk_level = 'low'`;
+- `auto_apply_eligible = true`;
+- `validation_errors = []`;
+- `proposal_type in ('approve_alias', 'add_localization')`;
+- target ingredient exists and is active.
+
+Blocked proposal types:
+
+- `create_canonical`;
+- `merge_duplicate`;
+- `redirect_duplicate`;
+- `reconcile_recipe_ingredients`;
+- `needs_human_review`;
+- anything medium/high/critical/unknown risk.
+
+## Supported Mutations
+
+### Approve Alias
+
+Allowed only when:
+
+- the target ingredient already exists;
+- no active alias points to another ingredient;
+- the proposal was already validated;
+- the action can be reversed by deleting a new alias or restoring a previous alias row.
+
+Side effects:
+
+- inserts or updates one `ingredient_aliases_v2` row;
+- marks matching `custom_ingredient_observations` as `resolved_alias`;
+- records one `catalog_candidate_decisions` row;
+- marks proposal as `auto_applied`;
+- writes one `catalog_agent_apply_audit` row;
+- writes one proposal event.
+
+### Add Localization
+
+Allowed only when:
+
+- the target ingredient already exists;
+- the target does not already have a different localization for the same language;
+- the proposal was already validated;
+- the action can be reversed by deleting the inserted localization.
+
+If the same localization already exists, the proposal can be marked `auto_applied`, but rollback is a no-op.
+
+## Audit
+
+Every successful auto-apply writes to `catalog_agent_apply_audit`.
+
+The audit row stores:
+
+- proposal id and run id;
+- optional worker job id;
+- mutation type and mutation scope;
+- actor role and user id, when available;
+- target ingredient;
+- before state;
+- after state;
+- rollback plan;
+- apply note;
+- current audit status.
+
+The audit table is admin-readable and service-role writable.
+
+## Rollback
+
+Rollback is handled by `rollback_catalog_agent_apply(...)`.
+
+Rollback is allowed only when:
+
+- the audit row is still `applied`;
+- a revert reason is provided;
+- the current catalog row still matches the audited after-state.
+
+This guard prevents the rollback function from overwriting later legitimate changes.
+
+Rollback behavior:
+
+- inserted alias: delete the alias row;
+- updated alias: restore the previous alias row;
+- inserted localization: delete the localization row;
+- existing same localization: no catalog mutation;
+- proposal returns to `validated`;
+- audit status becomes `reverted`;
+- proposal event records the rollback.
+
+## Worker Policy
+
+The future `low_risk_apply_batch` worker should:
+
+- create a `catalog_agent_worker_jobs` row;
+- call `apply_catalog_agent_low_risk_proposal_batch(...)`;
+- stop at a small item limit;
+- report applied and failed counts;
+- avoid retry storms after validation or rollback failures.
+
+The worker should stay disabled until dev has enough successful dry operational history.
+
+## Release Policy
+
+Development:
+
+- functions can be tested with temporary transaction-based smoke tests;
+- auto-apply primitives can exist;
+- no schedule should run by default.
+
+Staging:
+
+- do not enable autonomous apply until dev audit history is clean;
+- require Supabase lint success;
+- verify console visibility for audit rows;
+- verify rollback on a representative alias and localization.
+
+Production:
+
+- enable only after staging has real tester data and rollback confidence;
+- keep daily limits very low at first;
+- alert on any rollback or failed apply.

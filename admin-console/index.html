@@ -136,14 +136,37 @@
               </div>
             </section>
 
+            <section class="summary ops-summary" aria-label="Auto apply audit summary">
+              <div>
+                <span>Auto-applies today</span>
+                <strong id="autoAppliesToday">0</strong>
+              </div>
+              <div>
+                <span>Active applies</span>
+                <strong id="activeAppliesToday">0</strong>
+              </div>
+              <div>
+                <span>Reverted</span>
+                <strong id="revertedAppliesToday">0</strong>
+              </div>
+              <div>
+                <span>Failed reverts</span>
+                <strong id="failedRevertsToday">0</strong>
+              </div>
+            </section>
+
             <div class="ops-list" id="workerJobsList">
               <p>No worker jobs loaded yet.</p>
+            </div>
+
+            <div class="ops-list" id="applyAuditList">
+              <p>No auto-apply audit records loaded yet.</p>
             </div>
           </section>
         </section>
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260511-4"></script>
+    <script type="module" src="./app.js?v=20260511-5"></script>
   </body>
 </html>
