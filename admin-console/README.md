@@ -27,6 +27,8 @@ It currently supports:
 - applying already validated low-risk proposals;
 - loading relevant learning memory for the selected proposal term.
 
+The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
+
 ## Local Setup
 
 Create a local config file from the example:

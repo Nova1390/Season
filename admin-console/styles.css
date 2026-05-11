@@ -467,6 +467,16 @@ p {
   gap: 8px;
 }
 
+.action-guidance {
+  color: var(--muted);
+}
+
+.action-row button:disabled {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+  color: var(--faint);
+}
+
 @media (max-width: 980px) {
   .shell {
     grid-template-columns: 1fr;

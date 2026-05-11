@@ -254,6 +254,7 @@ function renderSelectedProposal() {
   const proposal = item.proposal ?? {};
   const target = item.target ?? {};
   const proposed = item.proposed ?? {};
+  const actionState = getProposalActionState(proposal);
 
   elements.proposalDetail.innerHTML = `
     <div class="detail-stack">
@@ -286,15 +287,16 @@ function renderSelectedProposal() {
 
       <section class="detail-section">
         <h3>Actions</h3>
+        <p class="action-guidance">${escapeHTML(actionState.guidance)}</p>
         <div class="review-note">
           <textarea id="reviewNote" placeholder="Reviewer note, required for reject and useful for learning memory."></textarea>
           <div class="action-row">
-            <button type="button" data-action="queue">Queue validation</button>
-            <button type="button" data-action="validate">Validate</button>
-            <button type="button" data-action="apply">Apply if safe</button>
-            <button type="button" data-action="more" class="secondary">More evidence</button>
-            <button type="button" data-action="reject" class="danger">Reject</button>
-            <button type="button" data-action="learning" class="secondary">Load learning</button>
+            ${actionButton("queue", "Queue validation", actionState.queue)}
+            ${actionButton("validate", "Validate", actionState.validate)}
+            ${actionButton("apply", "Apply if safe", actionState.apply)}
+            ${actionButton("more", "More evidence", actionState.more, "secondary")}
+            ${actionButton("reject", "Reject", actionState.reject, "danger")}
+            ${actionButton("learning", "Load learning", actionState.learning, "secondary")}
           </div>
         </div>
       </section>
@@ -321,12 +323,12 @@ function renderSelectedProposal() {
     </div>
   `;
 
-  elements.proposalDetail.querySelector('[data-action="queue"]').addEventListener("click", () => reviewProposal("queue_for_validation"));
-  elements.proposalDetail.querySelector('[data-action="more"]').addEventListener("click", () => reviewProposal("request_more_evidence"));
-  elements.proposalDetail.querySelector('[data-action="reject"]').addEventListener("click", () => reviewProposal("reject"));
-  elements.proposalDetail.querySelector('[data-action="validate"]').addEventListener("click", validateProposal);
-  elements.proposalDetail.querySelector('[data-action="apply"]').addEventListener("click", applyProposal);
-  elements.proposalDetail.querySelector('[data-action="learning"]').addEventListener("click", loadLearningMemory);
+  bindEnabledAction("queue", () => reviewProposal("queue_for_validation"));
+  bindEnabledAction("more", () => reviewProposal("request_more_evidence"));
+  bindEnabledAction("reject", () => reviewProposal("reject"));
+  bindEnabledAction("validate", validateProposal);
+  bindEnabledAction("apply", applyProposal);
+  bindEnabledAction("learning", loadLearningMemory);
 }
 
 async function reviewProposal(action) {
@@ -409,6 +411,91 @@ function detailCell(label, value) {
       <strong>${escapeHTML(value ?? "none")}</strong>
     </div>
   `;
+}
+
+function getProposalActionState(proposal) {
+  const status = String(proposal.status ?? "");
+  const proposalType = String(proposal.proposal_type ?? "");
+  const riskLevel = String(proposal.risk_level ?? "");
+  const actionableTypes = ["approve_alias", "add_localization", "create_canonical"];
+  const applyTypes = ["approve_alias", "add_localization"];
+  const isClosed = ["applied", "rejected", "superseded"].includes(status);
+  const canQueue = !isClosed
+    && ["draft", "needs_human_review", "failed_validation"].includes(status)
+    && actionableTypes.includes(proposalType);
+  const canValidate = status === "queued_for_validation" && actionableTypes.includes(proposalType);
+  const canApply = status === "validated"
+    && riskLevel === "low"
+    && applyTypes.includes(proposalType);
+  const canRequestMore = !isClosed;
+  const canReject = !isClosed;
+
+  return {
+    guidance: actionGuidance({
+      status,
+      proposalType,
+      riskLevel,
+      canQueue,
+      canValidate,
+      canApply
+    }),
+    queue: {
+      enabled: canQueue,
+      reason: canQueue ? "" : "Only actionable proposal types can be queued for validation."
+    },
+    validate: {
+      enabled: canValidate,
+      reason: canValidate ? "" : "Validation runs only after a proposal is queued and actionable."
+    },
+    apply: {
+      enabled: canApply,
+      reason: canApply ? "" : "Apply requires validated, low-risk approve_alias or add_localization."
+    },
+    more: {
+      enabled: canRequestMore,
+      reason: canRequestMore ? "" : "Closed proposals cannot request more evidence."
+    },
+    reject: {
+      enabled: canReject,
+      reason: canReject ? "" : "Closed proposals cannot be rejected again."
+    },
+    learning: {
+      enabled: true,
+      reason: ""
+    }
+  };
+}
+
+function actionGuidance(input) {
+  if (input.proposalType === "needs_human_review") {
+    return "This is a triage outcome, not an applicable catalog change. Use More evidence, Reject, or Load learning.";
+  }
+  if (input.status === "failed_validation") {
+    return "This proposal failed deterministic validation. Review the errors before re-queueing.";
+  }
+  if (input.canApply) {
+    return "This proposal passed validation and is low risk. Apply is available, but still review the target first.";
+  }
+  if (input.canValidate) {
+    return "This proposal is queued. Run validation before any apply decision.";
+  }
+  if (input.canQueue) {
+    return "This proposal can be queued for deterministic validation.";
+  }
+  return "Review the proposal status, type, and risk before choosing an action.";
+}
+
+function actionButton(action, label, state, variant = "") {
+  const classes = [variant].filter(Boolean).join(" ");
+  const disabled = state.enabled ? "" : "disabled";
+  const title = state.reason ? ` title="${escapeHTML(state.reason)}"` : "";
+  return `<button type="button" data-action="${escapeHTML(action)}" class="${escapeHTML(classes)}" ${disabled}${title}>${escapeHTML(label)}</button>`;
+}
+
+function bindEnabledAction(action, handler) {
+  const button = elements.proposalDetail.querySelector(`[data-action="${action}"]`);
+  if (!button || button.disabled) return;
+  button.addEventListener("click", handler);
 }
 
 function badge(value) {
