@@ -11,7 +11,8 @@ Some terms are clearly ingredients but not always clearly one canonical ingredie
 Example:
 
 - `lievito` is an ingredient.
-- It may mean baker's yeast, dry yeast, baking powder, sourdough starter, or another leavening agent depending on recipe context.
+- Bare `lievito` now has a governed generic catalog target.
+- More specific terms may still mean baker's yeast, dry yeast, baking powder, sourdough starter, or another leavening agent depending on recipe context.
 
 The agent should not treat this as "low confidence that the term is an ingredient". It should treat it as "high confidence ingredient, uncertain canonical target".
 
@@ -64,6 +65,8 @@ If the term is clearly an ingredient but target is ambiguous, the agent should r
 
 It should not return `ignore_noise` or vague low-confidence output.
 
+For bare `lievito`, the preferred target is the generic `lievito` catalog item when that candidate is present and recipe context does not specify a more precise leavening variant. Specific variants remain separate catalog identities.
+
 ## Learning Memory Rule
 
 The Edge Function augments eligible work items with `context.relevant_learning_memory` before calling the LLM.
@@ -85,12 +88,14 @@ The Edge Function skips recent duplicate work only for live proposals. Terminal 
 
 ## Dev Observation
 
-On 2026-05-11, the context-enriched snapshot for `lievito` showed:
+On 2026-05-11, the context-enriched snapshot for `lievito` originally showed:
 
 - the term is treated as likely ingredient, not noise;
 - the only current catalog candidate is `lievito_in_polvere_per_dolci` / baking powder;
 - `recipe_context` is empty because the observation has no `latest_recipe_id`;
 - the correct next action remains human-review or richer context, not blind alias approval.
+
+Later on 2026-05-11, Season added a governed generic `lievito` base ingredient so bare unspecified `lievito` can resolve safely without being forced into `lievito_in_polvere_per_dolci`.
 
 ## Safety Boundary
 

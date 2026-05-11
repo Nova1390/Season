@@ -102,6 +102,11 @@ Runtime flow:
 
 If a term already has a recent live proposal, the agent normally skips it to control cost and noise. A newer learning-memory entry reopens the term for another proposal-only pass, because the agent now has information it did not have during the previous decision.
 
+Example implemented policy:
+
+- Bare `lievito` maps to the generic catalog item `lievito` when no recipe evidence specifies a more precise leavening variant.
+- Specific terms such as baking powder, brewer's yeast, sourdough starter, fresh yeast, or dry yeast remain separate identities and should only be chosen when the source text supports them.
+
 Included learning statuses:
 
 - `implemented`: behavior/policy already changed; follow it;
