@@ -1,0 +1,455 @@
+# Catalog Agent LLM Reasoning Loop Plan
+
+Status: planning contract. No runtime implementation yet.
+
+This document defines how the Season Catalog Governance Agent should use LLMs as controlled reasoning tools, not as a single-shot autopilot wrapper.
+
+It complements:
+
+- `docs/catalog-ai-agent-operating-plan.md`
+- `docs/catalog-ai-agent-contracts.md`
+- `docs/catalog-agent-autopilot-alignment-plan.md`
+- `docs/catalog-agent-responsibility-charter.md`
+- `docs/catalog-agent-learning-memory.md`
+
+## 1. Goal
+
+The agent should behave like a responsible catalog manager.
+
+For each unresolved ingredient term, it should gather enough evidence to make a safe decision, then either:
+
+- authorize a low-risk worker action;
+- create a structured proposal;
+- request more evidence;
+- escalate to human review with a precise reason;
+- write learning memory when the case teaches a reusable rule.
+
+The LLM should be used for semantic depth, not only for a final classification.
+
+## 2. Current Limitation
+
+The current `run-catalog-agent-triage` runtime is intentionally conservative:
+
+- it sends compact work packets to one LLM prompt;
+- it receives one structured proposal set;
+- it stores proposals only;
+- deterministic validators decide whether anything is actionable.
+
+That is safe, but it underuses the model's ability to reason deeply about:
+
+- product families;
+- culinary variants;
+- substitutability;
+- language and market context;
+- nutrition, allergy, seasonality, fridge, shopping, and filter implications;
+- when a term should become a child variant instead of an alias to a base ingredient.
+
+The next architecture should keep the same safety posture while allowing bounded multi-pass reasoning.
+
+## 3. Target Loop
+
+The agent should run a finite loop for each work item or small related cluster.
+
+```text
+observe unresolved term
+  -> load catalog context and learning memory
+  -> semantic profiling pass
+  -> catalog matching pass
+  -> risk review pass when needed
+  -> decision synthesis
+  -> validator / worker routing
+  -> audit and learning memory
+```
+
+The loop stops when the agent has either:
+
+- a low-risk validated path;
+- a clear human-review question;
+- insufficient evidence after budget is exhausted;
+- repeated reasoning passes produce no new evidence.
+
+The loop must never continue indefinitely.
+
+## 4. LLM Task Roles
+
+The agent should call specialized LLM task prompts instead of one overloaded prompt.
+
+### 4.1 Semantic Profiler
+
+Purpose:
+
+- understand what the term likely is.
+
+Inputs:
+
+- normalized text;
+- raw examples;
+- recipe title and nearby ingredients;
+- quantities and units;
+- language and source;
+- known candidate ingredients;
+- relevant learning memory.
+
+Expected output:
+
+- `product_family`;
+- `semantic_category`;
+- `variant_dimension`;
+- `is_identity_bearing_variant`;
+- `parent_candidate_slug`;
+- `substitutability_with_parent`;
+- `attribute_implications`;
+- `market_or_language_notes`;
+- confidence and rationale.
+
+Example:
+
+```json
+{
+  "normalized_text": "pomodorini",
+  "product_family": "tomato",
+  "variant_dimension": "size_or_market_variant",
+  "is_identity_bearing_variant": true,
+  "parent_candidate_slug": "tomato",
+  "substitutability_with_parent": "partial",
+  "attribute_implications": ["shopping_matching", "fridge_matching", "culinary_usage"],
+  "confidence_score": 0.9
+}
+```
+
+### 4.2 Catalog Matcher
+
+Purpose:
+
+- compare the semantic profile with current Supabase catalog candidates.
+
+Expected output:
+
+- exact canonical match, if safe;
+- parent-child recommendation, if strict;
+- alias recommendation, if identity is unchanged;
+- catalog gap, if no safe node exists;
+- conflicting candidates;
+- missing evidence.
+
+### 4.3 Risk Reviewer
+
+Purpose:
+
+- challenge the proposed decision before any validation or apply path.
+
+The reviewer should actively look for:
+
+- meaningful variants collapsed into base ingredients;
+- product/package/brand ambiguity;
+- nutrition/allergy/seasonality differences;
+- multilingual false friends;
+- context too weak for automation;
+- previous failed or rejected decisions.
+
+### 4.4 Decision Writer
+
+Purpose:
+
+- convert the reasoning trace into a strict agent proposal.
+
+It should output only supported proposal types:
+
+- `approve_alias`;
+- `create_canonical`;
+- `add_localization`;
+- `ignore_noise`;
+- `needs_human_review`.
+
+It must include:
+
+- final confidence;
+- risk level;
+- auto-apply eligibility;
+- rationale;
+- evidence references;
+- blocking questions.
+
+### 4.5 Learning Writer
+
+Purpose:
+
+- convert failures, human corrections, validator blocks, and repeated ambiguity into reusable memory.
+
+It should not create catalog policy by itself. It should create an advisory learning artifact that future agent runs can use.
+
+## 5. Semantic Profile Contract
+
+Future runtime should persist or embed a semantic profile alongside proposals.
+
+Recommended fields:
+
+- `normalized_text`;
+- `language_code`;
+- `product_family`;
+- `semantic_category`;
+- `variant_dimension`;
+- `variant_kind`;
+- `parent_candidate_slug`;
+- `is_identity_bearing_variant`;
+- `substitutability_with_parent`;
+- `attribute_implications`;
+- `nutrition_implication`;
+- `seasonality_implication`;
+- `allergy_implication`;
+- `fridge_matching_implication`;
+- `shopping_matching_implication`;
+- `filter_implication`;
+- `market_or_language_notes`;
+- `confidence_score`;
+- `evidence`;
+- `open_questions`.
+
+Allowed `substitutability_with_parent` values:
+
+- `full`;
+- `partial`;
+- `unsafe`;
+- `unknown`.
+
+Allowed implication values:
+
+- `none`;
+- `possible`;
+- `likely`;
+- `material`;
+- `unknown`.
+
+The semantic profile is not catalog truth. It is evidence for validators, workers, and reviewers.
+
+## 6. Budget and Stop Conditions
+
+Default budget per normalized term:
+
+- 1 semantic profiling call;
+- 1 decision synthesis call;
+- 1 optional risk review call.
+
+Maximum budget per normal term:
+
+- 3 LLM calls.
+
+Maximum budget per high-impact recurring term:
+
+- 5 LLM calls.
+
+High-impact means at least one of:
+
+- many observations;
+- affects many recipes;
+- appears across multiple sources/languages;
+- blocks a known catalog coverage goal;
+- has repeated prior failures or human corrections.
+
+Hard stop conditions:
+
+- estimated daily budget exceeded;
+- per-run item limit exceeded;
+- per-term call limit exceeded;
+- two consecutive passes add no new evidence;
+- risk reviewer flags `critical`;
+- required catalog candidates are missing from context;
+- validator rejects the same recommendation twice;
+- learning memory says the pattern is unresolved and no new evidence exists.
+
+Cost policy:
+
+- use cheaper models for semantic profiling and decision synthesis when risk is low or medium;
+- reserve stronger models for high-impact ambiguous terms;
+- cache semantic profiles by normalized text, language, source domain, and relevant context hash;
+- never call an LLM when deterministic rules or implemented learning memory already settle the case.
+
+## 7. Agent and Autopilot Boundary
+
+The agent owns the loop.
+
+Autopilot remains a bounded worker.
+
+Autopilot may still call LLMs for enrichment proposal generation, but those calls are execution-level subtasks. They do not own governance policy.
+
+The agent may delegate work to Autopilot when:
+
+- semantic profile says more metadata is needed;
+- catalog draft enrichment is the correct next step;
+- a low-risk apply batch can be previewed or executed within policy;
+- reconciliation preview is needed before any recipe mutation.
+
+The agent must pause or narrow Autopilot when:
+
+- worker quality drops;
+- validation failure ratio is high;
+- LLM spend approaches the run/day budget;
+- worker output conflicts with learning memory or guardrails.
+
+## 8. Human Review Philosophy
+
+Human review should be rare and high-signal.
+
+The agent should not ask the founder to resolve repetitive questions that it can answer safely from:
+
+- current catalog context;
+- recipe context;
+- learning memory;
+- previous validator outcomes;
+- specialized LLM reasoning passes.
+
+When review is needed, the agent should ask one precise question, for example:
+
+```text
+"Should Italian 'pomodorini' be represented as a child tomato variant for shopping/fridge matching,
+or should it temporarily remain a non-auto-applicable alias until the tomato family is modeled?"
+```
+
+Bad review request:
+
+```text
+"What should I do with pomodorini?"
+```
+
+## 9. Implementation Plan
+
+### Step 1: Prompt Contract Expansion
+
+Add a semantic profile contract to `run-catalog-agent-triage`.
+
+Deliverables:
+
+- new TypeScript interfaces for semantic profile output;
+- updated JSON schema/validator;
+- prompt sections for semantic profiling and meaningful variant analysis;
+- no DB mutation changes yet.
+
+Exit criteria:
+
+- LLM output includes structured semantic evidence;
+- existing proposal persistence still works;
+- invalid semantic fields fail validation.
+
+### Step 2: Reasoning Trace Persistence
+
+Persist agent reasoning in an auditable way.
+
+Deliverables:
+
+- table or JSON column for per-proposal semantic profile and reasoning trace;
+- migration with RLS/grants aligned to current admin-console policy;
+- review inbox exposes profile summary.
+
+Exit criteria:
+
+- admin console can show "why the agent thinks this is a variant/family/alias";
+- raw JSON remains available for debugging;
+- proposals remain immutable except governed status transitions.
+
+### Step 3: Multi-Pass Orchestrator
+
+Introduce bounded task calls.
+
+Deliverables:
+
+- `semantic_profiler` prompt;
+- `catalog_matcher` prompt or deterministic matcher wrapper;
+- optional `risk_reviewer` prompt;
+- `decision_writer` synthesis prompt;
+- per-term call budget and stop conditions.
+
+Exit criteria:
+
+- normal work item uses at most 3 calls;
+- high-impact item uses at most 5 calls;
+- no loop can recursively schedule itself;
+- every call writes `catalog_ai_usage_events`.
+
+### Step 4: Cost Governor Upgrade
+
+Centralize cost controls across agent and Autopilot LLM calls.
+
+Deliverables:
+
+- per-run budget enforcement before each provider call;
+- daily budget view includes task role;
+- stop reasons visible in run summary;
+- admin console budget status.
+
+Exit criteria:
+
+- agent refuses more LLM work once budget is exhausted;
+- console explains whether it stopped because it solved, escalated, or hit budget.
+
+### Step 5: Learning Feedback Loop
+
+Use outcomes to improve future reasoning.
+
+Deliverables:
+
+- learning writer prompt for failed/rejected/overridden decisions;
+- structured learning fields for semantic rules and anti-patterns;
+- runtime retrieval of term-specific and family-level lessons.
+
+Exit criteria:
+
+- future LLM packets include relevant lessons;
+- repeated mistakes become less likely;
+- learning remains advisory and validator-bound.
+
+### Step 6: Worker Delegation Policy
+
+Let the agent decide when Autopilot should run.
+
+Deliverables:
+
+- agent loop can request bounded worker jobs;
+- worker jobs inherit risk ceiling and budget;
+- worker failures feed learning memory;
+- no staging scheduling until dev proof is complete.
+
+Exit criteria:
+
+- Autopilot is visibly governed by agent runs;
+- workers do not independently expand LLM workload;
+- low-risk batches can run without creating founder review noise.
+
+### Step 7: Evaluation Fixtures
+
+Create regression fixtures for common semantic traps.
+
+Initial fixtures:
+
+- `pomodori` vs `pomodorini`;
+- `patate` vs `patate dolci`;
+- `lievito` vs `lievito per dolci` vs `lievito di birra`;
+- `cipolla` vs `cipolla rossa`;
+- localization-only examples across Italian, English, and French.
+
+Exit criteria:
+
+- prompt changes can be tested before deployment;
+- regressions are caught without relying on manual dashboard inspection.
+
+## 10. Non-Goals
+
+This plan does not authorize:
+
+- autonomous creation of canonical ingredients without validator and policy approval;
+- direct LLM writes to catalog tables;
+- unbounded research loops;
+- web browsing from the Edge Function;
+- staging enablement before dev smoke tests and release approval;
+- replacing deterministic validators with LLM judgment.
+
+## 11. Success Metrics
+
+The loop is working when:
+
+- fewer proposals land in vague `needs_human_review`;
+- high-risk review requests contain precise questions;
+- low-risk alias/localization work is handled without founder review;
+- meaningful variants are no longer collapsed into base ingredients;
+- daily LLM cost remains predictable;
+- repeated mistakes create learning memory and do not recur;
+- Autopilot work is visible as agent-authorized execution, not independent policy.

@@ -11,6 +11,7 @@ It complements:
 - `docs/catalog-system-review-and-consolidation-plan.md`
 - `docs/catalog-agent-responsibility-charter.md`
 - `docs/catalog-ai-agent-contracts.md`
+- `docs/catalog-agent-llm-reasoning-loop-plan.md`
 
 Current implementation status:
 
@@ -26,6 +27,7 @@ Current implementation status:
 - The first manual apply adapter is documented in `docs/catalog-agent-manual-apply-adapter.md`.
 - Structured continuous-improvement memory is documented in `docs/catalog-agent-learning-memory.md`.
 - Runtime learning memory is now attached to proposal-only LLM packets through `public.get_catalog_agent_learning_context(...)`.
+- The next LLM architecture is documented in `docs/catalog-agent-llm-reasoning-loop-plan.md`: the agent should use bounded multi-pass reasoning roles instead of a single one-shot prompt when extra semantic confidence is needed.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
 - No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
@@ -79,6 +81,8 @@ An AI agent is useful because those tasks require context, language understandin
 Therefore, the agent should act as:
 
 - analyst
+- semantic profiler
+- product-family and variant analyst
 - reviewer
 - triage assistant
 - proposal generator
@@ -134,6 +138,34 @@ Catalog signals
 The first implementation should be read-heavy and proposal-only.
 
 Direct mutation should be limited to inserting agent proposal/audit rows. Any catalog or recipe mutation must go through existing governed functions.
+
+### 3.3 Multi-Pass Reasoning Direction
+
+The agent should evolve from one LLM call per batch into a bounded reasoning loop per term or small related cluster.
+
+The intended loop is:
+
+```text
+observe term
+  -> semantic profile
+  -> catalog match
+  -> risk review when needed
+  -> decision synthesis
+  -> validator / worker routing
+  -> audit and learning memory
+```
+
+This does not make the LLM a source of truth. It gives the agent better evidence before it creates a proposal or delegates work.
+
+The runtime must preserve hard limits:
+
+- per-term LLM call cap;
+- per-run and per-day cost budgets;
+- no recursive worker chains;
+- stop when reasoning adds no new evidence;
+- escalation when the remaining uncertainty is policy-sensitive.
+
+The detailed prompt roles, semantic profile contract, budget limits, and implementation sequence are defined in `docs/catalog-agent-llm-reasoning-loop-plan.md`.
 
 ## 4. Agent Responsibilities
 

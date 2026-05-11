@@ -15,6 +15,7 @@ Current scope:
 - Define proposal-only database persistence.
 - Define safety rules for validation and future apply stages.
 - Define the first LLM-backed proposal-only Edge Function runtime.
+- Define the planned bounded multi-pass LLM reasoning loop.
 
 Out of scope for this phase:
 
@@ -35,6 +36,7 @@ Out of scope for this phase:
 - Every proposal must be attributable to a run, agent version, model, prompt version, and input snapshot hash when available.
 - Service-role credentials must never be present in app code, repo files, or client-triggered payloads.
 - Mistakes, rejected proposals, validation failures, and recurring ambiguities must become documented learning artifacts.
+- Multiple LLM calls for one term are allowed only when each call has a distinct task role, inherited budget, audit attribution, and stop condition.
 
 ## 3. Decision Vocabulary
 
@@ -156,9 +158,29 @@ Budget controls required for proposal-only runtime:
 - Autopilot worker jobs launched by the agent must inherit the same per-run budget and safety envelope.
 - If worker quality or cost exceeds policy, the agent must pause delegation and create a learning/audit event instead of continuing.
 
+Planned multi-pass LLM task roles:
+
+- `semantic_profiler`: product family, semantic category, variant dimension, substitutability, and attribute implications.
+- `catalog_matcher`: compare the semantic profile with current catalog candidates and aliases.
+- `risk_reviewer`: challenge the proposed decision for variant, nutrition, allergy, seasonality, language, and product/package risks.
+- `decision_writer`: produce the final governed proposal shape.
+- `learning_writer`: turn failures, corrections, and repeated ambiguity into advisory learning memory.
+
+Default proposal-only reasoning budget:
+
+- normal term: maximum 3 LLM calls;
+- high-impact recurring term: maximum 5 LLM calls;
+- stop when two consecutive passes add no new evidence;
+- stop when deterministic policy or implemented learning memory already resolves the case;
+- stop when the daily or per-run budget is exhausted.
+
+The full planning contract is `docs/catalog-agent-llm-reasoning-loop-plan.md`.
+
 ## 7. Proposal Contract
 
 Each proposal must include enough structure for backend validation without relying on prose interpretation.
+
+Future proposals should also carry or reference a semantic profile when LLM reasoning was used. The semantic profile is evidence, not catalog truth.
 
 Required proposal fields:
 

@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode and canonical creation remain intentionally gated.
+Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Multi-pass LLM reasoning is planned in `docs/catalog-agent-llm-reasoning-loop-plan.md`. Low-risk apply real mode and canonical creation remain intentionally gated.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -34,6 +34,7 @@ The Catalog Agent owns:
 - backlog priority;
 - policy interpretation;
 - risk classification;
+- semantic investigation depth;
 - autonomy level;
 - worker delegation;
 - budget envelope;
@@ -80,6 +81,16 @@ The agent must not:
 - bypass deterministic validators;
 - run unlimited exploratory LLM calls;
 - ask the founder to review repetitive low-risk work.
+
+The agent may run multiple LLM task prompts only inside a bounded loop:
+
+- semantic profiler;
+- catalog matcher;
+- risk reviewer;
+- decision writer;
+- learning writer.
+
+Each pass must have a clear purpose, inherited budget, audit trail, and stop condition. If another pass cannot add new evidence, the agent must stop and either decide, delegate a worker, or escalate.
 
 ## 4. Implementation Phases
 
@@ -210,6 +221,27 @@ Exit criteria:
 - one daily budget view covers both agent and Autopilot;
 - manager-level run summary includes delegated worker costs;
 - console can show "today's automation spend and yield".
+
+### Phase 4.5: Multi-Pass LLM Reasoning
+
+Let the agent use LLMs as specialized reasoning tools before final proposal synthesis.
+
+Status: planned in `docs/catalog-agent-llm-reasoning-loop-plan.md`; no runtime implementation yet.
+
+Required behavior:
+
+- semantic profiling happens before final decision when term identity is not already settled by deterministic rules or learning memory;
+- risk review is called only when the decision could collapse a meaningful variant, create catalog identity, or affect nutrition/allergy/seasonality/fridge/shopping semantics;
+- decision synthesis produces the same governed proposal vocabulary used today;
+- all calls are attributed in `catalog_ai_usage_events`;
+- per-term and per-run budgets are enforced before each call.
+
+Exit criteria:
+
+- fewer vague `needs_human_review` proposals;
+- review questions become precise policy questions;
+- meaningful variants are identified before alias validation;
+- Autopilot remains execution-only and does not own policy.
 
 ### Phase 5: Low-Risk Autonomous Apply
 

@@ -33,6 +33,8 @@ The agent should act as:
 - catalog governance operator
 - catalog automation manager
 - multilingual ingredient analyst
+- semantic product-family analyst
+- meaningful-variant analyst
 - quality-control reviewer
 - proposal writer
 - exception router
@@ -68,6 +70,10 @@ It should continuously ask:
 - Did previous decisions improve catalog coverage without creating duplicates?
 
 The agent's success is measured by catalog health, not by activity volume.
+
+The agent may use LLMs more than once for the same unresolved term, but only as a bounded reasoning loop. Multiple calls are justified when each call has a different operational role, such as semantic profiling, catalog matching, risk review, decision synthesis, or learning extraction.
+
+The agent must not confuse "more thinking" with "better work". It should stop when it has enough evidence, when budget is exhausted, or when another pass would not add new information.
 
 ## 4. Decision Philosophy
 
@@ -164,11 +170,13 @@ The agent may:
 - pause Autopilot when quality, budget, or safety checks fail;
 - convert repeated Autopilot failures into learning memory;
 - escalate new policy decisions to the founder.
+- call specialized LLM task prompts to gather semantic evidence before delegating Autopilot or creating a proposal.
 
 The desired operating model is:
 
 ```text
 Catalog Agent decides priority, policy, risk, and budget.
+Catalog Agent controls LLM reasoning depth and stop conditions.
 Autopilot executes bounded enrichment/reconciliation jobs.
 Backend validators decide whether a mutation is structurally safe.
 The founder reviews only policy changes and exceptions.
