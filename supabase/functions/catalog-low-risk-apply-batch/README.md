@@ -33,6 +33,8 @@ It delegates mutation to `apply_catalog_agent_low_risk_proposal_batch(...)`, whi
 - `dry_run=true`: previews eligible proposals, completes the worker job, and does not mutate catalog data.
 - `dry_run=false`: requires `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED=true`; applies eligible proposals through guarded RPCs.
 
+Dry-run readiness is sourced from `get_catalog_agent_auto_apply_diagnostics()`, so previews match the same backend criteria used by the real batch apply path.
+
 ## Safety
 
 - No service-role key is exposed to the browser.

@@ -17,6 +17,7 @@ const state = {
   operations: {
     summary: null,
     autoApplySummary: null,
+    autoApplyDiagnostics: null,
     workerJobs: [],
     applyAudits: []
   }
@@ -50,6 +51,7 @@ const elements = {
   workerSourceDomainInput: document.querySelector("#workerSourceDomainInput"),
   runWorkerButton: document.querySelector("#runWorkerButton"),
   workerRunResult: document.querySelector("#workerRunResult"),
+  autoApplyDiagnostics: document.querySelector("#autoApplyDiagnostics"),
   agentRunsToday: document.querySelector("#agentRunsToday"),
   workerJobsToday: document.querySelector("#workerJobsToday"),
   llmTokensToday: document.querySelector("#llmTokensToday"),
@@ -126,7 +128,7 @@ function bindEvents() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
-    state.operations = { summary: null, autoApplySummary: null, workerJobs: [], applyAudits: [] };
+    state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
     setAuthMessage("");
     renderSession();
   });
@@ -267,7 +269,7 @@ async function openAdminSession() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
-    state.operations = { summary: null, autoApplySummary: null, workerJobs: [], applyAudits: [] };
+    state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
     renderSession();
     setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
     setStatus("Access denied.");
@@ -333,7 +335,7 @@ async function loadOperations(options = {}) {
 
   const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
 
-  const [summaryResult, autoApplySummaryResult, jobsResult, applyAuditsResult] = await Promise.all([
+  const [summaryResult, autoApplySummaryResult, diagnosticsResult, jobsResult, applyAuditsResult] = await Promise.all([
     state.client
       .from("catalog_agent_daily_automation_summary")
       .select("*")
@@ -344,6 +346,7 @@ async function loadOperations(options = {}) {
       .select("*")
       .eq("day", todayISO)
       .maybeSingle(),
+    state.client.rpc("get_catalog_agent_auto_apply_diagnostics"),
     state.client
       .from("catalog_agent_worker_jobs")
       .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
@@ -364,6 +367,10 @@ async function loadOperations(options = {}) {
     setStatus(autoApplySummaryResult.error.message, "error");
     return;
   }
+  if (diagnosticsResult.error) {
+    setStatus(diagnosticsResult.error.message, "error");
+    return;
+  }
   if (jobsResult.error) {
     setStatus(jobsResult.error.message, "error");
     return;
@@ -376,6 +383,7 @@ async function loadOperations(options = {}) {
   state.operations = {
     summary: summaryResult.data ?? null,
     autoApplySummary: autoApplySummaryResult.data ?? null,
+    autoApplyDiagnostics: diagnosticsResult.data ?? null,
     workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : [],
     applyAudits: Array.isArray(applyAuditsResult.data) ? applyAuditsResult.data : []
   };
@@ -388,6 +396,7 @@ async function loadOperations(options = {}) {
 function renderOperations() {
   const summary = state.operations.summary ?? {};
   const autoApplySummary = state.operations.autoApplySummary ?? {};
+  const diagnostics = state.operations.autoApplyDiagnostics ?? {};
   const jobs = state.operations.workerJobs ?? [];
   const applyAudits = state.operations.applyAudits ?? [];
 
@@ -399,6 +408,7 @@ function renderOperations() {
   elements.activeAppliesToday.textContent = String(autoApplySummary.active_applies ?? 0);
   elements.revertedAppliesToday.textContent = String(autoApplySummary.reverted_applies ?? 0);
   elements.failedRevertsToday.textContent = String(autoApplySummary.failed_reverts ?? 0);
+  renderAutoApplyDiagnostics(diagnostics);
 
   if (jobs.length === 0) {
     elements.workerJobsList.innerHTML = "<p>No worker jobs yet. The agent has not delegated Autopilot work today.</p>";
@@ -463,6 +473,42 @@ function renderOperations() {
       })}
     </article>
   `).join("");
+}
+
+function renderAutoApplyDiagnostics(diagnostics) {
+  if (!diagnostics?.ok) {
+    elements.autoApplyDiagnostics.innerHTML = "<p>Auto-apply diagnostics are not loaded yet.</p>";
+    return;
+  }
+
+  const counts = diagnostics.counts ?? {};
+  const readyCount = Number(diagnostics.ready_for_low_risk_apply ?? 0);
+  const readyPreview = Array.isArray(diagnostics.ready_preview) ? diagnostics.ready_preview : [];
+
+  elements.autoApplyDiagnostics.innerHTML = `
+    <article class="worker-job">
+      <header>
+        <div>
+          <strong>Low-risk apply readiness</strong>
+          <span>${escapeHTML(diagnostics.explanation ?? "No explanation available.")}</span>
+        </div>
+        <div class="badge-line">
+          ${badge(`${readyCount}_ready`)}
+        </div>
+      </header>
+      <div class="diagnostic-grid">
+        ${diagnosticCell("Ready", readyCount)}
+        ${diagnosticCell("Draft", counts.draft)}
+        ${diagnosticCell("Queued", counts.queued_for_validation)}
+        ${diagnosticCell("Needs review", counts.needs_human_review)}
+        ${diagnosticCell("Failed validation", counts.failed_validation)}
+        ${diagnosticCell("Validated total", counts.validated_total)}
+        ${diagnosticCell("Not eligible", counts.validated_not_auto_apply_eligible)}
+        ${diagnosticCell("Auto-applied", counts.auto_applied)}
+      </div>
+      ${readyPreview.length > 0 ? jsonBlock({ ready_preview: readyPreview }) : ""}
+    </article>
+  `;
 }
 
 async function rollbackApplyAudit(applyAuditId) {
@@ -757,6 +803,15 @@ function detailCell(label, value) {
     <div>
       <span>${escapeHTML(label)}</span>
       <strong>${escapeHTML(value ?? "none")}</strong>
+    </div>
+  `;
+}
+
+function diagnosticCell(label, value) {
+  return `
+    <div>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value ?? 0)}</strong>
     </div>
   `;
 }

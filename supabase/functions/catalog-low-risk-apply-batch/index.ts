@@ -162,21 +162,14 @@ async function previewEligibleProposals(
   client: ReturnType<typeof createClient>,
   limit: number,
 ): Promise<Array<Record<string, unknown>>> {
-  const { data, error } = await client
-    .from("catalog_agent_proposals")
-    .select("id,run_id,proposal_type,normalized_text,target_ingredient_id,target_slug,confidence_score,risk_level,created_at")
-    .eq("status", "validated")
-    .eq("risk_level", "low")
-    .eq("auto_apply_eligible", true)
-    .in("proposal_type", ["approve_alias", "add_localization"])
-    .order("created_at", { ascending: true })
-    .limit(limit);
+  const { data, error } = await client.rpc("get_catalog_agent_auto_apply_diagnostics");
 
   if (error) {
     throw new Error(`preview_eligible_low_risk_apply_failed:${error.message}`);
   }
 
-  return Array.isArray(data) ? data : [];
+  const preview = (data as Record<string, unknown> | null)?.ready_preview;
+  return Array.isArray(preview) ? preview.slice(0, limit) as Array<Record<string, unknown>> : [];
 }
 
 async function startWorkerJob(

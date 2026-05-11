@@ -386,6 +386,31 @@ p {
   font-size: 12px;
 }
 
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.diagnostic-grid div {
+  display: grid;
+  gap: 5px;
+  background: #fbf7ef;
+  padding: 10px;
+}
+
+.diagnostic-grid span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.diagnostic-grid strong {
+  font-size: 18px;
+}
+
 .audit-record {
   border-color: rgba(77, 107, 61, 0.32);
   background: #fbfaf6;
@@ -590,7 +615,8 @@ p {
   .filters,
   .worker-run-form,
   .ops-panel > header,
-  .worker-job header {
+  .worker-job header,
+  .diagnostic-grid {
     grid-template-columns: 1fr;
   }
 

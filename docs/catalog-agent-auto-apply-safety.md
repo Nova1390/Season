@@ -144,6 +144,8 @@ The orchestrator can delegate to it with:
 
 The admin console exposes only the dry-run path. Real apply remains a backend/operator-controlled path gated by `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED`.
 
+The console explains dry-run zero-result states through `get_catalog_agent_auto_apply_diagnostics()`. This RPC uses the same readiness criteria as the low-risk apply batch: validated status, low risk, auto-apply eligibility, supported proposal type, empty validation errors, and no active apply audit.
+
 The worker should:
 
 - create a `catalog_agent_worker_jobs` row;

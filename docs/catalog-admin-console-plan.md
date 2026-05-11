@@ -87,6 +87,7 @@ Implemented dev follow-up:
 - rollback still goes through `rollback_catalog_agent_apply(...)`, which checks catalog-admin access and verifies the current row still matches the audited after-state before mutating anything.
 - the Operations section can start bounded worker runs for `low_risk_apply_batch` dry-run and small `enrichment_draft_batch` jobs;
 - real apply is intentionally not exposed as a console action.
+- low-risk dry-run zero-result states are explained through `get_catalog_agent_auto_apply_diagnostics()`, so operators can distinguish clean backlog from blocked proposals.
 
 ## Folder Ownership
 

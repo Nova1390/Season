@@ -27,6 +27,7 @@ It currently supports:
 - applying already validated low-risk proposals;
 - loading relevant learning memory for the selected proposal term;
 - running approved agent worker jobs from the Operations section;
+- explaining why low-risk dry-runs have zero eligible proposals;
 - viewing recent agent-orchestrated Autopilot worker jobs;
 - viewing today's catalog AI usage rollup.
 - viewing auto-apply audit and rollback summary.
@@ -40,6 +41,7 @@ Operations worker controls are deliberately narrow:
 - `enrichment_draft_batch` is capped in the UI to 3 items per run;
 - real low-risk apply remains unavailable from the console;
 - every run is still authorized by Supabase Auth and recorded in `catalog_agent_worker_jobs`.
+- readiness diagnostics come from `get_catalog_agent_auto_apply_diagnostics()`, not browser-side policy guesses.
 
 ## Local Setup
 
