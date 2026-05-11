@@ -59,6 +59,7 @@ The first static console supports:
 - manual governed apply through `apply_catalog_agent_proposal(...)`;
 - learning context through `get_catalog_agent_learning_context(...)`.
 - operations visibility for agent worker jobs, AI usage, auto-apply audit records, and guarded rollback.
+- safe worker invocation through `run-catalog-agent-orchestrator`.
 
 ## Rollout
 
@@ -84,6 +85,8 @@ Implemented dev follow-up:
 - the Operations section shows agent-delegated worker jobs and auto-apply audit records;
 - active `applied` audit rows can be rolled back from the console only with an explicit operator reason;
 - rollback still goes through `rollback_catalog_agent_apply(...)`, which checks catalog-admin access and verifies the current row still matches the audited after-state before mutating anything.
+- the Operations section can start bounded worker runs for `low_risk_apply_batch` dry-run and small `enrichment_draft_batch` jobs;
+- real apply is intentionally not exposed as a console action.
 
 ## Folder Ownership
 

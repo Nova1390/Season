@@ -21,6 +21,7 @@ The orchestrator supports two bounded workers:
 - Disabled unless `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true`.
 - Dev-only until promoted intentionally.
 - Requires catalog admin, service role, or operator token.
+- Supports browser invocation from the admin console through CORS preflight.
 - Caps worker item count through `CATALOG_AGENT_MAX_WORKER_ITEMS_PER_RUN`.
 - Writes `catalog_agent_runs`.
 - Writes `catalog_agent_worker_jobs`.

@@ -142,6 +142,8 @@ The orchestrator can delegate to it with:
 - `action = 'dry_run'` for preview;
 - `action = 'apply_low_risk'` for real apply.
 
+The admin console exposes only the dry-run path. Real apply remains a backend/operator-controlled path gated by `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED`.
+
 The worker should:
 
 - create a `catalog_agent_worker_jobs` row;

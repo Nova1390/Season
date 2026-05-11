@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260511-5">
+    <link rel="stylesheet" href="./styles.css?v=20260511-6">
     <script src="./config.local.js"></script>
   </head>
   <body>
@@ -117,6 +117,28 @@
               <button id="refreshOpsButton" type="button" class="secondary">Refresh operations</button>
             </header>
 
+            <form id="workerRunForm" class="worker-run-form">
+              <label>
+                Worker
+                <select id="workerNameInput">
+                  <option value="low_risk_apply_batch">Low-risk apply dry-run</option>
+                  <option value="enrichment_draft_batch">Enrichment draft batch</option>
+                </select>
+              </label>
+              <label>
+                Limit
+                <input id="workerLimitInput" type="number" min="1" max="3" value="1">
+              </label>
+              <label>
+                Source domain
+                <input id="workerSourceDomainInput" type="text" placeholder="optional, e.g. giallozafferano.it" spellcheck="false">
+              </label>
+              <button id="runWorkerButton" type="submit">Run worker</button>
+              <p id="workerRunHint">Low-risk apply runs in dry-run only. Real apply stays disabled from the console.</p>
+            </form>
+
+            <div id="workerRunResult" class="ops-list" hidden></div>
+
             <section class="summary ops-summary" aria-label="Automation summary">
               <div>
                 <span>Agent runs today</span>
@@ -167,6 +189,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260511-6"></script>
+    <script type="module" src="./app.js?v=20260511-7"></script>
   </body>
 </html>

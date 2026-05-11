@@ -3,7 +3,7 @@ import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
 import {
   env,
   fetchWithTimeout,
-  jsonResponseWithStatus,
+  JSON_HEADERS,
   numberEnv,
 } from "../_shared/edge.ts";
 import { requestIdFromHeaders } from "../_shared/observability.ts";
@@ -46,6 +46,11 @@ const ORCHESTRATOR_ENABLED = env("CATALOG_AGENT_ORCHESTRATOR_ENABLED", "false").
 const LOW_RISK_APPLY_ENABLED = env("CATALOG_AGENT_LOW_RISK_APPLY_ENABLED", "false").toLowerCase() === "true";
 const MAX_WORKER_ITEMS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_WORKER_ITEMS_PER_RUN", 5), 1, 25);
 const WORKER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_WORKER_TIMEOUT_MS", 60000), 5000, 180000);
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-season-catalog-agent-token",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
 
 Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
@@ -55,6 +60,13 @@ Deno.serve(async (request) => {
 
   try {
     console.log(`[${LOG_PREFIX}] phase=request_received method=${request.method} request_id=${requestId}`);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: CORS_HEADERS,
+      });
+    }
 
     if (request.method !== "POST") {
       return errorJson(405, "METHOD_NOT_ALLOWED", "Only POST is supported.");
@@ -198,7 +210,7 @@ Deno.serve(async (request) => {
     await completeRun(adminClient, agentRunId, summary);
     await insertRunEvent(adminClient, agentRunId, "orchestration_completed", summary, auth.userId);
 
-    return jsonResponseWithStatus({
+    return orchestratorJson({
       ok: true,
       run_id: agentRunId,
       worker_job_id: workerJobId,
@@ -513,8 +525,18 @@ function elapsedMs(startedAt: number): number {
 }
 
 function errorJson(status: number, code: string, message: string): Response {
-  return jsonResponseWithStatus({
+  return orchestratorJson({
     ok: false,
     error: { code, message },
   }, status);
+}
+
+function orchestratorJson(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      ...JSON_HEADERS,
+      ...CORS_HEADERS,
+    },
+  });
 }

@@ -36,6 +36,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -75,6 +76,7 @@ button.danger {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line-strong);
@@ -91,6 +93,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus);
@@ -328,6 +331,23 @@ p {
 
 .ops-summary {
   border-bottom: 0;
+}
+
+.worker-run-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 96px minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.worker-run-form p {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .ops-list {
@@ -568,6 +588,7 @@ p {
   .review-layout,
   .summary,
   .filters,
+  .worker-run-form,
   .ops-panel > header,
   .worker-job header {
     grid-template-columns: 1fr;

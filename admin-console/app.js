@@ -44,6 +44,12 @@ const elements = {
   proposalList: document.querySelector("#proposalList"),
   proposalDetail: document.querySelector("#proposalDetail"),
   refreshOpsButton: document.querySelector("#refreshOpsButton"),
+  workerRunForm: document.querySelector("#workerRunForm"),
+  workerNameInput: document.querySelector("#workerNameInput"),
+  workerLimitInput: document.querySelector("#workerLimitInput"),
+  workerSourceDomainInput: document.querySelector("#workerSourceDomainInput"),
+  runWorkerButton: document.querySelector("#runWorkerButton"),
+  workerRunResult: document.querySelector("#workerRunResult"),
   agentRunsToday: document.querySelector("#agentRunsToday"),
   workerJobsToday: document.querySelector("#workerJobsToday"),
   llmTokensToday: document.querySelector("#llmTokensToday"),
@@ -127,11 +133,100 @@ function bindEvents() {
 
   elements.refreshButton.addEventListener("click", loadInbox);
   elements.refreshOpsButton.addEventListener("click", loadOperations);
+  elements.workerRunForm.addEventListener("submit", runAgentWorker);
   elements.applyAuditList.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-rollback-audit-id]");
     if (!button) return;
     await rollbackApplyAudit(Number(button.dataset.rollbackAuditId));
   });
+}
+
+async function runAgentWorker(event) {
+  event.preventDefault();
+  if (!state.session || !state.isAdmin) return;
+
+  const workerName = elements.workerNameInput.value;
+  const limit = clampNumber(Number(elements.workerLimitInput.value), 1, 3, 1);
+  const sourceDomain = elements.workerSourceDomainInput.value.trim() || null;
+  const payload = buildWorkerPayload({ workerName, limit, sourceDomain });
+
+  elements.runWorkerButton.disabled = true;
+  renderWorkerRunResult({
+    ok: true,
+    status: "running",
+    message: `Running ${workerName}...`
+  });
+  setStatus(`Running ${workerName}...`);
+
+  const { data, error } = await state.client.functions.invoke("run-catalog-agent-orchestrator", {
+    body: payload
+  });
+
+  elements.runWorkerButton.disabled = false;
+
+  if (error) {
+    renderWorkerRunResult({
+      ok: false,
+      status: "failed",
+      message: error.message,
+      details: error
+    });
+    setStatus(error.message, "error");
+    await loadOperations({ silent: true });
+    return;
+  }
+
+  renderWorkerRunResult({
+    ok: data?.ok === true,
+    status: data?.ok === true ? "completed" : "failed",
+    message: data?.ok === true ? "Worker completed." : "Worker returned an error.",
+    details: data
+  });
+  setStatus(data?.ok === true ? "Agent worker completed." : "Agent worker failed.", data?.ok === true ? "success" : "error");
+  await loadOperations({ silent: true });
+  await loadInbox({ keepProposalId: state.selected?.proposal_id });
+}
+
+function buildWorkerPayload({ workerName, limit, sourceDomain }) {
+  if (workerName === "low_risk_apply_batch") {
+    return {
+      worker_name: "low_risk_apply_batch",
+      action: "dry_run",
+      limit,
+      source_domain: sourceDomain,
+      risk_ceiling: "low",
+      dry_run: true,
+      debug: false
+    };
+  }
+
+  return {
+    worker_name: "enrichment_draft_batch",
+    action: "run",
+    limit,
+    source_domain: sourceDomain,
+    risk_ceiling: "low",
+    dry_run: false,
+    debug: false
+  };
+}
+
+function renderWorkerRunResult(result) {
+  elements.workerRunResult.hidden = false;
+  elements.workerRunResult.innerHTML = `
+    <article class="worker-job ${result.ok ? "" : "audit-record"}">
+      <header>
+        <div>
+          <strong>${escapeHTML(result.message)}</strong>
+          <span>${escapeHTML(result.status)}</span>
+        </div>
+        <div class="badge-line">
+          ${badge(result.status)}
+        </div>
+      </header>
+      ${result.details ? jsonBlock(result.details) : ""}
+    </article>
+  `;
 }
 
 async function signIn() {
