@@ -10,12 +10,22 @@ Admin-only batch orchestrator for pending enrichment drafts.
 5. If validation has no errors, attempts `status='ready'` upsert.
 6. Returns per-item summary (`succeeded/failed/skipped`) without creating ingredients.
 
+When invoked by `run-catalog-agent-orchestrator`, the request includes `agent_run_id` and `agent_worker_job_id`. The batch then:
+
+- marks the worker job `running`;
+- forwards agent/job ids to `catalog-enrichment-proposal`;
+- lets proposal LLM calls write `catalog_ai_usage_events`;
+- marks the worker job `completed` or `failed`.
+
 ## Request
 `POST /functions/v1/run-catalog-enrichment-draft-batch`
 
 ```json
 {
-  "limit": 20
+  "limit": 20,
+  "agent_run_id": null,
+  "agent_worker_job_id": null,
+  "source_domain": null
 }
 ```
 
@@ -53,3 +63,4 @@ Admin-only batch orchestrator for pending enrichment drafts.
 - Accepts service-role or authenticated user token.
 - User-token callers must pass backend admin check (`is_current_user_catalog_admin`).
 - No canonical ingredient creation occurs in this function.
+- Agent-delegated calls must have a parent `catalog_agent_worker_jobs` row.

@@ -307,6 +307,65 @@ p {
   padding-bottom: 0;
 }
 
+.ops-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 2px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.ops-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ops-panel > header p {
+  margin-top: 5px;
+}
+
+.ops-summary {
+  border-bottom: 0;
+}
+
+.ops-list {
+  display: grid;
+  gap: 10px;
+}
+
+.worker-job {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.worker-job header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worker-job header span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.worker-job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .proposal-list,
 .proposal-detail {
   min-height: 520px;
@@ -498,7 +557,14 @@ p {
 
   .review-layout,
   .summary,
-  .filters {
+  .filters,
+  .ops-panel > header,
+  .worker-job header {
     grid-template-columns: 1fr;
+  }
+
+  .ops-panel > header,
+  .worker-job header {
+    display: grid;
   }
 }

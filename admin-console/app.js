@@ -13,7 +13,11 @@ const state = {
   isAdmin: false,
   inbox: null,
   selected: null,
-  learningMemory: null
+  learningMemory: null,
+  operations: {
+    summary: null,
+    workerJobs: []
+  }
 };
 
 const elements = {
@@ -36,7 +40,13 @@ const elements = {
   validatedCount: document.querySelector("#validatedCount"),
   failedCount: document.querySelector("#failedCount"),
   proposalList: document.querySelector("#proposalList"),
-  proposalDetail: document.querySelector("#proposalDetail")
+  proposalDetail: document.querySelector("#proposalDetail"),
+  refreshOpsButton: document.querySelector("#refreshOpsButton"),
+  agentRunsToday: document.querySelector("#agentRunsToday"),
+  workerJobsToday: document.querySelector("#workerJobsToday"),
+  llmTokensToday: document.querySelector("#llmTokensToday"),
+  llmCostToday: document.querySelector("#llmCostToday"),
+  workerJobsList: document.querySelector("#workerJobsList")
 };
 
 init();
@@ -103,11 +113,13 @@ function bindEvents() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
+    state.operations = { summary: null, workerJobs: [] };
     setAuthMessage("");
     renderSession();
   });
 
   elements.refreshButton.addEventListener("click", loadInbox);
+  elements.refreshOpsButton.addEventListener("click", loadOperations);
 }
 
 async function signIn() {
@@ -148,6 +160,7 @@ async function openAdminSession() {
     state.inbox = null;
     state.selected = null;
     state.learningMemory = null;
+    state.operations = { summary: null, workerJobs: [] };
     renderSession();
     setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
     setStatus("Access denied.");
@@ -202,6 +215,86 @@ async function loadInbox(options = {}) {
   }
   renderInbox();
   setStatus(`Loaded ${data?.items?.length ?? 0} proposals.`);
+  await loadOperations({ silent: true });
+}
+
+async function loadOperations(options = {}) {
+  if (!state.session) return;
+  if (!options.silent) {
+    setStatus("Loading agent operations...");
+  }
+
+  const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
+
+  const [summaryResult, jobsResult] = await Promise.all([
+    state.client
+      .from("catalog_agent_daily_automation_summary")
+      .select("*")
+      .eq("day", todayISO)
+      .maybeSingle(),
+    state.client
+      .from("catalog_agent_worker_jobs")
+      .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
+      .order("created_at", { ascending: false })
+      .limit(10)
+  ]);
+
+  if (summaryResult.error) {
+    setStatus(summaryResult.error.message, "error");
+    return;
+  }
+  if (jobsResult.error) {
+    setStatus(jobsResult.error.message, "error");
+    return;
+  }
+
+  state.operations = {
+    summary: summaryResult.data ?? null,
+    workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : []
+  };
+  renderOperations();
+  if (!options.silent) {
+    setStatus("Agent operations loaded.", "success");
+  }
+}
+
+function renderOperations() {
+  const summary = state.operations.summary ?? {};
+  const jobs = state.operations.workerJobs ?? [];
+
+  elements.agentRunsToday.textContent = String(summary.agent_runs ?? 0);
+  elements.workerJobsToday.textContent = String(summary.worker_jobs ?? 0);
+  elements.llmTokensToday.textContent = formatNumber(summary.total_tokens ?? 0);
+  elements.llmCostToday.textContent = formatCurrency(summary.estimated_cost_usd ?? 0);
+
+  if (jobs.length === 0) {
+    elements.workerJobsList.innerHTML = "<p>No worker jobs yet. The agent has not delegated Autopilot work today.</p>";
+    return;
+  }
+
+  elements.workerJobsList.innerHTML = jobs.map((job) => `
+    <article class="worker-job">
+      <header>
+        <div>
+          <strong>${escapeHTML(job.worker_name)}</strong>
+          <span>${escapeHTML(job.worker_function)}</span>
+        </div>
+        <div class="badge-line">
+          ${badge(job.status)}
+          ${badge(job.risk_ceiling)}
+          ${job.dry_run ? badge("dry_run") : ""}
+        </div>
+      </header>
+      <div class="worker-job-meta">
+        <span>Job #${escapeHTML(job.id)}</span>
+        <span>Run #${escapeHTML(job.agent_run_id ?? "none")}</span>
+        <span>Limit ${escapeHTML(job.item_limit)}</span>
+        <span>${escapeHTML(formatDate(job.created_at))}</span>
+      </div>
+      ${job.failure_reason ? `<p class="inline-error">${escapeHTML(job.failure_reason)}</p>` : ""}
+      ${jsonBlock(job.summary ?? {})}
+    </article>
+  `).join("");
 }
 
 function renderInbox() {
@@ -602,6 +695,22 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date);
+}
+
+function formatNumber(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "0";
+  return new Intl.NumberFormat("en").format(parsed);
+}
+
+function formatCurrency(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "$0";
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 4
+  }).format(parsed);
 }
 
 function escapeHTML(value) {

@@ -11,6 +11,7 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 - validates strict JSON output;
 - stores proposals in `catalog_agent_proposals`;
 - records run/proposal events;
+- records provider token usage in `catalog_ai_usage_events`;
 - never mutates catalog identity, aliases, localizations, recipes, or reconciliation state.
 
 ## Learning Memory

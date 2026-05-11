@@ -12,7 +12,9 @@ Dedicated Supabase Edge Function for Catalog Intelligence ingredient enrichment 
 
 ```json
 {
-  "normalized_text": "cicoria"
+  "normalized_text": "cicoria",
+  "agent_run_id": null,
+  "agent_worker_job_id": null
 }
 ```
 
@@ -51,6 +53,10 @@ Required:
 
 Optional:
 - `CATALOG_ENRICHMENT_PROVIDER_TIMEOUT_MS` (default: `15000`)
+- `CATALOG_ENRICHMENT_INPUT_COST_PER_1M_USD`
+- `CATALOG_ENRICHMENT_OUTPUT_COST_PER_1M_USD`
+
+When `agent_run_id` or `agent_worker_job_id` is provided, the function records token usage in `catalog_ai_usage_events` so Autopilot worker cost rolls up to the manager-level Catalog Agent run.
 
 ## Deploy
 ```bash

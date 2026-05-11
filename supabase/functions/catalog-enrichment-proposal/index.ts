@@ -17,12 +17,15 @@ import {
   requestIdFromHeaders,
   type TokenUsage,
 } from "../_shared/observability.ts";
+import { estimateUsageCost, recordAIUsageEvent } from "../_shared/ai_usage.ts";
 
 interface CatalogEnrichmentRequest {
   normalized_text?: string;
   original_text?: string;
   cleaned_text?: string;
   removed_qualifiers?: string[];
+  agent_run_id?: number | null;
+  agent_worker_job_id?: number | null;
 }
 
 interface NormalizedIdentityInput {
@@ -54,6 +57,8 @@ const OPENAI_API_KEY = env("OPENAI_API_KEY");
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = "gpt-5.4-mini";
 const PROVIDER_TIMEOUT_MS = numberEnv("CATALOG_ENRICHMENT_PROVIDER_TIMEOUT_MS", 15000);
+const INPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_ENRICHMENT_INPUT_COST_PER_1M_USD");
+const OUTPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_ENRICHMENT_OUTPUT_COST_PER_1M_USD");
 const MAX_NORMALIZED_TEXT_LENGTH = 120;
 
 Deno.serve(async (request) => {
@@ -90,6 +95,8 @@ Deno.serve(async (request) => {
     } catch {
       return errorJson(400, "INVALID_JSON", "Request body must be valid JSON.");
     }
+    const agentRunId = positiveIntegerOrNull(payload.agent_run_id);
+    const agentWorkerJobId = positiveIntegerOrNull(payload.agent_worker_job_id);
 
     const originalText = normalizeText(payload.original_text) || normalizeText(payload.normalized_text);
     if (!originalText) {
@@ -121,6 +128,18 @@ Deno.serve(async (request) => {
         model: OPENAI_MODEL,
         reason: "provider_not_configured",
       });
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        agentRunId,
+        workerJobId: agentWorkerJobId,
+        model: OPENAI_MODEL,
+        status: "fallback",
+        reason: "provider_not_configured",
+        metadata: { normalized_text: cleanedText },
+      });
       return json(buildFallbackProposal(cleanedText));
     }
 
@@ -143,6 +162,21 @@ Deno.serve(async (request) => {
           outputTokens: providerResult.usage.outputTokens,
           totalTokens: providerResult.usage.totalTokens,
           reason: "validator_failed",
+        });
+        await recordAIUsageEvent({
+          supabaseUrl: SUPABASE_URL,
+          serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+          functionName: "catalog-enrichment-proposal",
+          requestId,
+          agentRunId,
+          workerJobId: agentWorkerJobId,
+          model: OPENAI_MODEL,
+          status: "fallback",
+          providerDurationMs: providerResult.durationMs,
+          usage: providerResult.usage,
+          estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
+          reason: "validator_failed",
+          metadata: { normalized_text: cleanedText },
         });
         return json(buildFallbackProposal(cleanedText));
       }
@@ -169,6 +203,21 @@ Deno.serve(async (request) => {
           totalTokens: providerResult.usage.totalTokens,
           reason: "low_confidence_or_unknown_provider_output",
         });
+        await recordAIUsageEvent({
+          supabaseUrl: SUPABASE_URL,
+          serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+          functionName: "catalog-enrichment-proposal",
+          requestId,
+          agentRunId,
+          workerJobId: agentWorkerJobId,
+          model: OPENAI_MODEL,
+          status: "fallback",
+          providerDurationMs: providerResult.durationMs,
+          usage: providerResult.usage,
+          estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
+          reason: "low_confidence_or_unknown_provider_output",
+          metadata: { normalized_text: cleanedText },
+        });
         return json(deterministicFallback);
       }
       logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
@@ -181,6 +230,20 @@ Deno.serve(async (request) => {
         outputTokens: providerResult.usage.outputTokens,
         totalTokens: providerResult.usage.totalTokens,
       });
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        agentRunId,
+        workerJobId: agentWorkerJobId,
+        model: OPENAI_MODEL,
+        status: "success",
+        providerDurationMs: providerResult.durationMs,
+        usage: providerResult.usage,
+        estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
+        metadata: { normalized_text: cleanedText },
+      });
       return json(proposal);
     } catch (error) {
       console.log(`[SEASON_CATALOG_ENRICHMENT] phase=provider_failed fallback=true error=${String(error)}`);
@@ -192,6 +255,19 @@ Deno.serve(async (request) => {
         providerDurationMs,
         model: OPENAI_MODEL,
         reason: "provider_failed",
+      });
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: "catalog-enrichment-proposal",
+        requestId,
+        agentRunId,
+        workerJobId: agentWorkerJobId,
+        model: OPENAI_MODEL,
+        status: "error",
+        providerDurationMs,
+        reason: "provider_failed",
+        metadata: { normalized_text: cleanedText },
       });
       return json(buildFallbackProposal(cleanedText));
     }
@@ -207,6 +283,20 @@ Deno.serve(async (request) => {
     return json(buildFallbackProposal(""));
   }
 });
+
+function nonNegativeNumberEnv(name: string): number | null {
+  const raw = Deno.env.get(name);
+  if (raw === undefined || raw.trim().length === 0) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function positiveIntegerOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
 
 async function invokeProvider(cleanedText: string, originalText: string): Promise<ProviderInvocationResult> {
   const userPrompt = [

@@ -83,6 +83,9 @@ type RunnerMode = "user" | "service_role";
 interface BatchRequest {
   limit?: number;
   debug?: unknown;
+  agent_run_id?: number | null;
+  agent_worker_job_id?: number | null;
+  source_domain?: string | null;
 }
 
 interface PendingDraftRow {
@@ -170,6 +173,9 @@ interface NormalizedIdentityInput {
 }
 
 Deno.serve(async (request) => {
+  let agentRunId: number | null = null;
+  let agentWorkerJobId: number | null = null;
+  let serviceClient: ReturnType<typeof createClient> | null = null;
   try {
     console.log(`[SEASON_CATALOG_ENRICH_BATCH] phase=request_received method=${request.method}`);
 
@@ -195,21 +201,33 @@ Deno.serve(async (request) => {
 
     const limit = clampLimit(payload.limit);
     const debugEnabled = decodeBoolean(payload.debug);
+    agentRunId = positiveIntegerOrNull(payload.agent_run_id);
+    agentWorkerJobId = positiveIntegerOrNull(payload.agent_worker_job_id);
+    const sourceDomain = normalizeNullableText(payload.source_domain);
     console.log(
-      `[SEASON_CATALOG_ENRICH_BATCH] phase=batch_started mode=${auth.mode} limit=${limit} debug=${debugEnabled}`,
+      `[SEASON_CATALOG_ENRICH_BATCH] phase=batch_started mode=${auth.mode} limit=${limit} debug=${debugEnabled} agent_run_id=${agentRunId ?? "null"} worker_job_id=${agentWorkerJobId ?? "null"}`,
     );
 
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    if (agentWorkerJobId !== null) {
+      await startWorkerJob(serviceClient, agentWorkerJobId);
+    }
     const debugRunId = debugEnabled
       ? await createDebugRun(serviceClient, "run-catalog-enrichment-draft-batch", auth.mode, {
         requested_limit: limit,
+        agent_run_id: agentRunId,
+        agent_worker_job_id: agentWorkerJobId,
+        source_domain: sourceDomain,
       })
       : null;
     await writeDebugEvent(serviceClient, debugRunId, "run-catalog-enrichment-draft-batch", "start", {
       mode: auth.mode,
       requested_limit: limit,
+      agent_run_id: agentRunId,
+      agent_worker_job_id: agentWorkerJobId,
+      source_domain: sourceDomain,
     });
 
     const pendingSelection = await fetchPendingDrafts(serviceClient, limit, debugRunId);
@@ -316,6 +334,8 @@ Deno.serve(async (request) => {
           originalText: normalizedText,
           cleanedText: cleanedNormalizedText,
           removedQualifiers: identityInput.removedQualifiers,
+          agentRunId,
+          agentWorkerJobId,
         });
         const normalizedSuggestedSlug = normalizeText(proposal.suggested_slug);
         if (normalizedSuggestedSlug && await ingredientSlugExists(serviceClient, normalizedSuggestedSlug)) {
@@ -627,6 +647,16 @@ Deno.serve(async (request) => {
       effective_limit: pendingSelection.effectiveLimit,
       placeholder_only_mode: pendingSelection.placeholderOnlyMode,
     });
+    if (agentWorkerJobId !== null) {
+      await completeWorkerJob(serviceClient, agentWorkerJobId, {
+        summary,
+        placeholder_backlog: placeholderBacklog,
+        placeholder_selected: placeholderSelected,
+        placeholder_processed: placeholderProcessed,
+        source_domain: sourceDomain,
+        limit,
+      });
+    }
 
     return json({
       summary,
@@ -635,12 +665,20 @@ Deno.serve(async (request) => {
         mode: auth.mode,
         debug_enabled: debugEnabled,
         debug_run_id: debugRunId,
+        agent_run_id: agentRunId,
+        agent_worker_job_id: agentWorkerJobId,
+        source_domain: sourceDomain,
         limit,
         generated_at: new Date().toISOString(),
       },
     });
   } catch (error) {
     console.log(`[SEASON_CATALOG_ENRICH_BATCH] phase=unhandled_error error=${String(error)}`);
+    if (agentWorkerJobId !== null && serviceClient !== null) {
+      await failWorkerJob(serviceClient, agentWorkerJobId, String(error), {
+        reason: "unhandled_error",
+      });
+    }
     return errorJson(500, "INTERNAL_BATCH_ERROR", "Unexpected batch enrichment failure.");
   }
 });
@@ -951,6 +989,8 @@ async function fetchProposalWithFallback(input: {
   originalText: string;
   cleanedText: string;
   removedQualifiers: string[];
+  agentRunId: number | null;
+  agentWorkerJobId: number | null;
 }): Promise<ProposalResponse> {
   const originalText = input.originalText;
   const cleanedText = normalizeText(input.cleanedText) ?? originalText;
@@ -968,6 +1008,8 @@ async function fetchProposalWithFallback(input: {
         original_text: originalText,
         cleaned_text: cleanedText,
         removed_qualifiers: input.removedQualifiers,
+        agent_run_id: input.agentRunId,
+        agent_worker_job_id: input.agentWorkerJobId,
       }),
     },
     PROPOSAL_FUNCTION_TIMEOUT_MS,
@@ -1008,6 +1050,45 @@ async function fetchProposalWithFallback(input: {
     reasoning_summary: parsed.reasoning_summary ?? "",
     confidence_score: clamp01(parsed.confidence_score),
   };
+}
+
+async function startWorkerJob(client: ReturnType<typeof createClient>, jobId: number): Promise<void> {
+  const { error } = await client.rpc("start_catalog_agent_worker_job", {
+    p_job_id: jobId,
+  });
+  if (error) {
+    throw new Error(`worker_job_start_failed:${error.message}`);
+  }
+}
+
+async function completeWorkerJob(
+  client: ReturnType<typeof createClient>,
+  jobId: number,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await client.rpc("complete_catalog_agent_worker_job", {
+    p_job_id: jobId,
+    p_summary: summary,
+  });
+  if (error) {
+    throw new Error(`worker_job_complete_failed:${error.message}`);
+  }
+}
+
+async function failWorkerJob(
+  client: ReturnType<typeof createClient>,
+  jobId: number,
+  failureReason: string,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await client.rpc("fail_catalog_agent_worker_job", {
+    p_job_id: jobId,
+    p_failure_reason: failureReason,
+    p_summary: summary,
+  });
+  if (error) {
+    console.log(`[SEASON_CATALOG_ENRICH_BATCH] phase=worker_job_fail_mark_failed job_id=${jobId} error=${error.message}`);
+  }
 }
 
 function normalizeIngredientIdentityInput(normalizedText: string): NormalizedIdentityInput {
@@ -1654,6 +1735,17 @@ function clamp01(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0.1;
   return Math.max(0, Math.min(1, parsed));
+}
+
+function positiveIntegerOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function normalizeNullableText(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return text.length > 0 ? text : null;
 }
 
 function decodeBoolean(value: unknown): boolean {

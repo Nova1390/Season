@@ -12,6 +12,7 @@ import {
   requestIdFromHeaders,
   type TokenUsage,
 } from "../_shared/observability.ts";
+import { recordAIUsageEvent } from "../_shared/ai_usage.ts";
 import {
   CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
   type CatalogAgentProposalOutput,
@@ -186,6 +187,16 @@ Deno.serve(async (request) => {
         model: OPENAI_MODEL,
         reason: "provider_not_configured",
       });
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: FUNCTION_NAME,
+        requestId,
+        agentRunId: runId,
+        model: OPENAI_MODEL,
+        status: "error",
+        reason: "provider_not_configured",
+      });
       return errorJson(500, "PROVIDER_NOT_CONFIGURED", "OPENAI_API_KEY is not configured.");
     }
 
@@ -230,6 +241,19 @@ Deno.serve(async (request) => {
         totalTokens: providerResult.usage.totalTokens,
         reason: "validator_failed",
       });
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: FUNCTION_NAME,
+        requestId,
+        agentRunId: runId,
+        model: OPENAI_MODEL,
+        status: "error",
+        providerDurationMs: providerResult.durationMs,
+        usage: providerResult.usage,
+        estimatedCostUsd: estimateCost(providerResult.usage),
+        reason: "validator_failed",
+      });
       return errorJson(502, "PROVIDER_OUTPUT_INVALID", `Provider output failed validation: ${validation.errors.join(" | ")}`);
     }
 
@@ -269,6 +293,22 @@ Deno.serve(async (request) => {
       outputTokens: providerResult.usage.outputTokens,
       totalTokens: providerResult.usage.totalTokens,
     });
+    await recordAIUsageEvent({
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      functionName: FUNCTION_NAME,
+      requestId,
+      agentRunId: runId,
+      model: OPENAI_MODEL,
+      status: "success",
+      providerDurationMs: providerResult.durationMs,
+      usage: providerResult.usage,
+      estimatedCostUsd: cost,
+      metadata: {
+        proposals_created: insertedProposalIDs.length,
+        items_sent_to_llm: eligibleItems.length,
+      },
+    });
 
     return jsonResponseWithStatus({
       ok: true,
@@ -305,6 +345,18 @@ Deno.serve(async (request) => {
       model: OPENAI_MODEL,
       reason: "unhandled_error",
     });
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      await recordAIUsageEvent({
+        supabaseUrl: SUPABASE_URL,
+        serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        functionName: FUNCTION_NAME,
+        requestId,
+        agentRunId: runId,
+        model: OPENAI_MODEL,
+        status: "error",
+        reason: "unhandled_error",
+      });
+    }
     return errorJson(500, "UNHANDLED_ERROR", String(error));
   }
 });

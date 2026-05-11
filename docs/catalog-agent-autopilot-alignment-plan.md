@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: implementation plan.
+Status: Phase 1 complete; Phase 2, Phase 3 first worker, and Phase 4 first ledger implemented on dev. Low-risk apply and canonical creation remain intentionally gated.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -85,7 +85,7 @@ The agent must not:
 
 ### Phase 1: Documented Authority Boundary
 
-Status: in progress.
+Status: complete.
 
 Deliverables:
 
@@ -103,6 +103,8 @@ Exit criteria:
 ### Phase 2: Agent Orchestration Ledger
 
 Add a manager-level table for delegated work.
+
+Status: implemented in `supabase/migrations/20260511170000_catalog_agent_worker_jobs_and_ai_usage.sql`.
 
 Proposed object:
 
@@ -140,14 +142,25 @@ Exit criteria:
 
 Add a backend-safe way for the agent to request bounded worker jobs.
 
-Candidate RPC:
+Status: first worker adapter implemented for `enrichment_draft_batch` through `supabase/functions/run-catalog-agent-orchestrator`.
 
-- `request_catalog_agent_worker_job(...)`
+Implemented RPC:
 
-Allowed worker names initially:
+- `create_catalog_agent_worker_job(...)`
+- `start_catalog_agent_worker_job(...)`
+- `complete_catalog_agent_worker_job(...)`
+- `fail_catalog_agent_worker_job(...)`
+
+Worker names in the ledger:
 
 - `enrichment_draft_batch`
 - `reconciliation_preview`
+- `low_risk_apply_batch`
+
+Runtime support today:
+
+- `enrichment_draft_batch` is implemented through `run-catalog-agent-orchestrator`;
+- `reconciliation_preview` and `low_risk_apply_batch` are reserved ledger types, not yet enabled by the orchestrator.
 
 Rules:
 
@@ -167,6 +180,8 @@ Exit criteria:
 ### Phase 4: Cost Governor
 
 Centralize LLM budget controls across agent and Autopilot.
+
+Status: first ledger implemented through `catalog_ai_usage_events` and `catalog_agent_daily_automation_summary`.
 
 Required tracking:
 
@@ -197,6 +212,8 @@ Exit criteria:
 
 ### Phase 5: Low-Risk Autonomous Apply
 
+Status: planned, not enabled.
+
 Let the agent authorize safe apply only for low-risk work.
 
 First eligible actions:
@@ -221,6 +238,8 @@ Exit criteria:
 - console becomes audit-first, not approval-first.
 
 ### Phase 6: Policy-Based Canonical Creation
+
+Status: planned, not enabled.
 
 Allow the agent to create canonical ingredients only after patterns are proven.
 
@@ -261,18 +280,20 @@ The console should default to:
 - what needs a policy decision;
 - what it learned.
 
-## 6. Recommended Next Technical Step
+## 6. Implemented Dev Step
 
-Implement Phase 2 first.
+Implemented on dev:
 
-Reason:
+- `catalog_agent_worker_jobs` records manager-authorized worker jobs;
+- `catalog_ai_usage_events` records shared LLM usage across agent and Autopilot;
+- `catalog_agent_daily_automation_summary` powers the console overview;
+- `run-catalog-agent-orchestrator` delegates bounded enrichment work to Autopilot;
+- `run-catalog-enrichment-draft-batch` reports job lifecycle back to the ledger;
+- admin console shows orchestration summary and recent worker jobs.
 
-- it does not change catalog behavior;
-- it creates the audit backbone for agent-controlled Autopilot;
-- it prevents hidden overlap between LLM surfaces;
-- it lets us wire worker jobs incrementally without touching staging.
+Next technical step:
 
-After Phase 2, implement Phase 3 for `enrichment_draft_batch` only, in dev only.
+- enable a low-risk apply worker only after service-role-safe apply semantics and rollback/audit evidence are fully reviewed.
 
 ## 7. Dev/Staging Policy
 
