@@ -22,6 +22,8 @@ The system therefore separates two jobs:
 
 Smart Import is allowed to parse, normalize, match, and produce draft ingredients. It is not allowed to create canonical ingredients or approve aliases. Catalog Intelligence is allowed to review unresolved observations, propose enrichment, create canonical ingredients, approve aliases, and reconcile existing recipe ingredients when safety checks pass.
 
+Within Catalog Intelligence, the Catalog Governance Agent is the orchestration manager. Autopilot, enrichment proposal functions, batch creation, and reconciliation jobs are execution workers. They can use LLM calls for bounded subtasks, but they do not own final catalog policy.
+
 The core invariant is:
 
 `public.ingredients` is the canonical identity model, and `public.create_catalog_ingredient_from_candidate(...)` is the single canonical writer for new ingredient identity.
@@ -40,14 +42,19 @@ flowchart TD
     E --> H["Publish/save recipe"]
     H --> I["Unresolved custom ingredient observations"]
     I --> J["catalog_resolution_candidate_queue"]
-    J --> K["Governance / admin decisions"]
-    K --> L["Enrichment draft pipeline"]
-    L --> M["create_catalog_ingredient_from_enrichment_draft"]
-    M --> N["create_catalog_ingredient_from_candidate"]
-    N --> O["ingredients + localizations + optional approved alias"]
-    O --> P["Auto alias/localization stages"]
-    P --> Q["Safe recipe reconciliation preview/apply"]
-    Q --> R["Recipes updated only when safe"]
+    J --> K["Catalog Governance Agent"]
+    K --> L{"Delegate bounded work?"}
+    L -->|enrich| M["Autopilot enrichment worker"]
+    L -->|validate/apply low risk| N["Backend validators + governed RPCs"]
+    L -->|policy exception| O["Admin console review"]
+    M --> P["catalog_ingredient_enrichment_drafts"]
+    P --> K
+    O --> K
+    N --> Q["ingredients + aliases + localizations"]
+    Q --> R["Safe recipe reconciliation preview/apply"]
+    R --> S["Recipes updated only when safe"]
+    Q --> T["Learning memory + audit"]
+    T --> K
 ```
 
 Primary runtime surfaces:
@@ -58,6 +65,7 @@ Primary runtime surfaces:
 - Smart Import Edge Function: `supabase/functions/parse-recipe-caption`
 - Candidate queue: `public.catalog_resolution_candidate_queue`, `public.catalog_resolution_candidates(...)`
 - Governance decisions: `public.apply_catalog_candidate_decision(...)`
+- Catalog Governance Agent: `supabase/functions/run-catalog-agent-triage`
 - Enrichment proposal: `supabase/functions/catalog-enrichment-proposal`
 - Enrichment batch: `supabase/functions/run-catalog-enrichment-draft-batch`
 - Canonical creation batch: `supabase/functions/run-catalog-ingredient-creation-batch`
@@ -77,6 +85,7 @@ Current reality:
 - Canonical ingredient creation is now centralized through `create_catalog_ingredient_from_candidate(...)`, with ready-draft creation delegated through `create_catalog_ingredient_from_enrichment_draft(...)`.
 - Alias writes are still available through multiple governed paths. They are not yet unified behind one alias writer.
 - Recipe reconciliation is selective and safe-by-preview. It does not bulk rewrite every custom ingredient.
+- Autopilot and the Catalog Agent both currently have LLM surfaces. Their responsibilities must remain separated: Autopilot enriches bounded drafts; the agent owns governance, risk, prioritization, and autonomy.
 
 Target architecture:
 
@@ -85,6 +94,8 @@ Target architecture:
 - Alias approval and canonical creation remain separate decisions.
 - Existing recipe data migrates gradually toward canonical `ingredient_id` without breaking legacy compatibility.
 - Automation reduces operator workload only inside explicitly safe, auditable boundaries.
+- The Catalog Agent orchestrates Autopilot jobs instead of Autopilot acting as an independent policy engine.
+- LLM calls are budgeted centrally and attributed to either import parsing, enrichment execution, or governance reasoning.
 
 ## 3. Layer Responsibilities
 
@@ -160,12 +171,50 @@ Does:
 - Stores proposals in `catalog_ingredient_enrichment_drafts`.
 - Validates draft readiness with backend validation functions.
 - Marks drafts `ready` only when required fields and rules pass.
+- Acts as an Autopilot worker under backend policy or future agent delegation.
 
 Must not:
 
 - Insert directly into `ingredients`.
 - Treat an LLM proposal as approved canonical truth.
 - Bypass validation at creation time.
+- Decide global catalog policy.
+- Compete with the Catalog Agent's governance proposals.
+
+### Catalog Governance Agent
+
+Does:
+
+- Prioritizes unresolved observations and catalog debt.
+- Reads Autopilot outputs, enrichment drafts, candidate queues, validation results, and learning memory.
+- Decides whether a case is safe alias/localization work, a catalog gap, noise, a variant, or an escalation.
+- Delegates bounded work to Autopilot when enrichment, validation, or reconciliation preview is needed.
+- Sets per-run limits for scope, risk, budget, and source domain.
+- Converts repeated failures or corrections into learning memory.
+
+Must not:
+
+- Bypass backend validators or governed mutation RPCs.
+- Re-implement enrichment worker logic that already belongs to Autopilot.
+- Run unbounded LLM exploration.
+- Make high-risk identity changes without human approval.
+
+### Autopilot Workers
+
+Do:
+
+- Execute bounded jobs requested by backend policy or the Catalog Agent.
+- Enrich pending drafts through `catalog-enrichment-proposal`.
+- Validate draft readiness.
+- Prepare and run safe reconciliation previews.
+- Apply low-risk operations only through governed RPCs when explicitly allowed.
+
+Must not:
+
+- Own final catalog policy.
+- Treat LLM enrichment as canonical approval.
+- Schedule themselves without budget, safety, and audit controls.
+- Escalate by creating noisy review queues when learning memory or implemented policy can resolve the case.
 
 ### Canonical Creation
 
@@ -218,6 +267,8 @@ Authority is assigned by workflow, not by confidence score.
 - An LLM proposal can populate a draft, but it is not canonical truth.
 - A candidate queue recommendation can suggest an action, but it is not a decision.
 - A Smart Import match can resolve a draft ingredient, but it is not permission to mutate catalog tables.
+- An Autopilot LLM call can produce evidence for the agent, but it is not a manager-level governance decision.
+- The Catalog Agent may authorize low-risk work, but backend validators and governed RPCs remain the mutation gate.
 - An alias can map text to an ingredient only after it is approved/active or already present in trusted local catalog data.
 - A canonical ingredient exists only after the canonical writer creates or reuses it.
 - A recipe ingredient is reconciled only after the reconciliation safety view marks it safe and the apply RPC updates it.

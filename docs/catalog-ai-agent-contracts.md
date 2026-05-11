@@ -133,6 +133,15 @@ Phase 1 mode:
 - Initial environment: `Season-dev` only while TestFlight staging remains release-sensitive.
 - Runtime memory: `public.get_catalog_agent_learning_context(...)`
 
+Agent/autopilot authority contract:
+
+- The Catalog Agent is the governance manager.
+- Autopilot and enrichment functions are execution workers.
+- Autopilot LLM calls may enrich bounded work packets, but they must not finalize catalog policy.
+- Agent LLM calls may reason about policy, risk, priority, and delegation, but they must not bypass backend validators.
+- All LLM calls must be attributable by run mode, function name, model, token usage, and cost estimate when configured.
+- Future autonomous runs must have a single orchestration record that says which worker jobs the agent authorized.
+
 Budget controls required for proposal-only runtime:
 
 - agent must be disabled unless `CATALOG_AGENT_ENABLED=true`
@@ -144,6 +153,8 @@ Budget controls required for proposal-only runtime:
 - cost estimates must be recorded when cost env vars are configured
 - no cron/scheduler is allowed until explicitly documented
 - manual smoke tests must reset `CATALOG_AGENT_ENABLED=false` after verification unless the operator intentionally keeps dev callable
+- Autopilot worker jobs launched by the agent must inherit the same per-run budget and safety envelope.
+- If worker quality or cost exceeds policy, the agent must pause delegation and create a learning/audit event instead of continuing.
 
 ## 7. Proposal Contract
 
