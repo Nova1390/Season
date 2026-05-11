@@ -211,6 +211,13 @@ Deno.serve(async (request) => {
       const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
+      if (workerJobId !== null) {
+        await failOpenWorkerJob(adminClient, workerJobId, String(error), {
+          request_id: requestId,
+          duration_ms: elapsedMs(startedAt),
+          failed_by: FUNCTION_NAME,
+        });
+      }
       await failRun(adminClient, agentRunId, String(error), {
         worker_job_id: workerJobId,
         request_id: requestId,
@@ -388,6 +395,29 @@ async function failRun(
 
   if (error) {
     console.log(`[${LOG_PREFIX}] phase=fail_run_failed error=${error.message}`);
+  }
+}
+
+async function failOpenWorkerJob(
+  adminClient: ReturnType<typeof createClient>,
+  workerJobId: number,
+  message: string,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await adminClient
+    .from("catalog_agent_worker_jobs")
+    .update({
+      status: "failed",
+      finished_at: new Date().toISOString(),
+      failure_reason: message,
+      summary,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", workerJobId)
+    .in("status", ["queued", "running"]);
+
+  if (error) {
+    console.log(`[${LOG_PREFIX}] phase=fail_open_worker_job_failed worker_job_id=${workerJobId} error=${error.message}`);
   }
 }
 

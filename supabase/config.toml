@@ -162,6 +162,9 @@ verify_jwt = false
 [functions.catalog-low-risk-apply-batch]
 verify_jwt = false
 
+[functions.run-catalog-agent-orchestrator]
+verify_jwt = false
+
 [functions.run-catalog-ingredient-creation-batch]
 verify_jwt = false
 

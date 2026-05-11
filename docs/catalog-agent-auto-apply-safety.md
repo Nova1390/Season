@@ -164,3 +164,13 @@ Production:
 - enable only after staging has real tester data and rollback confidence;
 - keep daily limits very low at first;
 - alert on any rollback or failed apply.
+
+## Dev Dry-Run History
+
+2026-05-11:
+
+- created a real validated low-risk `approve_alias` proposal for `sale fino` -> `sale_fino`;
+- ran `low_risk_apply_batch` through the orchestrator in dry-run mode;
+- result: `1` eligible proposal previewed, `0` applied, `0` failed;
+- worker job: `catalog_agent_worker_jobs.id = 4`;
+- real apply remained disabled.
