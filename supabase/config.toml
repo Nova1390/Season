@@ -159,6 +159,9 @@ verify_jwt = false
 [functions.run-catalog-enrichment-draft-batch]
 verify_jwt = false
 
+[functions.catalog-low-risk-apply-batch]
+verify_jwt = false
+
 [functions.run-catalog-ingredient-creation-batch]
 verify_jwt = false
 

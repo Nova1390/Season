@@ -30,6 +30,8 @@ interface WorkerJobRow {
   dry_run: boolean;
 }
 
+type WorkerName = "enrichment_draft_batch" | "low_risk_apply_batch";
+
 const FUNCTION_NAME = "run-catalog-agent-orchestrator";
 const LOG_PREFIX = "SEASON_CATALOG_ORCHESTRATOR";
 const AGENT_NAME = "catalog-governance-agent";
@@ -41,6 +43,7 @@ const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 const OPERATOR_TOKEN = env("CATALOG_AGENT_OPERATOR_TOKEN");
 
 const ORCHESTRATOR_ENABLED = env("CATALOG_AGENT_ORCHESTRATOR_ENABLED", "false").toLowerCase() === "true";
+const LOW_RISK_APPLY_ENABLED = env("CATALOG_AGENT_LOW_RISK_APPLY_ENABLED", "false").toLowerCase() === "true";
 const MAX_WORKER_ITEMS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_WORKER_ITEMS_PER_RUN", 5), 1, 25);
 const WORKER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_WORKER_TIMEOUT_MS", 60000), 5000, 180000);
 
@@ -91,19 +94,33 @@ Deno.serve(async (request) => {
       return errorJson(400, "INVALID_JSON", "Request body must be valid JSON.");
     }
 
-    const workerName = normalizeText(payload.worker_name) ?? "enrichment_draft_batch";
-    if (workerName !== "enrichment_draft_batch") {
-      return errorJson(422, "UNSUPPORTED_WORKER", "Only enrichment_draft_batch is supported in v1.");
+    const workerName = normalizeWorkerName(payload.worker_name);
+    if (workerName === null) {
+      return errorJson(422, "UNSUPPORTED_WORKER", "Supported workers are enrichment_draft_batch and low_risk_apply_batch.");
     }
 
-    const action = normalizeText(payload.action) ?? "run";
+    const action = normalizeAction(workerName, payload.action, payload.dry_run);
     const limit = boundedInteger(Number(payload.limit ?? MAX_WORKER_ITEMS_PER_RUN), 1, MAX_WORKER_ITEMS_PER_RUN);
     const sourceDomain = normalizeNullableText(payload.source_domain);
     const riskCeiling = normalizeRiskCeiling(payload.risk_ceiling);
-    if (payload.dry_run === true) {
+    const dryRun = workerName === "low_risk_apply_batch" ? payload.dry_run !== false : false;
+
+    if (workerName === "enrichment_draft_batch" && payload.dry_run === true) {
       return errorJson(422, "DRY_RUN_NOT_SUPPORTED", "enrichment_draft_batch does not yet support dry_run.");
     }
-    const dryRun = false;
+    if (workerName === "low_risk_apply_batch" && riskCeiling !== "low") {
+      return errorJson(422, "LOW_RISK_WORKER_REQUIRES_LOW_RISK_CEILING", "low_risk_apply_batch only supports a low risk ceiling.");
+    }
+    if (workerName === "low_risk_apply_batch" && dryRun && action !== "dry_run") {
+      return errorJson(422, "LOW_RISK_DRY_RUN_ACTION_MISMATCH", "low_risk_apply_batch dry-run mode requires action=dry_run.");
+    }
+    if (workerName === "low_risk_apply_batch" && !dryRun && action !== "apply_low_risk") {
+      return errorJson(422, "LOW_RISK_APPLY_ACTION_REQUIRED", "low_risk_apply_batch apply mode requires action=apply_low_risk.");
+    }
+    if (workerName === "low_risk_apply_batch" && !dryRun && !LOW_RISK_APPLY_ENABLED) {
+      return errorJson(403, "LOW_RISK_APPLY_DISABLED", "low_risk_apply_batch apply mode is disabled.");
+    }
+
     const debug = payload.debug === true;
     const budgetLimitUsd = nonNegativeNumberOrNull(payload.budget_limit_usd);
 
@@ -158,11 +175,13 @@ Deno.serve(async (request) => {
       dry_run: workerJob.dry_run,
     }, auth.userId);
 
-    const workerResult = await invokeEnrichmentWorker({
+    const workerResult = await invokeWorker({
+      workerName,
       agentRunId,
       workerJobId,
       limit,
       sourceDomain,
+      dryRun,
       debug,
     });
 
@@ -286,15 +305,20 @@ async function createWorkerJob(
   };
 }
 
-async function invokeEnrichmentWorker(input: {
+async function invokeWorker(input: {
+  workerName: WorkerName;
   agentRunId: number;
   workerJobId: number;
   limit: number;
   sourceDomain: string | null;
+  dryRun: boolean;
   debug: boolean;
 }): Promise<Record<string, unknown>> {
+  const functionName = input.workerName === "low_risk_apply_batch"
+    ? "catalog-low-risk-apply-batch"
+    : "run-catalog-enrichment-draft-batch";
   const response = await fetchWithTimeout(
-    `${SUPABASE_URL}/functions/v1/run-catalog-enrichment-draft-batch`,
+    `${SUPABASE_URL}/functions/v1/${functionName}`,
     {
       method: "POST",
       headers: {
@@ -306,6 +330,7 @@ async function invokeEnrichmentWorker(input: {
         limit: input.limit,
         debug: input.debug,
         source_domain: input.sourceDomain,
+        dry_run: input.dryRun,
         agent_run_id: input.agentRunId,
         agent_worker_job_id: input.workerJobId,
       }),
@@ -400,6 +425,22 @@ function boundedInteger(value: number, min: number, max: number): number {
 function normalizeRiskCeiling(value: unknown): string {
   const normalized = normalizeText(value) ?? "low";
   return ["low", "medium", "high", "critical"].includes(normalized) ? normalized : "low";
+}
+
+function normalizeWorkerName(value: unknown): WorkerName | null {
+  const normalized = normalizeText(value) ?? "enrichment_draft_batch";
+  return normalized === "enrichment_draft_batch" || normalized === "low_risk_apply_batch"
+    ? normalized
+    : null;
+}
+
+function normalizeAction(workerName: WorkerName, value: unknown, dryRunValue: unknown): string {
+  const normalized = normalizeText(value);
+  if (workerName === "low_risk_apply_batch") {
+    const dryRun = dryRunValue !== false;
+    return normalized ?? (dryRun ? "dry_run" : "apply_low_risk");
+  }
+  return normalized ?? "run";
 }
 
 function normalizeNullableText(value: unknown): string | null {

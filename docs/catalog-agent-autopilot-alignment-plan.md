@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 first worker, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Low-risk apply scheduling and canonical creation remain intentionally gated.
+Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode and canonical creation remain intentionally gated.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -160,7 +160,8 @@ Worker names in the ledger:
 Runtime support today:
 
 - `enrichment_draft_batch` is implemented through `run-catalog-agent-orchestrator`;
-- `reconciliation_preview` and `low_risk_apply_batch` are reserved ledger types, not yet enabled by the orchestrator.
+- `low_risk_apply_batch` is implemented through `run-catalog-agent-orchestrator` in dry-run mode by default;
+- `reconciliation_preview` is a reserved ledger type, not yet enabled by the orchestrator.
 
 Rules:
 
@@ -212,7 +213,7 @@ Exit criteria:
 
 ### Phase 5: Low-Risk Autonomous Apply
 
-Status: safety foundation implemented in `supabase/migrations/20260511174500_catalog_agent_auto_apply_audit_rollback.sql`; autonomous worker scheduling is not enabled.
+Status: safety foundation implemented in `supabase/migrations/20260511174500_catalog_agent_auto_apply_audit_rollback.sql`; worker routing is implemented, real apply remains disabled unless `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED=true`.
 
 Let the agent authorize safe apply only for low-risk work.
 
@@ -244,6 +245,7 @@ Implemented safety primitives:
 - `rollback_catalog_agent_apply(...)`;
 - `catalog_agent_apply_audit`;
 - `catalog_agent_auto_apply_audit_summary`;
+- `catalog-low-risk-apply-batch`;
 - detailed operating policy in `docs/catalog-agent-auto-apply-safety.md`.
 
 ### Phase 6: Policy-Based Canonical Creation
@@ -302,7 +304,7 @@ Implemented on dev:
 
 Next technical step:
 
-- wire the `low_risk_apply_batch` worker behind the orchestrator only after dev smoke tests prove apply and rollback behavior on representative alias/localization cases.
+- run dry operational history for `low_risk_apply_batch` from the orchestrator, then decide daily limits before enabling real apply.
 
 ## 7. Dev/Staging Policy
 

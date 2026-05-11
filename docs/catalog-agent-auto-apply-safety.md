@@ -1,6 +1,6 @@
 # Catalog Agent Auto-Apply Safety
 
-Status: dev foundation implemented, autonomous scheduling not enabled.
+Status: dev foundation implemented, worker wired through the orchestrator, real apply disabled by default.
 
 This document defines how Season can safely let the Catalog Governance Agent apply a narrow class of catalog changes without human review.
 
@@ -118,15 +118,31 @@ Rollback behavior:
 
 ## Worker Policy
 
-The future `low_risk_apply_batch` worker should:
+The `low_risk_apply_batch` worker is implemented by `catalog-low-risk-apply-batch`.
+
+It can:
+
+- preview eligible proposals with `dry_run=true`;
+- apply eligible proposals with `dry_run=false` only when `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED=true`;
+- attach the result to `catalog_agent_worker_jobs`;
+- call `apply_catalog_agent_low_risk_proposal_batch(...)`;
+- report applied and failed counts.
+
+The orchestrator can delegate to it with:
+
+- `worker_name = 'low_risk_apply_batch'`;
+- `risk_ceiling = 'low'`;
+- `action = 'dry_run'` for preview;
+- `action = 'apply_low_risk'` for real apply.
+
+The worker should:
 
 - create a `catalog_agent_worker_jobs` row;
-- call `apply_catalog_agent_low_risk_proposal_batch(...)`;
 - stop at a small item limit;
 - report applied and failed counts;
 - avoid retry storms after validation or rollback failures.
 
-The worker should stay disabled until dev has enough successful dry operational history.
+Real apply should stay disabled until dev has enough successful dry operational history.
 
 ## Release Policy
 
