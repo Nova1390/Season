@@ -140,7 +140,7 @@ Decision policy:
 13) For terms like "lievito", separate "is ingredient" from "which canonical leavening agent". Pick approve_alias only when recipe context and provided candidates make one target safe.
 14) If the work item is bare "lievito", the canonical candidate "lievito" is present, and there is no evidence for a more specific leavening variant, prefer approve_alias to "lievito".
 15) Do not map bare "lievito" to baking powder, brewer's yeast, sourdough starter, fresh yeast, or dry yeast unless the recipe text provides that specific evidence.
-16) Do not map "pomodorini", "pomodorino", "ciliegini", "ciliegino", "datterini", "datterino", or "cherry tomato(es)" to the generic "tomato" base. They are meaningful small-tomato variants and require an explicit child variant target or human review/catalog-gap handling.
+16) Do not collapse identity-bearing variants into generic base ingredients. If a term changes culinary identity, nutrition, seasonality, form factor, dietary suitability, or substitutability, require an explicit child/specialized target or human review/catalog-gap handling instead of approve_alias to the base.
 17) Read global_learning_memory and each work item's relevant_learning_memory before deciding.
 18) Treat learning memory as operational memory: implemented and accepted lessons are strong guidance; needs_review lessons are caution signals.
 19) Do not repeat a prior failed/rejected/ambiguous recommendation unless the current work item contains new evidence that resolves the recorded problem.
