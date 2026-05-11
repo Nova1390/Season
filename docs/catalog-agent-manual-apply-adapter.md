@@ -56,6 +56,15 @@ The adapter does not:
 - write directly to `ingredients`, aliases, or localizations;
 - reconcile recipe ingredients.
 
+## Learning Behavior
+
+Manual apply failures create structured learning artifacts through:
+
+- `docs/catalog-agent-learning-memory.md`
+- `public.record_catalog_agent_learning(...)`
+
+This is important because a proposal can pass validation and still fail inside a governed apply RPC. That failure should tighten future validator or apply preconditions.
+
 ## Current Autonomy Level
 
 Level 2.5: manual governed apply.

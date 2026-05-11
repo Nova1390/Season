@@ -302,7 +302,7 @@ Persistence rules:
 - `service_role` can write proposal data for future backend workers.
 - App/client code must not receive direct write access.
 - `auto_apply_eligible` is advisory only and restricted to `risk_level = 'low'`.
-- `applied_at` can be set only when proposal status is `auto_applied`.
+- `applied_at` can be set only when proposal status is `applied` or `auto_applied`.
 - Proposal events must reference either a proposal or a run.
 
 Important limitation:
@@ -377,7 +377,25 @@ Learning status vocabulary:
 
 Implementation note:
 
-The first schema migration stores proposal lifecycle events in `catalog_agent_proposal_events`. A dedicated learning table can be added once validator/review workflows exist. Until then, learning notes should be stored as proposal events with explicit event types such as `learning_needed`, `review_rejected`, `validator_failed`, or `policy_gap_found`.
+Structured learning memory is implemented by:
+
+- `supabase/migrations/20260511120000_catalog_agent_structured_learning.sql`
+- `docs/catalog-agent-learning-memory.md`
+
+Learning RPCs:
+
+- `public.record_catalog_agent_learning(...)`
+- `public.get_catalog_agent_learning_memory(...)`
+- `public.review_catalog_agent_learning(...)`
+
+Automatic learning sources:
+
+- human rejection
+- more-evidence requests
+- validator failures
+- manual apply failures
+
+Learning artifacts are advisory until reviewed/accepted and translated into explicit prompt, validator, policy, or evaluation-set changes.
 
 ## 12. Data Access Contract
 

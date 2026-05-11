@@ -104,6 +104,15 @@ Queued proposals are handled by the deterministic validator:
 
 The validator can mark proposals `validated` or `failed_validation`, but it still cannot apply catalog changes.
 
+## Learning Behavior
+
+Human rejections and more-evidence requests create structured learning artifacts through:
+
+- `docs/catalog-agent-learning-memory.md`
+- `public.record_catalog_agent_learning(...)`
+
+The agent should treat these as feedback signals, not just audit logs.
+
 ## Current Autonomy Level
 
 Level 1.5: propose plus human triage.

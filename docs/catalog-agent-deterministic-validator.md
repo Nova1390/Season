@@ -120,3 +120,12 @@ Validated low-risk alias/localization proposals can be applied manually through:
 - `public.apply_catalog_agent_proposal_batch(...)`
 
 The apply adapter still uses existing governed RPCs only.
+
+## Learning Behavior
+
+Failed validation creates structured learning artifacts through:
+
+- `docs/catalog-agent-learning-memory.md`
+- `public.record_catalog_agent_learning(...)`
+
+These learnings help decide whether the prompt, validator, catalog policy, or evaluation set needs to change.
