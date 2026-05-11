@@ -64,6 +64,11 @@ const elements = {
   applyAuditList: document.querySelector("#applyAuditList")
 };
 
+const tooltip = {
+  node: null,
+  activeTarget: null
+};
+
 init();
 
 async function init() {
@@ -141,6 +146,81 @@ function bindEvents() {
     if (!button) return;
     await rollbackApplyAudit(Number(button.dataset.rollbackAuditId));
   });
+
+  bindHelpTooltips();
+}
+
+function bindHelpTooltips() {
+  tooltip.node = document.createElement("div");
+  tooltip.node.className = "help-popover";
+  tooltip.node.setAttribute("role", "tooltip");
+  tooltip.node.hidden = true;
+  document.body.append(tooltip.node);
+
+  document.addEventListener("pointerover", (event) => {
+    const target = event.target.closest("[data-help]");
+    if (!target) return;
+    showHelpTooltip(target);
+  });
+
+  document.addEventListener("pointerout", (event) => {
+    const target = event.target.closest("[data-help]");
+    if (!target) return;
+    hideHelpTooltip();
+  });
+
+  document.addEventListener("focusin", (event) => {
+    const target = event.target.closest("[data-help]");
+    if (!target) return;
+    showHelpTooltip(target);
+  });
+
+  document.addEventListener("focusout", (event) => {
+    const target = event.target.closest("[data-help]");
+    if (!target) return;
+    hideHelpTooltip();
+  });
+
+  window.addEventListener("scroll", () => {
+    if (tooltip.activeTarget) positionHelpTooltip(tooltip.activeTarget);
+  }, true);
+
+  window.addEventListener("resize", () => {
+    if (tooltip.activeTarget) positionHelpTooltip(tooltip.activeTarget);
+  });
+}
+
+function showHelpTooltip(target) {
+  const text = target.dataset.help;
+  if (!text || !tooltip.node) return;
+
+  tooltip.activeTarget = target;
+  tooltip.node.textContent = text;
+  tooltip.node.hidden = false;
+  positionHelpTooltip(target);
+}
+
+function hideHelpTooltip() {
+  if (!tooltip.node) return;
+  tooltip.activeTarget = null;
+  tooltip.node.hidden = true;
+}
+
+function positionHelpTooltip(target) {
+  if (!tooltip.node) return;
+
+  const rect = target.getBoundingClientRect();
+  const margin = 10;
+  const tooltipRect = tooltip.node.getBoundingClientRect();
+  const width = tooltipRect.width || 280;
+  const height = tooltipRect.height || 44;
+  const centeredLeft = rect.left + rect.width / 2 - width / 2;
+  const left = Math.min(Math.max(centeredLeft, margin), window.innerWidth - width - margin);
+  const topCandidate = rect.top - height - 10;
+  const top = topCandidate > margin ? topCandidate : rect.bottom + 10;
+
+  tooltip.node.style.left = `${Math.round(left)}px`;
+  tooltip.node.style.top = `${Math.round(top)}px`;
 }
 
 async function runAgentWorker(event) {

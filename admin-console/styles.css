@@ -114,7 +114,6 @@ label {
 }
 
 .help-tip {
-  position: relative;
   display: inline-grid;
   width: 16px;
   height: 16px;
@@ -130,12 +129,9 @@ label {
   vertical-align: middle;
 }
 
-.help-tip::after,
-[data-help]::after {
-  position: absolute;
-  z-index: 20;
-  bottom: calc(100% + 8px);
-  left: 50%;
+.help-popover {
+  position: fixed;
+  z-index: 10000;
   width: min(280px, 72vw);
   padding: 8px 10px;
   border: 1px solid var(--line-strong);
@@ -143,46 +139,11 @@ label {
   background: #2f271e;
   color: #fffdf8;
   box-shadow: 0 2px 8px rgba(38, 31, 23, 0.14);
-  content: attr(data-help);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.35;
-  opacity: 0;
   pointer-events: none;
   text-align: left;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  white-space: normal;
-}
-
-.help-tip::before,
-[data-help]::before {
-  position: absolute;
-  z-index: 21;
-  bottom: calc(100% + 3px);
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-right: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
-  background: #2f271e;
-  content: "";
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 4px) rotate(45deg);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.help-tip:hover::after,
-.help-tip:focus-visible::after,
-[data-help]:hover::after,
-[data-help]:focus-visible::after,
-.help-tip:hover::before,
-.help-tip:focus-visible::before,
-[data-help]:hover::before,
-[data-help]:focus-visible::before {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 .help-tip:focus-visible {
