@@ -57,14 +57,26 @@ Then open:
 http://localhost:4177/admin-console/
 ```
 
-## Deployment Direction
+## Deployment
 
-Recommended production-style host:
+Current dev deployment:
 
-- `admin.seasonapp.it` for the general backoffice;
-- or `catalog.seasonapp.it` if we want this to remain catalog-only for now.
+- URL: `https://catalog.seasonapp.it/`
+- Hosting path: `/home/u280052083/domains/seasonapp.it/public_html/catalog`
+- Supabase environment: `Season-dev`
+- Config file on host: `config.local.js`
 
-The console should initially point only to `Season-dev`. Staging can be enabled later with explicit config and release-governance checks.
+Deploy only static files:
+
+- `.htaccess`
+- `index.html`
+- `styles.css`
+- `app.js`
+- `config.local.js`
+
+The deployed `config.local.js` may contain a browser-safe Supabase publishable/anon key. It must never contain a service-role key.
+
+Staging can be enabled later with explicit config and release-governance checks.
 
 ## Security Notes
 

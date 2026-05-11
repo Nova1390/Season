@@ -1,6 +1,6 @@
 # Catalog Admin Console Plan
 
-Status: first implementation started.
+Status: first static console deployed to dev-backed catalog subdomain.
 
 Season should not put catalog governance tools inside the consumer mobile app. The catalog agent needs an operator surface, but that surface belongs in a separate web console that can serve iOS, Android, and backend operations equally.
 
@@ -10,13 +10,17 @@ Use a separate web console folder:
 
 - `admin-console/`
 
-Recommended host:
-
-- `admin.seasonapp.it`
-
-Alternative host if the scope remains catalog-only:
+Selected host:
 
 - `catalog.seasonapp.it`
+
+Current hosting path:
+
+- `/home/u280052083/domains/seasonapp.it/public_html/catalog`
+
+Current backend target:
+
+- `Season-dev`
 
 ## Why Not In-App
 
@@ -57,13 +61,12 @@ The first static console supports:
 
 Phase 1:
 
-- local only;
-- point at `Season-dev`;
+- deployed to `https://catalog.seasonapp.it/`;
+- points at `Season-dev`;
 - validate RPC permissions and UX with a catalog admin account.
 
 Phase 2:
 
-- deploy static console to a protected subdomain;
 - keep environment config separate from source code;
 - add HTTP basic protection or hosting-level access control if available.
 
