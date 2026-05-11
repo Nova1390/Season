@@ -386,6 +386,117 @@ p {
   font-size: 12px;
 }
 
+.run-result-card {
+  border-color: rgba(77, 107, 61, 0.35);
+}
+
+.run-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.run-metrics div,
+.readiness-main,
+.pipeline-node {
+  background: #fbf7ef;
+}
+
+.run-metrics div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.run-metrics span,
+.pipeline-node span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.run-metrics strong {
+  font-size: 18px;
+  word-break: break-word;
+}
+
+.readiness-card.ready {
+  border-color: rgba(73, 111, 58, 0.38);
+}
+
+.readiness-card.idle {
+  border-color: var(--line);
+}
+
+.readiness-main {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.readiness-main div {
+  display: grid;
+  gap: 2px;
+  border-right: 1px solid var(--line);
+  padding-right: 14px;
+}
+
+.readiness-main strong {
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.readiness-main span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pipeline-flow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pipeline-node {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-height: 68px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.pipeline-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  width: 8px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.pipeline-node strong {
+  font-size: 22px;
+}
+
+.pipeline-node.ok {
+  border-color: rgba(73, 111, 58, 0.35);
+  background: rgba(73, 111, 58, 0.07);
+}
+
+.pipeline-node.warning {
+  border-color: rgba(166, 106, 32, 0.35);
+  background: rgba(166, 106, 32, 0.07);
+}
+
 .diagnostic-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -576,6 +687,21 @@ p {
   line-height: 1.45;
 }
 
+.details-block {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.details-block summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.details-block .json-block {
+  margin-top: 8px;
+}
+
 .review-note {
   display: grid;
   gap: 8px;
@@ -614,10 +740,27 @@ p {
   .summary,
   .filters,
   .worker-run-form,
+  .run-metrics,
+  .pipeline-flow,
   .ops-panel > header,
   .worker-job header,
   .diagnostic-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pipeline-node::after {
+    display: none;
+  }
+
+  .readiness-main {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-main div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding-right: 0;
+    padding-bottom: 12px;
   }
 
   .ops-panel > header,

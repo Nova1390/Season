@@ -88,6 +88,7 @@ Implemented dev follow-up:
 - the Operations section can start bounded worker runs for `low_risk_apply_batch` dry-run and small `enrichment_draft_batch` jobs;
 - real apply is intentionally not exposed as a console action.
 - low-risk dry-run zero-result states are explained through `get_catalog_agent_auto_apply_diagnostics()`, so operators can distinguish clean backlog from blocked proposals.
+- Operations should prioritize visual summaries and hide raw JSON behind details panels unless an operator needs debugging data.
 
 ## Folder Ownership
 

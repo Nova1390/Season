@@ -214,19 +214,39 @@ function buildWorkerPayload({ workerName, limit, sourceDomain }) {
 }
 
 function renderWorkerRunResult(result) {
+  const details = result.details ?? {};
+  const topSummary = details.summary ?? {};
+  const workerSummary = topSummary.worker_summary ?? details.worker_result?.summary ?? {};
+  const runId = details.run_id ?? details.worker_result?.agent_run_id ?? "none";
+  const jobId = details.worker_job_id ?? details.worker_result?.agent_worker_job_id ?? "none";
+  const workerName = topSummary.worker_name ?? details.worker_result?.worker ?? "worker";
+  const mode = workerSummary.mode ?? (details.worker_result?.dry_run ? "dry_run" : "run");
+  const total = Number(workerSummary.total ?? 0);
+  const failed = Number(workerSummary.failed ?? 0);
+  const applied = Number(workerSummary.applied ?? 0);
+  const durationMs = Number(topSummary.duration_ms ?? workerSummary.duration_ms ?? 0);
+
   elements.workerRunResult.hidden = false;
   elements.workerRunResult.innerHTML = `
-    <article class="worker-job ${result.ok ? "" : "audit-record"}">
+    <article class="worker-job run-result-card ${result.ok ? "" : "audit-record"}">
       <header>
         <div>
           <strong>${escapeHTML(result.message)}</strong>
-          <span>${escapeHTML(result.status)}</span>
+          <span>${escapeHTML(workerName)} · ${escapeHTML(mode)}</span>
         </div>
         <div class="badge-line">
           ${badge(result.status)}
         </div>
       </header>
-      ${result.details ? jsonBlock(result.details) : ""}
+      <div class="run-metrics">
+        ${metricCell("Run", `#${runId}`)}
+        ${metricCell("Job", `#${jobId}`)}
+        ${metricCell("Eligible", total)}
+        ${metricCell("Applied", applied)}
+        ${metricCell("Failed", failed)}
+        ${metricCell("Duration", formatDuration(durationMs))}
+      </div>
+      ${result.details ? detailsBlock("Raw worker response", result.details) : ""}
     </article>
   `;
 }
@@ -485,8 +505,11 @@ function renderAutoApplyDiagnostics(diagnostics) {
   const readyCount = Number(diagnostics.ready_for_low_risk_apply ?? 0);
   const readyPreview = Array.isArray(diagnostics.ready_preview) ? diagnostics.ready_preview : [];
 
+  const terminalCount = Number(counts.auto_applied ?? 0) + Number(counts.superseded ?? 0) + Number(counts.rejected ?? 0);
+  const readinessTone = readyCount > 0 ? "ready" : "idle";
+
   elements.autoApplyDiagnostics.innerHTML = `
-    <article class="worker-job">
+    <article class="worker-job readiness-card ${readinessTone}">
       <header>
         <div>
           <strong>Low-risk apply readiness</strong>
@@ -496,6 +519,22 @@ function renderAutoApplyDiagnostics(diagnostics) {
           ${badge(`${readyCount}_ready`)}
         </div>
       </header>
+      <div class="readiness-main">
+        <div>
+          <strong>${escapeHTML(readyCount)}</strong>
+          <span>ready now</span>
+        </div>
+        <p>${escapeHTML(diagnostics.explanation ?? "No explanation available.")}</p>
+      </div>
+      <div class="pipeline-flow" aria-label="Low-risk apply pipeline">
+        ${pipelineNode("Draft", counts.draft)}
+        ${pipelineNode("Queued", counts.queued_for_validation)}
+        ${pipelineNode("Review", counts.needs_human_review)}
+        ${pipelineNode("Failed", counts.failed_validation, "warning")}
+        ${pipelineNode("Validated", counts.validated_total)}
+        ${pipelineNode("Ready", readyCount, readyCount > 0 ? "ok" : "neutral")}
+        ${pipelineNode("Handled", terminalCount, "ok")}
+      </div>
       <div class="diagnostic-grid">
         ${diagnosticCell("Ready", readyCount)}
         ${diagnosticCell("Draft", counts.draft)}
@@ -506,7 +545,7 @@ function renderAutoApplyDiagnostics(diagnostics) {
         ${diagnosticCell("Not eligible", counts.validated_not_auto_apply_eligible)}
         ${diagnosticCell("Auto-applied", counts.auto_applied)}
       </div>
-      ${readyPreview.length > 0 ? jsonBlock({ ready_preview: readyPreview }) : ""}
+      ${readyPreview.length > 0 ? detailsBlock("Ready preview", { ready_preview: readyPreview }) : ""}
     </article>
   `;
 }
@@ -807,9 +846,27 @@ function detailCell(label, value) {
   `;
 }
 
+function metricCell(label, value) {
+  return `
+    <div>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value ?? 0)}</strong>
+    </div>
+  `;
+}
+
 function diagnosticCell(label, value) {
   return `
     <div>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value ?? 0)}</strong>
+    </div>
+  `;
+}
+
+function pipelineNode(label, value, tone = "neutral") {
+  return `
+    <div class="pipeline-node ${escapeHTML(tone)}">
       <span>${escapeHTML(label)}</span>
       <strong>${escapeHTML(value ?? 0)}</strong>
     </div>
@@ -922,6 +979,15 @@ function jsonBlock(value) {
   return `<pre class="json-block">${escapeHTML(JSON.stringify(value, null, 2))}</pre>`;
 }
 
+function detailsBlock(label, value) {
+  return `
+    <details class="details-block">
+      <summary>${escapeHTML(label)}</summary>
+      ${jsonBlock(value)}
+    </details>
+  `;
+}
+
 function learningMemorySummary(value) {
   const metadata = value?.metadata ?? {};
   const termLearnings = value?.term_learnings ?? {};
@@ -992,6 +1058,13 @@ function formatCurrency(value) {
     currency: "USD",
     maximumFractionDigits: 4
   }).format(parsed);
+}
+
+function formatDuration(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return "0 ms";
+  if (parsed < 1000) return `${Math.round(parsed)} ms`;
+  return `${(parsed / 1000).toFixed(1)} s`;
 }
 
 function escapeHTML(value) {
