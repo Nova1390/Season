@@ -5,8 +5,8 @@ Proposal-only Catalog Governance Agent runner.
 This Edge Function is the first runtime surface for the autonomous catalog agent. It is intentionally conservative:
 
 - reads the bounded `get_catalog_agent_triage_snapshot(...)` work packet;
-- skips items with recent agent proposals;
-- attaches compact learning memory for each eligible term;
+- attaches compact learning memory for each candidate term;
+- skips items with recent agent proposals unless newer learning memory asks the agent to reconsider;
 - calls OpenAI Responses API with `gpt-5.4-mini` by default;
 - validates strict JSON output;
 - stores proposals in `catalog_agent_proposals`;
@@ -24,6 +24,8 @@ The model receives:
 - each work item `context.relevant_learning_memory`.
 
 The memory is advisory. The model must still use only targets present in the current work item and every persisted proposal remains subject to deterministic validation before any apply step.
+
+Recent proposal dedupe happens after learning memory is attached. This prevents repeated LLM calls for unchanged work, but still lets an operator note or review outcome reopen a term when the new lesson was created after the last live proposal.
 
 ## Required Secrets
 

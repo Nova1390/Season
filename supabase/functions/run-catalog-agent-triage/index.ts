@@ -191,7 +191,9 @@ Deno.serve(async (request) => {
 
     const snapshot = await fetchSnapshot(adminClient, limit, sourceDomain, includeNonNew);
     const workItems = readWorkItems(snapshot).slice(0, limit);
-    const { eligibleItems, skippedRecent } = splitRecentProposalSkips(workItems, RECENT_PROPOSAL_DAYS);
+    const learningContext = await fetchLearningContext(adminClient, workItems);
+    const enrichedWorkItems = attachLearningMemory(workItems, learningContext);
+    const { eligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
 
     if (eligibleItems.length === 0) {
       const summary = {
@@ -200,6 +202,7 @@ Deno.serve(async (request) => {
         proposals_created: 0,
         skipped_recent_proposal: skippedRecent.length,
         dry_run: dryRun,
+        learning_memory: summarizeLearningContext(learningContext),
         budget: budgetSummary(),
         duration_ms: elapsedMs(startedAt),
       };
@@ -208,10 +211,7 @@ Deno.serve(async (request) => {
       return jsonResponseWithStatus({ ok: true, run_id: runId, summary }, 200);
     }
 
-    const learningContext = await fetchLearningContext(adminClient, eligibleItems);
-    const enrichedEligibleItems = attachLearningMemory(eligibleItems, learningContext);
-
-    const providerResult = await invokeProvider(snapshot, enrichedEligibleItems, learningContext);
+    const providerResult = await invokeProvider(snapshot, eligibleItems, learningContext);
     const allowedTexts = new Set(eligibleItems.map((item) => normalizeText(item.normalized_text)));
     const validation = validateCatalogAgentTriageOutput(providerResult.parsed, allowedTexts);
     if (!validation.ok || !validation.value) {
@@ -654,7 +654,7 @@ function splitRecentProposalSkips(items: WorkItem[], recentDays: number): {
       const status = normalizeText(proposal.status);
       if (["failed_validation", "rejected", "superseded"].includes(status)) return false;
       const timestamp = Date.parse(proposal.created_at);
-      return Number.isFinite(timestamp) && timestamp >= cutoff;
+      return Number.isFinite(timestamp) && timestamp >= cutoff && !hasLearningMemoryAfter(item, timestamp);
     });
 
     if (hasRecentProposal) {
@@ -665,6 +665,16 @@ function splitRecentProposalSkips(items: WorkItem[], recentDays: number): {
   }
 
   return { eligibleItems, skippedRecent };
+}
+
+function hasLearningMemoryAfter(item: WorkItem, proposalTimestamp: number): boolean {
+  const learnings = readNestedArray(item, ["context", "relevant_learning_memory"]);
+
+  return learnings.some((learning) => {
+    if (!isRecord(learning) || typeof learning.created_at !== "string") return false;
+    const learningTimestamp = Date.parse(learning.created_at);
+    return Number.isFinite(learningTimestamp) && learningTimestamp > proposalTimestamp;
+  });
 }
 
 function compactWorkItem(item: WorkItem): Record<string, unknown> {

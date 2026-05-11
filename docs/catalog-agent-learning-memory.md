@@ -94,10 +94,13 @@ The proposal-only Edge Function now reads learning memory before calling the LLM
 Runtime flow:
 
 - fetch bounded triage snapshot;
-- fetch compact learning context for the eligible normalized texts;
+- fetch compact learning context for the candidate normalized texts;
 - attach term-specific lessons to each work item as `context.relevant_learning_memory`;
+- skip recent unchanged proposals only after learning memory is attached;
 - attach global lessons as `global_learning_memory`;
 - include `learning_memory_policy` so the model understands status semantics.
+
+If a term already has a recent live proposal, the agent normally skips it to control cost and noise. A newer learning-memory entry reopens the term for another proposal-only pass, because the agent now has information it did not have during the previous decision.
 
 Included learning statuses:
 
