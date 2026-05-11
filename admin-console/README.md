@@ -83,6 +83,16 @@ Deploy only static files:
 
 The deployed `config.local.js` may contain a browser-safe Supabase publishable/anon key. It must never contain a service-role key.
 
+SSH deploy is configured with the dedicated local key:
+
+```bash
+scp -i ~/.ssh/codex-season-website-deploy -P 65002 \
+  admin-console/index.html \
+  admin-console/app.js \
+  admin-console/styles.css \
+  u280052083@82.198.227.60:/home/u280052083/domains/seasonapp.it/public_html/catalog/
+```
+
 Staging can be enabled later with explicit config and release-governance checks.
 
 ## Security Notes
