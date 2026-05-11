@@ -244,6 +244,20 @@ The future validator must reject proposals when:
 
 Phase 1 does not implement validation logic; it stores enough data to make validation deterministic later.
 
+Phase 2 deterministic validation is implemented by:
+
+- `supabase/migrations/20260511103000_catalog_agent_deterministic_validator.sql`
+- `docs/catalog-agent-deterministic-validator.md`
+
+Validator RPCs:
+
+- `public.validate_catalog_agent_proposal(...)`
+- `public.validate_catalog_agent_proposal_batch(...)`
+
+Important boundary:
+
+The validator can only update proposal status, validation errors, and proposal events. It cannot apply aliases, create canonical ingredients, update localizations, mutate recipes, or reconcile observations.
+
 ## 10. Proposal Persistence Contract
 
 Implemented by:

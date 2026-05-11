@@ -21,6 +21,7 @@ Current implementation status:
 - The first proposal-only runtime is `supabase/functions/run-catalog-agent-triage`.
 - The first runtime calls the OpenAI Responses API through a bounded Edge Function, stores proposals only, logs token usage, and skips recent duplicate work.
 - The first backend Review Inbox RPCs are documented in `docs/catalog-agent-review-inbox.md`.
+- The first deterministic validator RPCs are documented in `docs/catalog-agent-deterministic-validator.md`.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
 - No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.

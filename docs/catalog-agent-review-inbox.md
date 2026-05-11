@@ -94,6 +94,16 @@ Admins should queue for validation only when:
 - identity reasoning looks sound;
 - any ambiguity is acceptable for deterministic validator checks.
 
+## Next Stage
+
+Queued proposals are handled by the deterministic validator:
+
+- `docs/catalog-agent-deterministic-validator.md`
+- `public.validate_catalog_agent_proposal(...)`
+- `public.validate_catalog_agent_proposal_batch(...)`
+
+The validator can mark proposals `validated` or `failed_validation`, but it still cannot apply catalog changes.
+
 ## Current Autonomy Level
 
 Level 1.5: propose plus human triage.
