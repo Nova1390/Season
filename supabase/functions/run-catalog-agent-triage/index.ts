@@ -44,8 +44,8 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v1";
-const PROMPT_VERSION = "catalog-agent-triage-v1";
+const AGENT_VERSION = "proposal-only-v2-learning-memory";
+const PROMPT_VERSION = "catalog-agent-triage-v2-learning-memory";
 
 const SUPABASE_URL = env("SUPABASE_URL");
 const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
@@ -208,7 +208,10 @@ Deno.serve(async (request) => {
       return jsonResponseWithStatus({ ok: true, run_id: runId, summary }, 200);
     }
 
-    const providerResult = await invokeProvider(snapshot, eligibleItems);
+    const learningContext = await fetchLearningContext(adminClient, eligibleItems);
+    const enrichedEligibleItems = attachLearningMemory(eligibleItems, learningContext);
+
+    const providerResult = await invokeProvider(snapshot, enrichedEligibleItems, learningContext);
     const allowedTexts = new Set(eligibleItems.map((item) => normalizeText(item.normalized_text)));
     const validation = validateCatalogAgentTriageOutput(providerResult.parsed, allowedTexts);
     if (!validation.ok || !validation.value) {
@@ -247,6 +250,7 @@ Deno.serve(async (request) => {
       estimated_cost_usd: cost,
       model: OPENAI_MODEL,
       prompt_version: PROMPT_VERSION,
+      learning_memory: summarizeLearningContext(learningContext),
       provider_duration_ms: providerResult.durationMs,
       budget: budgetSummary(),
       duration_ms: elapsedMs(startedAt),
@@ -445,12 +449,42 @@ async function fetchSnapshot(
   return data;
 }
 
+async function fetchLearningContext(
+  adminClient: ReturnType<typeof createClient>,
+  eligibleItems: WorkItem[],
+): Promise<Record<string, unknown>> {
+  const normalizedTexts = eligibleItems
+    .map((item) => normalizeText(item.normalized_text))
+    .filter((text) => text.length > 0);
+
+  if (normalizedTexts.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await adminClient.rpc("get_catalog_agent_learning_context", {
+    p_normalized_texts: normalizedTexts,
+    p_limit_per_term: 3,
+  });
+
+  if (error) {
+    throw new Error(`learning_context_failed:${error.message}`);
+  }
+  if (!isRecord(data)) {
+    throw new Error("learning_context_failed:payload_not_object");
+  }
+
+  return data;
+}
+
 async function invokeProvider(
   snapshot: Record<string, unknown>,
   eligibleItems: WorkItem[],
+  learningContext: Record<string, unknown>,
 ): Promise<ProviderInvocationResult> {
   const compactPacket = {
     policy: snapshot.policy,
+    learning_memory_policy: readNestedRecord(learningContext, ["runtime_instruction"]),
+    global_learning_memory: readNestedArray(learningContext, ["global_learnings"]).slice(0, 6),
     work_items: eligibleItems.map(compactWorkItem),
   };
 
@@ -655,8 +689,43 @@ function compactWorkItem(item: WorkItem): Record<string, unknown> {
       existing_alias_matches: readNestedArray(item, ["context", "existing_alias_matches"]).slice(0, 8),
       previous_catalog_decisions: readNestedArray(item, ["context", "previous_catalog_decisions"]).slice(0, 3),
       previous_agent_proposals: readNestedArray(item, ["context", "previous_agent_proposals"]).slice(0, 3),
+      relevant_learning_memory: readNestedArray(item, ["context", "relevant_learning_memory"]).slice(0, 3),
     },
     agent_instruction: item.agent_instruction,
+  };
+}
+
+function attachLearningMemory(items: WorkItem[], learningContext: Record<string, unknown>): WorkItem[] {
+  const termLearnings = readNestedRecord(learningContext, ["term_learnings"]);
+
+  return items.map((item) => {
+    const normalizedText = normalizeText(item.normalized_text);
+    const relevantMemory = Array.isArray(termLearnings[normalizedText])
+      ? (termLearnings[normalizedText] as unknown[])
+      : [];
+
+    return {
+      ...item,
+      context: {
+        ...readNestedRecord(item, ["context"]),
+        relevant_learning_memory: relevantMemory,
+      },
+    };
+  });
+}
+
+function summarizeLearningContext(learningContext: Record<string, unknown>): Record<string, unknown> {
+  const metadata = readNestedRecord(learningContext, ["metadata"]);
+  const globalLearnings = readNestedArray(learningContext, ["global_learnings"]);
+  const termLearnings = readNestedRecord(learningContext, ["term_learnings"]);
+  return {
+    source: metadata.source ?? null,
+    terms_requested: metadata.terms_requested ?? null,
+    terms_with_learning: metadata.terms_with_learning ?? null,
+    global_learning_count: globalLearnings.length,
+    term_learning_count: Object.values(termLearnings)
+      .filter(Array.isArray)
+      .reduce((total, learnings) => total + learnings.length, 0),
   };
 }
 

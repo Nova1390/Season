@@ -25,6 +25,7 @@ Updated runtime contract:
 
 - `supabase/functions/run-catalog-agent-triage/index.ts`
 - `supabase/functions/run-catalog-agent-triage/llm_contract.ts`
+- `supabase/migrations/20260511123000_catalog_agent_learning_context.sql`
 
 The snapshot source is now:
 
@@ -45,6 +46,7 @@ Each work item can include:
 - broader canonical candidates;
 - broader alias candidates;
 - semantic disambiguation instructions.
+- relevant learning memory from prior review, validation, apply, or operator observations.
 
 ## Reasoning Rule
 
@@ -61,6 +63,19 @@ If the term is clearly an ingredient but target is ambiguous, the agent should r
 - context-based rationale.
 
 It should not return `ignore_noise` or vague low-confidence output.
+
+## Learning Memory Rule
+
+The Edge Function augments eligible work items with `context.relevant_learning_memory` before calling the LLM.
+
+This memory is not a direct mutation policy. It is prior operational evidence.
+
+The agent should:
+
+- follow `implemented` and `accepted` lessons unless the current packet contains stronger contradictory evidence;
+- treat `needs_review` lessons as caution signals;
+- avoid repeating prior failed or ambiguous recommendations;
+- cite the `learning_id` in `evidence` when a lesson materially changes the decision.
 
 ## Retry Rule
 

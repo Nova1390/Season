@@ -24,6 +24,7 @@ Learning memory turns important outcomes into reusable artifacts:
 Implemented by:
 
 - `supabase/migrations/20260511120000_catalog_agent_structured_learning.sql`
+- `supabase/migrations/20260511123000_catalog_agent_learning_context.sql`
 
 Table:
 
@@ -33,6 +34,7 @@ RPCs:
 
 - `public.record_catalog_agent_learning(...)`
 - `public.get_catalog_agent_learning_memory(...)`
+- `public.get_catalog_agent_learning_context(...)`
 - `public.review_catalog_agent_learning(...)`
 
 ## Learning Types
@@ -84,3 +86,29 @@ It does not:
 - change prompt behavior automatically.
 
 Accepted learnings must still be translated into explicit prompt, validator, policy, or evaluation-set changes.
+
+## Runtime Context
+
+The proposal-only Edge Function now reads learning memory before calling the LLM.
+
+Runtime flow:
+
+- fetch bounded triage snapshot;
+- fetch compact learning context for the eligible normalized texts;
+- attach term-specific lessons to each work item as `context.relevant_learning_memory`;
+- attach global lessons as `global_learning_memory`;
+- include `learning_memory_policy` so the model understands status semantics.
+
+Included learning statuses:
+
+- `implemented`: behavior/policy already changed; follow it;
+- `accepted`: human-reviewed lesson; strongly prefer it unless current evidence contradicts it;
+- `needs_review`: useful caution from an observed failure or operator note.
+
+Excluded learning statuses:
+
+- `draft`
+- `rejected`
+- `superseded`
+
+Runtime learning memory still does not mutate catalog data. It only changes the evidence available to the proposal-only model.

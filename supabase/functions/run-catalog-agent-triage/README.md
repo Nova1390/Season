@@ -6,11 +6,24 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 
 - reads the bounded `get_catalog_agent_triage_snapshot(...)` work packet;
 - skips items with recent agent proposals;
+- attaches compact learning memory for each eligible term;
 - calls OpenAI Responses API with `gpt-5.4-mini` by default;
 - validates strict JSON output;
 - stores proposals in `catalog_agent_proposals`;
 - records run/proposal events;
 - never mutates catalog identity, aliases, localizations, recipes, or reconciliation state.
+
+## Learning Memory
+
+Before the provider call, the function asks `public.get_catalog_agent_learning_context(...)` for term-specific and global lessons.
+
+The model receives:
+
+- `global_learning_memory`;
+- `learning_memory_policy`;
+- each work item `context.relevant_learning_memory`.
+
+The memory is advisory. The model must still use only targets present in the current work item and every persisted proposal remains subject to deterministic validation before any apply step.
 
 ## Required Secrets
 
@@ -61,7 +74,14 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
       "outputTokens": 500,
       "totalTokens": 1500
     },
-    "estimated_cost_usd": null
+    "estimated_cost_usd": null,
+    "learning_memory": {
+      "source": "catalog_agent_learning_context_v1",
+      "terms_requested": 8,
+      "terms_with_learning": 1,
+      "global_learning_count": 0,
+      "term_learning_count": 1
+    }
   }
 }
 ```

@@ -66,6 +66,7 @@ Your mission:
 - reduce unresolved custom ingredient backlog
 - handle multilingual ambiguity carefully
 - distinguish ingredient-existence confidence from canonical-target confidence
+- use learning memory to avoid repeating known mistakes
 - propose clear, auditable next actions
 - escalate uncertainty
 
@@ -137,6 +138,10 @@ Decision policy:
 11) If a term is clearly an ingredient but canonical target is ambiguous, do not call it low-confidence noise. Return needs_human_review with candidate targets and missing evidence in evidence/blocking_questions.
 12) Use recipe_context title, nearby ingredients, quantities, units, source, and step snippets to disambiguate terms such as yeast/baking powder/sourdough or generic vs specific variants.
 13) For terms like "lievito", separate "is ingredient" from "which canonical leavening agent". Pick approve_alias only when recipe context and provided candidates make one target safe.
+14) Read global_learning_memory and each work item's relevant_learning_memory before deciding.
+15) Treat learning memory as operational memory: implemented and accepted lessons are strong guidance; needs_review lessons are caution signals.
+16) Do not repeat a prior failed/rejected/ambiguous recommendation unless the current work item contains new evidence that resolves the recorded problem.
+17) When learning memory changes your decision, mention the learning_id in evidence.
 `;
 
 export function validateCatalogAgentTriageOutput(

@@ -131,6 +131,7 @@ Phase 1 mode:
 - `proposal_only`
 - Runtime: `supabase/functions/run-catalog-agent-triage`
 - Initial environment: `Season-dev` only while TestFlight staging remains release-sensitive.
+- Runtime memory: `public.get_catalog_agent_learning_context(...)`
 
 Budget controls required for proposal-only runtime:
 
@@ -380,12 +381,14 @@ Implementation note:
 Structured learning memory is implemented by:
 
 - `supabase/migrations/20260511120000_catalog_agent_structured_learning.sql`
+- `supabase/migrations/20260511123000_catalog_agent_learning_context.sql`
 - `docs/catalog-agent-learning-memory.md`
 
 Learning RPCs:
 
 - `public.record_catalog_agent_learning(...)`
 - `public.get_catalog_agent_learning_memory(...)`
+- `public.get_catalog_agent_learning_context(...)`
 - `public.review_catalog_agent_learning(...)`
 
 Automatic learning sources:
@@ -395,7 +398,7 @@ Automatic learning sources:
 - validator failures
 - manual apply failures
 
-Learning artifacts are advisory until reviewed/accepted and translated into explicit prompt, validator, policy, or evaluation-set changes.
+Learning artifacts are advisory. The runtime may pass `needs_review`, `accepted`, and `implemented` lessons to the LLM as memory, but the agent must still obey current policy, use only current work-item target IDs, and pass deterministic validation before anything can be applied.
 
 ## 12. Data Access Contract
 
@@ -421,6 +424,7 @@ Context-enriched reasoning rule:
 
 - The agent must separate ingredient-existence confidence from canonical-target confidence.
 - Terms that are clearly ingredients but ambiguous across canonical targets should become specific `needs_human_review` proposals with candidate targets and blocking questions, not vague low-confidence output.
+- The agent must read `global_learning_memory` and `context.relevant_learning_memory` before proposing, and should cite `learning_id` in evidence when a lesson influences the decision.
 
 Allowed snapshot data:
 
