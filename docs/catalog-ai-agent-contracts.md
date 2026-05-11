@@ -277,6 +277,30 @@ The proposal-only Edge Function writes to these tables but still does not valida
 - `catalog_agent_proposals`
 - `catalog_agent_proposal_events`
 
+## 10.1 Review Inbox Contract
+
+Implemented by:
+
+- `supabase/migrations/20260511100000_catalog_agent_review_inbox.sql`
+- `docs/catalog-agent-review-inbox.md`
+
+RPCs:
+
+- `public.get_catalog_agent_review_inbox(...)`: admin-only read contract for proposal review.
+- `public.review_catalog_agent_proposal(...)`: admin-only proposal lifecycle transition.
+
+Allowed review transitions:
+
+- `reject`
+- `defer`
+- `request_more_evidence`
+- `queue_for_validation`
+- `mark_needs_human_review`
+
+Important boundary:
+
+These RPCs can update proposal status and insert proposal events only. They must not apply aliases, create canonical ingredients, update localizations, mutate recipes, or reconcile observations.
+
 ## 11. Continuous Improvement Contract
 
 The agent must leave a structured learning trail when it discovers or causes an error.
