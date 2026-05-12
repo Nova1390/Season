@@ -43,6 +43,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Dev context quality is `10/10` after retargeting the legacy small tomato alias `pomodorini ciliegino -> pomodorini`.
 - Dev reached `4.0 supervised autonomy`: the agent can run a bounded multi-pass LLM dry-run, use learning/context guardrails, record usage, and remain non-mutating by default.
 - The autonomy path from `4.0` through `8.0+` is documented in `docs/catalog-agent-autonomy-roadmap.md`.
+- The first `4.5` persistence guard is deployed to `Season-dev`: `dry_run=false` fails closed unless `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`.
 - `catalog.seasonapp.it` was restored after the remote subdomain folder was missing; the deployed console now returns HTTP `200`.
 
 ## Dev Training Import
@@ -574,3 +575,27 @@ Interpretation:
 - The bounded multi-pass LLM path works when an eligible item is available.
 - Dry-run mode correctly avoids writing proposals or catalog mutations.
 - This is the current `4.0 supervised autonomy` level: useful reasoning is proven, but real apply and scheduled autonomous mutation remain disabled.
+
+## 2026-05-12 Proposal Persistence Gate 4.5 Start
+
+Environment: `Season-dev` only. Staging was not touched.
+
+Implemented and deployed:
+
+- `run-catalog-agent-triage` agent version `proposal-only-v4.5-quality-gate`.
+- New secret flag: `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`, default `false`.
+- If `dry_run=false` and persistence is not enabled, the function returns `PROPOSAL_PERSISTENCE_DISABLED` before calling the LLM or inserting proposals.
+- Runtime proposal quality gate added before proposal insert.
+- The gate checks evidence, confidence, grounded targets, create-canonical completeness, concrete human-review questions, and unsafe actionable risk.
+
+Smoke result:
+
+- Temporary dev operator token was set for the test and removed afterwards.
+- `dry_run=false` with persistence disabled returned `PROPOSAL_PERSISTENCE_DISABLED` as expected.
+- A follow-up LLM dry-run was attempted, but the daily run budget correctly stopped it with `DAILY_RUN_BUDGET_EXHAUSTED`.
+- Dev was restored to `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and conservative daily run budget.
+
+Interpretation:
+
+- The 4.5 fail-closed guard is proven.
+- The LLM-side quality-gate summary still needs a fresh run window before 4.5 can be marked complete.

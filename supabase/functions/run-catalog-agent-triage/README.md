@@ -10,7 +10,7 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 - calls OpenAI Responses API with `gpt-5.4-mini` by default;
 - uses a bounded multi-pass reasoning loop by default: semantic profiler, optional risk reviewer, final decision writer;
 - validates strict JSON output, including a structured `semantic_profile` for each proposal;
-- stores proposals in `catalog_agent_proposals`;
+- stores proposals in `catalog_agent_proposals` only when proposal persistence is explicitly enabled and the proposal quality gate passes;
 - records run/proposal events;
 - records provider token usage in `catalog_ai_usage_events`;
 - never mutates catalog identity, aliases, localizations, recipes, or reconciliation state.
@@ -69,6 +69,38 @@ Before validation, the function performs one safe repair class:
 
 This prevents one incomplete proposal from discarding an otherwise useful run, without weakening catalog safety.
 
+## Proposal Persistence Quality Gate
+
+`dry_run=true` remains the default safe operating style for smoke tests.
+
+When `dry_run=false`, the function now fails closed unless:
+
+```text
+CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true
+```
+
+This prevents accidental proposal inserts when an operator intended a dry-run.
+
+Even with persistence enabled, valid JSON is not enough. Every proposal is evaluated by a runtime quality gate before insert.
+
+The gate blocks proposals when, for example:
+
+- evidence is missing;
+- alias/localization confidence is below the configured runtime threshold;
+- a target slug/id is not grounded in the work packet context;
+- `create_canonical` lacks safe slug, localized name, language, semantic family/category, or enough confidence;
+- `needs_human_review` does not include a concrete blocking/open question;
+- unknown or critical risk is attached to an actionable proposal.
+
+The run still completes when weak proposals are blocked. The summary records:
+
+- `proposals_returned`;
+- `proposals_persistable`;
+- `proposals_blocked_by_quality_gate`;
+- `proposal_quality_gate` with issue codes and counts.
+
+This is the first `4.5 governed proposal autonomy` guardrail: the agent may persist work only when the output is both structurally valid and operationally reviewable.
+
 ## Semantic Profile
 
 Every proposal now carries a `semantic_profile` in the LLM contract.
@@ -118,6 +150,7 @@ Implemented learning memory can make this stronger. If accepted/implemented lear
 - `CATALOG_AGENT_MAX_RUNS_PER_DAY`: defaults to `3`, capped at `24`.
 - `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`: defaults to `7`.
 - `CATALOG_AGENT_PROVIDER_TIMEOUT_MS`: defaults to `20000`.
+- `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`: defaults to `false`; required for `dry_run=false`.
 - `CATALOG_AGENT_REASONING_MODE`: defaults to `multi_pass`; set `single_pass` for the legacy one-call path.
 - `CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN`: defaults to `3`, capped at `5`.
 - `CATALOG_AGENT_RISK_REVIEW_ENABLED`: defaults to `true`.

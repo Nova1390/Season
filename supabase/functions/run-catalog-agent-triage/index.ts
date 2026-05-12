@@ -55,7 +55,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4-multi-pass";
+const AGENT_VERSION = "proposal-only-v4.5-quality-gate";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -72,6 +72,7 @@ const MAX_ITEMS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_ITEMS_PER_
 const MAX_RUNS_PER_DAY = boundedInteger(numberEnv("CATALOG_AGENT_MAX_RUNS_PER_DAY", 3), 1, 24);
 const RECENT_PROPOSAL_DAYS = boundedInteger(numberEnv("CATALOG_AGENT_RECENT_PROPOSAL_DAYS", 7), 1, 90);
 const PROVIDER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_PROVIDER_TIMEOUT_MS", 20000), 1000, 60000);
+const PROPOSAL_PERSISTENCE_ENABLED = env("CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED", "false").toLowerCase() === "true";
 const REASONING_MODE = env("CATALOG_AGENT_REASONING_MODE", "multi_pass").toLowerCase() === "single_pass"
   ? "single_pass"
   : "multi_pass";
@@ -130,6 +131,10 @@ Deno.serve(async (request) => {
     const sourceDomain = normalizeNullableText(payload.source_domain);
     const includeNonNew = payload.include_non_new === true;
     const dryRun = payload.dry_run === true;
+
+    if (!dryRun && !PROPOSAL_PERSISTENCE_ENABLED) {
+      return errorJson(403, "PROPOSAL_PERSISTENCE_DISABLED", "Proposal persistence requires CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true.");
+    }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -300,9 +305,12 @@ Deno.serve(async (request) => {
     }
 
     const proposals = normalizeProposalStatuses(validation.value.proposals);
+    const qualityGate = evaluateProposalQuality(proposals, providerEligibleItems, dryRun);
+    await insertRunEvent(adminClient, runId, "proposal_quality_gate_evaluated", qualityGate.summary, auth.userId);
+
     const insertedProposalIDs = dryRun
       ? []
-      : await insertProposals(adminClient, runId, proposals, providerEligibleItems, repair.parsed, auth.userId);
+      : await insertProposals(adminClient, runId, qualityGate.persistableProposals, providerEligibleItems, repair.parsed, auth.userId);
 
     const cost = estimateCost(providerResult.usage);
     const summary = {
@@ -310,9 +318,12 @@ Deno.serve(async (request) => {
       items_eligible_before_retry: eligibleItems.length,
       items_sent_to_llm: providerEligibleItems.length,
       proposals_returned: proposals.length,
+      proposals_persistable: qualityGate.persistableProposals.length,
+      proposals_blocked_by_quality_gate: qualityGate.blockedProposals.length,
       proposals_created: insertedProposalIDs.length,
       skipped_recent_proposal: skippedRecent.length,
       dry_run: dryRun,
+      proposal_quality_gate: qualityGate.summary,
       usage: providerResult.usage,
       estimated_cost_usd: cost,
       model: OPENAI_MODEL,
@@ -366,11 +377,12 @@ Deno.serve(async (request) => {
       run_id: runId,
       summary,
       proposals: proposals.map((proposal, index) => ({
-        id: insertedProposalIDs[index] ?? null,
+        id: proposalInsertedId(proposal, qualityGate.persistableProposals, insertedProposalIDs),
         proposal_type: proposal.proposal_type,
         normalized_text: proposal.normalized_text,
         risk_level: proposal.risk_level,
         status: proposal.status,
+        quality_gate_status: qualityGate.acceptedIndexes.has(index) ? "persistable" : "blocked",
       })),
     }, 200);
   } catch (error) {
@@ -1271,6 +1283,203 @@ function addNullableNumbers(a: number | null, b: number | null): number | null {
   return (a ?? 0) + (b ?? 0);
 }
 
+type ProposalQualityIssue = {
+  proposal_index: number;
+  normalized_text: string;
+  code: string;
+  level: "error" | "warning";
+  message: string;
+};
+
+type ProposalQualityGateResult = {
+  persistableProposals: CatalogAgentProposalOutput[];
+  blockedProposals: CatalogAgentProposalOutput[];
+  acceptedIndexes: Set<number>;
+  issues: ProposalQualityIssue[];
+  summary: Record<string, unknown>;
+};
+
+function evaluateProposalQuality(
+  proposals: CatalogAgentProposalOutput[],
+  eligibleItems: WorkItem[],
+  dryRun: boolean,
+): ProposalQualityGateResult {
+  const itemByText = new Map(eligibleItems.map((item) => [normalizeText(item.normalized_text), item]));
+  const persistableProposals: CatalogAgentProposalOutput[] = [];
+  const blockedProposals: CatalogAgentProposalOutput[] = [];
+  const acceptedIndexes = new Set<number>();
+  const issues: ProposalQualityIssue[] = [];
+
+  proposals.forEach((proposal, index) => {
+    const proposalIssues = proposalQualityIssues(proposal, index, itemByText.get(normalizeText(proposal.normalized_text)));
+    issues.push(...proposalIssues);
+
+    const hasError = proposalIssues.some((issue) => issue.level === "error");
+    if (hasError) {
+      blockedProposals.push(proposal);
+      return;
+    }
+
+    acceptedIndexes.add(index);
+    persistableProposals.push(proposal);
+  });
+
+  return {
+    persistableProposals,
+    blockedProposals,
+    acceptedIndexes,
+    issues,
+    summary: {
+      mode: dryRun ? "dry_run" : "persistence",
+      persistence_enabled: PROPOSAL_PERSISTENCE_ENABLED,
+      proposals_returned: proposals.length,
+      proposals_persistable: persistableProposals.length,
+      proposals_blocked: blockedProposals.length,
+      error_count: issues.filter((issue) => issue.level === "error").length,
+      warning_count: issues.filter((issue) => issue.level === "warning").length,
+      issues: issues.slice(0, 25),
+    },
+  };
+}
+
+function proposalQualityIssues(
+  proposal: CatalogAgentProposalOutput,
+  index: number,
+  item: WorkItem | undefined,
+): ProposalQualityIssue[] {
+  const issues: ProposalQualityIssue[] = [];
+  const normalizedText = normalizeText(proposal.normalized_text);
+  const addIssue = (level: "error" | "warning", code: string, message: string) => {
+    issues.push({ proposal_index: index, normalized_text: normalizedText, code, level, message });
+  };
+
+  const semanticProfile = proposal.semantic_profile;
+  const proposalConfidence = typeof proposal.confidence_score === "number" ? proposal.confidence_score : null;
+  const semanticConfidence = typeof semanticProfile.confidence_score === "number" ? semanticProfile.confidence_score : null;
+  const hasProposalEvidence = Array.isArray(proposal.evidence) && proposal.evidence.length > 0;
+  const hasSemanticEvidence = Array.isArray(semanticProfile.evidence) && semanticProfile.evidence.length > 0;
+  const hasBlockingQuestions = Array.isArray(proposal.blocking_questions) && proposal.blocking_questions.some((text) => text.trim().length > 0);
+  const hasSemanticOpenQuestions = Array.isArray(semanticProfile.open_questions) && semanticProfile.open_questions.some((text) => text.trim().length > 0);
+  const hasConcreteEvidence = hasProposalEvidence || hasSemanticEvidence;
+
+  if (!item) {
+    addIssue("error", "missing_work_item", "Proposal text is not present in the eligible work packet.");
+  }
+
+  if (!hasConcreteEvidence) {
+    addIssue("error", "missing_evidence", "Persisted proposals require proposal evidence or semantic-profile evidence.");
+  }
+
+  if (proposal.rationale.trim().length < 40) {
+    addIssue("warning", "short_rationale", "Rationale is valid but too short for comfortable operator review.");
+  }
+
+  if (["unknown", "critical"].includes(proposal.risk_level) && proposal.proposal_type !== "needs_human_review") {
+    addIssue("error", "unsafe_actionable_risk", "Unknown or critical risk can only be persisted as needs_human_review.");
+  }
+
+  if (proposal.auto_apply_eligible && proposal.risk_level !== "low") {
+    addIssue("error", "auto_apply_requires_low_risk", "auto_apply_eligible requires low risk.");
+  }
+
+  if (proposal.proposal_type === "approve_alias" || proposal.proposal_type === "add_localization") {
+    if (proposalConfidence === null || proposalConfidence < 0.85) {
+      addIssue("error", "low_actionable_confidence", "Alias/localization proposals require confidence_score >= 0.85.");
+    }
+    if (semanticConfidence === null || semanticConfidence < 0.65) {
+      addIssue("error", "low_semantic_confidence", "Alias/localization proposals require semantic_profile.confidence_score >= 0.65.");
+    }
+    if (!contextContainsTarget(item, proposal)) {
+      addIssue("error", "target_not_grounded_in_context", "Target slug or id must appear in the work packet context.");
+    }
+  }
+
+  if (proposal.proposal_type === "add_localization") {
+    if (!normalizeText(proposal.proposed_localized_name) || !normalizeText(proposal.proposed_language_code)) {
+      addIssue("error", "localization_fields_missing", "add_localization requires proposed_localized_name and proposed_language_code.");
+    }
+  }
+
+  if (proposal.proposal_type === "create_canonical") {
+    if (proposalConfidence === null || proposalConfidence < 0.75) {
+      addIssue("error", "low_create_canonical_confidence", "create_canonical proposals require confidence_score >= 0.75.");
+    }
+    if (semanticConfidence === null || semanticConfidence < 0.7) {
+      addIssue("error", "low_create_canonical_semantic_confidence", "create_canonical proposals require semantic_profile.confidence_score >= 0.7.");
+    }
+    if (!isSafeProposedSlug(proposal.proposed_slug)) {
+      addIssue("error", "unsafe_proposed_slug", "create_canonical proposed_slug must be lowercase ASCII snake_case.");
+    }
+    if (!normalizeText(proposal.proposed_localized_name) || !normalizeText(proposal.proposed_language_code)) {
+      addIssue("error", "canonical_fields_missing", "create_canonical requires proposed_localized_name and proposed_language_code.");
+    }
+    if (normalizeText(proposal.target_ingredient_id) || normalizeText(proposal.target_slug)) {
+      addIssue("error", "canonical_should_not_have_target", "create_canonical must not set an existing target.");
+    }
+    if (!normalizeText(semanticProfile.product_family) && !normalizeText(semanticProfile.semantic_category)) {
+      addIssue("error", "missing_semantic_family", "create_canonical requires product_family or semantic_category in the semantic profile.");
+    }
+    if (proposal.auto_apply_eligible) {
+      addIssue("error", "canonical_never_auto_apply", "create_canonical must never be auto_apply_eligible.");
+    }
+  }
+
+  if (proposal.proposal_type === "needs_human_review") {
+    if (!hasBlockingQuestions && !hasSemanticOpenQuestions) {
+      addIssue("error", "review_without_question", "needs_human_review must contain a concrete blocking or open question.");
+    }
+  }
+
+  if (proposal.proposal_type === "ignore_noise") {
+    if (proposalConfidence === null || proposalConfidence < 0.8) {
+      addIssue("error", "low_ignore_noise_confidence", "ignore_noise requires confidence_score >= 0.8.");
+    }
+  }
+
+  return issues;
+}
+
+function proposalInsertedId(
+  proposal: CatalogAgentProposalOutput,
+  persistableProposals: CatalogAgentProposalOutput[],
+  insertedProposalIDs: number[],
+): number | null {
+  const persistableIndex = persistableProposals.indexOf(proposal);
+  return persistableIndex >= 0 ? (insertedProposalIDs[persistableIndex] ?? null) : null;
+}
+
+function contextContainsTarget(item: WorkItem | undefined, proposal: CatalogAgentProposalOutput): boolean {
+  if (!item) return false;
+  const targetSlug = normalizeText(proposal.target_slug);
+  const targetId = normalizeText(proposal.target_ingredient_id);
+  if (!targetSlug && !targetId) return false;
+
+  const candidateRecords = [
+    ...readNestedArray(item, ["context", "possible_canonical_matches"]),
+    ...readNestedArray(item, ["context", "existing_alias_matches"]),
+    readNestedRecord(item, ["coverage_blocker"]),
+  ].filter(isRecord);
+
+  return candidateRecords.some((candidate) => {
+    const candidateSlugs = [
+      candidate.slug,
+      candidate.ingredient_slug,
+      candidate.canonical_candidate_slug,
+      candidate.parent_slug,
+    ].map(normalizeText);
+    const candidateIds = [
+      candidate.ingredient_id,
+      candidate.target_ingredient_id,
+      candidate.canonical_candidate_ingredient_id,
+    ].map(normalizeText);
+    return (targetSlug && candidateSlugs.includes(targetSlug)) || (targetId && candidateIds.includes(targetId));
+  });
+}
+
+function isSafeProposedSlug(value: string | null): boolean {
+  return typeof value === "string" && /^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(value.trim());
+}
+
 async function insertProposals(
   adminClient: ReturnType<typeof createClient>,
   runId: number,
@@ -1496,6 +1705,7 @@ function budgetSummary(): Record<string, unknown> {
     max_runs_per_day: MAX_RUNS_PER_DAY,
     recent_proposal_days: RECENT_PROPOSAL_DAYS,
     provider_timeout_ms: PROVIDER_TIMEOUT_MS,
+    proposal_persistence_enabled: PROPOSAL_PERSISTENCE_ENABLED,
     reasoning_mode: REASONING_MODE,
     max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
     risk_review_enabled: RISK_REVIEW_ENABLED,

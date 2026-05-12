@@ -536,3 +536,26 @@ To reach `4.5`, the agent should produce persisted proposals only when all of th
 - admin console clearly explains why each proposal is safe, blocked, or escalated.
 
 The full maturity path from `4.0` to `8.0+` is defined in `docs/catalog-agent-autonomy-roadmap.md`.
+
+## 13. 4.5 Proposal Persistence Gate
+
+Status: implementation started.
+
+`run-catalog-agent-triage` now separates three concepts:
+
+- provider output is valid JSON;
+- provider output is operationally reviewable;
+- provider output is allowed to be persisted.
+
+The first concept is handled by the strict LLM contract validator. The second is handled by the runtime proposal quality gate. The third is controlled by `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`, which defaults to `false`.
+
+Quality gate checks include:
+
+- evidence is present;
+- actionable alias/localization targets are grounded in the current work packet;
+- actionable confidence and semantic-profile confidence pass minimum thresholds;
+- `create_canonical` proposals have a safe slug, localized name, language, semantic family/category, and enough confidence;
+- `needs_human_review` proposals ask a concrete blocking/open question;
+- unknown or critical risk cannot be persisted as an actionable proposal.
+
+The gate can block individual proposals while allowing the run to complete. This is important because the agent should learn to produce better work without turning every weak item into either a database write or a hard runtime failure.

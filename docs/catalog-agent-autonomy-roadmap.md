@@ -63,11 +63,21 @@ Still forbidden:
 
 Required implementation:
 
+- proposal persistence feature flag that fails closed before any LLM call when `dry_run=false` is requested accidentally;
 - proposal persistence gate that checks context-quality status before calling/persisting LLM output;
 - budget governor with explicit per-run, per-day, and per-item limits;
 - proposal quality validator that rejects empty targets, missing evidence, and vague `needs_human_review`;
 - admin console summary showing why a proposal was persisted, rejected, or skipped;
 - replay test comparing dry-run proposal shape against persisted proposal shape.
+
+Implementation status:
+
+- `run-catalog-agent-triage` now includes `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`, defaulting to disabled.
+- `run-catalog-agent-triage` now evaluates a proposal quality gate before insert.
+- The quality gate records `proposal_quality_gate_evaluated` and run-summary counts for persistable vs blocked proposals.
+- The updated Edge Function is deployed to `Season-dev`.
+- Fail-closed smoke passed: invoking `dry_run=false` while persistence was disabled returned `PROPOSAL_PERSISTENCE_DISABLED` before LLM usage or proposal writes.
+- Full LLM quality-gate smoke remains pending because the dev daily run budget correctly stopped the next run with `DAILY_RUN_BUDGET_EXHAUSTED`.
 
 Exit gates:
 
