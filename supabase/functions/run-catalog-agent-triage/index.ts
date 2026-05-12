@@ -250,7 +250,17 @@ Deno.serve(async (request) => {
     providerEligibleItems = providerAttempt.eligibleItems;
     const providerResult = providerAttempt.result;
     const allowedTexts = new Set(providerEligibleItems.map((item) => normalizeText(item.normalized_text)));
-    const validation = validateCatalogAgentTriageOutput(providerResult.parsed, allowedTexts);
+    const repair = repairProviderOutputForValidation(providerResult.parsed);
+    if (repair.repairs.length > 0) {
+      providerResult.reasoningTrace = {
+        ...providerResult.reasoningTrace,
+        output_repairs: repair.repairs,
+      };
+      await insertRunEvent(adminClient, runId, "provider_output_repaired", {
+        repairs: repair.repairs,
+      }, auth.userId);
+    }
+    const validation = validateCatalogAgentTriageOutput(repair.parsed, allowedTexts);
     if (!validation.ok || !validation.value) {
       await failRun(adminClient, runId, "Provider output failed validation.", {
         validation_errors: validation.errors,
@@ -292,7 +302,7 @@ Deno.serve(async (request) => {
     const proposals = normalizeProposalStatuses(validation.value.proposals);
     const insertedProposalIDs = dryRun
       ? []
-      : await insertProposals(adminClient, runId, proposals, providerEligibleItems, providerResult.parsed, auth.userId);
+      : await insertProposals(adminClient, runId, proposals, providerEligibleItems, repair.parsed, auth.userId);
 
     const cost = estimateCost(providerResult.usage);
     const summary = {
@@ -783,6 +793,100 @@ function isProviderTimeoutError(error: unknown): boolean {
   return message.includes("aborterror") ||
     message.includes("signal has been aborted") ||
     message.includes("timeout");
+}
+
+function repairProviderOutputForValidation(parsed: unknown): {
+  parsed: unknown;
+  repairs: Record<string, unknown>[];
+} {
+  if (!isRecord(parsed) || !Array.isArray(parsed.proposals)) {
+    return { parsed, repairs: [] };
+  }
+
+  const repairs: Record<string, unknown>[] = [];
+  const repairedProposals = parsed.proposals.map((proposal, index) => {
+    if (!isRecord(proposal)) return proposal;
+
+    const proposalType = String(proposal.proposal_type ?? "");
+    const missingTarget = ["approve_alias", "add_localization"].includes(proposalType) &&
+      !nonEmptyString(proposal.target_ingredient_id) &&
+      !nonEmptyString(proposal.target_slug);
+    const incompleteCanonical = proposalType === "create_canonical" &&
+      (!nonEmptyString(proposal.proposed_slug) || !nonEmptyString(proposal.proposed_localized_name));
+
+    if (!missingTarget && !incompleteCanonical) return proposal;
+
+    const reason = missingTarget
+      ? `${proposalType}_missing_target`
+      : "create_canonical_missing_required_fields";
+    repairs.push({
+      proposal_index: index,
+      normalized_text: typeof proposal.normalized_text === "string" ? proposal.normalized_text : null,
+      original_proposal_type: proposalType,
+      repair: "downgrade_to_needs_human_review",
+      reason,
+    });
+
+    const blockingQuestions = Array.isArray(proposal.blocking_questions)
+      ? proposal.blocking_questions.filter((item): item is string => typeof item === "string")
+      : [];
+    const evidence = Array.isArray(proposal.evidence) ? [...proposal.evidence] : [];
+
+    return {
+      ...proposal,
+      proposal_type: "needs_human_review",
+      target_ingredient_id: null,
+      target_slug: null,
+      auto_apply_eligible: false,
+      status: "needs_human_review",
+      risk_level: normalizeRiskForRepair(proposal.risk_level),
+      rationale: appendRepairRationale(proposal.rationale, reason),
+      evidence: [
+        ...evidence,
+        {
+          type: "provider_output_repair",
+          reason,
+          original_proposal_type: proposalType,
+        },
+      ],
+      blocking_questions: [
+        ...blockingQuestions,
+        repairBlockingQuestion(reason),
+      ],
+    };
+  });
+
+  return {
+    parsed: {
+      ...parsed,
+      proposals: repairedProposals,
+    },
+    repairs,
+  };
+}
+
+function nonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeRiskForRepair(value: unknown): string {
+  return ["low", "medium", "high", "critical", "unknown"].includes(String(value))
+    ? String(value)
+    : "unknown";
+}
+
+function appendRepairRationale(value: unknown, reason: string): string {
+  const base = typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : "The provider returned an incomplete actionable proposal.";
+  return `${base} Downgraded to human review because ${reason}.`;
+}
+
+function repairBlockingQuestion(reason: string): string {
+  if (reason === "create_canonical_missing_required_fields") {
+    return "Which stable slug and localized display name should be used before creating this canonical ingredient draft?";
+  }
+  return "Which existing canonical target should this proposal use before it can become actionable?";
 }
 
 async function invokeMultiPassProvider(

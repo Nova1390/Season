@@ -56,6 +56,19 @@ If a provider role aborts because of timeout and the run has more than one eligi
 
 The retry is deliberately single-shot. It prevents runaway loops and keeps costs bounded. If the smaller packet also fails, the run fails normally and remains visible in audit.
 
+## Provider Output Repair
+
+The deterministic validator remains the source of truth for proposal shape.
+
+Before validation, the function performs one safe repair class:
+
+- incomplete actionable proposals are downgraded to `needs_human_review`;
+- examples: `approve_alias` / `add_localization` without a target, or `create_canonical` without required draft fields;
+- the repair is recorded as `provider_output_repaired`;
+- repaired proposals are not auto-applicable and include a blocking question.
+
+This prevents one incomplete proposal from discarding an otherwise useful run, without weakening catalog safety.
+
 ## Semantic Profile
 
 Every proposal now carries a `semantic_profile` in the LLM contract.

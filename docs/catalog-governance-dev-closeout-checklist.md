@@ -274,6 +274,13 @@ Adaptive retry deployment:
 - `CATALOG_AGENT_ENABLED` was disabled again after the smoke run.
 - `CATALOG_AGENT_PROVIDER_TIMEOUT_MS` was restored to `20000`.
 
+Budget-conscious follow-up:
+
+- Run `39` was a no-op because `CATALOG_AGENT_MAX_ITEMS_PER_RUN=10` only reached recent proposals.
+- Run `40` used a temporary cap of `12` and spent `10,367` total tokens.
+- Run `40` found a useful runtime issue: the provider returned an `add_localization` proposal without a target, so validation failed and no proposals were inserted.
+- The triage function now repairs incomplete actionable proposals by downgrading them to `needs_human_review`, recording `provider_output_repaired`, and preserving a blocking question.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
