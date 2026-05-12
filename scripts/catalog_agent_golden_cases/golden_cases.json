@@ -81,9 +81,10 @@
       "why": "Base plural tomatoes should resolve toward existing tomato, unlike small tomato variants.",
       "current": {
         "kind": "proposal",
-        "proposal_type": "needs_human_review",
-        "status_any_of": ["needs_human_review", "superseded"],
-        "max_risk": "medium"
+        "proposal_type": "approve_alias",
+        "target_slug": "tomato",
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.85
       },
       "target": {
         "kind": "proposal",
@@ -106,7 +107,6 @@
       "target": {
         "kind": "proposal",
         "proposal_type_any_of": ["create_canonical", "approve_alias"],
-        "target_slug_any_of": ["pomodorini"],
         "proposed_slug_any_of": ["pomodorini", "cherry_tomatoes"],
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.8
@@ -171,13 +171,14 @@
       "why": "Oat flakes are a specific oat product; target behavior should avoid vague review once enough catalog context exists.",
       "current": {
         "kind": "proposal",
-        "proposal_type": "needs_human_review",
-        "status_any_of": ["needs_human_review", "failed_validation", "superseded"]
+        "proposal_type": "create_canonical",
+        "proposed_slug_any_of": ["oat_flakes", "rolled_oats", "fiocchi_di_avena"],
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
+        "min_confidence": 0.8
       },
       "target": {
         "kind": "proposal",
         "proposal_type_any_of": ["create_canonical", "approve_alias"],
-        "target_slug_any_of": ["rolled_oats", "oat_flakes", "fiocchi_di_avena"],
         "proposed_slug_any_of": ["rolled_oats", "oat_flakes", "fiocchi_di_avena"],
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.8

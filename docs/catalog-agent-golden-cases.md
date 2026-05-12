@@ -93,7 +93,7 @@ Only after that should low-risk apply be considered for scheduled dev runs.
 
 ## 2026-05-12 Baseline
 
-Read-only Supabase dev run:
+Read-only Supabase dev run before the mini target run:
 
 ```text
 current: 10/10 passed
@@ -116,7 +116,7 @@ Main target gaps:
 
 - `uovo`, `pane raffermo`, `mais`, and `mele` were fixed by governance, but the historical agent proposals were wrong.
 - `pomodori` still needs to become an actionable alias proposal for `tomato`.
-- `pomodorini` needs a fresh post-canonical rerun so the agent can target the new child canonical instead of the old missing-catalog proposal.
+- `pomodorini` already showed good variant intelligence by proposing a dedicated canonical child; future runs should target the existing child canonical instead of recreating it.
 - `fiocchi d avena` needs better catalog-gap or alias confidence instead of vague review.
 
 Follow-up learning seeded:
@@ -125,4 +125,36 @@ Follow-up learning seeded:
 - `pomodorini`: once the child canonical exists, future proposals should target `pomodorini`, not recreate it or collapse to `tomato`.
 - `fiocchi d avena`: clear product-form identities such as oat flakes should become a catalog-gap `create_canonical` draft when no dedicated child target exists.
 - These lessons are deliberately term-specific plus policy-shaped: they reopen the cases for the next controlled agent run without applying catalog mutations.
-- The `target` score remains `3/10` until a new controlled triage run creates fresh proposals; learning changes future eligibility and reasoning, not historical proposal rows.
+- The `target` score remained `3/10` until a new controlled triage run created fresh proposals; learning changes future eligibility and reasoning, not historical proposal rows.
+
+## 2026-05-12 Mini Target Run
+
+Run `42`:
+
+- Source domain: `smart_import_training_captions`.
+- Limit: `4`.
+- Items in snapshot: `4`.
+- Items sent to LLM: `2`.
+- Recent proposals skipped: `2`.
+- Proposals created: `2`.
+- Token usage: `13,028` input, `1,845` output, `14,873` total.
+- Provider duration: `18,273ms`.
+- Triage was disabled immediately after the run.
+
+Created proposals:
+
+- `#23 pomodori`: `approve_alias -> tomato`, low risk, confidence `0.99`, auto-apply eligible.
+- `#24 fiocchi d avena`: `create_canonical`, proposed slug `oat_flakes`, medium risk, confidence `0.93`.
+
+Golden-case result after updating the fixture to recognize valid `create_canonical` proposals:
+
+```text
+current: 10/10 passed
+target: 6/10 passed
+```
+
+Interpretation:
+
+- The agent moved from `3/10` to `6/10` on target behavior after learning memory and a small rerun.
+- Remaining target failures are historical proposals for already-governed terms: `uovo`, `pane raffermo`, `mais`, `mele`.
+- Those cases are fixed in the catalog, but the target profile still records that the latest historical agent proposal was wrong because no fresh agent rerun exists for resolved observations.

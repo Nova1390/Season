@@ -361,6 +361,16 @@ Next intelligence increment:
 - Updated the LLM contract so base plural/localized forms prefer aliasing when non-variant, while product-form identities can become canonical drafts when missing.
 - This is no-apply learning only; the next controlled triage run should show whether target score improves without manual governance.
 
+Mini target run result:
+
+- `catalog_agent_runs.id = 42`.
+- Items sent to LLM: `2`.
+- Token usage: `14,873` total.
+- New proposal `#23`: `pomodori` as `approve_alias -> tomato`, low risk, confidence `0.99`.
+- New proposal `#24`: `fiocchi d avena` as `create_canonical` with proposed slug `oat_flakes`, medium risk, confidence `0.93`.
+- Agent disabled immediately after the run.
+- Golden target score improved from `3/10` to `6/10` after fixture correction for valid `create_canonical` proposals.
+
 ### 1. Static Console
 
 Open:
