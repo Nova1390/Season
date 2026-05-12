@@ -144,7 +144,7 @@ Notes:
 - Debug is configured for the development Supabase environment.
 - Release is configured for the staging Supabase environment.
 - `CODE_SIGNING_ALLOWED=NO` validates compilation and packaging, not App Store signing.
-- TestFlight distribution uses a signed Archive/export/upload flow; the current staging candidate is `1.0.1 (2)`.
+- TestFlight distribution uses a signed Archive/export/upload flow; the current staging candidate is `1.0.1 (3)`.
 
 ## Release Hygiene
 
@@ -175,7 +175,7 @@ Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql
 The app is in a TestFlight rollout preparation phase:
 
 - iOS Release builds successfully against staging.
-- TestFlight candidate `1.0.1 (2)` has been archived/uploaded from Release configuration.
+- TestFlight candidate `1.0.1 (3)` is the current bugfix candidate from Release configuration.
 - Auth, profile, recipe feed, fridge, shopping list, creator, and smart import flows are integrated.
 - Fridge and shopping list use local-first state with outbox-backed Supabase sync.
 - Catalog hierarchy, enrichment, and reconciliation workflows are active.

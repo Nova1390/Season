@@ -2,7 +2,7 @@
 
 ## Working Today
 - The app is in TestFlight rollout preparation for an iOS 26+ release.
-- TestFlight build `1.0.1 (2)` has been archived/uploaded from Release configuration.
+- TestFlight build `1.0.1 (3)` is the current bugfix candidate from Release configuration.
 - Debug builds target the development Supabase environment; Release builds target the staging Supabase environment.
 - `Season/PrivacyInfo.xcprivacy` is present and lint-clean for app-level privacy manifest coverage.
 - Supabase auth path is integrated for app testing flows.
