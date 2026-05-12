@@ -29,8 +29,9 @@ Current implementation status:
 - Runtime learning memory is now attached to proposal-only LLM packets through `public.get_catalog_agent_learning_context(...)`.
 - The next LLM architecture is documented in `docs/catalog-agent-llm-reasoning-loop-plan.md`: the agent should use bounded multi-pass reasoning roles instead of a single one-shot prompt when extra semantic confidence is needed.
 - Step 1 of that architecture is implemented: `run-catalog-agent-triage` now requires a structured `semantic_profile` in proposal output and persists it in proposal evidence.
+- The first `create_canonical` execution bridge is implemented: an admin can prepare an enrichment draft from a catalog-gap proposal, the enrichment worker can enrich it, and the agent orchestrator can now delegate ingredient creation from ready drafts through `ingredient_creation_batch`.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
-- No auto-apply, recipe mutation, scheduler, or iOS admin UI is implemented yet.
+- Low-risk auto-apply infrastructure exists but real apply remains disabled by default; recipe mutation, scheduler promotion, and iOS admin UI are not implemented for the agent path.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
 
 ## 1. Executive Summary
@@ -117,7 +118,7 @@ Current automation surfaces:
 
 - `catalog-enrichment-proposal`: LLM-backed enrichment proposal endpoint.
 - `run-catalog-enrichment-draft-batch`: enriches pending drafts.
-- `run-catalog-ingredient-creation-batch`: creates ready catalog ingredients through governed functions.
+- `run-catalog-ingredient-creation-batch`: creates ready catalog ingredients through governed functions; when routed by the agent it requires the parent worker-job ledger and the dedicated ingredient-creation enable flag.
 - `run-catalog-automation-cycle`: orchestration wrapper for recovery, enrichment, creation, alias/localization application, and reconciliation.
 - `staging_catalog_autopilot_v2_*`: staging-only scheduler and verification scripts.
 
@@ -139,6 +140,19 @@ Catalog signals
 The first implementation should be read-heavy and proposal-only.
 
 Direct mutation should be limited to inserting agent proposal/audit rows. Any catalog or recipe mutation must go through existing governed functions.
+
+For missing catalog identities, the governed path is:
+
+```text
+agent create_canonical proposal
+  -> admin prepares enrichment draft
+  -> enrichment worker fills structured metadata
+  -> draft validators mark it ready
+  -> ingredient_creation_batch creates via governed RPC
+  -> audit/worker ledger records the mutation
+```
+
+The agent may delegate the last worker, but it still cannot create directly from an LLM proposal.
 
 ### 3.3 Multi-Pass Reasoning Direction
 

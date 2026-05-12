@@ -51,6 +51,7 @@ const elements = {
   workerLimitInput: document.querySelector("#workerLimitInput"),
   workerSourceDomainInput: document.querySelector("#workerSourceDomainInput"),
   runWorkerButton: document.querySelector("#runWorkerButton"),
+  workerRunHint: document.querySelector("#workerRunHint"),
   workerRunResult: document.querySelector("#workerRunResult"),
   autoApplyDiagnostics: document.querySelector("#autoApplyDiagnostics"),
   agentRunsToday: document.querySelector("#agentRunsToday"),
@@ -142,6 +143,7 @@ function bindEvents() {
 
   elements.refreshButton.addEventListener("click", loadInbox);
   elements.refreshOpsButton.addEventListener("click", loadOperations);
+  elements.workerNameInput.addEventListener("change", updateWorkerRunHint);
   elements.workerRunForm.addEventListener("submit", runAgentWorker);
   elements.applyAuditList.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-rollback-audit-id]");
@@ -150,6 +152,18 @@ function bindEvents() {
   });
 
   bindHelpTooltips();
+  updateWorkerRunHint();
+}
+
+function updateWorkerRunHint() {
+  const workerName = elements.workerNameInput.value;
+  const hints = {
+    low_risk_apply_batch: "Low-risk apply runs in dry-run only. Real apply stays disabled from the console.",
+    enrichment_draft_batch: "Enrichment fills pending drafts; it may call the LLM but does not create final ingredients.",
+    ingredient_creation_batch: "Ingredient creation only consumes ready enrichment drafts and is gated by backend flags."
+  };
+
+  elements.workerRunHint.textContent = hints[workerName] ?? "Worker execution is bounded by backend policy and audit logs.";
 }
 
 function bindHelpTooltips() {
@@ -284,6 +298,18 @@ function buildWorkerPayload({ workerName, limit, sourceDomain }) {
     };
   }
 
+  if (workerName === "ingredient_creation_batch") {
+    return {
+      worker_name: "ingredient_creation_batch",
+      action: "create_ingredient",
+      limit,
+      source_domain: sourceDomain,
+      risk_ceiling: "low",
+      dry_run: false,
+      debug: false
+    };
+  }
+
   return {
     worker_name: "enrichment_draft_batch",
     action: "run",
@@ -305,7 +331,11 @@ function renderWorkerRunResult(result) {
   const mode = workerSummary.mode ?? (details.worker_result?.dry_run ? "dry_run" : "run");
   const total = Number(workerSummary.total ?? 0);
   const failed = Number(workerSummary.failed ?? 0);
-  const applied = Number(workerSummary.applied ?? 0);
+  const applied = Number(workerSummary.applied ?? workerSummary.created ?? 0);
+  const appliedLabel = workerName === "run-catalog-ingredient-creation-batch" ||
+      workerName === "ingredient_creation_batch"
+    ? "Created"
+    : "Applied";
   const durationMs = Number(topSummary.duration_ms ?? workerSummary.duration_ms ?? 0);
 
   elements.workerRunResult.hidden = false;
@@ -324,7 +354,7 @@ function renderWorkerRunResult(result) {
         ${metricCell("Run", `#${runId}`, "ID della run dell'agente manager. Raggruppa la richiesta e tutti gli eventi collegati.")}
         ${metricCell("Job", `#${jobId}`, "ID del lavoro Autopilot delegato dall'agente. Utile per audit e debug.")}
         ${metricCell("Eligible", total, "Quanti elementi erano pronti per questo worker secondo i controlli backend.")}
-        ${metricCell("Applied", applied, "Quanti elementi sono stati applicati. In dry-run deve restare sempre zero.")}
+        ${metricCell(appliedLabel, applied, "Quanti elementi sono stati modificati dal worker. Per la creazione ingredienti indica i nuovi canonici creati da draft pronte.")}
         ${metricCell("Failed", failed, "Quanti elementi hanno fallito durante il worker. Se sale, va controllato prima di proseguire.")}
         ${metricCell("Duration", formatDuration(durationMs), "Quanto tempo ha impiegato la run. Aiuta a capire se un worker sta rallentando.")}
       </div>

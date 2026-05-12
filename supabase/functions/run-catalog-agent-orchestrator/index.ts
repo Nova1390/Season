@@ -30,7 +30,7 @@ interface WorkerJobRow {
   dry_run: boolean;
 }
 
-type WorkerName = "enrichment_draft_batch" | "low_risk_apply_batch";
+type WorkerName = "enrichment_draft_batch" | "ingredient_creation_batch" | "low_risk_apply_batch";
 
 const FUNCTION_NAME = "run-catalog-agent-orchestrator";
 const LOG_PREFIX = "SEASON_CATALOG_ORCHESTRATOR";
@@ -108,7 +108,11 @@ Deno.serve(async (request) => {
 
     const workerName = normalizeWorkerName(payload.worker_name);
     if (workerName === null) {
-      return errorJson(422, "UNSUPPORTED_WORKER", "Supported workers are enrichment_draft_batch and low_risk_apply_batch.");
+      return errorJson(
+        422,
+        "UNSUPPORTED_WORKER",
+        "Supported workers are enrichment_draft_batch, ingredient_creation_batch, and low_risk_apply_batch.",
+      );
     }
 
     const action = normalizeAction(workerName, payload.action, payload.dry_run);
@@ -119,6 +123,16 @@ Deno.serve(async (request) => {
 
     if (workerName === "enrichment_draft_batch" && payload.dry_run === true) {
       return errorJson(422, "DRY_RUN_NOT_SUPPORTED", "enrichment_draft_batch does not yet support dry_run.");
+    }
+    if (workerName === "ingredient_creation_batch" && payload.dry_run === true) {
+      return errorJson(422, "DRY_RUN_NOT_SUPPORTED", "ingredient_creation_batch does not support dry_run.");
+    }
+    if (workerName === "ingredient_creation_batch" && action !== "create_ingredient") {
+      return errorJson(
+        422,
+        "INGREDIENT_CREATION_ACTION_REQUIRED",
+        "ingredient_creation_batch requires action=create_ingredient.",
+      );
     }
     if (workerName === "low_risk_apply_batch" && riskCeiling !== "low") {
       return errorJson(422, "LOW_RISK_WORKER_REQUIRES_LOW_RISK_CEILING", "low_risk_apply_batch only supports a low risk ceiling.");
@@ -335,6 +349,8 @@ async function invokeWorker(input: {
 }): Promise<Record<string, unknown>> {
   const functionName = input.workerName === "low_risk_apply_batch"
     ? "catalog-low-risk-apply-batch"
+    : input.workerName === "ingredient_creation_batch"
+    ? "run-catalog-ingredient-creation-batch"
     : "run-catalog-enrichment-draft-batch";
   const response = await fetchWithTimeout(
     `${SUPABASE_URL}/functions/v1/${functionName}`,
@@ -471,7 +487,9 @@ function normalizeRiskCeiling(value: unknown): string {
 
 function normalizeWorkerName(value: unknown): WorkerName | null {
   const normalized = normalizeText(value) ?? "enrichment_draft_batch";
-  return normalized === "enrichment_draft_batch" || normalized === "low_risk_apply_batch"
+  return normalized === "enrichment_draft_batch" ||
+      normalized === "ingredient_creation_batch" ||
+      normalized === "low_risk_apply_batch"
     ? normalized
     : null;
 }
@@ -481,6 +499,9 @@ function normalizeAction(workerName: WorkerName, value: unknown, dryRunValue: un
   if (workerName === "low_risk_apply_batch") {
     const dryRun = dryRunValue !== false;
     return normalized ?? (dryRun ? "dry_run" : "apply_low_risk");
+  }
+  if (workerName === "ingredient_creation_batch") {
+    return normalized ?? "create_ingredient";
   }
   return normalized ?? "run";
 }

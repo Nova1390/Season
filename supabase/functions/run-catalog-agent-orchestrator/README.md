@@ -6,15 +6,18 @@ This Edge Function does not reason with an LLM and does not mutate catalog data 
 
 ## Supported Workers
 
-The orchestrator supports two bounded workers:
+The orchestrator supports three bounded workers:
 
 - `enrichment_draft_batch` -> `run-catalog-enrichment-draft-batch`
+- `ingredient_creation_batch` -> `run-catalog-ingredient-creation-batch`
 - `low_risk_apply_batch` -> `catalog-low-risk-apply-batch`
 
 `low_risk_apply_batch` defaults to dry-run mode. Real apply requires both:
 
 - request payload `dry_run=false` and `action=apply_low_risk`;
 - `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED=true`.
+
+`ingredient_creation_batch` has no dry-run mode. It only consumes enrichment drafts that are already `ready`; real creation requires `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true` in the target Supabase project.
 
 ## Safety
 
@@ -27,6 +30,8 @@ The orchestrator supports two bounded workers:
 - Writes `catalog_agent_worker_jobs`.
 - Worker LLM calls write `catalog_ai_usage_events`.
 - `dry_run=true` is rejected for `enrichment_draft_batch`.
+- `dry_run=true` is rejected for `ingredient_creation_batch`.
+- `ingredient_creation_batch` requires `action=create_ingredient`.
 - `dry_run=true` is the default for `low_risk_apply_batch`.
 - `low_risk_apply_batch` only accepts `risk_ceiling=low`.
 
@@ -53,6 +58,20 @@ Low-risk apply dry-run:
   "limit": 3,
   "risk_ceiling": "low",
   "dry_run": true,
+  "debug": false
+}
+```
+
+Ingredient creation from ready drafts:
+
+```json
+{
+  "worker_name": "ingredient_creation_batch",
+  "action": "create_ingredient",
+  "limit": 1,
+  "source_domain": null,
+  "risk_ceiling": "low",
+  "dry_run": false,
   "debug": false
 }
 ```
@@ -106,6 +125,17 @@ curl -X POST 'https://gyuedxycbnqljryenapx.supabase.co/functions/v1/run-catalog-
   -H "x-season-catalog-agent-token: ${CATALOG_AGENT_OPERATOR_TOKEN}" \
   -H 'Content-Type: application/json' \
   --data '{"worker_name":"low_risk_apply_batch","action":"dry_run","limit":3,"risk_ceiling":"low","dry_run":true}'
+```
+
+Run ingredient creation for one ready draft, only after enabling the creation flag:
+
+```bash
+curl -X POST 'https://gyuedxycbnqljryenapx.supabase.co/functions/v1/run-catalog-agent-orchestrator' \
+  -H "apikey: ${ANON_KEY}" \
+  -H "Authorization: Bearer ${ANON_KEY}" \
+  -H "x-season-catalog-agent-token: ${CATALOG_AGENT_OPERATOR_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  --data '{"worker_name":"ingredient_creation_batch","action":"create_ingredient","limit":1,"dry_run":false}'
 ```
 
 Disable after smoke tests unless intentionally testing:

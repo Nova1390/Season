@@ -49,6 +49,7 @@ Operations worker controls are deliberately narrow:
 
 - `low_risk_apply_batch` is exposed only as `dry_run=true`;
 - `enrichment_draft_batch` is capped in the UI to 3 items per run;
+- `ingredient_creation_batch` is available only for ready enrichment drafts and still requires the backend `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true` flag;
 - real low-risk apply remains unavailable from the console;
 - every run is still authorized by Supabase Auth and recorded in `catalog_agent_worker_jobs`.
 - readiness diagnostics come from `get_catalog_agent_auto_apply_diagnostics()`, not browser-side policy guesses.

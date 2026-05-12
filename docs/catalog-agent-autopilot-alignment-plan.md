@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, Phase 4.5 batch-level multi-pass reasoning, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode and canonical creation remain intentionally gated.
+Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, Phase 4.5 batch-level multi-pass reasoning, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode remains intentionally gated. Canonical creation now has an agent-routed worker path, still behind ready-draft validation and a dedicated backend enable flag.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -165,12 +165,14 @@ Implemented RPC:
 Worker names in the ledger:
 
 - `enrichment_draft_batch`
+- `ingredient_creation_batch`
 - `reconciliation_preview`
 - `low_risk_apply_batch`
 
 Runtime support today:
 
 - `enrichment_draft_batch` is implemented through `run-catalog-agent-orchestrator`;
+- `ingredient_creation_batch` is implemented through `run-catalog-agent-orchestrator`, consumes only ready enrichment drafts, and requires `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true`;
 - `low_risk_apply_batch` is implemented through `run-catalog-agent-orchestrator` in dry-run mode by default;
 - `reconciliation_preview` is a reserved ledger type, not yet enabled by the orchestrator.
 
@@ -182,6 +184,7 @@ Rules:
 - default dry-run for new worker types;
 - no recursive worker chains;
 - worker result must write summary back to the ledger.
+- creation workers must never consume raw LLM proposals; they consume only validated enrichment drafts.
 
 Exit criteria:
 

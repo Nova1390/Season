@@ -27,6 +27,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Dev controlled apply test was performed and documented.
 - Console operations dashboard shows worker jobs, AI usage, readiness, and audit.
 - Console exposes only safe dry-run for low-risk apply.
+- Console exposes `ingredient_creation_batch` for ready enrichment drafts only; the backend still requires `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true`.
 - Console uses backend diagnostics for zero-eligible explanations.
 - Console help bubbles explain operator-facing fields.
 - Tooltip rendering was moved to a page-level popover to avoid clipping.
@@ -96,6 +97,15 @@ Semantic profile upgrade:
 - Dev smoke test `catalog_agent_runs.id = 23` returned 6 valid dry-run proposals and created no rows.
 - Dev was restored to `CATALOG_AGENT_ENABLED=false` after the smoke test.
 
+Canonical creation worker bridge:
+
+- `create_canonical` proposals can prepare a pending enrichment draft through `prepare_catalog_agent_canonical_enrichment_draft(...)`.
+- `run-catalog-agent-orchestrator` now supports `ingredient_creation_batch`.
+- `ingredient_creation_batch` calls `run-catalog-ingredient-creation-batch`, which creates only from already `ready` enrichment drafts.
+- The worker records start/completion/failure on `catalog_agent_worker_jobs`.
+- Real creation is disabled unless `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true`.
+- Dev smoke artifact: proposal `#12` for `pomodorini` prepared a pending draft; it was not created as a catalog ingredient because enrichment/validation still need to run.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
@@ -162,6 +172,18 @@ Expected acceptable outcomes:
 - eligible preview lists only validated, low-risk, existing-canonical work.
 
 Do not enable real apply from the console.
+
+For canonical creation testing, use the stricter sequence:
+
+```text
+Prepare draft -> Enrichment draft batch -> confirm draft ready -> Ingredient creation batch
+```
+
+Expected acceptable outcomes:
+
+- if no draft is ready, the worker completes with zero created items;
+- if one draft is ready and the enable flag is on, exactly one ingredient is created for a limit of `1`;
+- if the enable flag is off, the worker job fails closed and records the failure reason.
 
 ### 4. AI Usage
 

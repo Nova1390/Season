@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260512-1">
+    <link rel="stylesheet" href="./styles.css?v=20260512-2">
     <script src="./config.local.js"></script>
   </head>
   <body>
@@ -132,6 +132,7 @@
                 <select id="workerNameInput">
                   <option value="low_risk_apply_batch">Low-risk apply dry-run</option>
                   <option value="enrichment_draft_batch">Enrichment draft batch</option>
+                  <option value="ingredient_creation_batch">Ingredient creation batch</option>
                 </select>
               </label>
               <label>
@@ -149,7 +150,7 @@
                 <input id="workerSourceDomainInput" type="text" placeholder="optional, e.g. giallozafferano.it" spellcheck="false">
               </label>
               <button id="runWorkerButton" type="submit" data-help="Avvia il worker selezionato. Il dry-run non modifica il catalogo; serve solo a vedere cosa sarebbe pronto.">Run worker</button>
-              <p id="workerRunHint">Low-risk apply runs in dry-run only. Real apply stays disabled from the console.</p>
+              <p id="workerRunHint">Ingredient creation only consumes ready enrichment drafts and is gated by backend flags.</p>
             </form>
 
             <div id="workerRunResult" class="ops-list" hidden></div>
@@ -205,6 +206,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260512-1"></script>
+    <script type="module" src="./app.js?v=20260512-2"></script>
   </body>
 </html>

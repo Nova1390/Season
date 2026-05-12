@@ -3,20 +3,27 @@ import {
   env,
   extractBearerToken,
   jsonResponse,
+  numberEnv,
 } from "../_shared/edge.ts";
+import { requestIdFromHeaders } from "../_shared/observability.ts";
 
 const SUPABASE_URL = env("SUPABASE_URL");
 const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 
 const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
+const MAX_LIMIT = boundedInteger(numberEnv("CATALOG_AGENT_INGREDIENT_CREATION_MAX_ITEMS", 3), 1, 10);
 const MIN_CONFIDENCE = 0.6;
+const WORKER_ENABLED = env("CATALOG_AGENT_INGREDIENT_CREATION_ENABLED", "false").toLowerCase() === "true";
 
 type RunnerMode = "user" | "service_role";
 
 interface BatchRequest {
   limit?: number;
+  source_domain?: string | null;
+  agent_run_id?: number | null;
+  agent_worker_job_id?: number | null;
+  debug?: boolean;
 }
 
 interface ReadyDraftRow {
@@ -56,8 +63,13 @@ interface CreateFromDraftRow {
 }
 
 Deno.serve(async (request) => {
+  const requestId = requestIdFromHeaders(request);
+  const startedAt = performance.now();
+  let agentWorkerJobId: number | null = null;
+  let serviceClient: ReturnType<typeof createClient> | null = null;
+
   try {
-    console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=request_received method=${request.method}`);
+    console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=request_received method=${request.method} request_id=${requestId}`);
 
     if (request.method !== "POST") {
       return errorJson(405, "METHOD_NOT_ALLOWED", "Only POST is supported.");
@@ -80,12 +92,16 @@ Deno.serve(async (request) => {
     }
 
     const limit = clampLimit(payload.limit);
+    const sourceDomain = normalizeText(payload.source_domain);
+    const agentRunId = positiveIntegerOrNull(payload.agent_run_id);
+    agentWorkerJobId = positiveIntegerOrNull(payload.agent_worker_job_id);
+    const debug = payload.debug === true;
     const actorId = auth.userId;
     console.log(
-      `[SEASON_INGREDIENT_CREATE_BATCH] phase=batch_started mode=${auth.mode} limit=${limit} actor_id=${actorId ?? "null"}`,
+      `[SEASON_INGREDIENT_CREATE_BATCH] phase=batch_started mode=${auth.mode} enabled=${WORKER_ENABLED} limit=${limit} source_domain=${sourceDomain ?? "null"} actor_id=${actorId ?? "null"} agent_run_id=${agentRunId ?? "null"} worker_job_id=${agentWorkerJobId ?? "null"}`,
     );
 
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const writerClient = auth.bearerToken
@@ -95,7 +111,15 @@ Deno.serve(async (request) => {
       })
       : serviceClient;
 
-    const drafts = await fetchReadyDrafts(serviceClient, limit);
+    if (agentWorkerJobId !== null) {
+      await startWorkerJob(serviceClient, agentWorkerJobId);
+    }
+
+    if (!WORKER_ENABLED) {
+      throw new WorkerDisabledError("ingredient_creation_worker_disabled");
+    }
+
+    const drafts = await fetchReadyDrafts(serviceClient, limit, sourceDomain);
     const items: ItemResult[] = [];
 
     for (const draft of drafts) {
@@ -159,12 +183,18 @@ Deno.serve(async (request) => {
     }
 
     const summary = {
+      mode: "create_ingredient",
       total: items.length,
       created: items.filter((item) => item.result_status === "created").length,
       skipped_existing: items.filter((item) => item.result_status === "skipped_existing").length,
       skipped_invalid: items.filter((item) => item.result_status === "skipped_invalid").length,
       failed: items.filter((item) => item.result_status === "failed").length,
+      duration_ms: elapsedMs(startedAt),
     };
+
+    if (agentWorkerJobId !== null) {
+      await completeWorkerJob(serviceClient, agentWorkerJobId, summary);
+    }
 
     console.log(
       `[SEASON_INGREDIENT_CREATE_BATCH] phase=batch_completed total=${summary.total} created=${summary.created} skipped_existing=${summary.skipped_existing} skipped_invalid=${summary.skipped_invalid} failed=${summary.failed}`,
@@ -173,15 +203,32 @@ Deno.serve(async (request) => {
     return json({
       summary,
       items,
+      agent_run_id: agentRunId,
+      agent_worker_job_id: agentWorkerJobId,
+      debug,
       metadata: {
         mode: auth.mode,
         limit,
+        source_domain: sourceDomain,
         minimum_confidence: MIN_CONFIDENCE,
         generated_at: new Date().toISOString(),
       },
     });
   } catch (error) {
-    console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=unhandled_error error=${String(error)}`);
+    const message = String(error);
+    console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=unhandled_error request_id=${requestId} error=${message}`);
+
+    if (serviceClient && agentWorkerJobId !== null) {
+      await failWorkerJob(serviceClient, agentWorkerJobId, message, {
+        duration_ms: elapsedMs(startedAt),
+        request_id: requestId,
+      });
+    }
+
+    if (error instanceof WorkerDisabledError) {
+      return errorJson(403, "INGREDIENT_CREATION_DISABLED", "Ingredient creation worker is disabled.");
+    }
+
     return errorJson(500, "INTERNAL_BATCH_ERROR", "Unexpected ingredient creation batch failure.");
   }
 });
@@ -227,13 +274,45 @@ async function resolveAndAuthorize(
   return { allowed: isAdmin, mode: "user", userId: userData.user.id, bearerToken: bearer };
 }
 
-async function fetchReadyDrafts(client: ReturnType<typeof createClient>, limit: number): Promise<ReadyDraftRow[]> {
-  const { data, error } = await client
+async function fetchReadyDrafts(
+  client: ReturnType<typeof createClient>,
+  limit: number,
+  sourceDomain: string | null,
+): Promise<ReadyDraftRow[]> {
+  let normalizedTexts: string[] | null = null;
+
+  if (sourceDomain) {
+    const { data: observations, error: observationError } = await client
+      .from("custom_ingredient_observations")
+      .select("normalized_text")
+      .eq("source", sourceDomain)
+      .limit(500);
+
+    if (observationError) {
+      throw new Error(`source_observations_fetch_failed:${observationError.message}`);
+    }
+
+    normalizedTexts = Array.from(new Set((observations ?? [])
+      .map((row) => normalizeText((row as Record<string, unknown>).normalized_text))
+      .filter((value): value is string => Boolean(value))));
+
+    if (normalizedTexts.length === 0) {
+      return [];
+    }
+  }
+
+  let query = client
     .from("catalog_ingredient_enrichment_drafts")
     .select(
       "normalized_text,status,ingredient_type,canonical_name_it,canonical_name_en,suggested_slug,default_unit,supported_units,is_seasonal,season_months,confidence_score,parent_candidate_slug,variant_kind,specificity_rank_suggestion,updated_at",
     )
-    .eq("status", "ready")
+    .eq("status", "ready");
+
+  if (normalizedTexts) {
+    query = query.in("normalized_text", normalizedTexts);
+  }
+
+  const { data, error } = await query
     .order("updated_at", { ascending: false })
     .limit(limit);
 
@@ -242,6 +321,51 @@ async function fetchReadyDrafts(client: ReturnType<typeof createClient>, limit: 
   }
 
   return (data ?? []) as ReadyDraftRow[];
+}
+
+async function startWorkerJob(
+  client: ReturnType<typeof createClient>,
+  workerJobId: number,
+): Promise<void> {
+  const { error } = await client.rpc("start_catalog_agent_worker_job", {
+    p_job_id: workerJobId,
+  });
+
+  if (error) {
+    throw new Error(`start_worker_job_failed:${error.message}`);
+  }
+}
+
+async function completeWorkerJob(
+  client: ReturnType<typeof createClient>,
+  workerJobId: number,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await client.rpc("complete_catalog_agent_worker_job", {
+    p_job_id: workerJobId,
+    p_summary: summary,
+  });
+
+  if (error) {
+    throw new Error(`complete_worker_job_failed:${error.message}`);
+  }
+}
+
+async function failWorkerJob(
+  client: ReturnType<typeof createClient>,
+  workerJobId: number,
+  message: string,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await client.rpc("fail_catalog_agent_worker_job", {
+    p_job_id: workerJobId,
+    p_failure_reason: message,
+    p_summary: summary,
+  });
+
+  if (error) {
+    console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=fail_worker_job_failed error=${error.message}`);
+  }
 }
 
 function invalidDraftReason(draft: ReadyDraftRow, slug: string | null): string | null {
@@ -346,6 +470,21 @@ function clampLimit(value: unknown): number {
   return Math.max(1, Math.min(MAX_LIMIT, Math.floor(parsed)));
 }
 
+function boundedInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(Math.floor(value), min), max);
+}
+
+function positiveIntegerOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function elapsedMs(startedAt: number): number {
+  return Math.max(0, Math.round(performance.now() - startedAt));
+}
+
 function decodeBoolean(payload: unknown): boolean {
   if (typeof payload === "boolean") return payload;
   if (typeof payload === "string") return payload.toLowerCase() === "true";
@@ -363,3 +502,5 @@ function json(body: unknown, init: ResponseInit = {}): Response {
 function errorJson(status: number, code: string, message: string): Response {
   return json({ error: code, message }, { status });
 }
+
+class WorkerDisabledError extends Error {}
