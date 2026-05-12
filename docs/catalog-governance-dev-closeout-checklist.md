@@ -185,6 +185,29 @@ Recommended implementation:
 - re-run the same batch and expect `uovo` to become an actionable existing-canonical proposal instead of human review;
 - only after that, prepare drafts for reviewed `create_canonical` proposals such as `frutti di bosco` with creation still disabled.
 
+### Reviewed Decisions After Batch 34
+
+Decisions:
+
+- `uovo` maps to existing canonical `eggs`; this is a singular Italian alias problem, not a catalog gap.
+- `pane raffermo` maps to existing canonical `bread`; `raffermo` is recipe preparation/context and should not create a separate catalog identity.
+- `frutti di bosco` remains open because mixed-berry identity needs a careful product-family decision before catalog creation.
+
+Implementation:
+
+- migration `20260512161000_govern_uovo_and_stale_bread_aliases.sql` adds governed aliases for `uovo -> eggs` and `pane raffermo -> bread`;
+- the migration records candidate decisions and implemented learning memory;
+- open agent proposals for those terms are marked `superseded`;
+- staging is still untouched.
+
+Dev verification:
+
+- `uovo` alias is approved, active, confidence `0.99`, target `eggs`;
+- `pane raffermo` alias is approved, active, confidence `0.94`, target `bread`;
+- matching custom observations are `resolved_alias`;
+- agent proposals `#13` and `#14` are `superseded`;
+- `supabase db lint --linked` returned no schema errors.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
