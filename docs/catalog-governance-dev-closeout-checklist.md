@@ -232,6 +232,38 @@ Dev verification:
 - `olive` snapshot exposes multiple plausible candidates, preserving ambiguity;
 - `supabase db lint --linked` returned no schema errors.
 
+### 2026-05-12 Post-Learning Agent Launch
+
+Runs:
+
+- `catalog_agent_runs.id = 35`: failed before proposals with `semantic_profiler:AbortError`; no proposals were created and AI usage recorded an error without token counts.
+- `catalog_agent_runs.id = 36`: `limit=3` no-op; all 3 items were skipped by recent-proposal dedupe.
+- `catalog_agent_runs.id = 37`: successful proposal-only run after temporarily setting `CATALOG_AGENT_PROVIDER_TIMEOUT_MS=60000`.
+
+Run `37` summary:
+
+- Source domain: `smart_import_training_captions`.
+- Items in snapshot: `10`.
+- Items sent to LLM: `2`.
+- Recent proposals skipped: `8`.
+- Proposals created: `2`.
+- Token usage: `8,498` input, `2,236` output, `10,734` total.
+- Provider duration: `18,917ms`.
+- Triage was disabled again after the run.
+
+Created proposals:
+
+| ID | Term | Proposal | Risk | Status | Assessment |
+| --- | --- | --- | --- | --- | --- |
+| `19` | `lenticchie rosse` | `create_canonical` | medium | draft | Good behavior: red lentils are a meaningful lentil variant and should not collapse into generic lentils without a dedicated child. |
+| `20` | `lievito per dolci` | `needs_human_review` | high | needs review | Good conservative behavior: usually dessert baking powder/cake leavening in Italian, but formulation/target policy is not yet explicit. |
+
+Operational note:
+
+- Multi-pass runs over larger packets can exceed the default `20s` provider timeout.
+- For controlled dev smoke tests, `60s` provider timeout is more realistic.
+- Before production scheduling, the agent should either use smaller batches, adaptive timeout, or a retry policy that falls back to fewer items instead of failing the whole run.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
