@@ -85,7 +85,7 @@
 "home.section.from_fridge.title" = "From your fridge";
 "home.section.more_ideas" = "More ideas";
 "home.section.seasonal.cta" = "See all";
-"home.section.seasonal.subtitle" = "Right now · Lombardy";
+"home.section.seasonal.subtitle" = "Right now";
 "home.section.seasonal.title" = "At peak this week";
 "home.section.weekly.label" = "Chosen for you";
 "home.section.weekly.title" = "Recipes for your moment";
@@ -194,6 +194,13 @@
 "shopping.recipe_prefix" = "For";
 "detail.nutrition.highlights" = "Nutrition highlights";
 "detail.related_recipes.title" = "What to cook with this";
+"ingredient.type.produce" = "Seasonal produce";
+"ingredient.type.basic" = "Basic ingredient";
+"account.appearance.title" = "Appearance";
+"account.appearance.system" = "System";
+"account.appearance.light" = "Light";
+"account.appearance.dark" = "Dark";
+"account.appearance.hint" = "Follow your phone settings or force light/dark mode.";
 "detail.seasonality" = "Seasonality";
 "detail.seasonality.unavailable" = "Seasonality unavailable";
 "home.band.peak.kicker" = "At peak this week";

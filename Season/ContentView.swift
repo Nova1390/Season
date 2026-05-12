@@ -1,6 +1,36 @@
 import SwiftUI
 import UIKit
 
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .system:
+            return "circle.lefthalf.filled"
+        case .light:
+            return "sun.max"
+        case .dark:
+            return "moon"
+        }
+    }
+}
+
 struct ContentView: View {
     private enum MainTab: Int {
         case home
@@ -11,14 +41,20 @@ struct ContentView: View {
 
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
+    @AppStorage("appAppearanceRaw") private var appAppearanceRaw = AppAppearance.system.rawValue
     @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
     @StateObject private var fridgeViewModel = FridgeViewModel()
     @State private var selectedTab: MainTab = .home
+    @State private var homeNavigationResetID = UUID()
+    @State private var searchNavigationResetID = UUID()
+    @State private var todayNavigationResetID = UUID()
+    @State private var accountNavigationResetID = UUID()
     @State private var showingCreateRecipe = false
     @State private var activeDraftRecipeID: String?
     @State private var outboxDispatcher = OutboxDispatcher()
     @StateObject private var syncFeedback = SyncFeedbackCenter.shared
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -33,6 +69,7 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .id(homeNavigationResetID)
             .tag(MainTab.home)
             .tabItem {
                 Label(viewModel.localizer.text(.homeTab), systemImage: "house.fill")
@@ -44,6 +81,7 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .id(searchNavigationResetID)
             .tag(MainTab.search)
             .tabItem {
                 Label(viewModel.localizer.text(.searchTab), systemImage: "magnifyingglass")
@@ -55,6 +93,7 @@ struct ContentView: View {
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .id(todayNavigationResetID)
             .tag(MainTab.today)
             .tabItem {
                 Label(viewModel.localizer.text(.todayTab), systemImage: "sun.max.fill")
@@ -64,10 +103,12 @@ struct ContentView: View {
                 AccountView(
                     selectedLanguage: $selectedLanguage,
                     nutritionGoalsRaw: $nutritionGoalsRaw,
+                    appAppearanceRaw: $appAppearanceRaw,
                     viewModel: viewModel,
                     shoppingListViewModel: shoppingListViewModel
                 )
             }
+            .id(accountNavigationResetID)
             .tag(MainTab.account)
             .tabItem {
                 Label(viewModel.localizer.text(.accountTab), systemImage: "person.crop.circle.fill")
@@ -151,7 +192,7 @@ struct ContentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                    .stroke(tabBarBorderColor, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.08), radius: 30, x: 0, y: 10)
             .padding(.horizontal, 10)
@@ -192,8 +233,13 @@ struct ContentView: View {
         .onChange(of: nutritionGoalsRaw) { _, newValue in
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(newValue)
         }
+        .preferredColorScheme(appAppearance.colorScheme)
         .environmentObject(fridgeViewModel)
         .animation(.easeInOut(duration: 0.2), value: syncFeedback.isVisible)
+    }
+
+    private var appAppearance: AppAppearance {
+        AppAppearance(rawValue: appAppearanceRaw) ?? .system
     }
 
     private var bottomBarDiscoverTitle: String {
@@ -204,11 +250,23 @@ struct ContentView: View {
         viewModel.languageCode == AppLanguage.italian.rawValue ? "Io" : "Me"
     }
 
+    private var tabBarBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.22) : Color.white.opacity(0.75)
+    }
+
+    private var activeTabBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.38)
+    }
+
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {
         let isActive = selectedTab == tab
 
         return Button {
-            selectedTab = tab
+            if selectedTab == tab {
+                resetNavigation(for: tab)
+            } else {
+                selectedTab = tab
+            }
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: imageName)
@@ -222,11 +280,24 @@ struct ContentView: View {
             .frame(height: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isActive ? Color.white.opacity(0.38) : Color.clear)
+                    .fill(isActive ? activeTabBackgroundColor : Color.clear)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func resetNavigation(for tab: MainTab) {
+        switch tab {
+        case .home:
+            homeNavigationResetID = UUID()
+        case .search:
+            searchNavigationResetID = UUID()
+        case .today:
+            todayNavigationResetID = UUID()
+        case .account:
+            accountNavigationResetID = UUID()
+        }
     }
 }
 

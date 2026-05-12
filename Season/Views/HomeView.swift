@@ -4,6 +4,7 @@ struct HomeView: View {
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var followStore = FollowStore.shared
     @State private var selectedQuickFilter: HomeQuickFilter?
     @State private var cachedMiniFeeds: [HomeQuickFilter: [HomeFeedItem]] = [:]
@@ -16,6 +17,7 @@ struct HomeView: View {
     @State private var selectedRecipeRoute: HomeRecipeRoute?
     private let homeQuickFilters: [HomeQuickFilter] = [.readyNow, .under15, .highProtein, .peakSeason, .trending]
     private let homeContentGutter: CGFloat = DS.Spacing.xl
+    private let homeChromeGutter: CGFloat = 10
 
     var body: some View {
         GeometryReader { proxy in
@@ -266,7 +268,7 @@ struct HomeView: View {
                 .stroke(DS.Color.border, lineWidth: 1)
         )
         .dsShadow(.s2)
-        .padding(.horizontal, homeContentGutter)
+        .padding(.horizontal, homeChromeGutter)
         .padding(.bottom, DS.Spacing.xxl)
     }
 
@@ -424,14 +426,22 @@ struct HomeView: View {
             Image(systemName: "arrow.right")
                 .font(.system(size: 13, weight: .semibold))
         }
-        .foregroundStyle(Color.white)
+        .foregroundStyle(primaryCTAForeground)
         .padding(.horizontal, 18)
         .frame(maxWidth: .infinity)
         .frame(height: 48)
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
-                .fill(DS.Color.ink)
+                    .fill(primaryCTABackground)
         )
+    }
+
+    private var primaryCTABackground: Color {
+        colorScheme == .dark ? DS.Color.sageDeep : DS.Color.ink
+    }
+
+    private var primaryCTAForeground: Color {
+        colorScheme == .dark ? Color.black.opacity(0.86) : Color.white
     }
 
     private func heroSecondaryIcon(systemName: String, isActive: Bool) -> some View {
@@ -994,12 +1004,12 @@ struct HomeView: View {
                         Text(HomeQuickFilter.following.title(using: viewModel.localizer))
                             .font(DS.Font.chip)
                     }
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(activeFilterForeground)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(DS.Color.ink)
+                            .fill(activeFilterBackground)
                     )
                 }
 
@@ -1058,6 +1068,14 @@ struct HomeView: View {
 
     private var localizedAllFilterTitle: String {
         viewModel.languageCode == "it" ? "Tutte" : "All"
+    }
+
+    private var activeFilterBackground: Color {
+        colorScheme == .dark ? DS.Color.sageDeep : DS.Color.ink
+    }
+
+    private var activeFilterForeground: Color {
+        colorScheme == .dark ? Color.black.opacity(0.86) : Color.white
     }
 
     @ViewBuilder
@@ -1395,10 +1413,11 @@ struct HomeView: View {
     }
 
     private var tipBandView: some View {
-        TipCardBand(
+        let tip = weeklyHomeTip
+        return TipCardBand(
             kicker: viewModel.localizer.localized("home.tip.kicker"),
-            text: viewModel.localizer.localized("home.tip.text"),
-            textEmphasis: viewModel.localizer.localized("home.tip.text_em"),
+            text: tip.text,
+            textEmphasis: tip.emphasis,
             ctaText: viewModel.localizer.localized("home.tip.cta"),
             isInteractive: false
         )
@@ -1459,7 +1478,28 @@ struct HomeView: View {
                 isFollowing: suggestion.isFollowing,
                 onFollow: { suggestion.toggleFollow() }
             )
+            .padding(.horizontal, homeContentGutter)
         }
+    }
+
+    private var weeklyHomeTip: (text: String, emphasis: String?) {
+        let italianTips: [(String, String?)] = [
+            ("Le verdure di stagione vanno usate appena raccolte: il sapore cala di ora in ora.", "appena raccolte"),
+            ("Prima di fare la spesa guarda cosa hai gia in frigo: spesso manca solo un dettaglio.", "cosa hai gia"),
+            ("Se una ricetta sembra lunga, prepara prima gli ingredienti: cucinare diventa quasi automatico.", "prepara prima"),
+            ("Erbe fresche e agrumi salvano molti piatti semplici: aggiungili alla fine.", "alla fine"),
+            ("Quando un ingrediente e al picco di stagione, lascia che sia lui il protagonista.", "picco di stagione")
+        ]
+        let englishTips: [(String, String?)] = [
+            ("Use seasonal vegetables as soon as you can: their flavor fades hour by hour.", "as soon as you can"),
+            ("Before shopping, check your fridge first: often you only need one small thing.", "check your fridge"),
+            ("If a recipe feels long, prep the ingredients first: cooking becomes almost automatic.", "prep the ingredients"),
+            ("Fresh herbs and citrus lift simple dishes: add them at the end.", "at the end"),
+            ("When an ingredient is at peak season, let it lead the plate.", "peak season")
+        ]
+        let tips = viewModel.languageCode == "it" ? italianTips : englishTips
+        let week = Calendar.current.component(.weekOfYear, from: Date())
+        return tips[(max(week, 1) - 1) % tips.count]
     }
 
     // MARK: - Editorial helper data

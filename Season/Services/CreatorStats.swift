@@ -21,7 +21,10 @@ func followerCount(for creatorID: String?, fallbackName: String) -> Int {
     if !idSeed.isEmpty {
         return followerCount(for: idSeed)
     }
-    return followerCount(for: fallbackName)
+    // A missing canonical creator id usually means the profile belongs to the
+    // current user preview or to an unresolved legacy author. Do not invent
+    // social proof for real accounts.
+    return 0
 }
 
 private func deterministicHash(_ value: String) -> UInt64 {

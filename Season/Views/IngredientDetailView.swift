@@ -4,9 +4,6 @@ struct IngredientDetailView: View {
     let ingredient: IngredientReference
     let viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
-    private let localizer = AppLocalizer(
-        languageCode: Locale.current.language.languageCode?.identifier.hasPrefix("it") == true ? "it" : "en"
-    )
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     @State private var fridgeButtonPulse = false
     @State private var shoppingButtonPulse = false
@@ -428,11 +425,11 @@ struct IngredientDetailView: View {
     private var typeLabel: String {
         switch ingredient.type {
         case .produce:
-            return "produce"
+            return localizer.localized("ingredient.type.produce")
         case .basic:
-            return "basic"
+            return localizer.localized("ingredient.type.basic")
         case .custom:
-            return "custom"
+            return localizer.text(.customIngredient)
         }
     }
 
@@ -447,26 +444,33 @@ struct IngredientDetailView: View {
     }
 
     private var resolvedProduceItem: ProduceItem? {
-        guard let produceID = ingredient.produceID,
-              !produceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
+        if let produceID = ingredient.produceID,
+           !produceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let item = ProduceStore.loadFromBundle().first(where: { $0.id == produceID }) {
+            return item
         }
-        return ProduceStore.loadFromBundle().first { $0.id == produceID }
+
+        let normalizedName = normalizedIngredientName(ingredient.name)
+        guard !normalizedName.isEmpty else { return nil }
+        return ProduceStore.loadFromBundle().first { item in
+            item.localizedNames.values.contains { localizedName in
+                normalizedIngredientName(localizedName) == normalizedName
+            } || normalizedIngredientName(item.id.replacingOccurrences(of: "_", with: " ")) == normalizedName
+        }
     }
 
     private var resolvedBasicIngredient: BasicIngredient? {
-        guard ingredient.type == .basic else { return nil }
         if ingredient.id.hasPrefix("basic:") {
             let id = String(ingredient.id.dropFirst("basic:".count))
             if let found = BasicIngredientCatalog.all.first(where: { $0.id == id }) {
                 return found
             }
         }
-        let normalizedName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedName = normalizedIngredientName(ingredient.name)
         return BasicIngredientCatalog.all.first {
-            $0.displayName(languageCode: localizer.languageCode)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased() == normalizedName
+            $0.localizedNames.values.contains { localizedName in
+                normalizedIngredientName(localizedName) == normalizedName
+            } || normalizedIngredientName($0.id.replacingOccurrences(of: "_", with: " ")) == normalizedName
         }
     }
 
@@ -518,6 +522,20 @@ struct IngredientDetailView: View {
         if let produce = resolvedProduceItem {
             return localizer.categoryTitle(for: produce.category)
         }
-        return typeLabel.capitalized
+        if resolvedBasicIngredient != nil {
+            return localizer.text(.basicIngredient)
+        }
+        return typeLabel
+    }
+
+    private var localizer: AppLocalizer {
+        viewModel.localizer
+    }
+
+    private func normalizedIngredientName(_ value: String) -> String {
+        value
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

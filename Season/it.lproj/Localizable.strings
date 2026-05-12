@@ -85,7 +85,7 @@
 "home.section.from_fridge.title" = "Dal tuo frigo";
 "home.section.more_ideas" = "Altre idee";
 "home.section.seasonal.cta" = "Vedi tutti";
-"home.section.seasonal.subtitle" = "In questo momento · Lombardia";
+"home.section.seasonal.subtitle" = "In questo momento";
 "home.section.seasonal.title" = "Al picco questa settimana";
 "home.section.weekly.label" = "Scelto per te";
 "home.section.weekly.title" = "Ricette per il tuo momento";
@@ -194,6 +194,13 @@
 "shopping.recipe_prefix" = "Per";
 "detail.nutrition.highlights" = "Nutrienti principali";
 "detail.related_recipes.title" = "Cosa cucinare con questo";
+"ingredient.type.produce" = "Prodotto stagionale";
+"ingredient.type.basic" = "Ingrediente base";
+"account.appearance.title" = "Aspetto";
+"account.appearance.system" = "Sistema";
+"account.appearance.light" = "Chiaro";
+"account.appearance.dark" = "Scuro";
+"account.appearance.hint" = "Scegli se seguire il telefono o forzare la modalita chiara/scura.";
 "detail.seasonality" = "Stagionalità";
 "detail.seasonality.unavailable" = "Stagionalità non disponibile";
 "home.band.peak.kicker" = "Al picco questa settimana";
