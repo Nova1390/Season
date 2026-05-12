@@ -185,7 +185,8 @@ Return exactly this JSON shape:
 
 Decision policy:
 1) Use approve_alias only when observed text is a surface/quantity/preparation variant of an existing target.
-2) Use add_localization when the text is a language display name for an existing ingredient.
+2) Use add_localization when the text is the intended language display name for an existing ingredient.
+2a) If the target already has a curated display name in that language, use approve_alias for plural forms, imported surface text, common alternate wording, or localized search terms. Do not use add_localization just because the observed text is in another language.
 3) Use create_canonical when a genuinely distinct culinary identity is likely needed.
 4) Use ignore_noise when the text is not an ingredient identity.
 5) Use needs_human_review when language/culture/variant/product ambiguity exists.

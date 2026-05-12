@@ -281,6 +281,31 @@ Budget-conscious follow-up:
 - Run `40` found a useful runtime issue: the provider returned an `add_localization` proposal without a target, so validation failed and no proposals were inserted.
 - The triage function now repairs incomplete actionable proposals by downgrading them to `needs_human_review`, recording `provider_output_repaired`, and preserving a blocking question.
 
+Run `41`:
+
+- Used the repaired provider-output function with a temporary `limit=12`.
+- Items in snapshot: `12`.
+- Items sent to LLM: `2`.
+- Recent proposals skipped: `10`.
+- Proposals created: `2`.
+- Token usage: `8,103` input, `1,654` output, `9,757` total.
+- No adaptive retry was needed.
+- Triage was disabled again after the run.
+
+Created proposals:
+
+| ID | Term | Proposal | Target | Risk | Status | Assessment |
+| --- | --- | --- | --- | --- | --- | --- |
+| `21` | `mais` | `add_localization` | `corn` | low | draft | Target was correct, but action was wrong: `mais` is a surface/common alias because `corn` already has Italian display text. |
+| `22` | `mele` | `add_localization` | `apple` | low | draft | Target was correct, but action was wrong: plural/common forms should become aliases, not replace canonical display localization. |
+
+Governance decision:
+
+- `mais` maps to existing canonical `corn` as an approved Italian alias.
+- `mele` maps to existing canonical `apple` as an approved Italian alias.
+- `add_localization` should be reserved for missing or incorrect display names, not for plural/imported surface forms when a curated localization already exists.
+- The prompt now contains this general rule before the model proposes anything.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
