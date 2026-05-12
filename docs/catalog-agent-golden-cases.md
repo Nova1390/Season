@@ -29,6 +29,12 @@ The goal is simple: separate three things that can otherwise get confused.
 - Useful after controlled triage runs.
 - Expected to fail in places while the agent is still learning.
 
+`effective_target`
+
+- Verifies the operationally correct end state after governed review/apply paths.
+- Useful when historical latest proposals are known-bad but the catalog has since been fixed.
+- This is the practical autonomy gate for "is Season usable and safe now?" while `target` remains the stricter "would the next proposal be right by itself?" measure.
+
 ## Current Golden Cases
 
 The first set covers the behaviors that define the jump from "proposal bot" to "catalog manager junior":
@@ -66,6 +72,12 @@ Target-intelligence check after a controlled agent run:
 python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile target
 ```
 
+Operational target check after governed applies:
+
+```bash
+python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile effective_target
+```
+
 JSON output for CI or future dashboard ingestion:
 
 ```bash
@@ -78,6 +90,7 @@ python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile current
 - The runner does not call OpenAI or any LLM provider.
 - Failing `current` means the dev catalog/proposal state regressed.
 - Failing `target` means the agent is not yet autonomous for that behavior.
+- Failing `effective_target` means the currently governed catalog/proposal outcome is not safe enough for the next autonomy step.
 - Add new golden cases whenever a human correction teaches a reusable catalog rule.
 
 ## Autonomy Gate
@@ -90,6 +103,8 @@ Before increasing autonomy, the agent should pass:
 - 0 localization/alias category mistakes for already-governed examples.
 
 Only after that should low-risk apply be considered for scheduled dev runs.
+
+`effective_target` can pass before `target` passes. That is intentional: `effective_target` measures the current governed outcome, while `target` keeps pressure on the agent to stop producing the same historical mistakes.
 
 ## 2026-05-12 Baseline
 
@@ -158,3 +173,28 @@ Interpretation:
 - The agent moved from `3/10` to `6/10` on target behavior after learning memory and a small rerun.
 - Remaining target failures are historical proposals for already-governed terms: `uovo`, `pane raffermo`, `mais`, `mele`.
 - Those cases are fixed in the catalog, but the target profile still records that the latest historical agent proposal was wrong because no fresh agent rerun exists for resolved observations.
+
+## 2026-05-12 Governed Apply Gate
+
+Dev-only controlled actions:
+
+- Proposal `#23 pomodori` was queued for deterministic validation.
+- The validator returned no errors and marked it `validated`.
+- The governed apply RPC applied it as an approved active alias to `tomato`.
+- Proposal `#24 fiocchi d avena` was not applied directly because it is `create_canonical` and medium risk.
+- Proposal `#24` was routed into the canonical enrichment path by preparing a pending enrichment draft with suggested slug `oat_flakes`.
+
+Golden-case result:
+
+```text
+current: 10/10 passed
+target: 6/10 passed
+effective_target: 10/10 passed
+```
+
+Interpretation:
+
+- Season-dev now has the correct operational state for the initial golden set.
+- The agent has demonstrated a low-risk proposal -> deterministic validator -> governed apply path.
+- The agent has also demonstrated a catalog-gap proposal -> enrichment draft path without directly creating an ingredient.
+- This raises the dev autonomy maturity to `3.5 dev-gated`: useful operational autonomy exists, but scheduled real apply and staging promotion remain disabled until more target-profile reruns are clean.

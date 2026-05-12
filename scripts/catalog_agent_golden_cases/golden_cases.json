@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "description": "No-LLM golden cases for Season catalog-agent governance. The current profile verifies the dev database after reviewed governance decisions. The target profile describes the behavior the autonomous agent should eventually produce without manual intervention.",
-  "profiles": ["current", "target"],
+  "description": "No-LLM golden cases for Season catalog-agent governance. The current profile verifies the dev database after reviewed governance decisions. The target profile describes the behavior the autonomous agent should eventually produce without manual intervention. The effective_target profile verifies the operationally correct catalog/proposal state after governed apply paths.",
+  "profiles": ["current", "target", "effective_target"],
   "cases": [
     {
       "id": "base-singular-uovo",
@@ -19,6 +19,12 @@
         "target_slug": "eggs",
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.9
+      },
+      "effective_target": {
+        "kind": "alias",
+        "target_slug": "eggs",
+        "status": "approved",
+        "is_active": true
       }
     },
     {
@@ -37,6 +43,12 @@
         "target_slug": "bread",
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.85
+      },
+      "effective_target": {
+        "kind": "alias",
+        "target_slug": "bread",
+        "status": "approved",
+        "is_active": true
       }
     },
     {
@@ -55,6 +67,12 @@
         "target_slug": "corn",
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.9
+      },
+      "effective_target": {
+        "kind": "alias",
+        "target_slug": "corn",
+        "status": "approved",
+        "is_active": true
       }
     },
     {
@@ -73,6 +91,12 @@
         "target_slug": "apple",
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.9
+      },
+      "effective_target": {
+        "kind": "alias",
+        "target_slug": "apple",
+        "status": "approved",
+        "is_active": true
       }
     },
     {
@@ -92,6 +116,12 @@
         "target_slug": "tomato",
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.85
+      },
+      "effective_target": {
+        "kind": "alias",
+        "target_slug": "tomato",
+        "status": "approved",
+        "is_active": true
       }
     },
     {
@@ -110,6 +140,12 @@
         "proposed_slug_any_of": ["pomodorini", "cherry_tomatoes"],
         "status_any_of": ["draft", "validated", "applied"],
         "min_confidence": 0.8
+      },
+      "effective_target": {
+        "kind": "canonical",
+        "slug": "pomodorini",
+        "status": "active",
+        "parent_slug": "tomato"
       }
     },
     {
@@ -129,6 +165,13 @@
         "status_any_of": ["draft", "queued_for_validation", "validated"],
         "proposed_slug_any_of": ["red_lentils", "lenticchie_rosse"],
         "min_confidence": 0.8
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type": "create_canonical",
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
+        "proposed_slug_any_of": ["red_lentils", "lenticchie_rosse"],
+        "min_confidence": 0.75
       }
     },
     {
@@ -146,6 +189,12 @@
         "proposal_type": "needs_human_review",
         "status_any_of": ["needs_human_review"],
         "risk_any_of": ["medium", "high"]
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type": "needs_human_review",
+        "status_any_of": ["needs_human_review", "superseded"],
+        "risk_any_of": ["medium", "high"]
       }
     },
     {
@@ -159,6 +208,12 @@
         "risk_any_of": ["medium", "high"]
       },
       "target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated"],
+        "min_confidence": 0.7
+      },
+      "effective_target": {
         "kind": "proposal",
         "proposal_type_any_of": ["approve_alias", "create_canonical", "needs_human_review"],
         "status_any_of": ["draft", "needs_human_review", "validated"],
@@ -181,6 +236,13 @@
         "proposal_type_any_of": ["create_canonical", "approve_alias"],
         "proposed_slug_any_of": ["rolled_oats", "oat_flakes", "fiocchi_di_avena"],
         "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.8
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type": "create_canonical",
+        "proposed_slug_any_of": ["rolled_oats", "oat_flakes", "fiocchi_di_avena"],
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
         "min_confidence": 0.8
       }
     }

@@ -67,6 +67,8 @@ This is important because a proposal can pass validation and still fail inside a
 
 ## Current Autonomy Level
 
-Level 2.5: manual governed apply.
+Level 3.5: dev-gated governed autonomy.
 
-The agent can now move from proposal to real catalog action only when an admin intentionally applies a validated, low-risk proposal through governed backend RPCs.
+The agent can now move one reviewed low-risk proposal from proposal to deterministic validation to governed apply on `Season-dev`. The demonstrated path applied `pomodori -> tomato` through `apply_catalog_agent_proposal(...)`, which delegates to existing governed catalog RPCs instead of writing tables directly.
+
+This is still not scheduled auto-apply. Broad real apply, staging promotion, and unattended worker scheduling remain intentionally disabled until golden `target` behavior improves and more low-risk batches pass without regressions.

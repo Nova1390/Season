@@ -36,6 +36,9 @@ This checklist is for the current branch and dev environment only. It does not a
 - Smart Import training captions were imported into dev custom observations as a controlled catalog-agent exercise.
 - The agent triage run timestamp bug was fixed after the training import exposed it.
 - Golden-case evaluation now exists to measure catalog-agent intelligence without extra LLM calls.
+- Golden cases now include `effective_target`, an operational gate that separates fixed catalog state from historical latest-proposal quality.
+- Dev-only controlled apply proved the low-risk path with `pomodori -> tomato`.
+- Dev-only canonical draft preparation proved the create-canonical path for `fiocchi d avena -> oat_flakes` without creating an ingredient directly.
 
 ## Dev Training Import
 
@@ -258,6 +261,34 @@ Created proposals:
 | --- | --- | --- | --- | --- | --- |
 | `19` | `lenticchie rosse` | `create_canonical` | medium | draft | Good behavior: red lentils are a meaningful lentil variant and should not collapse into generic lentils without a dedicated child. |
 | `20` | `lievito per dolci` | `needs_human_review` | high | needs review | Good conservative behavior: usually dessert baking powder/cake leavening in Italian, but formulation/target policy is not yet explicit. |
+
+### 2026-05-12 Dev-Gated Autonomy Step
+
+Controlled actions:
+
+- Run `42` created `#23 pomodori` as `approve_alias -> tomato`, low risk, confidence `0.99`, auto-apply eligible.
+- Run `42` created `#24 fiocchi d avena` as `create_canonical`, proposed slug `oat_flakes`, medium risk.
+- `#23 pomodori` was queued for validation.
+- `validate_catalog_agent_proposal(23)` returned no validation errors and marked it `validated`.
+- `apply_catalog_agent_proposal(23, ...)` applied it through the governed alias RPC.
+- Result: active approved alias `pomodori -> tomato`; proposal status `applied`.
+- `#24 fiocchi d avena` was not directly applied because `create_canonical` must use the enrichment path.
+- `prepare_catalog_agent_canonical_enrichment_draft(24, ...)` created/refreshed a pending draft with suggested slug `oat_flakes`.
+
+Golden-case output:
+
+```text
+current: 10/10 passed
+target: 6/10 passed
+effective_target: 10/10 passed
+```
+
+Autonomy assessment:
+
+- Current maturity is `3.5 dev-gated`.
+- The agent can produce actionable low-risk work, pass deterministic validation, and apply through governed RPCs on dev.
+- The agent can route missing-canonical work into Autopilot's enrichment-draft lane instead of creating catalog identity directly.
+- Scheduled real apply, broad batch apply, and staging promotion remain disabled until `target` improves beyond the historical latest-proposal failures.
 
 Operational note:
 

@@ -270,7 +270,7 @@ def parse_args() -> argparse.Namespace:
     default_fixture = Path(__file__).with_name("golden_cases.json")
     parser = argparse.ArgumentParser(description="Run no-LLM Season catalog-agent golden checks.")
     parser.add_argument("--fixture", type=Path, default=default_fixture)
-    parser.add_argument("--profile", choices=("current", "target"), default="current")
+    parser.add_argument("--profile", default="current")
     parser.add_argument("--schema-only", action="store_true", help="Validate fixture shape without contacting Supabase.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     return parser.parse_args()
@@ -279,6 +279,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     payload = load_fixture(args.fixture)
+    profiles = payload.get("profiles") or []
+    if args.profile not in profiles:
+        print(
+            f"Unsupported profile {args.profile!r}. Available profiles: {', '.join(profiles)}",
+            file=sys.stderr,
+        )
+        return 2
     schema_errors = schema_check(payload, args.profile)
     if schema_errors:
         print("\n".join(schema_errors), file=sys.stderr)

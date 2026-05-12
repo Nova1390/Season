@@ -31,9 +31,10 @@ Current implementation status:
 - Step 1 of that architecture is implemented: `run-catalog-agent-triage` now requires a structured `semantic_profile` in proposal output and persists it in proposal evidence.
 - The first `create_canonical` execution bridge is implemented: an admin can prepare an enrichment draft from a catalog-gap proposal, the enrichment worker can enrich it, and the agent orchestrator can now delegate ingredient creation from ready drafts through `ingredient_creation_batch`.
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
-- Low-risk auto-apply infrastructure exists but real apply remains disabled by default; recipe mutation, scheduler promotion, and iOS admin UI are not implemented for the agent path.
+- Low-risk auto-apply infrastructure exists but scheduled real apply remains disabled by default; one dev-gated low-risk proposal has been applied through validator + governed RPC as an autonomy smoke test.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
-- A no-LLM golden-case harness now exists in `scripts/catalog_agent_golden_cases/` and is documented in `docs/catalog-agent-golden-cases.md`. It separates current dev correctness from target autonomous behavior before increasing apply permissions.
+- A no-LLM golden-case harness now exists in `scripts/catalog_agent_golden_cases/` and is documented in `docs/catalog-agent-golden-cases.md`. It separates current dev correctness, strict target autonomous behavior, and effective operational safety before increasing apply permissions.
+- Current autonomy maturity is `3.5 dev-gated`: the agent can close a reviewed low-risk alias path end-to-end on dev and can route `create_canonical` proposals into Autopilot's enrichment-draft lane, but scheduled apply and staging promotion remain off.
 
 ## 1. Executive Summary
 
