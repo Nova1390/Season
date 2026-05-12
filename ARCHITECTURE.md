@@ -51,7 +51,7 @@ Season is a hybrid local-first app with targeted cloud sync/write-through:
 - iOS recipe ingredient model/fetch now supports `ingredient_id` while retaining legacy compatibility (`produce_id`, `basic_ingredient_id`).
 
 ## Known Technical Debt / Next Hardening Areas
-- TestFlight build `1.0.1 (3)` is the current bugfix candidate; App Store Connect processing/review steps remain operational.
+- TestFlight build `1.0.1 (4)` is the current bugfix candidate; App Store Connect processing/review steps remain operational.
 - Staging preflight SQL should be run against the staging project before each release candidate and after catalog/security changes.
 - `OutboxStore` on `UserDefaults` has long-term scalability limits.
 - `RecipeRepository` still uses schema-drift fallback branches that should be reduced over time.

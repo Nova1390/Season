@@ -306,10 +306,10 @@ Configurazione in Xcode:
 
 Stato TestFlight:
 
-- `CURRENT_PROJECT_VERSION = 2`.
+- `CURRENT_PROJECT_VERSION = 4`.
 - `MARKETING_VERSION = 1.0.1`.
 - Release compila contro staging.
-- TestFlight candidate `1.0.1 (3)` e il candidato bugfix corrente da configurazione Release.
+- TestFlight candidate `1.0.1 (4)` e il candidato bugfix corrente da configurazione Release.
 - Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
 
 ## 13. Build e verifica
