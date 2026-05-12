@@ -506,6 +506,7 @@ final class ProduceViewModel: ObservableObject {
 
             let matched = resolveIngredientAlias(query: normalizedQuery)
                 ?? resolveCatalogMatchForCustomIngredient(query: normalizedQuery)
+                ?? resolveCatalogMatchInIngredientText(query: normalizedQuery)
             guard let matched else { return ingredient }
 
             successCount += 1
@@ -655,6 +656,27 @@ final class ProduceViewModel: ObservableObject {
         }
 
         return nil
+    }
+
+    private func resolveCatalogMatchInIngredientText(query: String) -> IngredientAliasMatch? {
+        let normalized = normalizedSearchText(query)
+        guard !normalized.isEmpty else { return nil }
+
+        var candidates: [(term: String, match: IngredientAliasMatch)] = []
+        candidates.reserveCapacity(produceByNormalizedName.count + basicByNormalizedName.count)
+        candidates.append(contentsOf: produceByNormalizedName.map { ($0.key, .produce($0.value)) })
+        candidates.append(contentsOf: basicByNormalizedName.map { ($0.key, .basic($0.value)) })
+
+        return candidates
+            .filter { $0.term.count >= 3 && normalizedContainsTerm($0.term, in: normalized) }
+            .sorted { lhs, rhs in
+                if lhs.term.count != rhs.term.count {
+                    return lhs.term.count > rhs.term.count
+                }
+                return lhs.term < rhs.term
+            }
+            .first?
+            .match
     }
 
     func loadNextRecipePageIfNeeded(isNearEnd: Bool) {
@@ -1791,6 +1813,12 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if ingredient.ingredientID != nil {
+            let fallbackText = ingredient.rawIngredientLine?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
+                : ingredient.name
+            if let match = resolveCatalogMatchInIngredientText(query: fallbackText) {
+                return resolvedIngredient(from: match, fallback: ingredient)
+            }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
                 displayName: ingredient.name,
@@ -1825,6 +1853,7 @@ final class ProduceViewModel: ObservableObject {
         let match = resolveUnifiedAliasMatch(query: normalizedQuery)
             ?? resolveUnifiedCatalogMatch(query: normalizedQuery)
             ?? resolveIngredientForImport(query: normalizedQuery)
+            ?? resolveCatalogMatchInIngredientText(query: normalizedQuery)
         guard let match else {
             if SeasonLog.verbose {
                 print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
@@ -1838,6 +1867,13 @@ final class ProduceViewModel: ObservableObject {
             )
         }
 
+        return resolvedIngredient(from: match, fallback: ingredient)
+    }
+
+    private func resolvedIngredient(
+        from match: IngredientAliasMatch,
+        fallback ingredient: RecipeIngredient
+    ) -> ResolvedIngredient {
         switch match {
         case .produce(let item):
             if SeasonLog.verbose {
@@ -2719,6 +2755,32 @@ final class ProduceViewModel: ObservableObject {
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             .lowercased()
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func normalizedWords(_ text: String) -> [String] {
+        normalizedSearchText(text)
+            .replacingOccurrences(of: "[^a-z0-9]+", with: " ", options: .regularExpression)
+            .split(separator: " ")
+            .map(String.init)
+    }
+
+    private func normalizedContainsTerm(_ term: String, in text: String) -> Bool {
+        let termWords = normalizedWords(term)
+        guard !termWords.isEmpty else { return false }
+        let textWords = normalizedWords(text)
+        guard textWords.count >= termWords.count else { return false }
+
+        if termWords.count == 1 {
+            return textWords.contains(termWords[0])
+        }
+
+        for startIndex in 0...(textWords.count - termWords.count) {
+            let window = textWords[startIndex..<(startIndex + termWords.count)]
+            if Array(window) == termWords {
+                return true
+            }
+        }
+        return false
     }
 
     private func matches(query: String, tokens: [String], in terms: [String]) -> Bool {

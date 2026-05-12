@@ -409,7 +409,10 @@ struct AuthorProfileView: View {
     }
 
     private var followerCountValue: Int {
-        followerCount(for: canonicalCreatorID, fallbackName: authorName)
+        if canonicalCreatorID == currentCreatorID {
+            return 0
+        }
+        return followerCount(for: canonicalCreatorID, fallbackName: authorName)
     }
 
     private var compactRecipeCountText: String {

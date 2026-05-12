@@ -9,6 +9,7 @@ struct AccountView: View {
     }
     @Binding var selectedLanguage: String
     @Binding var nutritionGoalsRaw: String
+    @Binding var appAppearanceRaw: String
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     @AppStorage("accountUsername") private var accountUsername = "Anna"
@@ -296,6 +297,7 @@ struct AccountView: View {
             NavigationLink {
                 AuthorProfileView(
                     authorName: publicProfileAuthorName,
+                    creatorID: currentAuthenticatedUserID,
                     viewModel: viewModel,
                     shoppingListViewModel: shoppingListViewModel,
                     profileSocialLinks: publicProfileSocialLinks,
@@ -635,6 +637,26 @@ struct AccountView: View {
             .modifier(AccountPreferenceBlockModifier())
 
             VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
+                Label(viewModel.localizer.localized("account.appearance.title"), systemImage: currentAppearance.systemImageName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Picker(viewModel.localizer.localized("account.appearance.title"), selection: $appAppearanceRaw) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearanceTitle(for: appearance))
+                            .tag(appearance.rawValue)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+
+                Text(viewModel.localizer.localized("account.appearance.hint"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .modifier(AccountPreferenceBlockModifier())
+
+            VStack(alignment: .leading, spacing: SeasonSpacing.xs) {
                 DisclosureGroup(isExpanded: $showNutritionPreferences) {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(NutritionPriorityDimension.allCases) { dimension in
@@ -669,6 +691,21 @@ struct AccountView: View {
             )
         }
         .tint(DS.Color.sage)
+    }
+
+    private var currentAppearance: AppAppearance {
+        AppAppearance(rawValue: appAppearanceRaw) ?? .system
+    }
+
+    private func appearanceTitle(for appearance: AppAppearance) -> String {
+        switch appearance {
+        case .system:
+            return viewModel.localizer.localized("account.appearance.system")
+        case .light:
+            return viewModel.localizer.localized("account.appearance.light")
+        case .dark:
+            return viewModel.localizer.localized("account.appearance.dark")
+        }
     }
 
     private var diagnosticsSection: some View {
