@@ -8,14 +8,17 @@ This document captures the current project state so bugfix work can proceed with
 
 - A new Season build has been published to TestFlight.
 - Treat the current TestFlight build as the active tester-facing version.
+- The current TestFlight build comes from the previous `supabase-integration` branch, not from `agent/catalog-governance`.
 - Bugfixes should be prioritized against the TestFlight build behavior first.
 - Keep staging/release-sensitive backend changes separate from dev catalog-agent experiments unless explicitly approved.
 
 ## Current Branch Context
 
-- Working branch: `agent/catalog-governance`.
-- GitHub branch is pushed.
-- Worktree was clean after the latest smoke test.
+- Catalog-agent working branch: `agent/catalog-governance`.
+- TestFlight bugfix base branch: `supabase-integration`.
+- Bugfix work for the current TestFlight build should branch from `supabase-integration`, not from `agent/catalog-governance`.
+- The catalog-agent GitHub branch is pushed and should remain separate unless explicitly merged later.
+- Worktree was clean after the latest catalog-agent smoke test.
 - Recent catalog-agent commits:
   - `b6850dc Document catalog agent LLM reasoning loop`
   - `47a8a05 Add catalog agent semantic profiles`
@@ -97,12 +100,21 @@ Important security reminder:
 
 When new TestFlight bugs arrive:
 
-1. Reproduce against the same environment/build if possible.
-2. Identify whether the bug is iOS UI, app config, Supabase data, Auth/OAuth, recipe/catalog behavior, or admin-console only.
-3. Avoid broad catalog migrations unless the bug is clearly backend-data related.
-4. Prefer small commits per bugfix.
-5. Re-run the relevant simulator/build or backend smoke test before pushing.
-6. Document any backend env/secret changes in this handoff or a linked runbook.
+1. Start from `supabase-integration` or a bugfix branch created from it.
+2. Reproduce against the same environment/build if possible.
+3. Identify whether the bug is iOS UI, app config, Supabase data, Auth/OAuth, recipe/catalog behavior, or admin-console only.
+4. Avoid broad catalog migrations unless the bug is clearly backend-data related.
+5. Prefer small commits per bugfix.
+6. Re-run the relevant simulator/build or backend smoke test before pushing.
+7. Document any backend env/secret changes in this handoff or a linked runbook.
+
+Recommended branch command:
+
+```bash
+git checkout supabase-integration
+git pull
+git checkout -b codex/testflight-bugfixes
+```
 
 ## Suggested Next Technical Steps
 
@@ -120,6 +132,7 @@ Only after urgent TestFlight bugs are under control:
 ## Do Not Forget
 
 - Keep TestFlight bugfixes and catalog-agent autonomy work conceptually separate.
+- Do not fix TestFlight bugs on `agent/catalog-governance` unless the user explicitly decides to merge that work into the release line.
 - Do not touch staging unless the user explicitly asks.
 - Do not enable real auto-apply while testers are starting to use the app.
 - Rotate/revoke the Supabase PAT after this workstream is stable.
