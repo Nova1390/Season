@@ -719,6 +719,42 @@ p {
   word-break: break-word;
 }
 
+.canonical-path {
+  background: #fbf7ef;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.canonical-path.detail-section {
+  border-top: 1px solid var(--line);
+}
+
+.canonical-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.canonical-steps div {
+  display: grid;
+  gap: 5px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.canonical-steps span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.canonical-steps strong {
+  word-break: break-word;
+}
+
 .json-block {
   overflow: auto;
   max-height: 240px;
@@ -786,6 +822,7 @@ p {
   .filters,
   .worker-run-form,
   .run-metrics,
+  .canonical-steps,
   .pipeline-flow,
   .ops-panel > header,
   .worker-job header,

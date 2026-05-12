@@ -194,6 +194,12 @@ Catalog-gap behavior:
 - Do not invent `target_ingredient_id`; use proposed fields for new canonical creation.
 - If implemented learning says a term family must not be compressed into a base ingredient, use that learning to prefer a child/specialized `create_canonical` draft when the identity is clear.
 
+Current execution bridge:
+
+- `prepare_catalog_agent_canonical_enrichment_draft(...)` turns a `create_canonical` proposal into a pending enrichment draft.
+- The enrichment draft worker then enriches the missing ingredient candidate.
+- Ingredient creation remains behind draft readiness and governed creation RPCs.
+
 ### 4.5 Learning Writer
 
 Purpose:

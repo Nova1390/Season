@@ -13,6 +13,7 @@ const state = {
   isAdmin: false,
   inbox: null,
   selected: null,
+  draftsByText: new Map(),
   learningMemory: null,
   operations: {
     summary: null,
@@ -132,6 +133,7 @@ function bindEvents() {
     state.isAdmin = false;
     state.inbox = null;
     state.selected = null;
+    state.draftsByText = new Map();
     state.learningMemory = null;
     state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
     setAuthMessage("");
@@ -368,6 +370,7 @@ async function openAdminSession() {
     state.isAdmin = false;
     state.inbox = null;
     state.selected = null;
+    state.draftsByText = new Map();
     state.learningMemory = null;
     state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
     renderSession();
@@ -418,6 +421,7 @@ async function loadInbox(options = {}) {
 
   state.inbox = data;
   const items = Array.isArray(data?.items) ? data.items : [];
+  state.draftsByText = await fetchDraftsForItems(items);
   state.selected = items.find((item) => Number(item.proposal_id) === previousSelectionId) ?? items[0] ?? null;
   if (!state.selected || Number(state.selected.proposal_id) !== previousSelectionId) {
     state.learningMemory = null;
@@ -491,6 +495,29 @@ async function loadOperations(options = {}) {
   if (!options.silent) {
     setStatus("Agent operations loaded.", "success");
   }
+}
+
+async function fetchDraftsForItems(items) {
+  const normalizedTexts = [...new Set(items
+    .map((item) => normalizeKey(item.proposal?.normalized_text))
+    .filter(Boolean))];
+
+  if (normalizedTexts.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await state.client
+    .from("catalog_ingredient_enrichment_drafts")
+    .select("normalized_text,status,ingredient_type,canonical_name_it,canonical_name_en,suggested_slug,confidence_score,validated_ready,validated_errors,updated_at")
+    .in("normalized_text", normalizedTexts);
+
+  if (error) {
+    setStatus(`Draft status unavailable: ${error.message}`, "error");
+    return new Map();
+  }
+
+  return new Map((Array.isArray(data) ? data : [])
+    .map((draft) => [normalizeKey(draft.normalized_text), draft]));
 }
 
 function renderOperations() {
@@ -734,7 +761,8 @@ function renderSelectedProposal() {
   const proposal = item.proposal ?? {};
   const target = item.target ?? {};
   const proposed = item.proposed ?? {};
-  const actionState = getProposalActionState(proposal);
+  const draft = state.draftsByText.get(normalizeKey(proposal.normalized_text)) ?? null;
+  const actionState = getProposalActionState(proposal, draft);
 
   elements.proposalDetail.innerHTML = `
     <div class="detail-stack">
@@ -760,6 +788,8 @@ function renderSelectedProposal() {
         </div>
       </section>
 
+      ${canonicalDraftPanel(proposal, proposed, draft)}
+
       <section class="detail-section">
         <h3>Rationale</h3>
         <p>${escapeHTML(proposal.rationale ?? "No rationale.")}</p>
@@ -771,6 +801,7 @@ function renderSelectedProposal() {
         <div class="review-note">
           <textarea id="reviewNote" placeholder="Reviewer note, required for reject and useful for learning memory."></textarea>
           <div class="action-row">
+            ${actionButton("prepareDraft", "Prepare draft", actionState.prepareDraft)}
             ${actionButton("queue", "Queue validation", actionState.queue)}
             ${actionButton("validate", "Validate", actionState.validate)}
             ${actionButton("apply", "Apply if safe", actionState.apply)}
@@ -804,6 +835,7 @@ function renderSelectedProposal() {
   `;
 
   bindEnabledAction("queue", () => reviewProposal("queue_for_validation"));
+  bindEnabledAction("prepareDraft", prepareCanonicalDraft);
   bindEnabledAction("more", () => reviewProposal("request_more_evidence"));
   bindEnabledAction("reject", () => reviewProposal("reject"));
   bindEnabledAction("validate", validateProposal);
@@ -853,6 +885,28 @@ async function validateProposal() {
   }
 
   await loadInbox();
+}
+
+async function prepareCanonicalDraft() {
+  const proposalId = state.selected?.proposal_id;
+  if (!proposalId) return;
+
+  const note = elements.proposalDetail.querySelector("#reviewNote")?.value?.trim() ?? "";
+  setStatus("Preparing canonical enrichment draft...");
+  const { data, error } = await state.client.rpc("prepare_catalog_agent_canonical_enrichment_draft", {
+    p_proposal_id: proposalId,
+    p_reviewer_note: note || null
+  });
+
+  if (error) {
+    setStatus(error.message, "error");
+    return;
+  }
+
+  await loadInbox({ keepProposalId: proposalId });
+  await loadOperations({ silent: true });
+  const draftStatus = data?.draft_status ?? "pending";
+  setStatus(`Canonical draft prepared (${draftStatus}). Run the enrichment worker when ready.`, "success");
 }
 
 async function applyProposal() {
@@ -926,6 +980,46 @@ function detailCell(label, value) {
   `;
 }
 
+function canonicalDraftPanel(proposal, proposed, draft) {
+  if (proposal.proposal_type !== "create_canonical") {
+    return "";
+  }
+
+  const draftStatus = draft?.status ?? "not_prepared";
+  const draftSlug = draft?.suggested_slug ?? proposed.proposed_slug ?? "none";
+  const draftName = draft?.canonical_name_it ?? draft?.canonical_name_en ?? proposed.proposed_localized_name ?? "none";
+  const validationState = draft?.validated_ready === true ? "ready" : "not_ready";
+
+  return `
+    <section class="detail-section canonical-path">
+      <h3>Canonical creation path</h3>
+      <p>This proposal creates a catalog gap workflow. It prepares an enrichment draft first; ingredient creation stays behind worker validation.</p>
+      <div class="canonical-steps">
+        ${pathStep("Proposal", proposal.status, "The agent identified a missing canonical ingredient.")}
+        ${pathStep("Draft", draftStatus, "An enrichment draft gives Autopilot a bounded work item to enrich.")}
+        ${pathStep("Validation", validationState, "Draft validators must pass before any ingredient can be created.")}
+        ${pathStep("Creation", "gated", "Canonical creation is still admin/worker controlled, never direct from this panel.")}
+      </div>
+      <div class="detail-grid">
+        ${detailCell("Draft slug", draftSlug)}
+        ${detailCell("Draft name", draftName)}
+        ${detailCell("Draft type", draft?.ingredient_type ?? "unknown")}
+        ${detailCell("Draft updated", draft?.updated_at ? formatDate(draft.updated_at) : "none")}
+      </div>
+      ${draft?.validated_errors ? detailsBlock("Draft validation errors", draft.validated_errors) : ""}
+    </section>
+  `;
+}
+
+function pathStep(label, value, helpText = "") {
+  return `
+    <div>
+      <span>${escapeHTML(label)} ${helpTip(helpText)}</span>
+      <strong>${escapeHTML(value ?? "none")}</strong>
+    </div>
+  `;
+}
+
 function metricCell(label, value, helpText = "") {
   return `
     <div>
@@ -953,13 +1047,17 @@ function pipelineNode(label, value, tone = "neutral", helpText = "") {
   `;
 }
 
-function getProposalActionState(proposal) {
+function getProposalActionState(proposal, draft = null) {
   const status = String(proposal.status ?? "");
   const proposalType = String(proposal.proposal_type ?? "");
   const riskLevel = String(proposal.risk_level ?? "");
   const actionableTypes = ["approve_alias", "add_localization", "create_canonical"];
   const applyTypes = ["approve_alias", "add_localization"];
   const isClosed = ["applied", "rejected", "superseded"].includes(status);
+  const draftStatus = String(draft?.status ?? "");
+  const canPrepareDraft = !isClosed
+    && proposalType === "create_canonical"
+    && draftStatus !== "ready";
   const canQueue = !isClosed
     && ["draft", "needs_human_review", "failed_validation"].includes(status)
     && actionableTypes.includes(proposalType);
@@ -977,8 +1075,14 @@ function getProposalActionState(proposal) {
       riskLevel,
       canQueue,
       canValidate,
-      canApply
+      canApply,
+      canPrepareDraft,
+      draftStatus
     }),
+    prepareDraft: {
+      enabled: canPrepareDraft,
+      reason: canPrepareDraft ? "" : "Only open create_canonical proposals without a ready draft can prepare an enrichment draft."
+    },
     queue: {
       enabled: canQueue,
       reason: canQueue ? "" : "Only actionable proposal types can be queued for validation."
@@ -1009,6 +1113,15 @@ function getProposalActionState(proposal) {
 function actionGuidance(input) {
   if (input.proposalType === "needs_human_review") {
     return "This is a triage outcome, not an applicable catalog change. Use More evidence, Reject, or Load learning.";
+  }
+  if (input.proposalType === "create_canonical") {
+    if (input.draftStatus === "ready") {
+      return "A ready enrichment draft exists. Validate the proposal and use the governed creation flow, not direct apply.";
+    }
+    if (input.canPrepareDraft) {
+      return "This is a catalog-gap proposal. Prepare an enrichment draft, then run the enrichment worker before creation.";
+    }
+    return "This catalog-gap proposal is not ready for draft preparation.";
   }
   if (input.status === "failed_validation") {
     return "This proposal failed deterministic validation. Review the errors before re-queueing.";
@@ -1091,6 +1204,10 @@ function parseCSV(value) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function normalizeKey(value) {
+  return String(value ?? "").trim().toLowerCase();
 }
 
 function decodeAdminAccessResult(value) {

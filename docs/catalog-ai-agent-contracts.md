@@ -219,6 +219,13 @@ Catalog gap rule:
 - `create_canonical` may carry medium/high risk and still remain `draft`, because risk controls apply to worker/apply eligibility, not to whether a proposal can be validated and routed.
 - `needs_human_review` is for unresolved identity boundaries, meaningful variant policy gaps, cultural/language ambiguity, brand/package ambiguity, or safety-sensitive uncertainty.
 
+Catalog-gap execution path:
+
+- A catalog admin may prepare a pending enrichment draft from a `create_canonical` proposal through `prepare_catalog_agent_canonical_enrichment_draft(...)`.
+- Preparing a draft does not create an ingredient. It only creates or refreshes a bounded Autopilot work item.
+- Autopilot enrichment, deterministic draft validation, and the governed ingredient-creation RPC remain separate gates.
+- Direct frontend ingredient creation from `create_canonical` proposals is not allowed.
+
 - `add_localization`
   - `target_ingredient_id` or `target_slug`
   - `proposed_localized_name`

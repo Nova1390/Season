@@ -30,6 +30,7 @@ It currently supports:
 - rejecting proposals with a note;
 - running deterministic validation;
 - applying already validated low-risk proposals;
+- preparing enrichment drafts from `create_canonical` catalog-gap proposals;
 - loading relevant learning memory for the selected proposal term;
 - running approved agent worker jobs from the Operations section;
 - explaining why low-risk dry-runs have zero eligible proposals;
@@ -41,6 +42,8 @@ It currently supports:
 - rolling back active auto-apply audit records with a required operator reason.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
+
+For `create_canonical`, the console does not create an ingredient directly. It exposes `Prepare draft`, which calls `prepare_catalog_agent_canonical_enrichment_draft(...)` and creates or refreshes a pending enrichment draft. Autopilot must enrich that draft and backend validators must pass before any ingredient creation flow can run.
 
 Operations worker controls are deliberately narrow:
 
