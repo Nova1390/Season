@@ -948,7 +948,9 @@ struct RecipeDetailView: View {
     }
 
     private func shouldHideSyntheticFallbackQuantity(for ingredient: RecipeIngredient) -> Bool {
-        guard ingredient.produceID == nil, ingredient.basicIngredientID == nil else { return false }
+        guard ingredient.ingredientID == nil,
+              ingredient.produceID == nil,
+              ingredient.basicIngredientID == nil else { return false }
         guard ingredient.quantityUnit == .piece else { return false }
         guard abs(ingredient.quantityValue - 1) < 0.001 else { return false }
 
@@ -1221,7 +1223,8 @@ struct RecipeDetailView: View {
     }
 
     private func displayIngredientName(for ingredient: IngredientRow) -> String {
-        guard ingredient.recipeIngredient.produceID == nil,
+        guard ingredient.recipeIngredient.ingredientID == nil,
+              ingredient.recipeIngredient.produceID == nil,
               ingredient.recipeIngredient.basicIngredientID == nil else {
             return ingredient.name
         }

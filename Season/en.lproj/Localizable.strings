@@ -196,6 +196,7 @@
 "detail.related_recipes.title" = "What to cook with this";
 "ingredient.type.produce" = "Seasonal produce";
 "ingredient.type.basic" = "Basic ingredient";
+"ingredient.type.catalog" = "Catalog ingredient";
 "account.appearance.title" = "Appearance";
 "account.appearance.system" = "System";
 "account.appearance.light" = "Light";
