@@ -35,6 +35,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - SSH deploy path and command are documented.
 - Smart Import training captions were imported into dev custom observations as a controlled catalog-agent exercise.
 - The agent triage run timestamp bug was fixed after the training import exposed it.
+- Golden-case evaluation now exists to measure catalog-agent intelligence without extra LLM calls.
 
 ## Dev Training Import
 
@@ -330,6 +331,29 @@ Not run by automation in this snapshot:
 - authenticated browser login with a catalog-admin dev user;
 - real console button smoke test;
 - Supabase CLI lint/query against dev, because no active Supabase CLI PAT is assumed during this closeout check.
+
+### 2026-05-12 Golden-Case Harness
+
+Added:
+
+- `scripts/catalog_agent_golden_cases/golden_cases.json`
+- `scripts/catalog_agent_golden_cases/run_golden_cases.py`
+- `docs/catalog-agent-golden-cases.md`
+
+Purpose:
+
+- `current` profile checks whether dev catalog/proposal state remains correct after reviewed governance.
+- `target` profile checks what the agent should eventually propose autonomously.
+- The runner is read-only and does not call OpenAI or any LLM provider.
+
+Local verification completed:
+
+- `python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --schema-only`: passed.
+- `python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile target --schema-only`: passed.
+- `python3 -m py_compile scripts/catalog_agent_golden_cases/run_golden_cases.py`: passed.
+- `git diff --check`: passed.
+- Supabase dev `current` profile: `10/10` passed.
+- Supabase dev `target` profile: `3/10` passed, which is the autonomy baseline before further prompt/context improvement.
 
 ### 1. Static Console
 

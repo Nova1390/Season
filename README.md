@@ -116,6 +116,7 @@ Start here:
 - [Catalog architecture](docs/catalog-architecture.md): canonical ingredient identity contract.
 - [Smart Import + Catalog Intelligence](docs/smart-import-catalog-intelligence-pipeline.md): source of truth for import, enrichment, autopilot, and reconciliation.
 - [Catalog AI Agent Operating Plan](docs/catalog-ai-agent-operating-plan.md): proposal-first plan for adding an AI agent without bypassing Supabase/autopilot guardrails.
+- [Catalog Agent Golden Cases](docs/catalog-agent-golden-cases.md): no-LLM checks for current dev correctness vs target autonomous behavior.
 - [Catalog Agent Responsibility Charter](docs/catalog-agent-responsibility-charter.md): operating charter for the autonomous catalog governance agent as a careful Season operator.
 - [Catalog AI Agent Contracts](docs/catalog-ai-agent-contracts.md): concrete Phase 0/1 contracts for proposal schema, statuses, risk, and documentation discipline.
 - [Catalog Admin Console Plan](docs/catalog-admin-console-plan.md): web-first internal console direction for catalog agent review, validation, apply, and learning memory.

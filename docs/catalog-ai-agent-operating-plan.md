@@ -33,6 +33,7 @@ Current implementation status:
 - It has been deployed and smoke-tested on `Season-dev`; staging is intentionally untouched while the current TestFlight release is in review.
 - Low-risk auto-apply infrastructure exists but real apply remains disabled by default; recipe mutation, scheduler promotion, and iOS admin UI are not implemented for the agent path.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
+- A no-LLM golden-case harness now exists in `scripts/catalog_agent_golden_cases/` and is documented in `docs/catalog-agent-golden-cases.md`. It separates current dev correctness from target autonomous behavior before increasing apply permissions.
 
 ## 1. Executive Summary
 
