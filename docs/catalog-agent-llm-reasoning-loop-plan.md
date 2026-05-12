@@ -566,3 +566,6 @@ Dev smoke:
 - The run returned `1` `create_canonical` draft for `pasta corta`.
 - The proposal quality gate classified it as persistable with `0` blocking issues.
 - No proposal was inserted because persistence remained disabled.
+- `run_id=48` executed the same gate with `dry_run=false` and `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`.
+- The gate persisted proposal `#25` as a draft `create_canonical` proposal for `pasta corta`.
+- The proposal was not auto-applicable and no catalog apply occurred.

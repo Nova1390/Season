@@ -622,3 +622,39 @@ Interpretation:
 - The runtime quality gate can classify a real LLM proposal as persistable without writing it.
 - This confirms the next safe microstep is a tiny `dry_run=false` dev test with `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`, still with real apply disabled.
 - Dev was restored again to `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and the temporary operator token was removed.
+
+### Governed Proposal Persistence Smoke
+
+Run `48` completed after opening a temporary dev-only persistence window.
+
+Result:
+
+- Source domain: `smart_import_training_captions`.
+- Items in snapshot: `10`.
+- Items sent to LLM: `1`.
+- Recent proposals skipped: `9`.
+- Returned proposals: `1`.
+- Persistable proposals: `1`.
+- Blocked by quality gate: `0`.
+- Persisted proposals: `1`.
+- Proposal id: `25`.
+- Proposal: `pasta corta`, `create_canonical`, medium risk, draft.
+- Proposed slug: `short_pasta`.
+- Proposed localized name: `pasta corta`.
+- Proposed language: `it`.
+- Confidence: `0.91`.
+- Auto-apply eligible: `false`.
+- Applied at: `null`.
+- Token usage: `6,257` input, `1,266` output, `7,523` total.
+
+Verification:
+
+- `catalog_agent_proposals.id=25` exists with `status='draft'`, `auto_apply_eligible=false`, `applied_at is null`, and no target ingredient id/slug.
+- Run `48` events are limited to run lifecycle, reasoning trace, quality gate, and `proposal_created`.
+- No apply event or catalog mutation was performed.
+
+Interpretation:
+
+- This proves the first real `4.5` behavior: the agent can persist a governed proposal that passed the quality gate.
+- This does not yet complete `4.5`; the roadmap still requires a larger mixed-term sample and no unsafe classifications.
+- Dev was restored again to `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, conservative daily run budget, and the temporary operator token was removed.
