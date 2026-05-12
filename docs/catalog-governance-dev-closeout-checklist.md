@@ -208,6 +208,30 @@ Dev verification:
 - agent proposals `#13` and `#14` are `superseded`;
 - `supabase db lint --linked` returned no schema errors.
 
+### Learning-To-Context Automation
+
+Implementation:
+
+- migration `20260512163500_catalog_agent_lexical_candidate_expansion.sql` adds `catalog_agent_lexical_candidate_terms(...)`;
+- the triage snapshot now includes `context.lexical_candidate_terms`;
+- `possible_canonical_matches` and `existing_alias_matches` use lexical terms before the LLM runs;
+- migration `20260512165000_refine_catalog_agent_lexical_expansion_noise.sql` keeps morphology conservative by applying singular/plural expansion only to single-token terms.
+
+Behavior added:
+
+- localized singular/plural forms can expose existing catalog targets, e.g. `pomodori` now gets `pomodoro` as a lookup hint and sees canonical `tomato`;
+- phrase modifiers that are preparation/freshness state can expose the base ingredient, e.g. `pane raffermo` can produce `pane` as a lookup hint;
+- multi-word product phrases such as `fiocchi d avena` no longer receive noisy fake morphology;
+- ambiguous families still show ambiguity rather than being auto-collapsed, e.g. `olive` exposes black/green/oil-related candidates and should remain review-only without stronger context.
+
+Dev verification:
+
+- `pomodori` snapshot includes lexical term `pomodoro` and canonical candidate `tomato` with match reason `it_name_lexical_variant`;
+- `fiocchi d avena` snapshot keeps only the original lexical term;
+- `pepe` snapshot keeps only the original lexical term;
+- `olive` snapshot exposes multiple plausible candidates, preserving ambiguity;
+- `supabase db lint --linked` returned no schema errors.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
