@@ -25,6 +25,11 @@
         "target_slug": "eggs",
         "status": "approved",
         "is_active": true
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["eggs"],
+        "source_any_of": ["alias", "canonical"]
       }
     },
     {
@@ -49,6 +54,12 @@
         "target_slug": "bread",
         "status": "approved",
         "is_active": true
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["bread"],
+        "source_any_of": ["alias", "canonical"],
+        "required_lexical_term_any_of": ["pane"]
       }
     },
     {
@@ -73,6 +84,11 @@
         "target_slug": "corn",
         "status": "approved",
         "is_active": true
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["corn"],
+        "source_any_of": ["alias", "canonical"]
       }
     },
     {
@@ -97,6 +113,11 @@
         "target_slug": "apple",
         "status": "approved",
         "is_active": true
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["apple"],
+        "source_any_of": ["alias", "canonical"]
       }
     },
     {
@@ -122,6 +143,12 @@
         "target_slug": "tomato",
         "status": "approved",
         "is_active": true
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["tomato"],
+        "source_any_of": ["alias", "canonical"],
+        "required_lexical_term_any_of": ["pomodoro"]
       }
     },
     {
@@ -146,6 +173,12 @@
         "slug": "pomodorini",
         "status": "active",
         "parent_slug": "tomato"
+      },
+      "context_target": {
+        "kind": "meaningful_variant_target",
+        "target_slug_any_of": ["pomodorini"],
+        "source_any_of": ["canonical"],
+        "forbidden_target_slug_any_of": ["tomato"]
       }
     },
     {
@@ -172,6 +205,11 @@
         "status_any_of": ["draft", "queued_for_validation", "validated"],
         "proposed_slug_any_of": ["red_lentils", "lenticchie_rosse"],
         "min_confidence": 0.75
+      },
+      "context_target": {
+        "kind": "catalog_gap",
+        "forbidden_target_slug_any_of": ["lentils"],
+        "max_existing_target_count": 0
       }
     },
     {
@@ -195,6 +233,11 @@
         "proposal_type": "needs_human_review",
         "status_any_of": ["needs_human_review", "superseded"],
         "risk_any_of": ["medium", "high"]
+      },
+      "context_target": {
+        "kind": "ambiguous_target_set",
+        "candidate_slug_any_of": ["black_olives", "green_olives"],
+        "min_candidate_count": 2
       }
     },
     {
@@ -218,6 +261,10 @@
         "proposal_type_any_of": ["approve_alias", "create_canonical", "needs_human_review"],
         "status_any_of": ["draft", "needs_human_review", "validated"],
         "min_confidence": 0.7
+      },
+      "context_target": {
+        "kind": "policy_gap",
+        "max_existing_target_count": 0
       }
     },
     {
@@ -244,6 +291,10 @@
         "proposed_slug_any_of": ["rolled_oats", "oat_flakes", "fiocchi_di_avena"],
         "status_any_of": ["draft", "queued_for_validation", "validated"],
         "min_confidence": 0.8
+      },
+      "context_target": {
+        "kind": "catalog_gap",
+        "max_existing_target_count": 0
       }
     }
   ]

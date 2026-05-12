@@ -39,6 +39,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - Golden cases now include `effective_target`, an operational gate that separates fixed catalog state from historical latest-proposal quality.
 - Dev-only controlled apply proved the low-risk path with `pomodori -> tomato`.
 - Dev-only canonical draft preparation proved the create-canonical path for `fiocchi d avena -> oat_flakes` without creating an ingredient directly.
+- Golden cases now include a `context_target` pre-LLM quality gate.
+- Dev context quality is `10/10` after retargeting the legacy small tomato alias `pomodorini ciliegino -> pomodorini`.
 
 ## Dev Training Import
 
@@ -289,6 +291,29 @@ Autonomy assessment:
 - The agent can produce actionable low-risk work, pass deterministic validation, and apply through governed RPCs on dev.
 - The agent can route missing-canonical work into Autopilot's enrichment-draft lane instead of creating catalog identity directly.
 - Scheduled real apply, broad batch apply, and staging promotion remain disabled until `target` improves beyond the historical latest-proposal failures.
+
+### 2026-05-12 Context Quality Gate
+
+Implementation:
+
+- Added `scripts/catalog_agent_golden_cases/run_context_quality.py`.
+- Added `context_target` expectations to `scripts/catalog_agent_golden_cases/golden_cases.json`.
+- The runner reconstructs pre-LLM context for golden cases even when the terms are already resolved and no longer appear in the normal unresolved queue.
+- The runner is read-only and does not call an LLM.
+
+Finding and fix:
+
+- First run: `9/10`.
+- Failing case: `pomodorini` context included forbidden parent target `tomato`.
+- Cause: legacy active alias `pomodorini ciliegino -> tomato`.
+- Migration `20260512190000_retarget_small_tomato_variant_aliases.sql` retargeted the alias to child canonical `pomodorini`, added a candidate decision, and recorded implemented learning.
+- Final run: `context_target: 10/10`.
+
+Interpretation:
+
+- This is a concrete intelligence improvement before model invocation.
+- The agent now gets cleaner target context for small tomato variants.
+- Future LLM failures can be separated into context failures vs reasoning/prompt failures.
 
 Operational note:
 

@@ -149,6 +149,32 @@ Exit criteria:
 - manual Autopilot runs are distinguishable from agent-delegated runs;
 - future console can show "agent asked worker to do X".
 
+### Phase 2.5: Context Quality Gate
+
+Status: implemented for the first golden set.
+
+Purpose:
+
+- prove the agent sees the right candidate targets before LLM reasoning;
+- catch noisy aliases that would push the model toward the wrong canonical target;
+- reduce avoidable review noise and token spend.
+
+Implemented runner:
+
+- `scripts/catalog_agent_golden_cases/run_context_quality.py`
+
+Current dev result:
+
+```text
+context_target: 10/10 passed
+```
+
+Example improvement:
+
+- `pomodorini ciliegino` previously pointed to base `tomato`.
+- The alias now targets child canonical `pomodorini`.
+- This prevents small tomato variants from being collapsed into the generic tomato target during pre-LLM context construction.
+
 ### Phase 3: Worker Invocation Adapter
 
 Add a backend-safe way for the agent to request bounded worker jobs.
@@ -176,6 +202,7 @@ Runtime support today:
 - `low_risk_apply_batch` is implemented through `run-catalog-agent-orchestrator` in dry-run mode by default;
 - `reconciliation_preview` is a reserved ledger type, not yet enabled by the orchestrator.
 - reviewed single-proposal low-risk apply has been smoke-tested through `apply_catalog_agent_proposal(...)`; scheduled/batch real apply remains disabled.
+- golden `context_target` replay now checks candidate quality before the agent spends LLM budget.
 
 Rules:
 

@@ -35,6 +35,7 @@ Current implementation status:
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
 - A no-LLM golden-case harness now exists in `scripts/catalog_agent_golden_cases/` and is documented in `docs/catalog-agent-golden-cases.md`. It separates current dev correctness, strict target autonomous behavior, and effective operational safety before increasing apply permissions.
 - Current autonomy maturity is `3.5 dev-gated`: the agent can close a reviewed low-risk alias path end-to-end on dev and can route `create_canonical` proposals into Autopilot's enrichment-draft lane, but scheduled apply and staging promotion remain off.
+- A no-LLM context-quality harness now verifies whether golden cases receive good candidate context before the LLM is called. This keeps intelligence improvements focused on either context enrichment or prompt reasoning instead of spending tokens blindly.
 
 ## 1. Executive Summary
 
@@ -142,6 +143,8 @@ Catalog signals
 The first implementation should be read-heavy and proposal-only.
 
 Direct mutation should be limited to inserting agent proposal/audit rows. Any catalog or recipe mutation must go through existing governed functions.
+
+Before the agent spends LLM budget, its input context should pass the golden `context_target` gate where applicable. This preflight answers whether the model is receiving the right candidate set. If context quality fails, improve catalog aliases, localizations, lexical expansion, or snapshot construction before running more LLM batches.
 
 For missing catalog identities, the governed path is:
 

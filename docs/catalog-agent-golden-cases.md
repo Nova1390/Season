@@ -14,6 +14,7 @@ The goal is simple: separate three things that can otherwise get confused.
 
 - Fixture: `scripts/catalog_agent_golden_cases/golden_cases.json`
 - Runner: `scripts/catalog_agent_golden_cases/run_golden_cases.py`
+- Context-quality runner: `scripts/catalog_agent_golden_cases/run_context_quality.py`
 
 ## Profiles
 
@@ -84,6 +85,12 @@ JSON output for CI or future dashboard ingestion:
 python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile current --json
 ```
 
+Pre-LLM context-quality check:
+
+```bash
+python3 scripts/catalog_agent_golden_cases/run_context_quality.py
+```
+
 ## Rules
 
 - The runner is read-only.
@@ -91,6 +98,7 @@ python3 scripts/catalog_agent_golden_cases/run_golden_cases.py --profile current
 - Failing `current` means the dev catalog/proposal state regressed.
 - Failing `target` means the agent is not yet autonomous for that behavior.
 - Failing `effective_target` means the currently governed catalog/proposal outcome is not safe enough for the next autonomy step.
+- Failing `context_target` means the agent may be spending LLM tokens with missing or noisy candidates.
 - Add new golden cases whenever a human correction teaches a reusable catalog rule.
 
 ## Autonomy Gate
@@ -198,3 +206,30 @@ Interpretation:
 - The agent has demonstrated a low-risk proposal -> deterministic validator -> governed apply path.
 - The agent has also demonstrated a catalog-gap proposal -> enrichment draft path without directly creating an ingredient.
 - This raises the dev autonomy maturity to `3.5 dev-gated`: useful operational autonomy exists, but scheduled real apply and staging promotion remain disabled until more target-profile reruns are clean.
+
+## 2026-05-12 Context Quality Gate
+
+The next step added a no-LLM preflight for the agent work packet:
+
+```text
+context_target: 10/10 passed
+```
+
+What it checks:
+
+- common surface forms expose the expected existing target before GPT runs;
+- meaningful variants expose the most specific child target, not only the generic parent;
+- ambiguous families expose multiple plausible candidates instead of pretending there is one safe target;
+- true catalog gaps remain gaps instead of being forced into a bad alias.
+
+Useful finding:
+
+- Initial context quality was `9/10` because `pomodorini` received base `tomato` as an applyable candidate through the legacy alias `pomodorini ciliegino -> tomato`.
+- Migration `20260512190000_retarget_small_tomato_variant_aliases.sql` retargeted that alias to the child canonical `pomodorini` and recorded implemented learning.
+- After the migration, `pomodorini` context exposes `pomodorini` without leaking `tomato` as a forbidden applyable target.
+
+Interpretation:
+
+- This moves the agent closer to `4.0 supervised autonomy` because it can now prove whether the input context is good before paying for LLM reasoning.
+- If future target runs fail while `context_target` passes, the problem is likely prompt/reasoning.
+- If `context_target` fails, fix snapshot/catalog context first and do not spend more model budget.

@@ -61,6 +61,37 @@ class SupabaseReadOnly:
             raise RuntimeError(f"Supabase GET {table} failed: HTTP {exc.code}: {body}") from exc
         return json.loads(raw) if raw else []
 
+    def select_all(self, table: str, params: dict[str, str], page_size: int = 1000) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            page_params = dict(params)
+            page_params["limit"] = str(page_size)
+            page_params["offset"] = str(offset)
+            page = self.select(table, page_params)
+            rows.extend(page)
+            if len(page) < page_size:
+                return rows
+            offset += page_size
+
+    def rpc(self, function_name: str, payload: dict[str, Any]) -> Any:
+        request = urllib.request.Request(
+            f"{self.rest_base}/rpc/{function_name}",
+            method="POST",
+            headers={
+                **self._headers(),
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(payload).encode("utf-8"),
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT, context=self.ssl_context) as response:
+                raw = response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Supabase RPC {function_name} failed: HTTP {exc.code}: {body}") from exc
+        return json.loads(raw) if raw else None
+
     def ingredient_by_slug(self, slug: str) -> dict[str, Any] | None:
         rows = self.select(
             "ingredients",
