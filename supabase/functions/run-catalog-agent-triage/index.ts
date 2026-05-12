@@ -237,15 +237,19 @@ Deno.serve(async (request) => {
       return jsonResponseWithStatus({ ok: true, run_id: runId, summary }, 200);
     }
 
-    const providerResult = await invokeProvider(
+    let providerEligibleItems = eligibleItems;
+    const providerAttempt = await invokeProviderWithAdaptiveRetry(
       adminClient,
       requestId,
       runId,
       snapshot,
       eligibleItems,
       learningContext,
+      auth.userId,
     );
-    const allowedTexts = new Set(eligibleItems.map((item) => normalizeText(item.normalized_text)));
+    providerEligibleItems = providerAttempt.eligibleItems;
+    const providerResult = providerAttempt.result;
+    const allowedTexts = new Set(providerEligibleItems.map((item) => normalizeText(item.normalized_text)));
     const validation = validateCatalogAgentTriageOutput(providerResult.parsed, allowedTexts);
     if (!validation.ok || !validation.value) {
       await failRun(adminClient, runId, "Provider output failed validation.", {
@@ -288,12 +292,13 @@ Deno.serve(async (request) => {
     const proposals = normalizeProposalStatuses(validation.value.proposals);
     const insertedProposalIDs = dryRun
       ? []
-      : await insertProposals(adminClient, runId, proposals, eligibleItems, providerResult.parsed, auth.userId);
+      : await insertProposals(adminClient, runId, proposals, providerEligibleItems, providerResult.parsed, auth.userId);
 
     const cost = estimateCost(providerResult.usage);
     const summary = {
       items_in_snapshot: workItems.length,
-      items_sent_to_llm: eligibleItems.length,
+      items_eligible_before_retry: eligibleItems.length,
+      items_sent_to_llm: providerEligibleItems.length,
       proposals_returned: proposals.length,
       proposals_created: insertedProposalIDs.length,
       skipped_recent_proposal: skippedRecent.length,
@@ -306,6 +311,7 @@ Deno.serve(async (request) => {
       provider_duration_ms: providerResult.durationMs,
       reasoning_mode: REASONING_MODE,
       reasoning_trace: providerResult.reasoningTrace,
+      adaptive_retry: providerAttempt.retrySummary,
       budget: budgetSummary(),
       duration_ms: elapsedMs(startedAt),
     };
@@ -336,7 +342,8 @@ Deno.serve(async (request) => {
       estimatedCostUsd: null,
       metadata: {
         proposals_created: insertedProposalIDs.length,
-        items_sent_to_llm: eligibleItems.length,
+        items_eligible_before_retry: eligibleItems.length,
+        items_sent_to_llm: providerEligibleItems.length,
         aggregate_usage: providerResult.usage,
         aggregate_estimated_cost_usd: cost,
         reasoning_mode: REASONING_MODE,
@@ -672,6 +679,110 @@ async function invokeProvider(
       roles: [roleTrace(result, "decision_writer_single_pass")],
     },
   };
+}
+
+async function invokeProviderWithAdaptiveRetry(
+  adminClient: ReturnType<typeof createClient>,
+  requestId: string,
+  runId: number,
+  snapshot: Record<string, unknown>,
+  eligibleItems: WorkItem[],
+  learningContext: Record<string, unknown>,
+  authUserId: string | null,
+): Promise<{
+  result: ProviderInvocationResult;
+  eligibleItems: WorkItem[];
+  retrySummary: Record<string, unknown> | null;
+}> {
+  try {
+    const result = await invokeProvider(
+      adminClient,
+      requestId,
+      runId,
+      snapshot,
+      eligibleItems,
+      learningContext,
+    );
+    return {
+      result,
+      eligibleItems,
+      retrySummary: null,
+    };
+  } catch (error) {
+    if (!isProviderTimeoutError(error) || eligibleItems.length <= 1) {
+      throw error;
+    }
+
+    const retryLimit = Math.max(1, Math.ceil(eligibleItems.length / 2));
+    const retryItems = eligibleItems.slice(0, retryLimit);
+    const retrySummary = {
+      enabled: true,
+      reason: "provider_timeout",
+      original_item_count: eligibleItems.length,
+      retry_item_count: retryItems.length,
+      failed_attempt_error: String(error),
+      strategy: "halve_eligible_items_once",
+    };
+
+    await insertRunEvent(adminClient, runId, "provider_adaptive_retry_scheduled", retrySummary, authUserId);
+    await recordAIUsageEvent({
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      functionName: FUNCTION_NAME,
+      requestId,
+      agentRunId: runId,
+      model: OPENAI_MODEL,
+      status: "error",
+      providerDurationMs: error instanceof ProviderInvocationError ? error.durationMs : null,
+      reason: "provider_timeout_retry",
+      metadata: retrySummary,
+    });
+
+    console.log(
+      `[${LOG_PREFIX}] phase=provider_adaptive_retry request_id=${requestId} run_id=${runId} ` +
+        `original_items=${eligibleItems.length} retry_items=${retryItems.length} error=${String(error)}`,
+    );
+
+    const retryResult = await invokeProvider(
+      adminClient,
+      requestId,
+      runId,
+      snapshot,
+      retryItems,
+      learningContext,
+    );
+
+    retryResult.reasoningTrace = {
+      ...retryResult.reasoningTrace,
+      adaptive_retry: {
+        ...retrySummary,
+        retry_status: "succeeded",
+      },
+    };
+
+    await insertRunEvent(adminClient, runId, "provider_adaptive_retry_succeeded", {
+      ...retrySummary,
+      retry_usage: retryResult.usage,
+      retry_provider_duration_ms: retryResult.durationMs,
+    }, authUserId);
+
+    return {
+      result: retryResult,
+      eligibleItems: retryItems,
+      retrySummary: {
+        ...retrySummary,
+        retry_status: "succeeded",
+      },
+    };
+  }
+}
+
+function isProviderTimeoutError(error: unknown): boolean {
+  if (!(error instanceof ProviderInvocationError)) return false;
+  const message = error.message.toLowerCase();
+  return message.includes("aborterror") ||
+    message.includes("signal has been aborted") ||
+    message.includes("timeout");
 }
 
 async function invokeMultiPassProvider(

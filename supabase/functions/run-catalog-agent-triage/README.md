@@ -43,6 +43,19 @@ Every provider call is recorded in `catalog_ai_usage_events` with `metadata.task
 
 Set `CATALOG_AGENT_REASONING_MODE=single_pass` to temporarily return to the old one-call behavior.
 
+## Adaptive Timeout Retry
+
+Provider timeouts should not make the whole run useless when the batch is too large.
+
+If a provider role aborts because of timeout and the run has more than one eligible work item, the function now:
+
+- records `provider_adaptive_retry_scheduled` on `catalog_agent_proposal_events`;
+- records an error event in `catalog_ai_usage_events` with `reason=provider_timeout_retry`;
+- retries once with the first half of eligible work items;
+- stores `adaptive_retry` details in the run summary and reasoning trace when the retry succeeds.
+
+The retry is deliberately single-shot. It prevents runaway loops and keeps costs bounded. If the smaller packet also fails, the run fails normally and remains visible in audit.
+
 ## Semantic Profile
 
 Every proposal now carries a `semantic_profile` in the LLM contract.

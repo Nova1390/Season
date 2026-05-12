@@ -262,7 +262,17 @@ Operational note:
 
 - Multi-pass runs over larger packets can exceed the default `20s` provider timeout.
 - For controlled dev smoke tests, `60s` provider timeout is more realistic.
-- Before production scheduling, the agent should either use smaller batches, adaptive timeout, or a retry policy that falls back to fewer items instead of failing the whole run.
+- The triage Edge Function now has a single-shot adaptive retry: on provider timeout it records the failed attempt, halves eligible items, and retries once.
+- Before production scheduling, keep batches small and monitor `adaptive_retry` frequency; repeated retries mean the prompt packet or batch size should be reduced.
+
+Adaptive retry deployment:
+
+- `run-catalog-agent-triage` was deployed to `Season-dev` after adding the retry path.
+- The retry records `provider_adaptive_retry_scheduled` and `provider_adaptive_retry_succeeded` run events when used.
+- Timeout retry attempts also create `catalog_ai_usage_events` rows with `reason=provider_timeout_retry`.
+- Post-deploy smoke run `catalog_agent_runs.id = 38` completed as a no-op with `10` recent-proposal skips and `0` LLM calls.
+- `CATALOG_AGENT_ENABLED` was disabled again after the smoke run.
+- `CATALOG_AGENT_PROVIDER_TIMEOUT_MS` was restored to `20000`.
 
 ## Final Dev Smoke Test
 
