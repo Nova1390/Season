@@ -54,6 +54,7 @@ struct ContentView: View {
     @State private var activeDraftRecipeID: String?
     @State private var outboxDispatcher = OutboxDispatcher()
     @StateObject private var syncFeedback = SyncFeedbackCenter.shared
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -191,7 +192,7 @@ struct ContentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                    .stroke(tabBarBorderColor, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.08), radius: 30, x: 0, y: 10)
             .padding(.horizontal, 10)
@@ -249,6 +250,14 @@ struct ContentView: View {
         viewModel.languageCode == AppLanguage.italian.rawValue ? "Io" : "Me"
     }
 
+    private var tabBarBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.22) : Color.white.opacity(0.75)
+    }
+
+    private var activeTabBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.38)
+    }
+
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {
         let isActive = selectedTab == tab
 
@@ -271,7 +280,7 @@ struct ContentView: View {
             .frame(height: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isActive ? Color.white.opacity(0.38) : Color.clear)
+                    .fill(isActive ? activeTabBackgroundColor : Color.clear)
             )
             .contentShape(Rectangle())
         }

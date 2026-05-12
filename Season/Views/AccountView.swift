@@ -67,6 +67,7 @@ struct AccountView: View {
     @State private var showingLogoutConfirmation = false
     @State private var hasCatalogAdminAccess = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     private let socialAuthService: SocialAuthServicing = SocialAuthService.live
     private let supabaseService = SupabaseService.shared
@@ -191,7 +192,7 @@ struct AccountView: View {
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(Color.white)
                             .frame(width: 26, height: 26)
-                            .background(Circle().fill(DS.Color.ink))
+                            .background(Circle().fill(profileEditBadgeBackground))
                             .overlay(
                                 Circle()
                                     .stroke(DS.Color.bg, lineWidth: 2)
@@ -695,6 +696,10 @@ struct AccountView: View {
 
     private var currentAppearance: AppAppearance {
         AppAppearance(rawValue: appAppearanceRaw) ?? .system
+    }
+
+    private var profileEditBadgeBackground: Color {
+        colorScheme == .dark ? Color.black.opacity(0.72) : DS.Color.ink
     }
 
     private func appearanceTitle(for appearance: AppAppearance) -> String {
