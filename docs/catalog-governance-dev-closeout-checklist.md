@@ -108,6 +108,83 @@ Canonical creation worker bridge:
 - Follow-up dev smoke completed the path for `pomodorini`: enrichment resolved the Italian parent candidate `pomodoro` to canonical slug `tomato`, promoted the draft to `ready`, then `ingredient_creation_batch` created `pomodorini` as a child produce variant of `tomato`.
 - The creation wrapper now preserves all available draft localizations, not only the display language chosen for the initial candidate creation call.
 
+## Next Controlled Agent Batch
+
+Status: planned for `Season-dev` only. Staging remains untouched.
+
+Goal:
+
+- verify that the agent behaves like a catalog manager, not a blind proposal generator;
+- confirm it can choose between existing-canonical aliasing, meaningful variant creation, new canonical creation, and human escalation;
+- keep all mutation workers disabled until proposal quality is reviewed.
+
+Runtime gates:
+
+- run triage/proposal generation first;
+- allow enrichment only for `create_canonical` drafts after reviewing the proposal shape;
+- keep `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false` unless a single bounded worker run is intentionally requested;
+- keep `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=false` unless one reviewed `ready` draft should be created with `limit=1`;
+- restore `CATALOG_AGENT_ENABLED=false` immediately after any manual dev smoke run.
+
+Candidate expectations:
+
+| Term | Expected agent behavior | Why it matters |
+| --- | --- | --- |
+| `pomodori` | Resolve toward existing base canonical `tomato`; do not create a new ingredient. | Plural/localized base terms should improve aliases/localizations without catalog duplication. |
+| `pepe` | Prefer an existing pepper canonical only if the observed context supports it; avoid deprecated duplicate `pepe_nero`. | The agent must use active catalog identity and avoid resurrecting deprecated duplicates. |
+| `uovo` | Resolve toward existing canonical `eggs` as a singular/localized alias candidate. | Common singular/plural forms should become deterministic catalog coverage. |
+| `fiocchi d avena` | Treat as a likely distinct oat-flake product under `oats`, not as a blind alias of base oats. | This tests parent/child variant reasoning and nutrition/filter implications. |
+| `olive` | Keep as human review unless context identifies green, black, pitted, oil-preserved, etc. | Generic terms with meaningful product variants should not auto-collapse. |
+| `pane raffermo` | Escalate or propose a contextual child only if policy supports stale bread as an ingredient identity. | Some recipe terms are preparation state/context, not always new catalog products. |
+
+Pass criteria:
+
+- high-confidence base terms produce actionable existing-canonical proposals;
+- clear missing catalog identities produce `create_canonical` drafts rather than generic review;
+- genuinely ambiguous terms remain `needs_human_review` with a precise blocking question;
+- no catalog ingredient, alias, localization, recipe, or reconciliation state changes happen during triage;
+- AI usage remains bounded and visible in `catalog_ai_usage_events`.
+
+### 2026-05-12 Batch Output
+
+Run:
+
+- `catalog_agent_runs.id = 34`.
+- Source domain: `smart_import_training_captions`.
+- Limit: `10`.
+- Items sent to LLM: `6`.
+- Proposals created: `6`.
+- Recent proposals skipped: `4`.
+- Reasoning mode: `multi_pass`.
+- Token usage: `18,634` input, `5,316` output, `23,950` total.
+- Triage was disabled again after the run.
+
+Created proposals:
+
+| ID | Term | Proposal | Risk | Status | Assessment |
+| --- | --- | --- | --- | --- | --- |
+| `13` | `pane raffermo` | `create_canonical` | medium | draft | Good behavior: recognizes a state-based bread identity instead of collapsing to base bread. Needs policy decision before creation. |
+| `14` | `uovo` | `needs_human_review` | low | needs review | Not good enough: the ingredient is clear and should have received an existing `eggs`/`uova` candidate in context. |
+| `15` | `acqua di cottura` | `needs_human_review` | medium | needs review | Good behavior: preparation byproduct, not safe to alias to plain water. |
+| `16` | `carne macinata` | `needs_human_review` | medium | needs review | Acceptable behavior: species is unspecified, so nutrition/filter meaning may differ. |
+| `17` | `cipolle` | `needs_human_review` | high | needs review | Acceptable until a generic onion parent policy exists; current candidates can imply color/type ambiguity. |
+| `18` | `frutti di bosco` | `create_canonical` | medium | draft | Good behavior: mixed berry identity should not collapse to one berry type. |
+
+Important diagnosis:
+
+- The agent is now capable of creating catalog-gap drafts when identity is clear.
+- The main weakness is upstream context, not only prompt wording.
+- `uovo` shows the gap: the model correctly understood "standard hen egg" with high confidence, but the work packet did not provide `eggs`/`uova` as a usable target candidate.
+- The next implementation step should enrich `get_catalog_agent_triage_snapshot(...)` with deterministic lexical candidate expansion before the LLM runs.
+
+Recommended implementation:
+
+- add a deterministic candidate-expansion layer for common singular/plural and localized forms;
+- include active aliases and localizations found through that expansion in `possible_canonical_matches` / `existing_alias_matches`;
+- keep the expansion data-driven where possible and use explicit exceptions only as catalog governance data, not hidden prompt hacks;
+- re-run the same batch and expect `uovo` to become an actionable existing-canonical proposal instead of human review;
+- only after that, prepare drafts for reviewed `create_canonical` proposals such as `frutti di bosco` with creation still disabled.
+
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
