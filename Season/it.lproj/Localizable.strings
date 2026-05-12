@@ -196,6 +196,7 @@
 "detail.related_recipes.title" = "Cosa cucinare con questo";
 "ingredient.type.produce" = "Prodotto stagionale";
 "ingredient.type.basic" = "Ingrediente base";
+"ingredient.type.catalog" = "Ingrediente catalogo";
 "account.appearance.title" = "Aspetto";
 "account.appearance.system" = "Sistema";
 "account.appearance.light" = "Chiaro";

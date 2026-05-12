@@ -199,6 +199,9 @@ struct IngredientDetailView: View {
         if let basic = resolvedBasicIngredient {
             return fridgeViewModel.contains(basic)
         }
+        if let ingredientID = ingredient.ingredientID {
+            return fridgeViewModel.containsCatalogIngredient(id: ingredientID)
+        }
         return fridgeViewModel.containsCustom(named: ingredient.name)
     }
 
@@ -208,6 +211,9 @@ struct IngredientDetailView: View {
         }
         if let basic = resolvedBasicIngredient {
             return shoppingListViewModel.contains(basic)
+        }
+        if let ingredientID = ingredient.ingredientID {
+            return shoppingListViewModel.containsCatalogIngredient(id: ingredientID, quantity: nil)
         }
         return shoppingListViewModel.containsCustom(named: ingredient.name)
     }
@@ -227,6 +233,14 @@ struct IngredientDetailView: View {
                     fridgeViewModel.remove(basic)
                 } else {
                     fridgeViewModel.add(basic)
+                }
+                return
+            }
+            if let ingredientID = ingredient.ingredientID {
+                if fridgeViewModel.containsCatalogIngredient(id: ingredientID) {
+                    fridgeViewModel.removeCatalog(ingredientID: ingredientID)
+                } else {
+                    fridgeViewModel.addCatalog(ingredientID: ingredientID, name: displayName)
                 }
                 return
             }
@@ -253,6 +267,19 @@ struct IngredientDetailView: View {
                     shoppingListViewModel.remove(basic)
                 } else {
                     shoppingListViewModel.add(basic)
+                }
+                return
+            }
+            if let ingredientID = ingredient.ingredientID {
+                if shoppingListViewModel.containsCatalogIngredient(id: ingredientID, quantity: nil) {
+                    let entry = ShoppingListEntry.catalog(
+                        ingredientID: ingredientID,
+                        name: displayName,
+                        quantity: nil
+                    )
+                    shoppingListViewModel.remove(entry)
+                } else {
+                    shoppingListViewModel.addCatalog(ingredientID: ingredientID, name: displayName, quantity: nil)
                 }
                 return
             }
@@ -428,6 +455,8 @@ struct IngredientDetailView: View {
             return localizer.localized("ingredient.type.produce")
         case .basic:
             return localizer.localized("ingredient.type.basic")
+        case .catalog:
+            return localizer.localized("ingredient.type.catalog")
         case .custom:
             return localizer.text(.customIngredient)
         }
