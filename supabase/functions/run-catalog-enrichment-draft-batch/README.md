@@ -7,6 +7,8 @@ Admin-only batch orchestrator for pending enrichment drafts.
 2. Calls `catalog-enrichment-proposal` for each draft.
 3. Writes proposal into draft via `upsert_catalog_ingredient_enrichment_draft(...)`.
 4. Validates via `validate_catalog_ingredient_enrichment_draft(...)`.
+
+Before validation, parent candidates from the LLM are resolved against active catalog slugs, localizations, and approved aliases. This keeps multilingual parent hints such as an Italian display name aligned to the canonical slug stored in `ingredients.slug`.
 5. If validation has no errors, attempts `status='ready'` upsert.
 6. Returns per-item summary (`succeeded/failed/skipped`) without creating ingredients.
 

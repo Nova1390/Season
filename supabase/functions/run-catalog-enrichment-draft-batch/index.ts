@@ -15,6 +15,7 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const PROPOSAL_FUNCTION_TIMEOUT_MS = numberEnv("CATALOG_ENRICHMENT_PROPOSAL_FUNCTION_TIMEOUT_MS", 30000);
 const AUTO_PROMOTION_MIN_CONFIDENCE = 0.9;
+const PRODUCE_VARIANT_READY_MIN_CONFIDENCE = 0.85;
 const RISKY_SEMANTIC_CATEGORIES = new Set<string>([]);
 const PLACEHOLDER_REASONING_SUMMARY = "automation_cycle_candidate_intake";
 const PLACEHOLDER_BACKLOG_HIGH_THRESHOLD = 30;
@@ -44,6 +45,13 @@ const SAFE_PRODUCE_CLEAN_QUALIFIERS = new Set([
   "weight_or_volume_quantity",
   "count_quantity",
   "trailing_number",
+]);
+const SAFE_PRODUCE_VARIANT_KINDS = new Set([
+  "cultivar",
+  "market_class",
+  "size",
+  "type",
+  "variety",
 ]);
 const INTRINSIC_VARIANT_ALLOWLIST = new Set([
   "latte intero",
@@ -330,13 +338,14 @@ Deno.serve(async (request) => {
             removed_qualifiers: identityInput.removedQualifiers,
           }, normalizedText);
         }
-        const proposal = await fetchProposalWithFallback({
+        const rawProposal = await fetchProposalWithFallback({
           originalText: normalizedText,
           cleanedText: cleanedNormalizedText,
           removedQualifiers: identityInput.removedQualifiers,
           agentRunId,
           agentWorkerJobId,
         });
+        const proposal = await resolveProposalParentCandidateSlug(serviceClient, rawProposal);
         const normalizedSuggestedSlug = normalizeText(proposal.suggested_slug);
         if (normalizedSuggestedSlug && await ingredientSlugExists(serviceClient, normalizedSuggestedSlug)) {
           await markDraftAppliedAlreadyExists(serviceClient, normalizedText);
@@ -423,6 +432,15 @@ Deno.serve(async (request) => {
             cleanedText: cleanedNormalizedText,
             removedQualifiers: identityInput.removedQualifiers,
           });
+        const autoReadyProduceIntrinsicVariant =
+          isSafeProduceIntrinsicVariantAutoReady({
+            validationPassed,
+            proposal,
+            reasons: autoPromotion.reasons,
+            originalText: normalizedText,
+            cleanedText: cleanedNormalizedText,
+            removedQualifiers: identityInput.removedQualifiers,
+          });
         const autoReadyTransformedPreserved =
           isSafeTransformedPreservedAutoReady({
             validationPassed,
@@ -486,6 +504,17 @@ Deno.serve(async (request) => {
           );
           finalStatus = upsertReady.status ?? "ready";
           detail = "auto_ready_intrinsic_variant";
+        } else if (autoReadyProduceIntrinsicVariant) {
+          const upsertReady = await upsertDraft(
+            serviceClient,
+            normalizedText,
+            proposal,
+            "ready",
+            false,
+            "auto_ready_produce_intrinsic_variant",
+          );
+          finalStatus = upsertReady.status ?? "ready";
+          detail = "auto_ready_produce_intrinsic_variant";
         } else if (autoReadyTransformedPreserved) {
           const upsertReady = await upsertDraft(
             serviceClient,
@@ -1326,6 +1355,47 @@ async function evaluateAutoPromotionEligibility(
   };
 }
 
+async function resolveProposalParentCandidateSlug(
+  client: ReturnType<typeof createClient>,
+  proposal: ProposalResponse,
+): Promise<ProposalResponse> {
+  const parentCandidateSlug = normalizeText(proposal.parent_candidate_slug);
+  if (!parentCandidateSlug) {
+    return proposal;
+  }
+
+  const resolvedParentSlug = await resolveIngredientSlugFromIdentityText(client, parentCandidateSlug);
+  if (!resolvedParentSlug || resolvedParentSlug === parentCandidateSlug) {
+    return proposal;
+  }
+
+  return {
+    ...proposal,
+    parent_candidate_slug: resolvedParentSlug,
+    parent_candidate_reason: [
+      normalizeText(proposal.parent_candidate_reason),
+      `resolved_parent_candidate_from:${parentCandidateSlug}`,
+    ].filter(Boolean).join("|"),
+  };
+}
+
+async function resolveIngredientSlugFromIdentityText(
+  client: ReturnType<typeof createClient>,
+  value: string,
+): Promise<string | null> {
+  const normalized = normalizeText(value);
+  if (!normalized) return null;
+
+  const directSlug = await findActiveIngredientSlugBySlug(client, normalized);
+  if (directSlug) return directSlug;
+
+  const textForm = normalized.replace(/_/g, " ");
+  const localizedSlug = await findSingleActiveIngredientSlugByLocalization(client, textForm);
+  if (localizedSlug) return localizedSlug;
+
+  return await findSingleActiveIngredientSlugByAlias(client, textForm);
+}
+
 async function resolveEffectiveParentCandidateSlug(
   client: ReturnType<typeof createClient>,
   normalizedText: string,
@@ -1349,6 +1419,99 @@ async function resolveEffectiveParentCandidateSlug(
   }
 
   return { parentSlug: parentCandidateSlug, parentExists: false };
+}
+
+async function findActiveIngredientSlugBySlug(
+  client: ReturnType<typeof createClient>,
+  slug: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("ingredients")
+    .select("slug,quality_status")
+    .eq("slug", slug)
+    .eq("quality_status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`ingredient_slug_resolve_failed:${error.message}`);
+  }
+
+  return normalizeText((data as Record<string, unknown> | null)?.slug);
+}
+
+async function findSingleActiveIngredientSlugByLocalization(
+  client: ReturnType<typeof createClient>,
+  text: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("ingredient_localizations")
+    .select("ingredient_id,display_name,short_name")
+    .or(`display_name.ilike.${escapePostgrestFilterValue(text)},short_name.ilike.${escapePostgrestFilterValue(text)}`)
+    .limit(10);
+
+  if (error) {
+    throw new Error(`ingredient_localization_resolve_failed:${error.message}`);
+  }
+
+  const ingredientIds = Array.from(new Set((data ?? [])
+    .map((row) => normalizeText((row as Record<string, unknown>).ingredient_id))
+    .filter((id): id is string => Boolean(id))));
+
+  return await findSingleActiveIngredientSlugByIds(client, ingredientIds);
+}
+
+async function findSingleActiveIngredientSlugByAlias(
+  client: ReturnType<typeof createClient>,
+  text: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("ingredient_aliases_v2")
+    .select("ingredient_id")
+    .eq("normalized_alias_text", text)
+    .eq("status", "approved")
+    .eq("is_active", true)
+    .limit(10);
+
+  if (error) {
+    throw new Error(`ingredient_alias_resolve_failed:${error.message}`);
+  }
+
+  const ingredientIds = Array.from(new Set((data ?? [])
+    .map((row) => normalizeText((row as Record<string, unknown>).ingredient_id))
+    .filter((id): id is string => Boolean(id))));
+
+  return await findSingleActiveIngredientSlugByIds(client, ingredientIds);
+}
+
+async function findSingleActiveIngredientSlugByIds(
+  client: ReturnType<typeof createClient>,
+  ingredientIds: string[],
+): Promise<string | null> {
+  if (ingredientIds.length === 0) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("ingredients")
+    .select("id,slug,quality_status")
+    .in("id", ingredientIds)
+    .eq("quality_status", "active")
+    .limit(10);
+
+  if (error) {
+    throw new Error(`ingredient_ids_resolve_failed:${error.message}`);
+  }
+
+  const slugs = Array.from(new Set((data ?? [])
+    .map((row) => normalizeText((row as Record<string, unknown>).slug))
+    .filter((slug): slug is string => Boolean(slug))));
+
+  return slugs.length === 1 ? slugs[0] : null;
+}
+
+function escapePostgrestFilterValue(value: string): string {
+  return value.replace(/[%*,()]/g, "\\$&");
 }
 
 function getSafeFallbackRootSlug(
@@ -1631,6 +1794,42 @@ function isSafeIntrinsicVariantAutoReady(input: {
   if (reasons.has("risky_semantic_category")) return false;
 
   return true;
+}
+
+function isSafeProduceIntrinsicVariantAutoReady(input: {
+  validationPassed: boolean;
+  proposal: ProposalResponse;
+  reasons: string[];
+  originalText: string;
+  cleanedText: string;
+  removedQualifiers: string[];
+}): boolean {
+  if (!input.validationPassed) return false;
+  if (input.proposal.ingredient_type !== "produce") return false;
+  if (clamp01(input.proposal.confidence_score) < PRODUCE_VARIANT_READY_MIN_CONFIDENCE) return false;
+
+  const original = normalizeText(input.originalText) ?? "";
+  const cleaned = normalizeText(input.cleanedText) ?? "";
+  if (!original || !cleaned) return false;
+  if (hasMixedOrUnclearIdentitySignal(cleaned)) return false;
+  if (Array.isArray(input.removedQualifiers) && input.removedQualifiers.length > 0) return false;
+
+  const parentCandidateSlug = normalizeText(input.proposal.parent_candidate_slug);
+  const variantKind = normalizeText(input.proposal.variant_kind);
+  if (!parentCandidateSlug || !variantKind || !SAFE_PRODUCE_VARIANT_KINDS.has(variantKind)) {
+    return false;
+  }
+
+  const reasons = new Set(input.reasons.map((reason) => normalizeText(reason) ?? reason));
+  if (reasons.has("alias_conflict")) return false;
+  if (reasons.has("canonical_conflict")) return false;
+  if (reasons.has("parent_not_found")) return false;
+  if (reasons.has("missing_parent_candidate")) return false;
+  if (reasons.has("semantic_category_unknown")) return false;
+  if (reasons.has("risky_semantic_category")) return false;
+
+  const allowedReasons = new Set(["low_confidence"]);
+  return [...reasons].every((reason) => allowedReasons.has(reason));
 }
 
 function isSafeTransformedPreservedAutoReady(input: {

@@ -105,6 +105,8 @@ Canonical creation worker bridge:
 - The worker records start/completion/failure on `catalog_agent_worker_jobs`.
 - Real creation is disabled unless `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true`.
 - Dev smoke artifact: proposal `#12` for `pomodorini` prepared a pending draft; it was not created as a catalog ingredient because enrichment/validation still need to run.
+- Follow-up dev smoke completed the path for `pomodorini`: enrichment resolved the Italian parent candidate `pomodoro` to canonical slug `tomato`, promoted the draft to `ready`, then `ingredient_creation_batch` created `pomodorini` as a child produce variant of `tomato`.
+- The creation wrapper now preserves all available draft localizations, not only the display language chosen for the initial candidate creation call.
 
 ## Final Dev Smoke Test
 

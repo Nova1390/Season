@@ -8,6 +8,7 @@ This worker is an executor, not a reasoning agent:
 - it does not choose canonical identity;
 - it does not create from `create_canonical` proposals directly;
 - it only calls `create_catalog_ingredient_from_enrichment_draft(...)`.
+- the governed RPC preserves every localization present in the draft, for example both `canonical_name_it` and `canonical_name_en` when available.
 
 ## Agent-Orchestrated Mode
 
