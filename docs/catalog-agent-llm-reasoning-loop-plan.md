@@ -492,3 +492,45 @@ The loop is working when:
 - daily LLM cost remains predictable;
 - repeated mistakes create learning memory and do not recur;
 - Autopilot work is visible as agent-authorized execution, not independent policy.
+
+## 12. 4.0 Supervised Autonomy Checkpoint
+
+Status: reached in `Season-dev` on 2026-05-12.
+
+Evidence:
+
+- `run-catalog-agent-triage` executed with prompt version `catalog-agent-triage-v4-multi-pass`.
+- The first two dry-runs stopped before LLM usage because recent-proposal guardrails removed every item.
+- The successful smoke run sent exactly `1` eligible work item to the LLM.
+- The run executed the three planned reasoning roles: `semantic_profiler`, `risk_reviewer`, and `decision_writer`.
+- Dry-run mode returned a `create_canonical` draft for `pasta corta` but persisted `0` proposals.
+- The temporary operator token was removed after the smoke test and `CATALOG_AGENT_ENABLED=false` was restored.
+
+Current autonomy rating:
+
+```text
+4.0 supervised autonomy
+```
+
+Meaning:
+
+- the agent can reason in multiple bounded LLM passes;
+- it can stop before spending tokens when recent work already exists;
+- it can use learning memory and enriched context;
+- it can produce non-mutating dry-run decisions;
+- it still cannot autonomously apply catalog changes or run on staging.
+
+Next improvement target:
+
+```text
+4.5 governed proposal autonomy
+```
+
+To reach `4.5`, the agent should produce persisted proposals only when all of these are true:
+
+- pre-LLM context gate passes;
+- budget governor allows the run;
+- recent-proposal guardrail leaves eligible work;
+- semantic profile contains enough target/candidate evidence;
+- deterministic validator can classify the proposal without founder interpretation;
+- admin console clearly explains why each proposal is safe, blocked, or escalated.

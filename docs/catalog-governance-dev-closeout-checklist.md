@@ -41,6 +41,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - Dev-only canonical draft preparation proved the create-canonical path for `fiocchi d avena -> oat_flakes` without creating an ingredient directly.
 - Golden cases now include a `context_target` pre-LLM quality gate.
 - Dev context quality is `10/10` after retargeting the legacy small tomato alias `pomodorini ciliegino -> pomodorini`.
+- Dev reached `4.0 supervised autonomy`: the agent can run a bounded multi-pass LLM dry-run, use learning/context guardrails, record usage, and remain non-mutating by default.
+- `catalog.seasonapp.it` was restored after the remote subdomain folder was missing; the deployed console now returns HTTP `200`.
 
 ## Dev Training Import
 
@@ -537,3 +539,37 @@ Keep the console dev-backed until the current TestFlight release is accepted and
 ```
 
 This keeps the agent work moving without destabilizing the release candidate.
+
+## 2026-05-12 Supervised Autonomy 4.0 Smoke Test
+
+Environment: `Season-dev` only. Staging was not touched.
+
+Temporary runtime changes:
+
+- `CATALOG_AGENT_ENABLED=true` was enabled only for the smoke test.
+- `CATALOG_AGENT_OPERATOR_TOKEN` was set only long enough to invoke the dev function and was unset afterwards.
+- `CATALOG_AGENT_ENABLED=false` was restored immediately after the smoke test.
+
+Observed runs:
+
+- `run_id=43`: dry-run completed, `0` items sent to LLM, `1` item skipped because a recent proposal already existed.
+- `run_id=44`: dry-run completed, `0` items sent to LLM, `2` items skipped because recent proposals already existed.
+- `run_id=45`: dry-run completed, `1` item sent to LLM, `0` proposals persisted.
+
+Run `45` details:
+
+- Source domain: `smart_import_training_captions`.
+- Model: `gpt-5.4-mini`.
+- Prompt version: `catalog-agent-triage-v4-multi-pass`.
+- Reasoning mode: `multi_pass`.
+- Internal roles executed: `semantic_profiler`, `risk_reviewer`, `decision_writer`.
+- Token usage: `6,333` input, `1,221` output, `7,554` total.
+- Returned dry-run proposal: `pasta corta`, `create_canonical`, medium risk, draft.
+- Persisted proposals for run `45`: `0`.
+
+Interpretation:
+
+- The recent-proposal guardrail worked before any LLM spend.
+- The bounded multi-pass LLM path works when an eligible item is available.
+- Dry-run mode correctly avoids writing proposals or catalog mutations.
+- This is the current `4.0 supervised autonomy` level: useful reasoning is proven, but real apply and scheduled autonomous mutation remain disabled.

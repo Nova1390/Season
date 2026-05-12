@@ -905,3 +905,30 @@ Autopilot applies.
 Humans decide ambiguity.
 Audit preserves truth.
 ```
+
+## 19. Term-Specific Migrations Policy
+
+Catalog-governance migrations may mention a concrete ingredient term when they record or repair a real production-like catalog decision. This is acceptable when the migration is data/audit oriented, not hidden application logic.
+
+Acceptable examples:
+
+- retargeting a wrong legacy alias after discovering a semantic bug;
+- recording implemented learning so the agent avoids repeating the same mistake;
+- adding a golden-case fixture that protects a general rule;
+- repairing observations/proposals after a guarded catalog decision.
+
+Unacceptable examples:
+
+- adding special-case app behavior for one ingredient in iOS code;
+- teaching the agent only by piling up one-off exceptions with no general policy;
+- applying an LLM recommendation directly to source-of-truth tables without validator/audit;
+- using term-specific migrations instead of improving snapshot context, prompt contract, or deterministic validators.
+
+Rule of thumb:
+
+```text
+A term-specific migration can document a scar.
+It should not become the brain.
+```
+
+For example, migrations that mention tomato/pomodorini are acceptable only because they repaired a known small-tomato-vs-base-tomato catalog error and were followed by generalized variant guardrails plus golden-case coverage. Future similar issues should first improve the general context and validator layer, then use term-specific migrations only to repair already-known bad data.

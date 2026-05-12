@@ -94,6 +94,12 @@ Current dev deployment:
 - Supabase environment: `Season-dev`
 - Config file on host: `config.local.js`
 
+If the URL returns `404`, first verify that the Hostinger subdomain still points to the custom folder and that the folder exists. The expected folder is:
+
+```text
+/home/u280052083/domains/seasonapp.it/public_html/catalog
+```
+
 Deploy only static files:
 
 - `.htaccess`
