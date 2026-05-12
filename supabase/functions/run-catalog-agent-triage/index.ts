@@ -613,6 +613,9 @@ Do not apply catalog changes.
 Review semantic profiles for catalog safety risk.
 Flag cases where aliasing could break recipe semantics, nutrition, allergy, seasonality, fridge matching, shopping matching, or filters.
 Prefer conservative guidance when the evidence is incomplete.
+Do not convert a clear catalog gap into human review solely because it is medium/high risk.
+When a meaningful variant identity is clear and the catalog lacks a child/specialized node, recommend create_canonical draft with auto_apply_eligible=false.
+Human review is for unresolved identity or policy ambiguity, not for every missing canonical ingredient.
 
 Return this exact JSON shape:
 {
@@ -736,7 +739,7 @@ async function invokeMultiPassProvider(
             mode: "multi_pass",
             max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
             risk_review_performed: riskReviews.length > 0,
-            instruction: "Semantic profiles are analysis evidence. Final proposals must still obey the triage contract.",
+            instruction: "Semantic profiles are analysis evidence. Final proposals must still obey the triage contract. Clear missing catalog identities should become create_canonical drafts, not vague review outcomes.",
           },
         },
       }),
@@ -1230,12 +1233,17 @@ function summarizeLearningContext(learningContext: Record<string, unknown>): Rec
 }
 
 function normalizeProposalStatuses(proposals: CatalogAgentProposalOutput[]): CatalogAgentProposalOutput[] {
-  return proposals.map((proposal) => ({
-    ...proposal,
-    normalized_text: normalizeText(proposal.normalized_text),
-    auto_apply_eligible: proposal.risk_level === "low" ? proposal.auto_apply_eligible : false,
-    status: proposal.risk_level === "low" ? proposal.status : "needs_human_review",
-  }));
+  return proposals.map((proposal) => {
+    const actionableAutoApplyType = ["approve_alias", "add_localization"].includes(proposal.proposal_type);
+    return {
+      ...proposal,
+      normalized_text: normalizeText(proposal.normalized_text),
+      auto_apply_eligible: proposal.risk_level === "low" && actionableAutoApplyType
+        ? proposal.auto_apply_eligible
+        : false,
+      status: proposal.proposal_type === "needs_human_review" ? "needs_human_review" : "draft",
+    };
+  });
 }
 
 function evidenceWithSemanticProfile(proposal: CatalogAgentProposalOutput): unknown[] {

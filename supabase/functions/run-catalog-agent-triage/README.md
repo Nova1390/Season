@@ -60,6 +60,22 @@ The profile captures:
 
 The semantic profile is not catalog truth. It is persisted inside proposal `evidence` as a structured item so reviewers and future validators can understand why the agent thinks a term is an alias, child variant, new canonical ingredient, or review case.
 
+## Catalog Gaps
+
+The agent should not treat a missing target as automatic human review.
+
+When a term is clearly a real ingredient identity and no safe catalog target exists, the expected proposal is:
+
+- `proposal_type`: `create_canonical`;
+- `target_ingredient_id` / `target_slug`: `null`;
+- `proposed_slug`, `proposed_localized_name`, `proposed_language_code`: filled;
+- `status`: `draft`;
+- `auto_apply_eligible`: `false`.
+
+`needs_human_review` is reserved for cases where the identity boundary, variant policy, language meaning, product/package interpretation, or safety implications are unresolved. In other words: missing catalog item means "propose creation"; unclear ingredient identity means "ask for review".
+
+Implemented learning memory can make this stronger. If accepted/implemented learning says a family variant must not be compressed into a base ingredient, the agent should create a child/specialized `create_canonical` draft when the identity is clear and the child target is missing.
+
 ## Required Secrets
 
 - `SUPABASE_URL`

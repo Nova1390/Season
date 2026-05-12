@@ -65,6 +65,17 @@ If the term is clearly an ingredient but target is ambiguous, the agent should r
 
 It should not return `ignore_noise` or vague low-confidence output.
 
+If the term is clearly an ingredient and the problem is not ambiguity but catalog absence, the agent should return:
+
+- `create_canonical`;
+- `status = draft`;
+- proposed slug/localized name/language;
+- evidence explaining why no existing target is safe.
+
+Missing target and ambiguous target are different states. Missing target should create a catalog-gap proposal; ambiguous target should ask a precise review question.
+
+Accepted or implemented learning memory can resolve part of the policy question. If learning says a product-family variant must not be collapsed into the base ingredient, and the variant identity is clear, the agent should propose a child/specialized catalog gap instead of reopening the same human review.
+
 For bare `lievito`, the preferred target is the generic `lievito` catalog item when that candidate is present and recipe context does not specify a more precise leavening variant. Specific variants remain separate catalog identities.
 
 ## Learning Memory Rule

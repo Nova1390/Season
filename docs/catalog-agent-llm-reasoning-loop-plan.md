@@ -79,6 +79,7 @@ observe unresolved term
 The loop stops when the agent has either:
 
 - a low-risk validated path;
+- a catalog-gap proposal to create a missing canonical ingredient;
 - a clear human-review question;
 - insufficient evidence after budget is exhausted;
 - repeated reasoning passes produce no new evidence.
@@ -184,6 +185,14 @@ It must include:
 - rationale;
 - evidence references;
 - blocking questions.
+
+Catalog-gap behavior:
+
+- If the term is clearly an ingredient and the catalog has no safe target, write `create_canonical`.
+- If the term is a meaningful variant and the child/specialized target is missing, write `create_canonical` when the identity is clear, or `needs_human_review` when the parent-child policy is unclear.
+- Do not use `needs_human_review` merely because `possible_canonical_matches` is empty.
+- Do not invent `target_ingredient_id`; use proposed fields for new canonical creation.
+- If implemented learning says a term family must not be compressed into a base ingredient, use that learning to prefer a child/specialized `create_canonical` draft when the identity is clear.
 
 ### 4.5 Learning Writer
 

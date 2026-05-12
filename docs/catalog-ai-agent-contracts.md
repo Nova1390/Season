@@ -212,6 +212,13 @@ Required by proposal type:
   - `proposed_language_code`
   - rationale explaining why alias/localization is insufficient
 
+Catalog gap rule:
+
+- If the term is clearly a real ingredient and no safe active catalog target exists, the agent should produce a `create_canonical` draft rather than a vague `needs_human_review`.
+- `create_canonical` must never be auto-applied in the current autonomy level.
+- `create_canonical` may carry medium/high risk and still remain `draft`, because risk controls apply to worker/apply eligibility, not to whether a proposal can be validated and routed.
+- `needs_human_review` is for unresolved identity boundaries, meaningful variant policy gaps, cultural/language ambiguity, brand/package ambiguity, or safety-sensitive uncertainty.
+
 - `add_localization`
   - `target_ingredient_id` or `target_slug`
   - `proposed_localized_name`

@@ -211,7 +211,13 @@ Decision policy:
 25) substitutability_with_parent="full" only when the term can safely use the parent ingredient for recipe/fridge/shopping semantics. Use "partial", "unsafe", or "unknown" when a child/specialized target or review may be needed.
 26) For terms such as "pomodorini" vs "pomodori", do not rely on a hardcoded example. Apply the general meaningful-variant rule: if the term is a recognized culinary/market variant with material matching or usage differences, do not auto-approve it as a base alias.
 27) If a semantic_profile suggests a meaningful variant but the catalog has no explicit safe child target, prefer create_canonical or needs_human_review over approve_alias to the base.
-28) Include concrete semantic_profile.evidence and proposal evidence that reference recipe context, catalog candidates, learning memory, or missing evidence.
+28) Lack of an existing target is not, by itself, a reason for needs_human_review. If the term is clearly a real ingredient identity, no safe catalog target/candidate exists, and there is enough evidence to name the ingredient, return create_canonical instead of a vague review outcome.
+29) For create_canonical, leave target_ingredient_id and target_slug null, set proposed_slug, proposed_localized_name, and proposed_language_code, set auto_apply_eligible=false, and use status="draft". The proposed_slug must be stable snake_case ASCII without inventing an existing id.
+30) Use needs_human_review instead of create_canonical only when the identity boundary is unclear, the term may be a brand/package/preparation/noise, the variant policy is unresolved, or the proposed canonical would risk collapsing another meaningful ingredient.
+31) Medium/high risk does not automatically mean needs_human_review. Actionable proposal types can be draft with auto_apply_eligible=false so deterministic validators and future workers can inspect them safely.
+32) If implemented learning memory says a term or product family must not be compressed into a base ingredient, treat that as authorization to propose a child/specialized create_canonical draft when the identity is clear and the child target is missing. Do not ask for human review just because the new canonical would be medium/high risk; risk controls apply to apply eligibility, not to proposal creation.
+33) For clear market or culinary variants such as size class, cultivar, processing state, fat level, freshness, protected designation, or product type, prefer create_canonical draft over needs_human_review when the variant identity is well known and the catalog lacks an explicit child/specialized node.
+34) Include concrete semantic_profile.evidence and proposal evidence that reference recipe context, catalog candidates, learning memory, catalog gaps, or missing evidence.
 `;
 
 export function validateCatalogAgentTriageOutput(
@@ -337,8 +343,14 @@ function validateProposal(
   if (!CATALOG_AGENT_ALLOWED_STATUSES.includes(status as CatalogAgentProposalStatus)) {
     errors.push(`${prefix}.status unsupported`);
   }
-  if (riskLevel !== "low" && status !== "needs_human_review") {
-    errors.push(`${prefix}.status must be needs_human_review for non-low risk`);
+  if (proposalType === "needs_human_review" && status !== "needs_human_review") {
+    errors.push(`${prefix}.needs_human_review requires status needs_human_review`);
+  }
+  if (proposalType !== "needs_human_review" && status !== "draft") {
+    errors.push(`${prefix}.actionable proposal types must use draft status`);
+  }
+  if (proposal.auto_apply_eligible === true && !["approve_alias", "add_localization"].includes(String(proposalType))) {
+    errors.push(`${prefix}.auto_apply_eligible is only supported for approve_alias/add_localization`);
   }
 
   validateSemanticProfile(proposal.semantic_profile, `${prefix}.semantic_profile`, errors);
