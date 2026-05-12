@@ -534,3 +534,5 @@ To reach `4.5`, the agent should produce persisted proposals only when all of th
 - semantic profile contains enough target/candidate evidence;
 - deterministic validator can classify the proposal without founder interpretation;
 - admin console clearly explains why each proposal is safe, blocked, or escalated.
+
+The full maturity path from `4.0` to `8.0+` is defined in `docs/catalog-agent-autonomy-roadmap.md`.

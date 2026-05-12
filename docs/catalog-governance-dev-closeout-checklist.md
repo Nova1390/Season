@@ -42,6 +42,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Golden cases now include a `context_target` pre-LLM quality gate.
 - Dev context quality is `10/10` after retargeting the legacy small tomato alias `pomodorini ciliegino -> pomodorini`.
 - Dev reached `4.0 supervised autonomy`: the agent can run a bounded multi-pass LLM dry-run, use learning/context guardrails, record usage, and remain non-mutating by default.
+- The autonomy path from `4.0` through `8.0+` is documented in `docs/catalog-agent-autonomy-roadmap.md`.
 - `catalog.seasonapp.it` was restored after the remote subdomain folder was missing; the deployed console now returns HTTP `200`.
 
 ## Dev Training Import

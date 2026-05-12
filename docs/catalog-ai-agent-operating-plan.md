@@ -12,6 +12,7 @@ It complements:
 - `docs/catalog-agent-responsibility-charter.md`
 - `docs/catalog-ai-agent-contracts.md`
 - `docs/catalog-agent-llm-reasoning-loop-plan.md`
+- `docs/catalog-agent-autonomy-roadmap.md`
 
 Current implementation status:
 
@@ -34,7 +35,7 @@ Current implementation status:
 - Low-risk auto-apply infrastructure exists but scheduled real apply remains disabled by default; one dev-gated low-risk proposal has been applied through validator + governed RPC as an autonomy smoke test.
 - Continuous improvement is required: mistakes, rejections, validator failures, and recurring ambiguities must become learning artifacts before behavior changes.
 - A no-LLM golden-case harness now exists in `scripts/catalog_agent_golden_cases/` and is documented in `docs/catalog-agent-golden-cases.md`. It separates current dev correctness, strict target autonomous behavior, and effective operational safety before increasing apply permissions.
-- Current autonomy maturity is `3.5 dev-gated`: the agent can close a reviewed low-risk alias path end-to-end on dev and can route `create_canonical` proposals into Autopilot's enrichment-draft lane, but scheduled apply and staging promotion remain off.
+- Current autonomy maturity is `4.0 supervised autonomy`: the agent can run bounded multi-pass LLM reasoning in dry-run, use learning/context guardrails, record usage, and remain non-mutating by default. The staged path to `8.0+` is defined in `docs/catalog-agent-autonomy-roadmap.md`.
 - A no-LLM context-quality harness now verifies whether golden cases receive good candidate context before the LLM is called. This keeps intelligence improvements focused on either context enrichment or prompt reasoning instead of spending tokens blindly.
 
 ## 1. Executive Summary
