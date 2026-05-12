@@ -12,6 +12,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Staging backend: intentionally untouched for this agent-console cycle
 - Real low-risk apply: disabled by default
 - Console low-risk apply: dry-run only
+- TestFlight handoff: `docs/testflight-bugfix-handoff-2026-05-12.md`
 
 ## Completed
 
@@ -85,6 +86,15 @@ Meaningful variant learning:
 - The first data row covers small tomato variants vs base `tomato`, but the validator logic is general and reusable for future cases such as sweet potatoes vs potatoes, gluten-free pasta vs pasta, Greek yogurt vs yogurt, or basmati rice vs rice.
 - The agent prompt now carries the general rule before the model proposes anything.
 - Expected future behavior: `pomodori` can resolve to base `tomato`; `pomodorini` requires an explicit child variant such as `cherry_tomatoes` or human review/catalog-gap handling.
+
+Semantic profile upgrade:
+
+- `run-catalog-agent-triage` now uses prompt version `catalog-agent-triage-v3-semantic-profile`.
+- Each LLM proposal must include a structured `semantic_profile`.
+- The profile captures product family, variant dimension, parent candidate, identity-bearing variant risk, substitutability, and app-impact implications.
+- Step 1 stores the profile inside proposal `evidence` without a DB schema change.
+- Dev smoke test `catalog_agent_runs.id = 23` returned 6 valid dry-run proposals and created no rows.
+- Dev was restored to `CATALOG_AGENT_ENABLED=false` after the smoke test.
 
 ## Final Dev Smoke Test
 
