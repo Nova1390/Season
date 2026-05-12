@@ -77,7 +77,8 @@ Implementation status:
 - The quality gate records `proposal_quality_gate_evaluated` and run-summary counts for persistable vs blocked proposals.
 - The updated Edge Function is deployed to `Season-dev`.
 - Fail-closed smoke passed: invoking `dry_run=false` while persistence was disabled returned `PROPOSAL_PERSISTENCE_DISABLED` before LLM usage or proposal writes.
-- Full LLM quality-gate smoke remains pending because the dev daily run budget correctly stopped the next run with `DAILY_RUN_BUDGET_EXHAUSTED`.
+- Full LLM quality-gate smoke passed in dry-run with `run_id=47`: `1` returned proposal, `1` persistable proposal, `0` blocked proposals, and `0` persisted proposals because persistence remained disabled.
+- The dev run window was closed afterwards: `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and the temporary operator token was removed.
 
 Exit gates:
 

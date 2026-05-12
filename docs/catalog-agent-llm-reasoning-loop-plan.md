@@ -559,3 +559,10 @@ Quality gate checks include:
 - unknown or critical risk cannot be persisted as an actionable proposal.
 
 The gate can block individual proposals while allowing the run to complete. This is important because the agent should learn to produce better work without turning every weak item into either a database write or a hard runtime failure.
+
+Dev smoke:
+
+- `run_id=47` executed the quality gate in `dry_run=true`.
+- The run returned `1` `create_canonical` draft for `pasta corta`.
+- The proposal quality gate classified it as persistable with `0` blocking issues.
+- No proposal was inserted because persistence remained disabled.
