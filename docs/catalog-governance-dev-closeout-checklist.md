@@ -355,6 +355,12 @@ Local verification completed:
 - Supabase dev `current` profile: `10/10` passed.
 - Supabase dev `target` profile: `3/10` passed, which is the autonomy baseline before further prompt/context improvement.
 
+Next intelligence increment:
+
+- Seeded fresh learning for `pomodori`, `pomodorini`, and `fiocchi d avena` target gaps.
+- Updated the LLM contract so base plural/localized forms prefer aliasing when non-variant, while product-form identities can become canonical drafts when missing.
+- This is no-apply learning only; the next controlled triage run should show whether target score improves without manual governance.
+
 ### 1. Static Console
 
 Open:

@@ -118,3 +118,11 @@ Main target gaps:
 - `pomodori` still needs to become an actionable alias proposal for `tomato`.
 - `pomodorini` needs a fresh post-canonical rerun so the agent can target the new child canonical instead of the old missing-catalog proposal.
 - `fiocchi d avena` needs better catalog-gap or alias confidence instead of vague review.
+
+Follow-up learning seeded:
+
+- `pomodori`: base plural/localized tomato forms should become `approve_alias -> tomato` unless semantic evidence shows a meaningful variant.
+- `pomodorini`: once the child canonical exists, future proposals should target `pomodorini`, not recreate it or collapse to `tomato`.
+- `fiocchi d avena`: clear product-form identities such as oat flakes should become a catalog-gap `create_canonical` draft when no dedicated child target exists.
+- These lessons are deliberately term-specific plus policy-shaped: they reopen the cases for the next controlled agent run without applying catalog mutations.
+- The `target` score remains `3/10` until a new controlled triage run creates fresh proposals; learning changes future eligibility and reasoning, not historical proposal rows.

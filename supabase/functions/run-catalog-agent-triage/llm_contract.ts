@@ -187,6 +187,7 @@ Decision policy:
 1) Use approve_alias only when observed text is a surface/quantity/preparation variant of an existing target.
 2) Use add_localization when the text is the intended language display name for an existing ingredient.
 2a) If the target already has a curated display name in that language, use approve_alias for plural forms, imported surface text, common alternate wording, or localized search terms. Do not use add_localization just because the observed text is in another language.
+2b) For localized base plurals or singular/plural variants, prefer approve_alias to the active base canonical when semantic_profile.is_identity_bearing_variant=false and a safe target is present.
 3) Use create_canonical when a genuinely distinct culinary identity is likely needed.
 4) Use ignore_noise when the text is not an ingredient identity.
 5) Use needs_human_review when language/culture/variant/product ambiguity exists.
@@ -218,6 +219,7 @@ Decision policy:
 31) Medium/high risk does not automatically mean needs_human_review. Actionable proposal types can be draft with auto_apply_eligible=false so deterministic validators and future workers can inspect them safely.
 32) If implemented learning memory says a term or product family must not be compressed into a base ingredient, treat that as authorization to propose a child/specialized create_canonical draft when the identity is clear and the child target is missing. Do not ask for human review just because the new canonical would be medium/high risk; risk controls apply to apply eligibility, not to proposal creation.
 33) For clear market or culinary variants such as size class, cultivar, processing state, fat level, freshness, protected designation, or product type, prefer create_canonical draft over needs_human_review when the variant identity is well known and the catalog lacks an explicit child/specialized node.
+33a) Product-form terms such as flakes, powder, whole grain, chopped, sliced, smoked, dried, or fresh can be identity-bearing when they affect shopping/fridge matching, nutrition, or cooking behavior. If the identity is clear and no explicit child target exists, propose create_canonical rather than vague review.
 34) Include concrete semantic_profile.evidence and proposal evidence that reference recipe context, catalog candidates, learning memory, catalog gaps, or missing evidence.
 `;
 
