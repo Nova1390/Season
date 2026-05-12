@@ -100,6 +100,27 @@ Semantic profile upgrade:
 
 Run these checks before treating the branch as ready for review.
 
+### 2026-05-12 Closeout Verification Snapshot
+
+Status: passed for the static console and branch hygiene after TestFlight `1.0.1 (4)` was merged into `agent/catalog-governance`.
+
+Checks run:
+
+- `git diff --check`: passed.
+- `node --check admin-console/app.js`: passed.
+- `node --check admin-console/config.example.js`: passed.
+- Live `https://catalog.seasonapp.it/` static assets match local `admin-console/index.html`, `admin-console/app.js`, and `admin-console/styles.css` by SHA-256.
+- Live `config.local.js` points to `Season-dev` (`gyuedxycbnqljryenapx`) and not staging.
+- Live `config.local.js` does not expose service-role markers.
+- `run-catalog-agent-orchestrator` responds to browser CORS preflight from the console origin with `204`.
+- Direct worker/triage browser preflight is not enabled, which is acceptable because the console should route worker operations through the orchestrator.
+
+Not run by automation in this snapshot:
+
+- authenticated browser login with a catalog-admin dev user;
+- real console button smoke test;
+- Supabase CLI lint/query against dev, because no active Supabase CLI PAT is assumed during this closeout check.
+
 ### 1. Static Console
 
 Open:
