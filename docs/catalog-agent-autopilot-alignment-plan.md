@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, and Phase 5 safety foundation implemented on dev. Multi-pass LLM reasoning is planned in `docs/catalog-agent-llm-reasoning-loop-plan.md`. Low-risk apply real mode and canonical creation remain intentionally gated.
+Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, Phase 4.5 batch-level multi-pass reasoning, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode and canonical creation remain intentionally gated.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -226,22 +226,22 @@ Exit criteria:
 
 Let the agent use LLMs as specialized reasoning tools before final proposal synthesis.
 
-Status: planned in `docs/catalog-agent-llm-reasoning-loop-plan.md`; no runtime implementation yet.
+Status: batch-level runtime implemented in `supabase/functions/run-catalog-agent-triage` v4; adaptive per-term loops remain planned in `docs/catalog-agent-llm-reasoning-loop-plan.md`.
 
 Required behavior:
 
-- semantic profiling happens before final decision when term identity is not already settled by deterministic rules or learning memory;
-- risk review is called only when the decision could collapse a meaningful variant, create catalog identity, or affect nutrition/allergy/seasonality/fridge/shopping semantics;
+- semantic profiling happens before final decision when multi-pass mode is enabled;
+- risk review is called only when enabled and the semantic profile indicates ambiguity, open questions, non-full substitutability, or identity-bearing variant risk;
 - decision synthesis produces the same governed proposal vocabulary used today;
-- all calls are attributed in `catalog_ai_usage_events`;
-- per-term and per-run budgets are enforced before each call.
+- all calls are attributed in `catalog_ai_usage_events` with `metadata.task_role`;
+- per-run call ceiling is implemented; per-term adaptive budget enforcement remains planned.
 
 Exit criteria:
 
-- fewer vague `needs_human_review` proposals;
-- review questions become precise policy questions;
-- meaningful variants are identified before alias validation;
-- Autopilot remains execution-only and does not own policy.
+- fewer vague `needs_human_review` proposals: requires dev smoke history;
+- review questions become precise policy questions: requires dev smoke history;
+- meaningful variants are identified before alias validation: implemented in prompt contract and semantic profile pass;
+- Autopilot remains execution-only and does not own policy: unchanged.
 
 ### Phase 5: Low-Risk Autonomous Apply
 

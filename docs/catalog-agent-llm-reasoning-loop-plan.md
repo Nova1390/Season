@@ -1,6 +1,6 @@
 # Catalog Agent LLM Reasoning Loop Plan
 
-Status: planning contract. Step 1 prompt-contract expansion is implemented in `run-catalog-agent-triage` v3; remaining loop steps are not implemented yet.
+Status: implementation contract. Step 1 prompt-contract expansion and Step 3 batch-level multi-pass orchestration are implemented in `run-catalog-agent-triage` v4. Per-term adaptive loops, catalog matcher split-out, learning writer, and full budget governor remain planned.
 
 This document defines how the Season Catalog Governance Agent should use LLMs as controlled reasoning tools, not as a single-shot autopilot wrapper.
 
@@ -44,7 +44,22 @@ That is safe, but it underuses the model's ability to reason deeply about:
 - nutrition, allergy, seasonality, fridge, shopping, and filter implications;
 - when a term should become a child variant instead of an alias to a base ingredient.
 
-The next architecture should keep the same safety posture while allowing bounded multi-pass reasoning.
+The v4 runtime keeps the same safety posture while allowing bounded batch-level multi-pass reasoning.
+
+Implemented now:
+
+- semantic profiling pass;
+- optional risk review pass;
+- final decision writer pass using the existing proposal validator;
+- per-role token attribution in `catalog_ai_usage_events`;
+- aggregate reasoning trace in the run summary.
+
+Still planned:
+
+- per-term adaptive continuation when one term needs deeper investigation;
+- separate catalog matcher role or deterministic matcher wrapper;
+- learning writer for failed/rejected/overridden outcomes;
+- stronger pre-call budget stop checks.
 
 ## 3. Target Loop
 
@@ -357,20 +372,22 @@ Exit criteria:
 
 Introduce bounded task calls.
 
+Status: partially implemented in `supabase/functions/run-catalog-agent-triage` v4.
+
 Deliverables:
 
-- `semantic_profiler` prompt;
-- `catalog_matcher` prompt or deterministic matcher wrapper;
-- optional `risk_reviewer` prompt;
-- `decision_writer` synthesis prompt;
-- per-term call budget and stop conditions.
+- `semantic_profiler` prompt: implemented.
+- `catalog_matcher` prompt or deterministic matcher wrapper: planned.
+- optional `risk_reviewer` prompt: implemented.
+- `decision_writer` synthesis prompt: implemented.
+- per-term call budget and stop conditions: planned; current implementation has per-run call ceiling.
 
 Exit criteria:
 
-- normal work item uses at most 3 calls;
-- high-impact item uses at most 5 calls;
-- no loop can recursively schedule itself;
-- every call writes `catalog_ai_usage_events`.
+- normal batch uses at most 3 calls today;
+- high-impact item uses at most 5 calls: planned;
+- no loop can recursively schedule itself: implemented, because the function performs a fixed finite sequence;
+- every call writes `catalog_ai_usage_events`: implemented with `metadata.task_role`.
 
 ### Step 4: Cost Governor Upgrade
 

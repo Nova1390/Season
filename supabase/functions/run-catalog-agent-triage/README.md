@@ -8,6 +8,7 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 - attaches compact learning memory for each candidate term;
 - skips items with recent agent proposals unless newer learning memory asks the agent to reconsider;
 - calls OpenAI Responses API with `gpt-5.4-mini` by default;
+- uses a bounded multi-pass reasoning loop by default: semantic profiler, optional risk reviewer, final decision writer;
 - validates strict JSON output, including a structured `semantic_profile` for each proposal;
 - stores proposals in `catalog_agent_proposals`;
 - records run/proposal events;
@@ -27,6 +28,20 @@ The model receives:
 The memory is advisory. The model must still use only targets present in the current work item and every persisted proposal remains subject to deterministic validation before any apply step.
 
 Recent proposal dedupe happens after learning memory is attached. This prevents repeated LLM calls for unchanged work, but still lets an operator note or review outcome reopen a term when the new lesson was created after the last live proposal.
+
+## Multi-Pass Reasoning
+
+The default runtime mode is `multi_pass`.
+
+The agent now uses the LLM as a set of small task roles instead of asking for one overloaded answer:
+
+- `semantic_profiler`: describes product family, variant dimensions, substitutability, and attribute implications before deciding.
+- `risk_reviewer`: runs only when enabled and when the semantic profile suggests ambiguity or a meaningful variant risk.
+- `decision_writer`: produces the final proposal using the same strict proposal JSON contract as the previous single-pass runtime.
+
+Every provider call is recorded in `catalog_ai_usage_events` with `metadata.task_role`. The run summary also includes an aggregate `reasoning_trace`, while the aggregate run-level event keeps token fields empty to avoid double-counting provider calls.
+
+Set `CATALOG_AGENT_REASONING_MODE=single_pass` to temporarily return to the old one-call behavior.
 
 ## Semantic Profile
 
@@ -61,6 +76,9 @@ The semantic profile is not catalog truth. It is persisted inside proposal `evid
 - `CATALOG_AGENT_MAX_RUNS_PER_DAY`: defaults to `3`, capped at `24`.
 - `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`: defaults to `7`.
 - `CATALOG_AGENT_PROVIDER_TIMEOUT_MS`: defaults to `20000`.
+- `CATALOG_AGENT_REASONING_MODE`: defaults to `multi_pass`; set `single_pass` for the legacy one-call path.
+- `CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN`: defaults to `3`, capped at `5`.
+- `CATALOG_AGENT_RISK_REVIEW_ENABLED`: defaults to `true`.
 - `CATALOG_AGENT_INPUT_COST_PER_1M_USD`: optional cost estimate.
 - `CATALOG_AGENT_OUTPUT_COST_PER_1M_USD`: optional cost estimate.
 
@@ -95,6 +113,13 @@ The semantic profile is not catalog truth. It is persisted inside proposal `evid
       "totalTokens": 1500
     },
     "estimated_cost_usd": null,
+    "reasoning_mode": "multi_pass",
+    "reasoning_trace": {
+      "mode": "multi_pass",
+      "semantic_profile_count": 8,
+      "risk_review_enabled": true,
+      "risk_review_performed": true
+    },
     "learning_memory": {
       "source": "catalog_agent_learning_context_v1",
       "terms_requested": 8,

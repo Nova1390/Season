@@ -14,7 +14,10 @@ import {
 } from "../_shared/observability.ts";
 import { recordAIUsageEvent } from "../_shared/ai_usage.ts";
 import {
+  CATALOG_AGENT_ALLOWED_IMPLICATION_LEVELS,
+  CATALOG_AGENT_ALLOWED_SUBSTITUTABILITY,
   CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
+  type CatalogAgentSemanticProfileOutput,
   type CatalogAgentProposalOutput,
   validateCatalogAgentTriageOutput,
 } from "./llm_contract.ts";
@@ -27,6 +30,13 @@ interface AgentRunRequest {
 }
 
 interface ProviderInvocationResult {
+  parsed: unknown;
+  durationMs: number;
+  usage: TokenUsage;
+  reasoningTrace: Record<string, unknown>;
+}
+
+interface ProviderRoleResult {
   parsed: unknown;
   durationMs: number;
   usage: TokenUsage;
@@ -45,8 +55,8 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v3-semantic-profile";
-const PROMPT_VERSION = "catalog-agent-triage-v3-semantic-profile";
+const AGENT_VERSION = "proposal-only-v4-multi-pass";
+const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
 const SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY");
@@ -62,6 +72,11 @@ const MAX_ITEMS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_ITEMS_PER_
 const MAX_RUNS_PER_DAY = boundedInteger(numberEnv("CATALOG_AGENT_MAX_RUNS_PER_DAY", 3), 1, 24);
 const RECENT_PROPOSAL_DAYS = boundedInteger(numberEnv("CATALOG_AGENT_RECENT_PROPOSAL_DAYS", 7), 1, 90);
 const PROVIDER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_PROVIDER_TIMEOUT_MS", 20000), 1000, 60000);
+const REASONING_MODE = env("CATALOG_AGENT_REASONING_MODE", "multi_pass").toLowerCase() === "single_pass"
+  ? "single_pass"
+  : "multi_pass";
+const MAX_REASONING_CALLS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN", 3), 1, 5);
+const RISK_REVIEW_ENABLED = env("CATALOG_AGENT_RISK_REVIEW_ENABLED", "true").toLowerCase() !== "false";
 const INPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_INPUT_COST_PER_1M_USD");
 const OUTPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_OUTPUT_COST_PER_1M_USD");
 
@@ -222,7 +237,14 @@ Deno.serve(async (request) => {
       return jsonResponseWithStatus({ ok: true, run_id: runId, summary }, 200);
     }
 
-    const providerResult = await invokeProvider(snapshot, eligibleItems, learningContext);
+    const providerResult = await invokeProvider(
+      adminClient,
+      requestId,
+      runId,
+      snapshot,
+      eligibleItems,
+      learningContext,
+    );
     const allowedTexts = new Set(eligibleItems.map((item) => normalizeText(item.normalized_text)));
     const validation = validateCatalogAgentTriageOutput(providerResult.parsed, allowedTexts);
     if (!validation.ok || !validation.value) {
@@ -250,9 +272,15 @@ Deno.serve(async (request) => {
         model: OPENAI_MODEL,
         status: "error",
         providerDurationMs: providerResult.durationMs,
-        usage: providerResult.usage,
-        estimatedCostUsd: estimateCost(providerResult.usage),
+        usage: null,
+        estimatedCostUsd: null,
         reason: "validator_failed",
+        metadata: {
+          aggregate_usage: providerResult.usage,
+          aggregate_estimated_cost_usd: estimateCost(providerResult.usage),
+          reasoning_mode: REASONING_MODE,
+          reasoning_trace: providerResult.reasoningTrace,
+        },
       });
       return errorJson(502, "PROVIDER_OUTPUT_INVALID", `Provider output failed validation: ${validation.errors.join(" | ")}`);
     }
@@ -276,6 +304,8 @@ Deno.serve(async (request) => {
       prompt_version: PROMPT_VERSION,
       learning_memory: summarizeLearningContext(learningContext),
       provider_duration_ms: providerResult.durationMs,
+      reasoning_mode: REASONING_MODE,
+      reasoning_trace: providerResult.reasoningTrace,
       budget: budgetSummary(),
       duration_ms: elapsedMs(startedAt),
     };
@@ -302,11 +332,15 @@ Deno.serve(async (request) => {
       model: OPENAI_MODEL,
       status: "success",
       providerDurationMs: providerResult.durationMs,
-      usage: providerResult.usage,
-      estimatedCostUsd: cost,
+      usage: null,
+      estimatedCostUsd: null,
       metadata: {
         proposals_created: insertedProposalIDs.length,
         items_sent_to_llm: eligibleItems.length,
+        aggregate_usage: providerResult.usage,
+        aggregate_estimated_cost_usd: cost,
+        reasoning_mode: REASONING_MODE,
+        reasoning_trace: providerResult.reasoningTrace,
       },
     });
 
@@ -530,7 +564,73 @@ async function fetchLearningContext(
   return data;
 }
 
+const SEMANTIC_PROFILER_SYSTEM_PROMPT = `You are Season's catalog semantic profiler.
+
+Return ONLY valid JSON.
+Do not output markdown.
+Do not apply catalog changes.
+
+For each work item, analyze culinary identity and variant semantics before any operational decision.
+Separate ingredient-existence confidence from canonical-target confidence.
+Use recipe context, catalog candidates, and learning memory.
+
+Return this exact JSON shape:
+{
+  "semantic_profiles": [
+    {
+      "normalized_text": string,
+      "semantic_profile": {
+        "product_family": string | null,
+        "semantic_category": string | null,
+        "variant_dimension": string | null,
+        "variant_kind": string | null,
+        "parent_candidate_slug": string | null,
+        "is_identity_bearing_variant": boolean | null,
+        "substitutability_with_parent": "full" | "partial" | "unsafe" | "unknown",
+        "attribute_implications": string[],
+        "nutrition_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "seasonality_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "allergy_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "fridge_matching_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "shopping_matching_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "filter_implication": "none" | "possible" | "likely" | "material" | "unknown",
+        "market_or_language_notes": string | null,
+        "confidence_score": number | null,
+        "evidence": string[],
+        "open_questions": string[]
+      },
+      "needs_risk_review": boolean
+    }
+  ]
+}`;
+
+const RISK_REVIEWER_SYSTEM_PROMPT = `You are Season's catalog risk reviewer.
+
+Return ONLY valid JSON.
+Do not output markdown.
+Do not apply catalog changes.
+
+Review semantic profiles for catalog safety risk.
+Flag cases where aliasing could break recipe semantics, nutrition, allergy, seasonality, fridge matching, shopping matching, or filters.
+Prefer conservative guidance when the evidence is incomplete.
+
+Return this exact JSON shape:
+{
+  "risk_reviews": [
+    {
+      "normalized_text": string,
+      "risk_flags": string[],
+      "recommended_risk_level": "low" | "medium" | "high" | "critical" | "unknown",
+      "decision_guidance": string,
+      "blocking_questions": string[]
+    }
+  ]
+}`;
+
 async function invokeProvider(
+  adminClient: ReturnType<typeof createClient>,
+  requestId: string,
+  runId: number,
   snapshot: Record<string, unknown>,
   eligibleItems: WorkItem[],
   learningContext: Record<string, unknown>,
@@ -542,6 +642,141 @@ async function invokeProvider(
     work_items: eligibleItems.map(compactWorkItem),
   };
 
+  if (REASONING_MODE === "multi_pass" && MAX_REASONING_CALLS_PER_RUN >= 2) {
+    return await invokeMultiPassProvider(adminClient, requestId, runId, compactPacket);
+  }
+
+  const result = await invokeProviderRole({
+    taskRole: "decision_writer_single_pass",
+    systemPrompt: CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
+    userPrompt: [
+      "Review this Season catalog governance work packet.",
+      "Return strict JSON only using the required shape.",
+      "Remember: proposal-only. Do not claim to apply changes.",
+      JSON.stringify(compactPacket),
+    ].join("\n"),
+    maxOutputTokens: 5000,
+  });
+
+  await recordProviderRoleUsage(requestId, runId, "decision_writer_single_pass", result);
+  return {
+    parsed: result.parsed,
+    durationMs: result.durationMs,
+    usage: result.usage,
+    reasoningTrace: {
+      mode: "single_pass",
+      max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
+      roles: [roleTrace(result, "decision_writer_single_pass")],
+    },
+  };
+}
+
+async function invokeMultiPassProvider(
+  adminClient: ReturnType<typeof createClient>,
+  requestId: string,
+  runId: number,
+  compactPacket: Record<string, unknown>,
+): Promise<ProviderInvocationResult> {
+  const semanticResult = await invokeProviderRole({
+    taskRole: "semantic_profiler",
+    systemPrompt: SEMANTIC_PROFILER_SYSTEM_PROMPT,
+    userPrompt: [
+      "Profile these catalog work items before any decision is made.",
+      "Focus on product family, variant identity, substitutability, and catalog implications.",
+      JSON.stringify(compactPacket),
+    ].join("\n"),
+    maxOutputTokens: 5000,
+  });
+  await recordProviderRoleUsage(requestId, runId, "semantic_profiler", semanticResult);
+
+  const semanticProfiles = normalizeSemanticProfilePass(semanticResult.parsed, compactPacket);
+  let aggregateUsage = semanticResult.usage;
+  let aggregateDurationMs = semanticResult.durationMs;
+  const roleTraces = [roleTrace(semanticResult, "semantic_profiler")];
+  let riskReviews: Record<string, unknown>[] = [];
+
+  const riskReviewAllowed = RISK_REVIEW_ENABLED && MAX_REASONING_CALLS_PER_RUN >= 3;
+  const hasRiskReviewWork = semanticProfiles.some((profile) => profile.needs_risk_review === true);
+  if (riskReviewAllowed && hasRiskReviewWork) {
+    const riskResult = await invokeProviderRole({
+      taskRole: "risk_reviewer",
+      systemPrompt: RISK_REVIEWER_SYSTEM_PROMPT,
+      userPrompt: [
+        "Review these semantic profiles for catalog safety risk.",
+        "Do not decide final actions. Provide risk guidance only.",
+        JSON.stringify({
+          policy: compactPacket.policy,
+          work_items: compactPacket.work_items,
+          semantic_profiles: semanticProfiles,
+        }),
+      ].join("\n"),
+      maxOutputTokens: 3500,
+    });
+    await recordProviderRoleUsage(requestId, runId, "risk_reviewer", riskResult);
+    riskReviews = normalizeRiskReviewPass(riskResult.parsed, compactPacket);
+    aggregateUsage = addUsage(aggregateUsage, riskResult.usage);
+    aggregateDurationMs += riskResult.durationMs;
+    roleTraces.push(roleTrace(riskResult, "risk_reviewer"));
+  }
+
+  const decisionResult = await invokeProviderRole({
+    taskRole: "decision_writer",
+    systemPrompt: CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
+    userPrompt: [
+      "Write the final proposal-only catalog governance decisions.",
+      "Use the original work packet plus the semantic profile and risk review context.",
+      "Return strict JSON only using the required proposal shape.",
+      "Do not apply changes.",
+      JSON.stringify({
+        ...compactPacket,
+        reasoning_context: {
+          semantic_profiles: semanticProfiles,
+          risk_reviews: riskReviews,
+          policy: {
+            mode: "multi_pass",
+            max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
+            risk_review_performed: riskReviews.length > 0,
+            instruction: "Semantic profiles are analysis evidence. Final proposals must still obey the triage contract.",
+          },
+        },
+      }),
+    ].join("\n"),
+    maxOutputTokens: 5000,
+  });
+  await recordProviderRoleUsage(requestId, runId, "decision_writer", decisionResult);
+
+  aggregateUsage = addUsage(aggregateUsage, decisionResult.usage);
+  aggregateDurationMs += decisionResult.durationMs;
+  roleTraces.push(roleTrace(decisionResult, "decision_writer"));
+
+  await insertRunEvent(adminClient, runId, "reasoning_trace_created", {
+    mode: "multi_pass",
+    semantic_profiles: semanticProfiles.length,
+    risk_reviews: riskReviews.length,
+    roles: roleTraces,
+  }, null);
+
+  return {
+    parsed: decisionResult.parsed,
+    durationMs: aggregateDurationMs,
+    usage: aggregateUsage,
+    reasoningTrace: {
+      mode: "multi_pass",
+      max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
+      semantic_profile_count: semanticProfiles.length,
+      risk_review_enabled: RISK_REVIEW_ENABLED,
+      risk_review_performed: riskReviews.length > 0,
+      roles: roleTraces,
+    },
+  };
+}
+
+async function invokeProviderRole(input: {
+  taskRole: string;
+  systemPrompt: string;
+  userPrompt: string;
+  maxOutputTokens: number;
+}): Promise<ProviderRoleResult> {
   const payload = {
     model: OPENAI_MODEL,
     input: [
@@ -550,7 +785,7 @@ async function invokeProvider(
         content: [
           {
             type: "input_text",
-            text: CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
+            text: input.systemPrompt,
           },
         ],
       },
@@ -559,20 +794,14 @@ async function invokeProvider(
         content: [
           {
             type: "input_text",
-            text: [
-              "Review this Season catalog governance work packet.",
-              "Return strict JSON only using the required shape.",
-              "Remember: proposal-only. Do not claim to apply changes.",
-              JSON.stringify(compactPacket),
-            ].join("\n"),
+            text: input.userPrompt,
           },
         ],
       },
     ],
     temperature: 0,
-    max_output_tokens: 5000,
+    max_output_tokens: input.maxOutputTokens,
   };
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
   const startedAt = performance.now();
@@ -611,10 +840,217 @@ async function invokeProvider(
       usage,
     };
   } catch (error) {
-    throw new ProviderInvocationError(String(error), elapsedMs(startedAt));
+    throw new ProviderInvocationError(`${input.taskRole}:${String(error)}`, elapsedMs(startedAt));
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function recordProviderRoleUsage(
+  requestId: string,
+  runId: number,
+  taskRole: string,
+  result: ProviderRoleResult,
+) {
+  logLLMUsage(LOG_PREFIX, {
+    functionName: `${FUNCTION_NAME}:${taskRole}`,
+    requestId,
+    status: "success",
+    providerDurationMs: result.durationMs,
+    model: OPENAI_MODEL,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+    totalTokens: result.usage.totalTokens,
+  });
+
+  await recordAIUsageEvent({
+    supabaseUrl: SUPABASE_URL,
+    serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+    functionName: FUNCTION_NAME,
+    requestId,
+    agentRunId: runId,
+    model: OPENAI_MODEL,
+    status: "success",
+    providerDurationMs: result.durationMs,
+    usage: result.usage,
+    estimatedCostUsd: estimateCost(result.usage),
+    metadata: {
+      task_role: taskRole,
+      reasoning_mode: REASONING_MODE,
+    },
+  });
+}
+
+function roleTrace(result: ProviderRoleResult, taskRole: string): Record<string, unknown> {
+  return {
+    task_role: taskRole,
+    provider_duration_ms: result.durationMs,
+    usage: result.usage,
+  };
+}
+
+function normalizeSemanticProfilePass(
+  parsed: unknown,
+  compactPacket: Record<string, unknown>,
+): Array<Record<string, unknown> & { needs_risk_review: boolean }> {
+  const allowedTexts = new Set(compactWorkItemTexts(compactPacket));
+  const rawProfiles = readNestedArray(parsed, ["semantic_profiles"]);
+  const profileByText = new Map<string, Record<string, unknown> & { needs_risk_review: boolean }>();
+
+  for (const rawProfile of rawProfiles) {
+    if (!isRecord(rawProfile)) continue;
+    const normalizedText = normalizeText(rawProfile.normalized_text);
+    if (!allowedTexts.has(normalizedText)) continue;
+    const semanticProfile = sanitizeSemanticProfile(rawProfile.semantic_profile);
+    const needsRiskReview = rawProfile.needs_risk_review === true ||
+      semanticProfile.is_identity_bearing_variant === true ||
+      semanticProfile.substitutability_with_parent !== "full" ||
+      semanticProfile.open_questions.length > 0;
+    profileByText.set(normalizedText, {
+      normalized_text: normalizedText,
+      semantic_profile: semanticProfile,
+      needs_risk_review: needsRiskReview,
+    });
+  }
+
+  for (const text of allowedTexts) {
+    if (!profileByText.has(text)) {
+      profileByText.set(text, {
+        normalized_text: text,
+        semantic_profile: defaultSemanticProfile(text),
+        needs_risk_review: true,
+      });
+    }
+  }
+
+  return [...profileByText.values()];
+}
+
+function normalizeRiskReviewPass(
+  parsed: unknown,
+  compactPacket: Record<string, unknown>,
+): Record<string, unknown>[] {
+  const allowedTexts = new Set(compactWorkItemTexts(compactPacket));
+  const rawReviews = readNestedArray(parsed, ["risk_reviews"]);
+
+  return rawReviews
+    .filter(isRecord)
+    .map((review) => ({
+      normalized_text: normalizeText(review.normalized_text),
+      risk_flags: stringArray(review.risk_flags).slice(0, 8),
+      recommended_risk_level: allowedRiskLevel(review.recommended_risk_level),
+      decision_guidance: stringOrNull(review.decision_guidance) ?? "No specific risk guidance returned.",
+      blocking_questions: stringArray(review.blocking_questions).slice(0, 8),
+    }))
+    .filter((review) => allowedTexts.has(String(review.normalized_text)));
+}
+
+function compactWorkItemTexts(compactPacket: Record<string, unknown>): string[] {
+  const workItems = Array.isArray(compactPacket.work_items) ? compactPacket.work_items : [];
+  return workItems
+    .filter(isRecord)
+    .map((item) => normalizeText(item.normalized_text))
+    .filter((text) => text.length > 0);
+}
+
+function sanitizeSemanticProfile(value: unknown): CatalogAgentSemanticProfileOutput {
+  const record = isRecord(value) ? value : {};
+  return {
+    product_family: stringOrNull(record.product_family),
+    semantic_category: stringOrNull(record.semantic_category),
+    variant_dimension: stringOrNull(record.variant_dimension),
+    variant_kind: stringOrNull(record.variant_kind),
+    parent_candidate_slug: stringOrNull(record.parent_candidate_slug),
+    is_identity_bearing_variant: typeof record.is_identity_bearing_variant === "boolean"
+      ? record.is_identity_bearing_variant
+      : null,
+    substitutability_with_parent: allowedSubstitutability(record.substitutability_with_parent),
+    attribute_implications: stringArray(record.attribute_implications).slice(0, 12),
+    nutrition_implication: allowedImplication(record.nutrition_implication),
+    seasonality_implication: allowedImplication(record.seasonality_implication),
+    allergy_implication: allowedImplication(record.allergy_implication),
+    fridge_matching_implication: allowedImplication(record.fridge_matching_implication),
+    shopping_matching_implication: allowedImplication(record.shopping_matching_implication),
+    filter_implication: allowedImplication(record.filter_implication),
+    market_or_language_notes: stringOrNull(record.market_or_language_notes),
+    confidence_score: boundedConfidence(record.confidence_score),
+    evidence: stringArray(record.evidence).slice(0, 12),
+    open_questions: stringArray(record.open_questions).slice(0, 8),
+  };
+}
+
+function defaultSemanticProfile(normalizedText: string): CatalogAgentSemanticProfileOutput {
+  return {
+    product_family: null,
+    semantic_category: null,
+    variant_dimension: null,
+    variant_kind: null,
+    parent_candidate_slug: null,
+    is_identity_bearing_variant: null,
+    substitutability_with_parent: "unknown",
+    attribute_implications: [],
+    nutrition_implication: "unknown",
+    seasonality_implication: "unknown",
+    allergy_implication: "unknown",
+    fridge_matching_implication: "unknown",
+    shopping_matching_implication: "unknown",
+    filter_implication: "unknown",
+    market_or_language_notes: null,
+    confidence_score: null,
+    evidence: [`Semantic profiler did not return a valid profile for ${normalizedText}.`],
+    open_questions: ["Run decision writer conservatively because semantic profile is incomplete."],
+  };
+}
+
+function allowedSubstitutability(value: unknown): CatalogAgentSemanticProfileOutput["substitutability_with_parent"] {
+  return CATALOG_AGENT_ALLOWED_SUBSTITUTABILITY.includes(value as CatalogAgentSemanticProfileOutput["substitutability_with_parent"])
+    ? value as CatalogAgentSemanticProfileOutput["substitutability_with_parent"]
+    : "unknown";
+}
+
+function allowedImplication(value: unknown): CatalogAgentSemanticProfileOutput["nutrition_implication"] {
+  return CATALOG_AGENT_ALLOWED_IMPLICATION_LEVELS.includes(value as CatalogAgentSemanticProfileOutput["nutrition_implication"])
+    ? value as CatalogAgentSemanticProfileOutput["nutrition_implication"]
+    : "unknown";
+}
+
+function allowedRiskLevel(value: unknown): string {
+  return ["low", "medium", "high", "critical", "unknown"].includes(String(value))
+    ? String(value)
+    : "unknown";
+}
+
+function boundedConfidence(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.min(1, Math.max(0, parsed));
+}
+
+function stringOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
+  return {
+    inputTokens: addNullableNumbers(a.inputTokens, b.inputTokens),
+    outputTokens: addNullableNumbers(a.outputTokens, b.outputTokens),
+    totalTokens: addNullableNumbers(a.totalTokens, b.totalTokens),
+  };
+}
+
+function addNullableNumbers(a: number | null, b: number | null): number | null {
+  if (a === null && b === null) return null;
+  return (a ?? 0) + (b ?? 0);
 }
 
 async function insertProposals(
@@ -837,6 +1273,9 @@ function budgetSummary(): Record<string, unknown> {
     max_runs_per_day: MAX_RUNS_PER_DAY,
     recent_proposal_days: RECENT_PROPOSAL_DAYS,
     provider_timeout_ms: PROVIDER_TIMEOUT_MS,
+    reasoning_mode: REASONING_MODE,
+    max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
+    risk_review_enabled: RISK_REVIEW_ENABLED,
     input_cost_per_1m_usd: INPUT_COST_PER_1M_USD,
     output_cost_per_1m_usd: OUTPUT_COST_PER_1M_USD,
   };

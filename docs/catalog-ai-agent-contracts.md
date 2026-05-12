@@ -1,6 +1,6 @@
 # Catalog AI Agent Contracts
 
-Status: implementation contract for Phase 0 and Phase 1 proposal-only runtime. Semantic profile output is implemented in `run-catalog-agent-triage` v3.
+Status: implementation contract for Phase 0 and Phase 1 proposal-only runtime. Semantic profile output and bounded batch-level multi-pass reasoning are implemented in `run-catalog-agent-triage` v4.
 
 This document turns `docs/catalog-ai-agent-operating-plan.md` into concrete contracts for the first implementation steps. Every future agent feature must update this file or a linked runbook in the same change.
 
@@ -134,6 +134,7 @@ Phase 1 mode:
 - Runtime: `supabase/functions/run-catalog-agent-triage`
 - Initial environment: `Season-dev` only while TestFlight staging remains release-sensitive.
 - Runtime memory: `public.get_catalog_agent_learning_context(...)`
+- Runtime reasoning: fixed multi-pass by default with `semantic_profiler`, optional `risk_reviewer`, and `decision_writer`.
 
 Agent/autopilot authority contract:
 
@@ -160,19 +161,27 @@ Budget controls required for proposal-only runtime:
 
 Planned multi-pass LLM task roles:
 
-- `semantic_profiler`: product family, semantic category, variant dimension, substitutability, and attribute implications.
-- `catalog_matcher`: compare the semantic profile with current catalog candidates and aliases.
-- `risk_reviewer`: challenge the proposed decision for variant, nutrition, allergy, seasonality, language, and product/package risks.
-- `decision_writer`: produce the final governed proposal shape.
-- `learning_writer`: turn failures, corrections, and repeated ambiguity into advisory learning memory.
+- `semantic_profiler`: implemented; product family, semantic category, variant dimension, substitutability, and attribute implications.
+- `catalog_matcher`: planned; compare the semantic profile with current catalog candidates and aliases.
+- `risk_reviewer`: implemented as optional pass; challenge the proposed decision for variant, nutrition, allergy, seasonality, language, and product/package risks.
+- `decision_writer`: implemented; produce the final governed proposal shape.
+- `learning_writer`: planned; turn failures, corrections, and repeated ambiguity into advisory learning memory.
 
 Default proposal-only reasoning budget:
 
-- normal term: maximum 3 LLM calls;
+- normal batch: maximum 3 LLM calls today;
+- normal term: maximum 3 LLM calls planned for adaptive per-term mode;
 - high-impact recurring term: maximum 5 LLM calls;
 - stop when two consecutive passes add no new evidence;
 - stop when deterministic policy or implemented learning memory already resolves the case;
 - stop when the daily or per-run budget is exhausted.
+
+Runtime controls:
+
+- `CATALOG_AGENT_REASONING_MODE=multi_pass` by default;
+- `CATALOG_AGENT_REASONING_MODE=single_pass` keeps a one-call fallback;
+- `CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN` defaults to `3` and is capped at `5`;
+- `CATALOG_AGENT_RISK_REVIEW_ENABLED=false` disables the optional challenge pass.
 
 The full planning contract is `docs/catalog-agent-llm-reasoning-loop-plan.md`.
 
