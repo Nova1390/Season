@@ -111,6 +111,7 @@ No-LLM learning-memory preflight:
 - Passing this preflight does not prove final parsing quality; it only proves the agent has the memory needed before reasoning.
 - To test the Edge Function response shape without LLM cost, run `python3 scripts/smart_import_learning_cases/run_edge_contract.py` with `SUPABASE_ANON_KEY` plus either `USER_JWT` or dev test-account credentials.
 - The Edge Function contract check should return `meta.usedServerLLM=false` and include `learning_memory_context` in `smartImportAgent.passes`.
+- To intentionally spend a small amount of dev LLM budget on real captions, preview first with `python3 scripts/smart_import_learning_cases/run_llm_probe.py --dry-run --limit 3`, then run the live probe with `--limit 3`.
 
 Creator UI pass criteria:
 - Server-assisted imports show a concise Smart Import Agent status card under the import quality badge.

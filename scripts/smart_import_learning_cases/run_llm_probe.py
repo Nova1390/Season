@@ -1,0 +1,336 @@
+#!/usr/bin/env python3
+"""Budgeted live LLM probe for Smart Import creator captions.
+
+This script intentionally calls `parse-recipe-caption` in dev. It should be run
+sparingly and with a small `--limit` because it can spend provider tokens.
+It uses caption fixtures and reports whether expected ingredient names appear
+in the returned draft.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+from run_edge_contract import (
+    DEFAULT_SUPABASE_URL,
+    auth_token,
+    delete_temp_user,
+    post_json,
+)
+
+
+DEFAULT_CAPTIONS_CSV = Path(
+    "/Users/roccodaffuso/Documents/Codex/2026-05-11/"
+    "buonasera-ho-necessit-di-individuare-potenziali/"
+    "apify-season-influencer-kit/data/smart_import_training_captions.csv"
+)
+
+
+def normalize_text(value: str) -> str:
+    value = value.lower().replace("'", " ")
+    value = re.sub(r"[^a-z0-9àèéìòùç\s]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def token_set(value: str) -> set[str]:
+    return {token for token in normalize_text(value).split() if len(token) > 2}
+
+
+def load_caption_cases(
+    path: Path,
+    limit: int,
+    difficulties: set[str],
+    case_ids: list[str],
+) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    if case_ids:
+        by_id = {row.get("id"): row for row in rows}
+        missing_ids = [case_id for case_id in case_ids if case_id not in by_id]
+        if missing_ids:
+            raise RuntimeError(f"Unknown case ids: {', '.join(missing_ids)}")
+        return [by_id[case_id] for case_id in case_ids]
+
+    selected: list[dict[str, str]] = []
+    for row in rows:
+        difficulty = (row.get("difficulty") or "").strip().lower()
+        if difficulties and difficulty not in difficulties:
+            continue
+        selected.append(row)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
+def expected_ingredients(row: dict[str, str]) -> list[str]:
+    return [
+        item.strip()
+        for item in (row.get("expected_ingredients") or "").split(";")
+        if item.strip()
+    ]
+
+
+def expected_quantity_fragments(row: dict[str, str]) -> list[str]:
+    return [
+        item.strip()
+        for item in (row.get("expected_quantities") or "").split(";")
+        if item.strip()
+    ]
+
+
+def quantity_fragment_for(name: str, fragments: list[str]) -> str:
+    name_tokens = token_set(name)
+    if not name_tokens:
+        return name
+
+    best_fragment = ""
+    best_overlap = 0
+    for fragment in fragments:
+        fragment_tokens = token_set(fragment)
+        overlap = len(name_tokens & fragment_tokens)
+        if overlap > best_overlap:
+            best_fragment = fragment
+            best_overlap = overlap
+
+    return best_fragment if best_overlap > 0 else name
+
+
+def parse_candidate_quantity(raw_text: str) -> tuple[float | None, str | None]:
+    compact = raw_text.replace(",", ".")
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(g|ml)\b", compact, flags=re.IGNORECASE)
+    if match:
+        return float(match.group(1)), match.group(2).lower()
+    if re.search(r"\bq\.?b\.?\b", compact, flags=re.IGNORECASE):
+        return None, None
+    piece_match = re.search(r"\b(\d+(?:\.\d+)?)\b", compact)
+    if piece_match:
+        return float(piece_match.group(1)), "piece"
+    return None, None
+
+
+def ingredient_names(response: dict[str, Any]) -> list[str]:
+    result = response.get("result")
+    if not isinstance(result, dict):
+        return []
+    ingredients = result.get("ingredients")
+    if not isinstance(ingredients, list):
+        return []
+    names: list[str] = []
+    for ingredient in ingredients:
+        if isinstance(ingredient, dict) and isinstance(ingredient.get("name"), str):
+            names.append(ingredient["name"])
+    return names
+
+
+def matched_expectations(expected: list[str], actual: list[str]) -> tuple[list[str], list[str]]:
+    actual_norm = [normalize_text(name) for name in actual]
+    matched: list[str] = []
+    missing: list[str] = []
+
+    for expected_name in expected:
+        expected_tokens = token_set(expected_name)
+        expected_norm = normalize_text(expected_name)
+        found = False
+        for actual_name in actual_norm:
+            if expected_norm and (expected_norm in actual_name or actual_name in expected_norm):
+                found = True
+                break
+            actual_tokens = set(actual_name.split())
+            if expected_tokens and expected_tokens.issubset(actual_tokens):
+                found = True
+                break
+        if found:
+            matched.append(expected_name)
+        else:
+            missing.append(expected_name)
+
+    return matched, missing
+
+
+def call_parse_recipe_caption(
+    supabase_url: str,
+    anon_key: str,
+    token: str,
+    caption: str,
+    use_candidates: bool,
+    row: dict[str, str],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "caption": caption,
+        "languageCode": "it",
+    }
+    if use_candidates:
+        quantity_fragments = expected_quantity_fragments(row)
+        payload["ingredientCandidates"] = [
+            unresolved_candidate_payload(name, quantity_fragment_for(name, quantity_fragments))
+            for name in expected_ingredients(row)
+        ]
+
+    return post_json(
+        f"{supabase_url.rstrip('/')}/functions/v1/parse-recipe-caption",
+        {
+            "apikey": anon_key,
+            "Authorization": f"Bearer {token}",
+        },
+        payload,
+    )
+
+
+def unresolved_candidate_payload(name: str, raw_text: str) -> dict[str, Any]:
+    quantity, unit = parse_candidate_quantity(raw_text)
+    return {
+        "raw_text": raw_text,
+        "normalized_text": name,
+        "possible_quantity": quantity,
+        "possible_unit": unit,
+        "catalog_match": {
+            "matchType": "none",
+            "matchedIngredientId": None,
+            "confidence": 0,
+        },
+    }
+
+
+def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str, Any]:
+    expected = expected_ingredients(row)
+    actual = ingredient_names(response)
+    matched, missing = matched_expectations(expected, actual)
+    result = response.get("result") if isinstance(response.get("result"), dict) else {}
+    agent = result.get("smartImportAgent") if isinstance(result, dict) and isinstance(result.get("smartImportAgent"), dict) else {}
+    meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+    return {
+        "id": row.get("id"),
+        "difficulty": row.get("difficulty"),
+        "theme": row.get("theme"),
+        "ok": response.get("ok") is True,
+        "usedServerLLM": meta.get("usedServerLLM"),
+        "draftQuality": agent.get("draftQuality"),
+        "expected_count": len(expected),
+        "actual_count": len(actual),
+        "matched_count": len(matched),
+        "missing": missing,
+        "actual": actual,
+        "reviewHints": agent.get("reviewHints") or [],
+        "passes": [
+            item.get("name")
+            for item in agent.get("passes", [])
+            if isinstance(item, dict)
+        ] if isinstance(agent, dict) else [],
+    }
+
+
+def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
+    return {
+        "id": row.get("id"),
+        "difficulty": row.get("difficulty"),
+        "theme": row.get("theme"),
+        "ok": False,
+        "usedServerLLM": None,
+        "draftQuality": None,
+        "expected_count": len(expected_ingredients(row)),
+        "actual_count": 0,
+        "matched_count": 0,
+        "missing": expected_ingredients(row),
+        "actual": [],
+        "reviewHints": [],
+        "passes": [],
+        "error": str(error),
+    }
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--captions-csv", type=Path, default=DEFAULT_CAPTIONS_CSV)
+    parser.add_argument("--supabase-url", default=os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL))
+    parser.add_argument("--anon-key", default=os.environ.get("SUPABASE_ANON_KEY", ""))
+    parser.add_argument("--limit", type=int, default=3)
+    parser.add_argument("--case-id", action="append", default=[])
+    parser.add_argument("--difficulty", action="append", default=[])
+    parser.add_argument("--sleep-seconds", type=float, default=2.2)
+    parser.add_argument("--use-temp-user", action="store_true")
+    parser.add_argument("--with-candidates", action="store_true", help="Send expected ingredients as unresolved Swift-like candidates.")
+    parser.add_argument("--json", action="store_true", dest="json_output")
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args(argv)
+
+    if args.limit < 1 or args.limit > 10:
+        raise RuntimeError("--limit must be between 1 and 10 to keep LLM spend bounded.")
+
+    difficulties = {value.strip().lower() for value in args.difficulty if value.strip()}
+    case_ids = [value.strip() for value in args.case_id if value.strip()]
+    if case_ids and len(case_ids) > 10:
+        raise RuntimeError("At most 10 explicit --case-id values are allowed.")
+
+    cases = load_caption_cases(args.captions_csv, args.limit, difficulties, case_ids)
+    if not cases:
+        raise RuntimeError("No caption cases selected.")
+
+    if args.dry_run:
+        preview = [
+            {
+                "id": row.get("id"),
+                "difficulty": row.get("difficulty"),
+                "theme": row.get("theme"),
+                "expected": expected_ingredients(row),
+                "caption_preview": (row.get("caption") or "")[:180],
+            }
+            for row in cases
+        ]
+        print(json.dumps(preview, ensure_ascii=False, indent=2) if args.json_output else f"Dry run selected {len(preview)} caption cases.")
+        return 0
+
+    if not args.anon_key:
+        raise RuntimeError("SUPABASE_ANON_KEY is required.")
+
+    cleanup_user: tuple[str, str] | None = None
+    summaries: list[dict[str, Any]] = []
+    try:
+        token, cleanup_user = auth_token(args.supabase_url, args.anon_key, args.use_temp_user)
+        for index, row in enumerate(cases):
+            if index > 0:
+                time.sleep(max(0, args.sleep_seconds))
+            try:
+                response = call_parse_recipe_caption(
+                    args.supabase_url,
+                    args.anon_key,
+                    token,
+                    row.get("caption") or "",
+                    args.with_candidates,
+                    row,
+                )
+                summaries.append(response_summary(row, response))
+            except Exception as error:
+                summaries.append(error_summary(row, error))
+    finally:
+        if cleanup_user is not None:
+            user_id, service_role_key = cleanup_user
+            try:
+                delete_temp_user(args.supabase_url, service_role_key, user_id)
+            except Exception as error:
+                print(f"WARN failed to delete temporary user {user_id}: {error}", file=sys.stderr)
+
+    if args.json_output:
+        print(json.dumps({"ok": all(summary.get("ok") for summary in summaries), "summaries": summaries}, ensure_ascii=False, indent=2))
+    else:
+        for summary in summaries:
+            print(
+                f"{summary['id']} {summary['difficulty']} {summary['theme']}: "
+                f"matched {summary['matched_count']}/{summary['expected_count']} "
+                f"usedLLM={summary['usedServerLLM']} quality={summary['draftQuality']} "
+                f"missing={summary['missing']}"
+            )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

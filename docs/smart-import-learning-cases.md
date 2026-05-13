@@ -73,12 +73,67 @@ The Edge Function contract check sends exact local-catalog candidates, so it sho
 
 Operational note: the first live run of this smoke exposed a quota edge case where a newly created user could hit cooldown before consuming any request. Migration `20260513205500_fix_recipe_import_quota_first_request.sql` updates `consume_recipe_import_quota(...)` so cooldown applies only when `count > 0`.
 
+## Budgeted LLM Probe
+
+Use `run_llm_probe.py` only when we intentionally want to spend a small amount of provider budget against dev.
+
+Preview selected cases without network or LLM:
+
+```bash
+python3 scripts/smart_import_learning_cases/run_llm_probe.py --dry-run --limit 3 --json
+```
+
+Preview specific cases:
+
+```bash
+python3 scripts/smart_import_learning_cases/run_llm_probe.py \
+  --dry-run \
+  --case-id SI-TRAIN-017 \
+  --case-id SI-TRAIN-020 \
+  --case-id SI-TRAIN-050 \
+  --json
+```
+
+Run a small full-caption probe:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/run_llm_probe.py --use-temp-user --limit 3
+```
+
+Run a targeted ingredient-resolution probe with Swift-like unresolved candidates:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/run_llm_probe.py --use-temp-user --with-candidates --limit 3
+```
+
+Budget guardrails:
+
+- Default limit is 3 cases.
+- Hard limit is 10 cases per run.
+- The runner sleeps between requests to avoid quota cooldown.
+- Use `--dry-run` before any live run.
+- Prefer existing CSV fixtures before calling Apify.
+- Provider or Edge errors are captured per case in the JSON output so a transient `502` does not hide the rest of the probe results.
+
+Latest dev probe notes:
+
+- `2026-05-13`: targeted `--with-candidates` probe on `SI-TRAIN-017`, `SI-TRAIN-020`, and `SI-TRAIN-050` matched `19/19` expected ingredient names. The first pass used name-only candidates, so it correctly showed `quantities_missing` as probe noise.
+- `2026-05-13`: runner was updated to include fixture quantity fragments in Swift-like candidates.
+- `2026-05-13`: repeat probe on `SI-TRAIN-017` matched `7/7`, preserved `pane raffermo` as base `pane`, included `learning_memory_context`, used LLM, and no longer emitted `quantities_missing`.
+- `2026-05-13`: one live run returned transient `502 PROVIDER_REQUEST_FAILED`; the runner now records per-case errors instead of aborting the whole probe.
+
 ## Boundaries
 
 - The suite reads from dev through `get_catalog_agent_learning_context(...)`.
 - `run_learning_context.py` does not call `parse-recipe-caption` directly.
 - `run_edge_contract.py` calls `parse-recipe-caption` with exact candidates and expects `meta.usedServerLLM=false`.
-- It does not call OpenAI or any other LLM.
+- `run_llm_probe.py` can call OpenAI through dev `parse-recipe-caption`; run it intentionally and with small limits.
 - It does not create canonical ingredients, aliases, proposals, or recipe data.
 - It catches missing or stale memory context, not final recipe-draft quality.
 
