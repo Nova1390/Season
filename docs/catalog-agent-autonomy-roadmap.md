@@ -281,6 +281,11 @@ Implementation status:
 - migration `20260513143000_add_dev_schedule_window_expiry.sql` added required temporary-window expiry fields, `enabled_until` and `window_label`, to prevent accidentally leaving dev scheduling open;
 - guard smoke proved `enabled=true` without `enabled_until` is blocked with `schedule_window_missing_expiry`, then dev was restored to `window_status=disabled`;
 - admin console cache version `20260513-4` surfaces the scheduler window status and explanation;
+- first autonomous cron-window attempt proved the cron lane was real but over-conservative: shifts `#6` through `#9` were created by the accelerated scheduler and blocked because manual same-day work had already exhausted global run/token/apply ceilings;
+- migration `20260513153000_split_dev_schedule_guard_action_budgets.sql` fixed that policy by splitting guard reasons per action: harmless `low_risk_dry_run` can proceed on scheduled-shift and worker ceilings while `triage` remains blocked by LLM/run budgets and `low_risk_apply` remains blocked by apply/run budgets;
+- action-budget guard smoke returned `low_risk_dry_run=true`, `triage=false`, and `low_risk_apply=false` while the day still had `135813` historical LLM tokens and `24` manual agent runs;
+- first successful autonomous cron dry-run completed at `2026-05-13 15:25:05 UTC`: shift `#10`, orchestrator run `#74`, worker job `#29`, `0` eligible preview, `0` applied, `0` failed, and no scheduled triage LLM call;
+- after the run, the dev schedule was restored to `window_status=disabled`, the cron schedule was restored to `17 */2 * * *`, and `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false`;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 
@@ -542,7 +547,7 @@ Recommended implementation order:
 3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps. Completed in `docs/catalog-agent-dev-scheduler-runbook.md`.
 4. Install real dev micro-scheduler with kill-switch guard and Vault-backed credentials. Completed with `dev_catalog_agent_shift_dryrun_q2h`.
 5. Add mandatory expiry for any enabled scheduler window. Completed with `enabled_until` guard.
-6. Observe at least a few scheduled skipped ticks with `0` failed shifts.
-7. Open one short dry-run-only scheduled window with explicit expiry.
+6. Observe at least a few scheduled skipped ticks with `0` failed shifts. Completed with shifts `#4` and `#5`.
+7. Open one short dry-run-only scheduled window with explicit expiry. Completed with shift `#10`.
 8. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
 9. Keep staging untouched until Level `6.5`.

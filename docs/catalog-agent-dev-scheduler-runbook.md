@@ -109,6 +109,16 @@ Window-expiry validation:
 - missing-expiry smoke returned `schedule_window_missing_expiry`;
 - final schedule status returned `disabled` with `enabled_until=null` and `window_label=null`.
 
+Action-budget validation:
+
+- migration `20260513153000_split_dev_schedule_guard_action_budgets.sql` split guard reasons by action;
+- the guard now allows scheduled `low_risk_dry_run` when scheduled-shift and worker ceilings are healthy, even if manual same-day LLM usage is already high;
+- `triage` remains blocked by run, token, and cost ceilings;
+- `low_risk_apply` remains blocked by run and real-apply ceilings;
+- first autonomous single-slot cron dry-run completed as shift `#10`, orchestrator run `#74`, worker job `#29`;
+- result: `0` eligible preview, `0` applied, `0` failed, no scheduled triage LLM call;
+- final cleanup restored the cron schedule to `17 */2 * * *`, disabled the schedule window, cleared `enabled_until/window_label`, and set `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false`.
+
 ## Reading Results
 
 Prefer these read models before inspecting raw tables:
@@ -142,6 +152,7 @@ During the window:
 - keep `limit` at `1` unless the runbook for that exact test says otherwise;
 - set `window_label` to the purpose of the window;
 - watch the console `Shift health` and `Recent dev shifts` panel.
+- if the purpose is a single-slot autonomous cron test, prefer a date-specific cron expression and restore the normal schedule immediately after the expected tick.
 
 After the window:
 

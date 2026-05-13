@@ -265,3 +265,14 @@ Window-expiry guard:
 - guard smoke with `enabled=true` and `enabled_until=null` returned `schedule_window_missing_expiry`;
 - final status returned `window_status=disabled`, `enabled=false`, `enabled_until=null`, and `window_label=null`;
 - Supabase lint result: `No schema errors found`.
+
+Action-specific guard budgets:
+
+- the first autonomous cron-window attempt created real scheduled shifts `#6` through `#9`, but all were blocked by the original guard because manual same-day development had already hit global run/token/apply ceilings;
+- migration `20260513153000_split_dev_schedule_guard_action_budgets.sql` changed `catalog_agent_dev_schedule_guard(...)` to return action-specific reasons and allowed flags;
+- `low_risk_dry_run` is now gated by scheduled-shift and worker ceilings, because it is non-mutating and does not spend LLM tokens;
+- `triage` remains gated by run, token, and cost ceilings;
+- `low_risk_apply` remains gated by run and real-apply ceilings;
+- guard verification during the open window returned `low_risk_dry_run=true`, `triage=false`, and `low_risk_apply=false`;
+- first successful autonomous cron dry-run completed as shift `#10`, orchestrator run `#74`, worker job `#29`, with `0` eligible preview, `0` applied, and `0` failed;
+- final cleanup restored `window_status=disabled`, cron schedule `17 */2 * * *`, and `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false`.
