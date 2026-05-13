@@ -158,6 +158,17 @@ def ingredient_details(response: dict[str, Any]) -> list[dict[str, Any]]:
     return details
 
 
+def result_steps(result: dict[str, Any]) -> list[str]:
+    steps = result.get("steps")
+    if not isinstance(steps, list):
+        return []
+    return [
+        step.strip()
+        for step in steps
+        if isinstance(step, str) and step.strip()
+    ]
+
+
 def quantity_expectations(row: dict[str, str]) -> list[dict[str, Any]]:
     expectations: list[dict[str, Any]] = []
     for fragment in expected_quantity_fragments(row):
@@ -280,6 +291,7 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
     matched, missing = matched_expectations(expected, actual)
     matched_quantities, missing_quantities = quantity_matches(row, actual_details)
     result = response.get("result") if isinstance(response.get("result"), dict) else {}
+    steps = result_steps(result)
     agent = result.get("smartImportAgent") if isinstance(result, dict) and isinstance(result.get("smartImportAgent"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
     return {
@@ -289,6 +301,13 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
         "ok": response.get("ok") is True,
         "usedServerLLM": meta.get("usedServerLLM"),
         "draftQuality": agent.get("draftQuality"),
+        "title": result.get("title") if isinstance(result.get("title"), str) else None,
+        "step_count": len(steps),
+        "steps": steps,
+        "confidence": result.get("confidence"),
+        "servings": result.get("servings"),
+        "prepTimeMinutes": result.get("prepTimeMinutes"),
+        "cookTimeMinutes": result.get("cookTimeMinutes"),
         "expected_count": len(expected),
         "actual_count": len(actual),
         "matched_count": len(matched),
@@ -315,6 +334,13 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
         "ok": False,
         "usedServerLLM": None,
         "draftQuality": None,
+        "title": None,
+        "step_count": 0,
+        "steps": [],
+        "confidence": None,
+        "servings": None,
+        "prepTimeMinutes": None,
+        "cookTimeMinutes": None,
         "expected_count": len(expected_ingredients(row)),
         "actual_count": 0,
         "matched_count": 0,
@@ -409,6 +435,7 @@ def main(argv: list[str]) -> int:
                 f"{summary['id']} {summary['difficulty']} {summary['theme']}: "
                 f"matched {summary['matched_count']}/{summary['expected_count']} "
                 f"quantities {summary['matched_quantity_count']}/{summary['expected_quantity_count']} "
+                f"steps={summary['step_count']} title={bool(summary['title'])} "
                 f"usedLLM={summary['usedServerLLM']} quality={summary['draftQuality']} "
                 f"missing={summary['missing']} missing_quantities={summary['missing_quantities']}"
             )

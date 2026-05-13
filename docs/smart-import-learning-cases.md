@@ -121,6 +121,7 @@ Budget guardrails:
 - Prefer existing CSV fixtures before calling Apify.
 - Provider or Edge errors are captured per case in the JSON output so a transient `502` does not hide the rest of the probe results.
 - The runner reports both ingredient-name matches and measurable quantity/unit matches, so we can distinguish "recognized the ingredient" from "creator can publish without fixing doses".
+- The runner also reports draft usability signals: title presence, step count, parsed steps, confidence, servings, and prep/cook times. These fields tell us whether Smart Import is producing a creator-ready recipe draft, not just a correct ingredient list.
 
 Latest dev probe notes:
 
@@ -132,6 +133,8 @@ Latest dev probe notes:
 - `2026-05-13`: hard/messy full-caption probe on `SI-TRAIN-027`, `SI-TRAIN-029`, `SI-TRAIN-034`, `SI-TRAIN-038`, and `SI-TRAIN-040` matched `28/29` ingredient names. The only miss was `piadina`, because the edible base appeared in the opening phrase rather than the filling list.
 - `2026-05-13`: the probe parser now recognizes fractional quantities such as `1/2 bustina` as `0.5 piece`, and the full-caption prompt now tells the model to keep edible base/container ingredients from titles or opening phrases.
 - `2026-05-13`: repeat probe on `SI-TRAIN-040` after the prompt update matched `6/6` ingredient names and included `piadina` as the edible base.
+- `2026-05-13`: the LLM probe now records title and step quality fields, so future runs can catch drafts that recognize ingredients but still need human work before publishing.
+- `2026-05-13`: title/step probe on `SI-TRAIN-027`, `SI-TRAIN-029`, and `SI-TRAIN-040` matched `18/18` ingredient names. The model extracted usable titles, preserved explicit method sentences as one-step drafts for frittata/puttanesca, and correctly left the piadina draft with `steps_missing` instead of inventing a method from a caption that only listed fillings.
 
 ## Boundaries
 
