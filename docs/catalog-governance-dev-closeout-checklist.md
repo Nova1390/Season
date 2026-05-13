@@ -658,3 +658,35 @@ Interpretation:
 - This proves the first real `4.5` behavior: the agent can persist a governed proposal that passed the quality gate.
 - This does not yet complete `4.5`; the roadmap still requires a larger mixed-term sample and no unsafe classifications.
 - Dev was restored again to `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, conservative daily run budget, and the temporary operator token was removed.
+
+### Persisted Create-Canonical Draft Routing Smoke
+
+Proposal `#25` was routed into the governed enrichment-draft lane.
+
+Action:
+
+- Called `prepare_catalog_agent_canonical_enrichment_draft(25, ...)`.
+- Result: `ok=true`, `draft_status='pending'`, `draft_created_or_refreshed=true`, `next_worker='enrichment_draft_batch'`.
+- Mutation scope: `enrichment_draft_only`.
+
+Draft verification:
+
+- `catalog_ingredient_enrichment_drafts.normalized_text='pasta corta'`.
+- Status: `pending`.
+- Suggested slug: `short_pasta`.
+- Italian canonical name: `pasta corta`.
+- Confidence: `0.91`.
+- Ingredient type: `unknown`.
+- Needs manual review: `true`.
+- Validated ready: `false`.
+
+Safety verification:
+
+- No `ingredients` row exists for `short_pasta` or `pasta_corta`.
+- Proposal events include `canonical_enrichment_draft_prepared`.
+- No apply event or ingredient creation occurred.
+
+Interpretation:
+
+- This proves the correct `create_canonical` path after proposal persistence: agent proposal -> enrichment draft -> future Autopilot enrichment/validation.
+- The next microstep is to run a bounded enrichment worker for this pending draft, still without enabling ingredient creation.

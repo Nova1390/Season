@@ -569,3 +569,5 @@ Dev smoke:
 - `run_id=48` executed the same gate with `dry_run=false` and `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`.
 - The gate persisted proposal `#25` as a draft `create_canonical` proposal for `pasta corta`.
 - The proposal was not auto-applicable and no catalog apply occurred.
+- Proposal `#25` was then routed through `prepare_catalog_agent_canonical_enrichment_draft(...)`, creating or refreshing a pending enrichment draft for `pasta corta` / `short_pasta`.
+- No ingredient creation occurred; the next allowed worker is `enrichment_draft_batch`.
