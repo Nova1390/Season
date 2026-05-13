@@ -260,6 +260,7 @@ Implementation status:
 - the `red` digest is expected today because manual testing exceeded scheduled-day run, worker, and token ceilings; it proves the schedule guard/digest layer can detect when the agent should not continue unattended;
 - `run-catalog-agent-dev-shift` was added as the future scheduler entrypoint: it calls the guard first, skips safely while the kill switch is off, always refreshes the daily digest, and does not wire real apply or triage scheduling yet;
 - first controlled dry-shift smoke passed: `run-catalog-agent-dev-shift` was temporarily allowed on dev, launched `low_risk_apply_batch` in dry-run mode through orchestrator run `#67` and worker job `#22`, found `0` eligible proposals, applied `0` mutations, consumed `0` new LLM triage calls, refreshed the digest, and was then fully disabled again;
+- repeatable dry-shift smoke script added and passed: `scripts/catalog_agent_dev_shift_smoke.sh` produced latest run `#69` and worker job `#24`, verified cleanup by confirming the temporary token was unauthorized and the guard returned `schedule_disabled`;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 

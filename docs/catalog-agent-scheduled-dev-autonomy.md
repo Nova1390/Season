@@ -170,3 +170,12 @@ Controlled dry-shift smoke:
 - post-closure token smoke returned `UNAUTHORIZED`;
 - post-closure guard smoke returned `schedule_disabled`;
 - post-closure Supabase lint result: `No schema errors found`.
+
+Repeatable script:
+
+- script: `scripts/catalog_agent_dev_shift_smoke.sh`;
+- first script attempt produced orchestrator run `#68` and worker job `#23`, but the script-level post-cleanup guard verification failed because it did not set the SQL `service_role` claim before calling `catalog_agent_dev_schedule_guard(...)`;
+- the script bug was fixed by setting `request.jwt.claim.role = service_role` in the final guard verification query;
+- latest passing scripted smoke: orchestrator run `#69`, worker job `#24`;
+- latest passing scripted smoke result: `0` eligible preview, `0` applied, `0` failed, no LLM triage, no catalog mutation;
+- cleanup verification passed: temporary token returned `UNAUTHORIZED`, and final guard returned `schedule_disabled`.

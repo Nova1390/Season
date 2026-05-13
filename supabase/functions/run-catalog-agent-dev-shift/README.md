@@ -114,3 +114,11 @@ Controlled dry-shift smoke:
 - config and secrets were restored immediately afterwards;
 - post-closure guard returned `schedule_disabled`;
 - Supabase lint returned `No schema errors found`.
+
+Repeatable smoke:
+
+- script: `scripts/catalog_agent_dev_shift_smoke.sh`;
+- latest passing run: `catalog_agent_runs.id = 69`;
+- latest passing worker job: `catalog_agent_worker_jobs.id = 24`;
+- result: `0` eligible preview, `0` applied, `0` failed;
+- cleanup verification: temporary token returned `UNAUTHORIZED` and the guard returned `schedule_disabled`.
