@@ -258,6 +258,7 @@ Implementation status:
 - the default dev config is intentionally disabled, with dry-run enabled and real low-risk apply disabled until Level 5.0 gates have more history;
 - dev smoke passed through `scripts/catalog_agent_daily_digest_smoke.sh`: the guard returned `schedule_disabled` with `kill_switch=true`, and the digest stored a `red` status for the current manual-heavy development day;
 - the `red` digest is expected today because manual testing exceeded scheduled-day run, worker, and token ceilings; it proves the schedule guard/digest layer can detect when the agent should not continue unattended;
+- `run-catalog-agent-dev-shift` was added as the future scheduler entrypoint: it calls the guard first, skips safely while the kill switch is off, always refreshes the daily digest, and does not wire real apply or triage scheduling yet;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 

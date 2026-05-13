@@ -165,6 +165,9 @@ verify_jwt = false
 [functions.run-catalog-agent-orchestrator]
 verify_jwt = false
 
+[functions.run-catalog-agent-dev-shift]
+verify_jwt = false
+
 [functions.run-catalog-ingredient-creation-batch]
 verify_jwt = false
 

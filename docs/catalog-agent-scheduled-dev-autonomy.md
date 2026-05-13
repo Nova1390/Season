@@ -50,6 +50,16 @@ The goal is to reduce routine founder review, not to hide risk.
 
 - Admin-console read model that joins the current schedule config with the latest digest.
 
+`run-catalog-agent-dev-shift`
+
+- Dev-only Edge Function entrypoint for a future scheduler.
+- Calls `catalog_agent_dev_schedule_guard('dev')` before doing any work.
+- Returns a skipped shift when the kill switch is off.
+- Always refreshes the daily digest.
+- Can run low-risk apply preview only when the guard allows it.
+- Does not run real low-risk apply from schedule yet.
+- Recognizes but does not yet execute triage scheduling, preventing accidental LLM spend.
+
 ## Safety Defaults
 
 The initial dev row is intentionally conservative:
@@ -111,6 +121,7 @@ As of 2026-05-13:
 - The scheduled-autonomy config/digest layer is being introduced.
 - No dev schedule is enabled yet.
 - No staging schedule exists.
+- `run-catalog-agent-dev-shift` exists as a manual/scheduler entrypoint, but default dev config still blocks work through the kill switch.
 
 ## Dev Smoke Evidence
 
@@ -127,3 +138,8 @@ As of 2026-05-13:
 - detected anomalies: failed agent run, agent run ceiling exceeded, worker job ceiling exceeded, and LLM token ceiling exceeded;
 - interpretation: expected for a manual development day with many controlled test runs; the important behavior is that scheduled autonomy would stop rather than continue;
 - Supabase lint result: `No schema errors found`.
+- deployed Edge Function `run-catalog-agent-dev-shift` to `Season-dev`;
+- unauthenticated smoke returned `UNAUTHORIZED`;
+- temporary operator-token smoke returned `ok=true`, `skipped=true`, `reason=schedule_disabled`, and refreshed digest `1`;
+- the temporary operator token was removed immediately after the smoke;
+- post-removal smoke with the same token returned `UNAUTHORIZED`.
