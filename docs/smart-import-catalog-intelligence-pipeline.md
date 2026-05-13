@@ -90,6 +90,14 @@ Cost posture:
 - Deterministically resolved ingredients still avoid LLM calls.
 - The memory exists to reduce repeated LLM confusion, not to expand reasoning loops indiscriminately.
 
+Validation:
+
+- The no-LLM learning-memory contract is covered by `scripts/smart_import_learning_cases/run_learning_context.py`.
+- The fixture lives in `scripts/smart_import_learning_cases/learning_cases.json`.
+- Operational notes live in `docs/smart-import-learning-cases.md`.
+- These checks verify that lessons such as `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena` are available before targeted LLM reasoning.
+- They intentionally do not create catalog rows, approve aliases, run OpenAI, or judge final recipe quality.
+
 ## 2. System Overview
 
 ```mermaid

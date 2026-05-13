@@ -103,6 +103,12 @@ Server-assisted pass criteria:
 - If relevant learning memory exists for imported terms, `smartImportAgent.passes` should include `learning_memory_context`.
 - Learning-memory usage must not turn an unresolved ingredient into a canonical catalog mutation during import.
 
+No-LLM learning-memory preflight:
+- Before spending LLM budget on Smart Import prompt work, run `python3 scripts/smart_import_learning_cases/run_learning_context.py --schema-only`.
+- When dev is available, run `python3 scripts/smart_import_learning_cases/run_learning_context.py`.
+- The preflight confirms that known lessons such as `pomodorini` as a child variant, `pane raffermo` as bread plus preparation state, and bare `uovo` as eggs are available to the Smart Import Agent.
+- Passing this preflight does not prove final parsing quality; it only proves the agent has the memory needed before reasoning.
+
 Creator UI pass criteria:
 - Server-assisted imports show a concise Smart Import Agent status card under the import quality badge.
 - The card explains the next action in plain creator language: ready, review recommended, or more detail needed.

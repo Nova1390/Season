@@ -1,0 +1,50 @@
+{
+  "version": "smart_import_learning_cases_v1",
+  "description": "No-LLM checks that verify Smart Import can retrieve relevant Catalog Agent learning memory before ingredient-resolution reasoning.",
+  "cases": [
+    {
+      "id": "SIL-001",
+      "term": "pomodorini",
+      "caption": "Ingredienti: pomodorini 200g / olio evo q.b. / sale",
+      "expected": {
+        "min_term_learnings": 1,
+        "status_any_of": ["implemented"],
+        "must_contain_all": ["pomodorini", "tomato"],
+        "must_contain_any": ["child variant", "generic tomato", "base ingredient"]
+      }
+    },
+    {
+      "id": "SIL-002",
+      "term": "pane raffermo",
+      "caption": "Ingredienti: pane raffermo 120g / pomodori / basilico",
+      "expected": {
+        "min_term_learnings": 1,
+        "status_any_of": ["implemented"],
+        "must_contain_all": ["bread"],
+        "must_contain_any": ["base canonical", "preparation", "stale"]
+      }
+    },
+    {
+      "id": "SIL-003",
+      "term": "uovo",
+      "caption": "Ingredienti: uovo 1 / farina 00 120g / latte 200ml",
+      "expected": {
+        "min_term_learnings": 1,
+        "status_any_of": ["implemented"],
+        "must_contain_all": ["uovo", "eggs"],
+        "must_contain_any": ["singular", "canonical eggs", "approve_alias"]
+      }
+    },
+    {
+      "id": "SIL-004",
+      "term": "fiocchi d avena",
+      "caption": "Ingredienti: fiocchi d avena 40g / yogurt / frutti di bosco",
+      "expected": {
+        "min_term_learnings": 1,
+        "status_any_of": ["implemented"],
+        "must_contain_all": ["oat"],
+        "must_contain_any": ["product-form", "create_canonical", "rolled_oats", "oat_flakes"]
+      }
+    }
+  ]
+}
