@@ -866,3 +866,75 @@ Interpretation:
 
 - This closes the specific audit gap found during the ingredient-creation smoke.
 - Before expanding autonomy, this smoke should be run after any worker deploy or orchestration change.
+
+### Mixed-Term Proposal Persistence Batch
+
+A small mixed-term persistence batch was executed to advance the Level 4.5 quantitative gate.
+
+Temporary runtime settings:
+
+- `CATALOG_AGENT_ENABLED=true`.
+- `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`.
+- `CATALOG_AGENT_OPERATOR_TOKEN` was set for the smoke and removed afterwards.
+- `CATALOG_AGENT_MAX_ITEMS_PER_RUN=12`.
+- `CATALOG_AGENT_MAX_RUNS_PER_DAY=3`.
+- `CATALOG_AGENT_RECENT_PROPOSAL_DAYS=7`.
+
+Preflight:
+
+- Proposal-only runs today before execution: `0`.
+- Snapshot size: `12`.
+- Many top-priority terms had recent proposals and were expected to be skipped by the recent-proposal guardrail.
+
+Run result:
+
+- Agent run: `53`.
+- Dry run: `false`.
+- Items in snapshot: `12`.
+- Items eligible before retry: `3`.
+- Items sent to LLM: `3`.
+- Skipped because of recent proposals: `9`.
+- Proposals returned: `3`.
+- Proposals persistable: `3`.
+- Proposals blocked by quality gate: `0`.
+- Proposals created: `3`.
+- Model: `gpt-5.4-mini`.
+- Prompt version: `catalog-agent-triage-v4-multi-pass`.
+- Total tokens: `15,779`.
+
+Persisted proposals:
+
+- `#26` `pasta senza glutine`: `create_canonical`, `medium`, `draft`, proposed slug `gluten_free_pasta`.
+- `#27` `pecorino romano`: `needs_human_review`, `medium`, target slug `pecorino_romano_dop`.
+- `#28` `piadina`: `needs_human_review`, `high`, target slug `stuffed_piadina`.
+
+Quality interpretation:
+
+- The agent preserved a meaningful dietary variant for `pasta senza glutine` instead of collapsing it into generic pasta.
+- The agent escalated `pecorino romano` because protected-designation cheese identity and existing related aliases make the target decision policy-sensitive.
+- The agent escalated `piadina` because filled vs plain piadina are not safely interchangeable.
+- No low-risk or auto-apply-eligible proposal was created in this batch.
+- No critical-risk proposal was created.
+
+Cumulative proposal state after the batch:
+
+- Total agent proposals: `25`.
+- Low risk: `5`.
+- Medium risk: `14`.
+- High risk: `5`.
+- Critical risk: `0`.
+- Auto-apply eligible: `4`.
+
+Safety verification:
+
+- `CATALOG_AGENT_ENABLED=false` was restored after the batch.
+- `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false` was restored after the batch.
+- The temporary operator token was removed.
+- A post-run request returned `AGENT_DISABLED`.
+- No catalog apply or recipe mutation occurred.
+- No staging changes were made.
+
+Interpretation:
+
+- The persistence-volume side of the Level 4.5 gate is now satisfied in dev.
+- Level 4.5 should still not be promoted until the low-risk/auto-apply-eligible proposal sample is audited for unsafe classifications and the result is documented.

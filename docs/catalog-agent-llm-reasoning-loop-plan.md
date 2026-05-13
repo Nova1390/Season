@@ -577,4 +577,7 @@ Dev smoke:
 - A deployed-worker drift gap was discovered during this smoke: the ingredient was created and the agent run completed, but the worker-job row did not update until the current worker was deployed and the job was reconciled through the official worker-job RPC.
 - A repeatable worker-ledger regression smoke now exists at `scripts/catalog_agent_worker_ledger_smoke.sh`.
 - `run_id=52` passed the ledger regression using non-mutating `low_risk_apply_batch` dry-run mode: run completed, worker job completed, summaries were present, and run/job links were bidirectional.
-- The next allowed improvement is a small mixed-term persisted-proposal batch to close the remaining 4.5 quantitative gate before expanding creation autonomy beyond one reviewed item.
+- `run_id=53` executed a small mixed-term persisted-proposal batch with `limit=12`.
+- Recent-proposal guardrails skipped `9` items, `3` items went through the LLM, and all `3` proposals passed the quality gate and were persisted.
+- The batch created proposal `#26` for `pasta senza glutine` as a `create_canonical` draft, proposal `#27` for `pecorino romano` as `needs_human_review`, and proposal `#28` for `piadina` as `needs_human_review`.
+- The next allowed improvement is to audit the low-risk and auto-apply-eligible proposal sample before promoting Level 4.5.

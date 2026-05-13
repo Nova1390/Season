@@ -83,6 +83,8 @@ Implementation status:
 - First agent-orchestrated enrichment worker smoke passed with `run_id=49`, `worker_job_id=16`: one pending draft was enriched, validated, and promoted to `ready` without ingredient creation.
 - First agent-orchestrated ingredient creation smoke passed with `run_id=50`, `worker_job_id=17`: one reviewed ready draft created `pasta_corta` as an active child ingredient of `pasta`; the worker was redeployed first-class on dev after a ledger drift gap was detected and reconciled.
 - Repeatable worker-ledger regression smoke was added and passed with `run_id=52`, `worker_job_id=19` using non-mutating `low_risk_apply_batch` dry-run mode.
+- Mixed-term persistence batch passed with `run_id=53`: `12` snapshot items, `9` recent-proposal skips, `3` LLM-reviewed items, `3` persistable proposals, `0` quality-gate blocks, and `3` persisted proposals.
+- Cumulative dev proposal volume is now above the Level 4.5 quantity threshold: `25` total agent proposals, `0` critical-risk proposals, and `4` auto-apply-eligible proposals awaiting sample audit.
 - The dev run window was closed afterwards: `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and the temporary operator token was removed.
 
 Exit gates:
@@ -91,6 +93,7 @@ Exit gates:
 - golden `effective_target`: `10/10`;
 - golden `context_target`: `10/10`;
 - at least `10` dev persisted proposals from mixed terms with no unsafe low-risk classification;
+- low-risk and auto-apply-eligible proposal sample audit documented;
 - no direct catalog mutations during the level;
 - daily estimated LLM cost stays below the configured budget.
 
