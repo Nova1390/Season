@@ -53,6 +53,7 @@ The Smart Import Agent is the server-side drafting orchestrator inside `parse-re
 - score the draft as `publishable`, `needs_creator_review`, or `needs_more_input`,
 - return review hints such as `steps_missing`, `quantities_missing`, or `unresolved_ingredients_present`,
 - return one creator-facing `nextAction` so the app can explain the most important next step without exposing catalog jargon,
+- return a structured `scorecard` with `blockingIssues`, `niceToFix`, and `autoFixable` so future agent loops can prioritize work without re-parsing free-text hints,
 - expose the passes it executed so future debugging can explain what happened.
 
 It does not own catalog policy. If the Smart Import Agent cannot safely map an ingredient, it leaves the draft editable and lets Catalog Governance learn from the eventual custom observation.
@@ -63,6 +64,9 @@ As of the creator-flow UI integration, Swift surfaces the Smart Import Agent res
 - `needs_creator_review` means the draft is useful but one or more visible hints should be checked.
 - `needs_more_input` means the caption lacks enough recipe structure and the creator should add ingredients, amounts, or steps.
 - `nextAction` prioritizes the most useful single action: add more recipe detail, add method steps, complete amounts, resolve ingredients, review the draft, or publish.
+- `scorecard.blockingIssues` means the draft is not reliable enough for unattended publishing.
+- `scorecard.niceToFix` means the draft is useful but can be improved by the creator or a future safe autofix.
+- `scorecard.autoFixable` is reserved for issues the agent can safely repair deterministically without catalog mutation or extra LLM cost.
 
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
 

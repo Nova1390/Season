@@ -293,6 +293,7 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
     result = response.get("result") if isinstance(response.get("result"), dict) else {}
     steps = result_steps(result)
     agent = result.get("smartImportAgent") if isinstance(result, dict) and isinstance(result.get("smartImportAgent"), dict) else {}
+    scorecard = agent.get("scorecard") if isinstance(agent.get("scorecard"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
     return {
         "id": row.get("id"),
@@ -303,6 +304,11 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
         "draftQuality": agent.get("draftQuality"),
         "nextAction": agent.get("nextAction"),
         "actionReason": agent.get("actionReason"),
+        "scorecard": {
+            "blockingIssues": scorecard.get("blockingIssues") or [],
+            "niceToFix": scorecard.get("niceToFix") or [],
+            "autoFixable": scorecard.get("autoFixable") or [],
+        },
         "title": result.get("title") if isinstance(result.get("title"), str) else None,
         "step_count": len(steps),
         "steps": steps,
@@ -338,6 +344,11 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
         "draftQuality": None,
         "nextAction": None,
         "actionReason": None,
+        "scorecard": {
+            "blockingIssues": [],
+            "niceToFix": [],
+            "autoFixable": [],
+        },
         "title": None,
         "step_count": 0,
         "steps": [],

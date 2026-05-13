@@ -121,7 +121,7 @@ Budget guardrails:
 - Prefer existing CSV fixtures before calling Apify.
 - Provider or Edge errors are captured per case in the JSON output so a transient `502` does not hide the rest of the probe results.
 - The runner reports both ingredient-name matches and measurable quantity/unit matches, so we can distinguish "recognized the ingredient" from "creator can publish without fixing doses".
-- The runner also reports draft usability signals: title presence, step count, parsed steps, confidence, servings, prep/cook times, and the agent `nextAction`. These fields tell us whether Smart Import is producing a creator-ready recipe draft, not just a correct ingredient list.
+- The runner also reports draft usability signals: title presence, step count, parsed steps, confidence, servings, prep/cook times, the agent `nextAction`, and the structured `scorecard`. These fields tell us whether Smart Import is producing a creator-ready recipe draft, not just a correct ingredient list.
 
 Latest dev probe notes:
 
@@ -137,6 +137,8 @@ Latest dev probe notes:
 - `2026-05-13`: title/step probe on `SI-TRAIN-027`, `SI-TRAIN-029`, and `SI-TRAIN-040` matched `18/18` ingredient names. The model extracted usable titles, preserved explicit method sentences as one-step drafts for frittata/puttanesca, and correctly left the piadina draft with `steps_missing` instead of inventing a method from a caption that only listed fillings.
 - `2026-05-13`: Smart Import Agent now returns `nextAction` and `actionReason` so the creator UI can show the highest-priority next step, for example "add method steps" before secondary quantity cleanup.
 - `2026-05-13`: dev probe on `SI-TRAIN-040` after deploy returned `draftQuality=needs_more_input` and `nextAction=add_method_steps`, confirming the agent asks for a real method step instead of inventing one for an assembly-style caption.
+- `2026-05-13`: Smart Import Agent now returns a `scorecard` that separates blocking issues, nice-to-fix improvements, and deterministic autofix opportunities for future autonomous loops.
+- `2026-05-13`: dev probe on `SI-TRAIN-040` after scorecard deploy returned `blockingIssues=["steps_missing"]`, `niceToFix=["quantities_missing","servings_missing","timings_missing"]`, and `autoFixable=[]`, confirming the agent can prioritize creator action without losing secondary cleanup tasks.
 
 ## Boundaries
 

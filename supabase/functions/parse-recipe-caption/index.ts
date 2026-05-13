@@ -63,6 +63,12 @@ interface SmartImportAgentPass {
   candidateCount?: number;
 }
 
+interface SmartImportQualityScorecard {
+  blockingIssues: string[];
+  niceToFix: string[];
+  autoFixable: string[];
+}
+
 interface SmartImportLearningSummary {
   source: string | null;
   termsRequested: number;
@@ -77,6 +83,7 @@ interface SmartImportAgentSummary {
   draftQuality: SmartImportDraftQuality;
   nextAction: SmartImportNextAction;
   actionReason: string;
+  scorecard: SmartImportQualityScorecard;
   reviewHints: string[];
   unresolvedIngredients: string[];
   passes: SmartImportAgentPass[];
@@ -765,6 +772,7 @@ function buildSmartImportAgentSummary(
     .map((ingredient) => ingredient.name)
     .filter(Boolean)
     .slice(0, 12);
+  const scorecard = smartImportQualityScorecard(result, input.outputAudit, reviewHints);
   const nextAction = smartImportNextAction(result, input.outputAudit, reviewHints);
 
   let draftQuality: SmartImportDraftQuality = "publishable";
@@ -821,10 +829,62 @@ function buildSmartImportAgentSummary(
     draftQuality,
     nextAction: nextAction.name,
     actionReason: nextAction.reason,
+    scorecard,
     reviewHints,
     unresolvedIngredients,
     passes,
   };
+}
+
+function smartImportQualityScorecard(
+  result: ParseRecipeCaptionResult,
+  outputAudit: SmartImportOutputAudit,
+  reviewHints: string[],
+): SmartImportQualityScorecard {
+  const blockingIssues: string[] = [];
+  const niceToFix: string[] = [];
+  const autoFixable: string[] = [];
+
+  if (reviewHints.includes("ingredients_missing")) {
+    blockingIssues.push("ingredients_missing");
+  }
+  if (reviewHints.includes("steps_missing")) {
+    blockingIssues.push("steps_missing");
+  }
+  if (reviewHints.includes("unresolved_ingredients_present") || outputAudit.unknown > 0) {
+    blockingIssues.push("unresolved_ingredients_present");
+  }
+  if (reviewHints.includes("low_confidence_parse")) {
+    blockingIssues.push("low_confidence_parse");
+  }
+
+  if (reviewHints.includes("quantities_missing")) {
+    niceToFix.push("quantities_missing");
+  }
+  if (result.servings === null) {
+    niceToFix.push("servings_missing");
+  }
+  if (result.prepTimeMinutes === null && result.cookTimeMinutes === null) {
+    niceToFix.push("timings_missing");
+  }
+
+  if (reviewHints.includes("title_missing")) {
+    if (result.inferredDish) {
+      autoFixable.push("title_missing");
+    } else {
+      blockingIssues.push("title_missing");
+    }
+  }
+
+  return {
+    blockingIssues: uniqueStrings(blockingIssues),
+    niceToFix: uniqueStrings(niceToFix),
+    autoFixable: uniqueStrings(autoFixable),
+  };
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 function smartImportNextAction(

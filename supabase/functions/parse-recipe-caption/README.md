@@ -57,6 +57,11 @@ At least one between `caption` or `url` must be non-empty.
       "draftQuality": "needs_creator_review",
       "nextAction": "resolve_ingredients",
       "actionReason": "Some ingredients remain unresolved against the catalog and should be checked before publishing.",
+      "scorecard": {
+        "blockingIssues": ["unresolved_ingredients_present"],
+        "niceToFix": ["quantities_missing"],
+        "autoFixable": []
+      },
       "reviewHints": ["unresolved_ingredients_present"],
       "unresolvedIngredients": ["pomodorini"],
       "passes": [
