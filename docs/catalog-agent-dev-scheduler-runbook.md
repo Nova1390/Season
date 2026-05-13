@@ -26,9 +26,9 @@ The expected safe default is:
 - `low_risk_dry_run_enabled = true`;
 - `low_risk_apply_enabled = false`;
 - `CATALOG_AGENT_ORCHESTRATOR_ENABLED = false`;
-- no scheduler cron is active.
+- `dev_catalog_agent_shift_dryrun_q2h` cron is active but guarded by the kill switch.
 
-In this state, a manual function call should return `skipped=true` and `reason=schedule_disabled`.
+In this state, a scheduled or manual function call should return `skipped=true` and `reason=schedule_disabled`.
 
 The admin console should show:
 
@@ -36,6 +36,27 @@ The admin console should show:
 - `Kill switch`: `On`;
 - `Shift health`: `Green` after a clean skipped shift, or `Idle` before any shift attempts;
 - `Shift runs today`: count of attempts in `catalog_agent_dev_shift_runs`.
+
+## Scheduler Job
+
+Current dev scheduler:
+
+- job name: `dev_catalog_agent_shift_dryrun_q2h`;
+- schedule: `17 */2 * * *`;
+- project: `Season-dev`;
+- function: `run-catalog-agent-dev-shift`;
+- payload: `limit=1`, `dry_run=true`, `run_low_risk_preview=true`, `run_triage=false`;
+- real apply: not wired;
+- triage LLM: not wired;
+- auth: dedicated operator token.
+
+The cron command reads credentials from Supabase Vault. It must not contain service-role JWTs or literal operator tokens.
+
+Required Vault secret names:
+
+- `season_dev_catalog_agent_project_url`;
+- `season_dev_catalog_agent_publishable_key`;
+- `season_dev_catalog_agent_shift_operator_token`.
 
 ## Manual Dry-Shift Smoke
 
@@ -64,6 +85,16 @@ Latest validation evidence:
 - both returned `0` eligible preview, `0` applied, and `0` failed;
 - no scheduled triage LLM call was triggered;
 - final `catalog_agent_dev_shift_health` was `green`.
+
+Scheduler install evidence:
+
+- migration `20260513133000_create_dev_catalog_agent_shift_cron.sql` installed cron job `#3`;
+- job `#3` is active and uses Vault references;
+- cron command does not mention service-role and does not expose the operator token;
+- first real cron tick succeeded at `2026-05-13 14:17:00 UTC`;
+- cron-created shift `#4` was skipped with `schedule_disabled`;
+- manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`;
+- final shift health remained `green`: `5` shift attempts today, `2` completed, `3` skipped, `0` failed.
 
 ## Reading Results
 
@@ -129,6 +160,25 @@ set enabled = false,
     low_risk_apply_enabled = false,
     updated_at = now()
 where environment = 'dev';
+```
+
+If the scheduler itself needs to be paused, disable the cron job too:
+
+```sql
+do $$
+declare
+  v_job_id bigint;
+begin
+  select jobid
+  into v_job_id
+  from cron.job
+  where jobname = 'dev_catalog_agent_shift_dryrun_q2h'
+  limit 1;
+
+  if v_job_id is not null then
+    perform cron.alter_job(job_id => v_job_id, active => false);
+  end if;
+end $$;
 ```
 
 Then:

@@ -158,3 +158,14 @@ Timeline validation:
 - no scheduled triage LLM call was triggered;
 - `catalog_agent_dev_shift_health` returned `green` with `2` completed shift runs, `1` skipped shift run, and `0` failed shift runs for the day;
 - the final guard returned `schedule_disabled`.
+
+Micro-scheduler:
+
+- migration `20260513133000_create_dev_catalog_agent_shift_cron.sql` installed pg_cron job `dev_catalog_agent_shift_dryrun_q2h`;
+- schedule is `17 */2 * * *`;
+- credentials are read from Supabase Vault, not embedded as cron literals;
+- cron verification showed no service-role mention and no literal operator-token leak;
+- first real cron tick succeeded and created shift `#4`;
+- shift `#4` skipped safely with `schedule_disabled`;
+- manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`;
+- final shift health stayed `green`.

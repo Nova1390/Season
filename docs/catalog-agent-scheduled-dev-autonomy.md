@@ -237,3 +237,18 @@ Timeline validation series:
 - `catalog_agent_dev_shift_health` returned `green`, with `3` total shift attempts today, `2` completed, `1` skipped, `0` failed, and `2` worker results;
 - final guard returned `schedule_disabled`, confirming the kill switch was restored after the smokes;
 - stopped after two new runs to avoid unnecessary manual-day noise.
+
+Micro-scheduler install:
+
+- provisioned dedicated dev scheduler secrets in Edge Function secrets and Supabase Vault;
+- kept `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false`;
+- applied migration `20260513133000_create_dev_catalog_agent_shift_cron.sql` to `Season-dev`;
+- installed active pg_cron job `#3`, `dev_catalog_agent_shift_dryrun_q2h`, scheduled at `17 */2 * * *`;
+- cron command reads URL, publishable key, and operator token from Vault;
+- verification showed `uses_vault=true`, `mentions_service_role=false`, and `leaks_operator_token=false`;
+- guard remained `schedule_disabled` after installation;
+- first real cron tick succeeded at `2026-05-13 14:17:00 UTC`;
+- cron-created shift `#4` was skipped with `schedule_disabled`, with `0` worker results;
+- manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`, with `0` worker results;
+- final `catalog_agent_dev_shift_health` returned `green`, with `5` total shift attempts today, `2` completed, `3` skipped, `0` failed, and `2` worker results;
+- Supabase lint result: `No schema errors found`.

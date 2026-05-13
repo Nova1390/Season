@@ -273,6 +273,11 @@ Implementation status:
 - `docs/catalog-agent-dev-scheduler-runbook.md` documents safe default state, dry-shift smoke, temporary enablement windows, hard stops, recovery, and the rule that staging remains out of scope until Level 6.5;
 - timeline validation series passed with runs `#72` and `#73`, worker jobs `#27` and `#28`: both completed in dry-run mode with `0` eligible preview, `0` applied, `0` failed, no scheduled triage LLM calls, and final guard restored to `schedule_disabled`;
 - `catalog_agent_dev_shift_health` reported `green` after the series: `3` shift attempts today, `2` completed, `1` skipped, `0` failed, and `2` worker results;
+- migration `20260513133000_create_dev_catalog_agent_shift_cron.sql` installed the first real dev micro-scheduler job, `dev_catalog_agent_shift_dryrun_q2h`, active every two hours but blocked by the dev kill switch;
+- the scheduler reads URL, publishable key, and operator token from Vault, with no service-role JWT and no literal operator token in the cron command;
+- first real cron tick succeeded at `2026-05-13 14:17:00 UTC` and produced shift `#4`, safely skipped with `schedule_disabled`;
+- manual scheduler-token verification produced shift `#5`, also skipped with `schedule_disabled`;
+- final shift health after scheduler install stayed `green`: `5` attempts today, `2` completed dry-runs, `3` skipped guard checks, `0` failed, and `2` worker results;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 
@@ -525,12 +530,14 @@ No level may be promoted unless all of these are true:
 
 ## Immediate Next Step
 
-The next target is strengthening `6.0 scheduled dev autonomy` without enabling a real unattended schedule yet.
+The next target is observing the real `6.0` dev micro-scheduler while the kill switch remains on, then deciding when to open a tiny dry-run-only scheduled window.
 
 Recommended implementation order:
 
 1. Keep the dev schedule disabled by default while using manual dry-shift smokes.
 2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON. Completed with cache version `20260513-3`.
 3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps. Completed in `docs/catalog-agent-dev-scheduler-runbook.md`.
-4. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
-5. Keep staging untouched until Level `6.5`.
+4. Install real dev micro-scheduler with kill-switch guard and Vault-backed credentials. Completed with `dev_catalog_agent_shift_dryrun_q2h`.
+5. Observe at least a few scheduled skipped ticks with `0` failed shifts.
+6. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
+7. Keep staging untouched until Level `6.5`.
