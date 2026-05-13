@@ -580,4 +580,6 @@ Dev smoke:
 - `run_id=53` executed a small mixed-term persisted-proposal batch with `limit=12`.
 - Recent-proposal guardrails skipped `9` items, `3` items went through the LLM, and all `3` proposals passed the quality gate and were persisted.
 - The batch created proposal `#26` for `pasta senza glutine` as a `create_canonical` draft, proposal `#27` for `pecorino romano` as `needs_human_review`, and proposal `#28` for `piadina` as `needs_human_review`.
-- The next allowed improvement is to audit the low-risk and auto-apply-eligible proposal sample before promoting Level 4.5.
+- The low-risk and auto-apply-eligible sample audit covered proposals `#5`, `#14`, `#21`, `#22`, and `#23`.
+- The audit found `0` unsafe low-risk classifications and `0` unsafe low-risk mutations.
+- Level 4.5 is complete on dev; the next allowed improvement is Level 5.0 low-risk apply autonomy, starting with rollback regression tests.

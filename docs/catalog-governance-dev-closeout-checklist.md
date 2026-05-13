@@ -938,3 +938,45 @@ Interpretation:
 
 - The persistence-volume side of the Level 4.5 gate is now satisfied in dev.
 - Level 4.5 should still not be promoted until the low-risk/auto-apply-eligible proposal sample is audited for unsafe classifications and the result is documented.
+
+### Low-Risk And Auto-Apply Safety Audit
+
+The low-risk and auto-apply-eligible proposal sample was audited to close the remaining Level 4.5 safety gate.
+
+Sample:
+
+- Proposal `#5` `sale fino`: `approve_alias`, `low`, `auto_apply_eligible=true`, status `auto_applied`.
+- Proposal `#14` `uovo`: `needs_human_review`, `low`, `auto_apply_eligible=false`, status `superseded`.
+- Proposal `#21` `mais`: `add_localization`, `low`, `auto_apply_eligible=true`, status `superseded`.
+- Proposal `#22` `mele`: `add_localization`, `low`, `auto_apply_eligible=true`, status `superseded`.
+- Proposal `#23` `pomodori`: `approve_alias`, `low`, `auto_apply_eligible=true`, status `applied`.
+
+Findings:
+
+- `sale fino` is safe: it exactly maps to active canonical `sale_fino`; alias `sale fino` is active and approved with `approval_source='agent_auto_apply'`.
+- `sale fino` has apply audit `#3` with rollback plan `delete_inserted_alias` for alias `168`.
+- `uovo` is safe as a low-risk review outcome: the agent correctly recognized standard egg semantics but did not invent a target id when no candidate target was present.
+- `mais` is semantically safe as Italian localization for `corn`, but it was superseded and did not mutate catalog state.
+- `mele` is semantically safe as Italian plural/localization for `apple`, but it was superseded and did not mutate catalog state.
+- `pomodori` is safe: it maps to active canonical `tomato`, passed deterministic validation, and was applied manually through a governed alias RPC.
+- No sampled low-risk proposal points to a deprecated or missing canonical ingredient.
+- No sampled low-risk proposal produced a critical-risk or high-risk mutation.
+
+Quality debt:
+
+- Historical proposals `#21` and `#22` were marked `auto_apply_eligible=true` while storing only `target_slug` and not `target_ingredient_id`.
+- They were superseded and never applied, so this is not an unsafe mutation.
+- Future auto-apply eligibility should continue to require a concrete target id, not only a target slug. The current proposal quality gate already enforces stronger actionable target grounding than those historical proposals.
+
+Safety conclusion:
+
+- Low-risk sample unsafe classifications found: `0`.
+- Unsafe low-risk mutations found: `0`.
+- Auto-apply with rollback audit found: `sale fino`.
+- Governed manual apply after validation found: `pomodori`.
+
+Level 4.5 conclusion:
+
+- Level 4.5 governed proposal autonomy is complete on `Season-dev`.
+- The agent can persist useful governed proposals, escalate ambiguity, avoid duplicate LLM spend through recent-proposal guardrails, and leave mutation to validators/workers/humans.
+- The next roadmap target is Level 5.0 low-risk apply autonomy, starting with rollback regression tests and low-risk apply batch limits.

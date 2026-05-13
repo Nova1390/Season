@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `4.0 supervised autonomy` on `Season-dev`.
+Status: strategic implementation roadmap. Current level is `4.5 governed proposal autonomy` on `Season-dev`.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -72,6 +72,8 @@ Required implementation:
 
 Implementation status:
 
+Reached on `Season-dev` on 2026-05-13.
+
 - `run-catalog-agent-triage` now includes `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`, defaulting to disabled.
 - `run-catalog-agent-triage` now evaluates a proposal quality gate before insert.
 - The quality gate records `proposal_quality_gate_evaluated` and run-summary counts for persistable vs blocked proposals.
@@ -85,6 +87,8 @@ Implementation status:
 - Repeatable worker-ledger regression smoke was added and passed with `run_id=52`, `worker_job_id=19` using non-mutating `low_risk_apply_batch` dry-run mode.
 - Mixed-term persistence batch passed with `run_id=53`: `12` snapshot items, `9` recent-proposal skips, `3` LLM-reviewed items, `3` persistable proposals, `0` quality-gate blocks, and `3` persisted proposals.
 - Cumulative dev proposal volume is now above the Level 4.5 quantity threshold: `25` total agent proposals, `0` critical-risk proposals, and `4` auto-apply-eligible proposals awaiting sample audit.
+- Low-risk and auto-apply-eligible sample audit passed: proposals `#5`, `#14`, `#21`, `#22`, and `#23` showed `0` unsafe low-risk classifications and `0` unsafe low-risk mutations.
+- Historical proposals `#21` and `#22` exposed quality debt because they used `target_slug` without `target_ingredient_id`, but they were superseded and did not mutate catalog state; future auto-apply remains constrained by stronger target grounding.
 - The dev run window was closed afterwards: `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and the temporary operator token was removed.
 
 Exit gates:
@@ -92,10 +96,10 @@ Exit gates:
 - golden `current`: `10/10`;
 - golden `effective_target`: `10/10`;
 - golden `context_target`: `10/10`;
-- at least `10` dev persisted proposals from mixed terms with no unsafe low-risk classification;
-- low-risk and auto-apply-eligible proposal sample audit documented;
-- no direct catalog mutations during the level;
-- daily estimated LLM cost stays below the configured budget.
+- at least `10` dev persisted proposals from mixed terms with no unsafe low-risk classification: passed with `25` total agent proposals and `0` unsafe sampled low-risk classifications;
+- low-risk and auto-apply-eligible proposal sample audit documented: passed;
+- no direct catalog mutation from the proposal-persistence path: passed;
+- daily estimated LLM cost stays below the configured budget: passed within the configured run budget.
 
 Operational rating after completion:
 
@@ -469,13 +473,13 @@ No level may be promoted unless all of these are true:
 
 ## Immediate Next Step
 
-The next target is `4.5 governed proposal autonomy`.
+The next target is `5.0 low-risk apply autonomy`.
 
 Recommended implementation order:
 
-1. Add a proposal persistence gate that refuses weak LLM output before insert.
-2. Add budget and quality summary to the agent run output.
-3. Run one small dev batch with persisted proposals enabled.
-4. Validate proposal quality in the admin console.
-5. Update golden/effective/context gates after the run.
-6. Keep real apply disabled until Level `5.0`.
+1. Add a repeatable rollback regression smoke for one reversible dev alias.
+2. Keep real low-risk apply disabled by default and enable only controlled `limit=1` windows.
+3. Validate at least `20` low-risk proposals on dev.
+4. Run at least `5` real low-risk apply batches on dev with `0` unsafe mutations.
+5. Ensure every applied row has audit and rollback metadata.
+6. Keep staging untouched until Level `6.5`.
