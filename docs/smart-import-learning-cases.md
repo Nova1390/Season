@@ -120,6 +120,7 @@ Budget guardrails:
 - Use `--dry-run` before any live run.
 - Prefer existing CSV fixtures before calling Apify.
 - Provider or Edge errors are captured per case in the JSON output so a transient `502` does not hide the rest of the probe results.
+- The runner reports both ingredient-name matches and measurable quantity/unit matches, so we can distinguish "recognized the ingredient" from "creator can publish without fixing doses".
 
 Latest dev probe notes:
 
@@ -127,6 +128,7 @@ Latest dev probe notes:
 - `2026-05-13`: runner was updated to include fixture quantity fragments in Swift-like candidates.
 - `2026-05-13`: repeat probe on `SI-TRAIN-017` matched `7/7`, preserved `pane raffermo` as base `pane`, included `learning_memory_context`, used LLM, and no longer emitted `quantities_missing`.
 - `2026-05-13`: one live run returned transient `502 PROVIDER_REQUEST_FAILED`; the runner now records per-case errors instead of aborting the whole probe.
+- `2026-05-13`: quantity-aware repeat probe on `SI-TRAIN-017` matched `7/7` ingredient names and `3/3` measurable quantity/unit expectations (`pane 200g`, `pomodori 3`, `cetriolo 1`).
 
 ## Boundaries
 

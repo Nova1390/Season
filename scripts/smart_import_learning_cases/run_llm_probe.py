@@ -117,18 +117,84 @@ def parse_candidate_quantity(raw_text: str) -> tuple[float | None, str | None]:
     return None, None
 
 
-def ingredient_names(response: dict[str, Any]) -> list[str]:
+def ingredient_rows(response: dict[str, Any]) -> list[dict[str, Any]]:
     result = response.get("result")
     if not isinstance(result, dict):
         return []
     ingredients = result.get("ingredients")
     if not isinstance(ingredients, list):
         return []
+    return [ingredient for ingredient in ingredients if isinstance(ingredient, dict)]
+
+
+def ingredient_names(response: dict[str, Any]) -> list[str]:
     names: list[str] = []
-    for ingredient in ingredients:
-        if isinstance(ingredient, dict) and isinstance(ingredient.get("name"), str):
+    for ingredient in ingredient_rows(response):
+        if isinstance(ingredient.get("name"), str):
             names.append(ingredient["name"])
     return names
+
+
+def ingredient_details(response: dict[str, Any]) -> list[dict[str, Any]]:
+    details: list[dict[str, Any]] = []
+    for ingredient in ingredient_rows(response):
+        name = ingredient.get("name")
+        if not isinstance(name, str):
+            continue
+        details.append({
+            "name": name,
+            "quantity": ingredient.get("quantity"),
+            "unit": ingredient.get("unit"),
+            "status": ingredient.get("status"),
+            "confidence": ingredient.get("confidence"),
+        })
+    return details
+
+
+def quantity_expectations(row: dict[str, str]) -> list[dict[str, Any]]:
+    expectations: list[dict[str, Any]] = []
+    for fragment in expected_quantity_fragments(row):
+        quantity, unit = parse_candidate_quantity(fragment)
+        if quantity is None or unit is None:
+            continue
+        name = re.sub(r"\b\d+(?:[.,]\d+)?\s*(?:g|ml)?\b", "", fragment, flags=re.IGNORECASE)
+        name = re.sub(r"\bq\.?b\.?\b", "", name, flags=re.IGNORECASE)
+        name = normalize_text(name)
+        if not name:
+            continue
+        expectations.append({
+            "fragment": fragment,
+            "name": name,
+            "quantity": quantity,
+            "unit": unit,
+        })
+    return expectations
+
+
+def quantity_matches(row: dict[str, str], actual_details: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    matched: list[str] = []
+    missing: list[str] = []
+
+    for expectation in quantity_expectations(row):
+        expectation_tokens = token_set(str(expectation["name"]))
+        found = False
+        for actual in actual_details:
+            actual_tokens = token_set(str(actual.get("name") or ""))
+            if expectation_tokens and expectation_tokens.isdisjoint(actual_tokens):
+                continue
+            try:
+                actual_quantity = float(actual.get("quantity"))
+            except (TypeError, ValueError):
+                continue
+            if actual.get("unit") == expectation["unit"] and abs(actual_quantity - float(expectation["quantity"])) < 0.0001:
+                found = True
+                break
+        if found:
+            matched.append(str(expectation["fragment"]))
+        else:
+            missing.append(str(expectation["fragment"]))
+
+    return matched, missing
 
 
 def matched_expectations(expected: list[str], actual: list[str]) -> tuple[list[str], list[str]]:
@@ -203,7 +269,9 @@ def unresolved_candidate_payload(name: str, raw_text: str) -> dict[str, Any]:
 def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str, Any]:
     expected = expected_ingredients(row)
     actual = ingredient_names(response)
+    actual_details = ingredient_details(response)
     matched, missing = matched_expectations(expected, actual)
+    matched_quantities, missing_quantities = quantity_matches(row, actual_details)
     result = response.get("result") if isinstance(response.get("result"), dict) else {}
     agent = result.get("smartImportAgent") if isinstance(result, dict) and isinstance(result.get("smartImportAgent"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
@@ -218,7 +286,11 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
         "actual_count": len(actual),
         "matched_count": len(matched),
         "missing": missing,
+        "expected_quantity_count": len(quantity_expectations(row)),
+        "matched_quantity_count": len(matched_quantities),
+        "missing_quantities": missing_quantities,
         "actual": actual,
+        "actual_details": actual_details,
         "reviewHints": agent.get("reviewHints") or [],
         "passes": [
             item.get("name")
@@ -240,7 +312,11 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
         "actual_count": 0,
         "matched_count": 0,
         "missing": expected_ingredients(row),
+        "expected_quantity_count": len(quantity_expectations(row)),
+        "matched_quantity_count": 0,
+        "missing_quantities": [expectation["fragment"] for expectation in quantity_expectations(row)],
         "actual": [],
+        "actual_details": [],
         "reviewHints": [],
         "passes": [],
         "error": str(error),
@@ -325,8 +401,9 @@ def main(argv: list[str]) -> int:
             print(
                 f"{summary['id']} {summary['difficulty']} {summary['theme']}: "
                 f"matched {summary['matched_count']}/{summary['expected_count']} "
+                f"quantities {summary['matched_quantity_count']}/{summary['expected_quantity_count']} "
                 f"usedLLM={summary['usedServerLLM']} quality={summary['draftQuality']} "
-                f"missing={summary['missing']}"
+                f"missing={summary['missing']} missing_quantities={summary['missing_quantities']}"
             )
 
     return 0
