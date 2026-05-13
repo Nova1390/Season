@@ -121,6 +121,8 @@ Implementation status:
 - the apply path inserted alias id `178`, wrote audit metadata, and emitted `auto_apply_succeeded`;
 - the rollback path deleted the inserted alias, marked audit `#4` as `reverted`, returned proposal `#30` to `validated`, and emitted `auto_apply_rollback_succeeded`;
 - final verification showed `remaining_alias_rows=0`, `proposal_status=validated`, and `audit_status=reverted`;
+- the smoke was converted into repeatable script `scripts/catalog_agent_rollback_smoke.sh`;
+- scripted smoke passed with run `#57`, proposal `#32`, apply audit `#6`, and `rollback_smoke_ok=true`;
 - no staging data or schedules were touched.
 
 Allowed actions:

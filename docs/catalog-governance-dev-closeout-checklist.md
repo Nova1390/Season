@@ -1008,6 +1008,8 @@ Result:
 - Final alias rows for `season rollback smoke sale fino 20260513`: `0`.
 - Final proposal status: `validated`.
 - Final audit status: `reverted`.
+- The same check is now repeatable through `scripts/catalog_agent_rollback_smoke.sh`.
+- Scripted smoke passed with run `#57`, proposal `#32`, apply audit `#6`, rollback plan `delete_inserted_alias` for alias id `180`, and `rollback_smoke_ok=true`.
 
 Interpretation:
 

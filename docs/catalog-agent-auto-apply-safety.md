@@ -230,3 +230,11 @@ Production:
 - no staging data was touched.
 
 This proves the reversible alias path can be applied and rolled back without leaving a catalog alias behind. It does not yet enable broad unattended auto-apply; it only closes the first Level 5.0 rollback safety gate.
+
+Repeatable smoke:
+
+- script: `scripts/catalog_agent_rollback_smoke.sh`;
+- latest passing run: `catalog_agent_runs.id = 57`;
+- latest passing proposal: `catalog_agent_proposals.id = 32`;
+- latest passing apply audit: `catalog_agent_apply_audit.id = 6`;
+- latest verification: `rollback_smoke_ok=true`.
