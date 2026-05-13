@@ -907,7 +907,7 @@ function llmResolutionMap(items: LLMResolvedIngredient[]): Map<number, LLMResolv
 }
 
 async function fetchSmartImportLearningContext(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   candidates: NormalizedIngredientCandidate[],
 ): Promise<Record<string, unknown>> {
   const normalizedTexts = Array.from(
