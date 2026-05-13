@@ -96,3 +96,21 @@ Expected behavior:
 - digest id `1` was refreshed;
 - temporary operator token was removed immediately;
 - post-removal request with the same token returned `UNAUTHORIZED`.
+
+Controlled dry-shift smoke:
+
+- schedule config was temporarily enabled on dev only;
+- `triage_enabled=false`;
+- `low_risk_apply_enabled=false`;
+- `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true` only during the smoke;
+- request used `limit=1`, `dry_run=true`, `run_low_risk_preview=true`, and `run_triage=false`;
+- guard returned `ok=true`;
+- orchestrator run `#67` created worker job `#22`;
+- worker `low_risk_apply_batch` ran in dry-run mode;
+- eligible preview was `0`;
+- applied `0`;
+- failed `0`;
+- no LLM triage was run;
+- config and secrets were restored immediately afterwards;
+- post-closure guard returned `schedule_disabled`;
+- Supabase lint returned `No schema errors found`.

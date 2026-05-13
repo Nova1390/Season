@@ -143,3 +143,30 @@ As of 2026-05-13:
 - temporary operator-token smoke returned `ok=true`, `skipped=true`, `reason=schedule_disabled`, and refreshed digest `1`;
 - the temporary operator token was removed immediately after the smoke;
 - post-removal smoke with the same token returned `UNAUTHORIZED`.
+
+Controlled dry-shift smoke:
+
+- temporarily enabled only the dev schedule guard path with higher same-day ceilings because manual test activity had already exceeded the default scheduled-day limits;
+- kept `triage_enabled=false`;
+- kept `low_risk_apply_enabled=false`;
+- temporarily set `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true`;
+- used a temporary operator token only for the smoke;
+- invoked `run-catalog-agent-dev-shift` with `limit=1`, `dry_run=true`, `run_low_risk_preview=true`, and `run_triage=false`;
+- guard result before work: `ok=true`;
+- allowed actions: `low_risk_dry_run=true`, `triage=false`, `low_risk_apply=false`;
+- orchestrator run: `catalog_agent_runs.id = 67`;
+- worker job: `catalog_agent_worker_jobs.id = 22`;
+- worker: `low_risk_apply_batch`;
+- worker mode: `dry_run`;
+- eligible preview: `0`;
+- applied: `0`;
+- failed: `0`;
+- no LLM triage was run;
+- no catalog mutation was applied;
+- daily digest was refreshed after the shift;
+- after the smoke, the dev kill switch was restored to `enabled=false`;
+- `CATALOG_AGENT_ORCHESTRATOR_ENABLED` was set back to `false`;
+- the temporary operator token was removed;
+- post-closure token smoke returned `UNAUTHORIZED`;
+- post-closure guard smoke returned `schedule_disabled`;
+- post-closure Supabase lint result: `No schema errors found`.
