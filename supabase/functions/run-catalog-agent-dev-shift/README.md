@@ -122,3 +122,11 @@ Repeatable smoke:
 - latest passing worker job: `catalog_agent_worker_jobs.id = 24`;
 - result: `0` eligible preview, `0` applied, `0` failed;
 - cleanup verification: temporary token returned `UNAUTHORIZED` and the guard returned `schedule_disabled`.
+
+Controlled series:
+
+- runs `#70` and `#71` completed through `scripts/catalog_agent_dev_shift_smoke.sh`;
+- worker jobs `#25` and `#26` completed in dry-run mode;
+- both runs returned `0` eligible preview, `0` applied, and `0` failed;
+- final guard returned `schedule_disabled`;
+- daily catalog AI token usage stayed unchanged at `135813`, so no LLM triage was triggered by the series.

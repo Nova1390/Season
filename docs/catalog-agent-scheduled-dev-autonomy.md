@@ -179,3 +179,13 @@ Repeatable script:
 - latest passing scripted smoke: orchestrator run `#69`, worker job `#24`;
 - latest passing scripted smoke result: `0` eligible preview, `0` applied, `0` failed, no LLM triage, no catalog mutation;
 - cleanup verification passed: temporary token returned `UNAUTHORIZED`, and final guard returned `schedule_disabled`.
+
+Controlled dry-shift series:
+
+- ran two additional dry-shift smokes with `scripts/catalog_agent_dev_shift_smoke.sh`;
+- stopped after two runs to avoid adding unnecessary dev-run noise on an already manual-heavy test day;
+- run `#70`, worker job `#25`: completed, dry-run, `0` eligible preview, `0` applied, `0` failed;
+- run `#71`, worker job `#26`: completed, dry-run, `0` eligible preview, `0` applied, `0` failed;
+- final guard check returned `schedule_disabled`;
+- total catalog AI tokens for the day remained `135813`, confirming the dry-shift series did not trigger new LLM triage calls;
+- final Supabase lint result: `No schema errors found`.
