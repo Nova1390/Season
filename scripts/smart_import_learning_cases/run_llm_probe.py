@@ -106,6 +106,13 @@ def quantity_fragment_for(name: str, fragments: list[str]) -> str:
 
 def parse_candidate_quantity(raw_text: str) -> tuple[float | None, str | None]:
     compact = raw_text.replace(",", ".")
+    fraction_match = re.search(r"\b(\d+)\s*/\s*(\d+)\b", compact)
+    if fraction_match:
+        denominator = float(fraction_match.group(2))
+        if denominator != 0:
+            return float(fraction_match.group(1)) / denominator, "piece"
+    if re.search(r"\bmezz[ao]\b", compact, flags=re.IGNORECASE):
+        return 0.5, "piece"
     match = re.search(r"(\d+(?:\.\d+)?)\s*(g|ml)\b", compact, flags=re.IGNORECASE)
     if match:
         return float(match.group(1)), match.group(2).lower()

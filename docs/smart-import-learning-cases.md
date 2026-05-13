@@ -129,6 +129,9 @@ Latest dev probe notes:
 - `2026-05-13`: repeat probe on `SI-TRAIN-017` matched `7/7`, preserved `pane raffermo` as base `pane`, included `learning_memory_context`, used LLM, and no longer emitted `quantities_missing`.
 - `2026-05-13`: one live run returned transient `502 PROVIDER_REQUEST_FAILED`; the runner now records per-case errors instead of aborting the whole probe.
 - `2026-05-13`: quantity-aware repeat probe on `SI-TRAIN-017` matched `7/7` ingredient names and `3/3` measurable quantity/unit expectations (`pane 200g`, `pomodori 3`, `cetriolo 1`).
+- `2026-05-13`: hard/messy full-caption probe on `SI-TRAIN-027`, `SI-TRAIN-029`, `SI-TRAIN-034`, `SI-TRAIN-038`, and `SI-TRAIN-040` matched `28/29` ingredient names. The only miss was `piadina`, because the edible base appeared in the opening phrase rather than the filling list.
+- `2026-05-13`: the probe parser now recognizes fractional quantities such as `1/2 bustina` as `0.5 piece`, and the full-caption prompt now tells the model to keep edible base/container ingredients from titles or opening phrases.
+- `2026-05-13`: repeat probe on `SI-TRAIN-040` after the prompt update matched `6/6` ingredient names and included `piadina` as the edible base.
 
 ## Boundaries
 

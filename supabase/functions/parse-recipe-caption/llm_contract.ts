@@ -116,6 +116,7 @@ Rules:
 14) Do not turn preparation or freshness states into new ingredient identities. Keep the base ingredient as the name and place the state in notes when it matters (e.g. pane raffermo -> name pane, notes raffermo).
 15) Product forms can be identity-bearing when the parent would be too broad for shopping/fridge matching (e.g. fiocchi d'avena is not just avena).
 16) Generic family words that are truly underspecified can stay generic with medium/low confidence; do not over-specialize without evidence (e.g. olive without green/black/pitted context stays olive).
+17) If the title/opening phrase names an edible base or container that is part of the dish (e.g. piadina, tortilla, panino, bruschetta, crostino, toast), include it as an ingredient even if the following text mostly lists fillings or toppings.
 
 Example 1 (structured, high quality)
 INPUT:
