@@ -50,12 +50,27 @@ The goal is to reduce routine founder review, not to hide risk.
 
 - Admin-console read model that joins the current schedule config with the latest digest.
 
+`catalog_agent_dev_shift_runs`
+
+- Stores one row for every attempted scheduled dev shift.
+- Separates shift-lane health from the broader daily digest.
+- Records guard snapshot, worker results, skipped workers, digest snapshot, errors, and duration.
+- Lets us prove whether scheduled autonomy itself is healthy even when a manual-heavy dev day makes the global digest red.
+
+`catalog_agent_dev_shift_health`
+
+- Admin-console read model for today's dev-shift lane.
+- Reports completed, skipped, failed, and total shift runs.
+- Classifies shift health as `green`, `yellow`, `red`, or `idle`.
+- Explains the common case where the dev-shift lane is healthy but the daily digest is red because of manual testing noise.
+
 `run-catalog-agent-dev-shift`
 
 - Dev-only Edge Function entrypoint for a future scheduler.
 - Calls `catalog_agent_dev_schedule_guard('dev')` before doing any work.
 - Returns a skipped shift when the kill switch is off.
 - Always refreshes the daily digest.
+- Writes `catalog_agent_dev_shift_runs` for skipped, completed, and failed shifts.
 - Can run low-risk apply preview only when the guard allows it.
 - Does not run real low-risk apply from schedule yet.
 - Recognizes but does not yet execute triage scheduling, preventing accidental LLM spend.
@@ -189,3 +204,14 @@ Controlled dry-shift series:
 - final guard check returned `schedule_disabled`;
 - total catalog AI tokens for the day remained `135813`, confirming the dry-shift series did not trigger new LLM triage calls;
 - final Supabase lint result: `No schema errors found`.
+
+Shift-lane health split:
+
+- applied migration `20260513121500_catalog_agent_dev_shift_run_ledger.sql` to `Season-dev`;
+- deployed updated `run-catalog-agent-dev-shift` to `Season-dev`;
+- smoke with the dev kill switch still disabled created `catalog_agent_dev_shift_runs.id = 1`;
+- shift run `#1` finished as `skipped` with `skip_reason = schedule_disabled`;
+- `catalog_agent_dev_shift_health` returned `shift_health_status = green`;
+- shift-health message explicitly distinguishes a healthy scheduled-shift lane from the red global daily digest caused by manual development history;
+- temporary operator token was removed after the smoke, and reuse returned `UNAUTHORIZED`;
+- Supabase lint result: `No schema errors found`.

@@ -6,11 +6,13 @@ This function is intentionally conservative. It does not make independent catalo
 
 1. authenticates a catalog admin, service role, or configured operator token;
 2. calls `catalog_agent_dev_schedule_guard('dev')`;
-3. stops immediately when the guard blocks the shift;
-4. always builds `catalog_agent_build_daily_digest(current_date, 'dev')`;
-5. may run only the allowed low-risk dry-run worker when the guard allows it;
-6. never runs real low-risk apply from the scheduled shift yet;
-7. never targets staging.
+3. records the shift attempt in `catalog_agent_dev_shift_runs`;
+4. stops immediately when the guard blocks the shift;
+5. always builds `catalog_agent_build_daily_digest(current_date, 'dev')`;
+6. stores guard, worker, skipped-worker, digest, and duration snapshots on the shift row;
+7. may run only the allowed low-risk dry-run worker when the guard allows it;
+8. never runs real low-risk apply from the scheduled shift yet;
+9. never targets staging.
 
 ## Current Status
 
@@ -130,3 +132,13 @@ Controlled series:
 - both runs returned `0` eligible preview, `0` applied, and `0` failed;
 - final guard returned `schedule_disabled`;
 - daily catalog AI token usage stayed unchanged at `135813`, so no LLM triage was triggered by the series.
+
+Shift-ledger smoke:
+
+- migration `20260513121500_catalog_agent_dev_shift_run_ledger.sql` was applied to `Season-dev`;
+- the updated function was deployed to `Season-dev`;
+- blocked-shift smoke created `catalog_agent_dev_shift_runs.id = 1`;
+- shift `#1` finished as `skipped` with `skip_reason = schedule_disabled`;
+- `catalog_agent_dev_shift_health` returned `green`, proving the shift lane is healthy even while the global daily digest stays red from manual dev test history;
+- the temporary operator token was removed after the smoke and reuse returned `UNAUTHORIZED`;
+- Supabase lint returned `No schema errors found`.

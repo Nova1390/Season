@@ -41,6 +41,7 @@ It currently supports:
 - viewing auto-apply audit and rollback summary.
 - rolling back active auto-apply audit records with a required operator reason.
 - viewing scheduled-dev autonomy guard state, kill switch state, latest daily digest, and detected anomalies.
+- viewing scheduled dev-shift lane health separately from the broader daily digest.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
 
@@ -55,6 +56,7 @@ Operations worker controls are deliberately narrow:
 - every run is still authorized by Supabase Auth and recorded in `catalog_agent_worker_jobs`.
 - readiness diagnostics come from `get_catalog_agent_auto_apply_diagnostics()`, not browser-side policy guesses.
 - scheduled autonomy status is read-only in the console and comes from `catalog_agent_dev_schedule_status`, `catalog_agent_dev_schedule_guard(...)`, and `catalog_agent_daily_digests`.
+- dev-shift lane health comes from `catalog_agent_dev_shift_health`, so a red manual-heavy daily digest can be distinguished from a healthy skipped/completed scheduled-shift lane.
 
 ## Deployment History
 
@@ -65,6 +67,15 @@ Operations worker controls are deliberately narrow:
 - verified `https://catalog.seasonapp.it/` returns `200`;
 - verified cache-busted `app.js?v=20260513-1` and `styles.css?v=20260513-1` return `200`;
 - verified the deployed HTML includes the `Scheduled autonomy` card.
+
+2026-05-13 follow-up:
+
+- deployed cache version `20260513-2` with `Shift health` and `Shift runs today` in the scheduled autonomy card;
+- restored remote `.htaccess` and `config.local.js` after a static deploy left the folder without those files;
+- restored `/home/u280052083/domains/seasonapp.it/public_html/catalog` permissions to `755` and static file permissions to `644`;
+- verified `https://catalog.seasonapp.it/` returns `200`;
+- verified cache-busted `app.js?v=20260513-2` and `styles.css?v=20260513-2` return `200`;
+- verified the deployed HTML includes the shift-health UI.
 
 ## Local Setup
 
@@ -110,6 +121,13 @@ If the URL returns `404`, first verify that the Hostinger subdomain still points
 
 ```text
 /home/u280052083/domains/seasonapp.it/public_html/catalog
+```
+
+If the URL returns `403`, check directory permissions first. The folder must be executable by the web server:
+
+```bash
+chmod 755 /home/u280052083/domains/seasonapp.it/public_html/catalog
+chmod 644 /home/u280052083/domains/seasonapp.it/public_html/catalog/*
 ```
 
 Deploy only static files:

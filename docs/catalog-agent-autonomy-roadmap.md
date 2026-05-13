@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `5.0 low-risk apply autonomy in progress` on `Season-dev`, with Level `6.0` guardrail infrastructure started but not yet scheduled.
+Status: strategic implementation roadmap. Current level is `6.0 scheduled dev autonomy foundation` on `Season-dev`. Level `5.0` low-risk apply has a first successful real dev apply plus rollback proof, but still needs more volume before promotion beyond dev.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -262,6 +262,13 @@ Implementation status:
 - first controlled dry-shift smoke passed: `run-catalog-agent-dev-shift` was temporarily allowed on dev, launched `low_risk_apply_batch` in dry-run mode through orchestrator run `#67` and worker job `#22`, found `0` eligible proposals, applied `0` mutations, consumed `0` new LLM triage calls, refreshed the digest, and was then fully disabled again;
 - repeatable dry-shift smoke script added and passed: `scripts/catalog_agent_dev_shift_smoke.sh` produced latest run `#69` and worker job `#24`, verified cleanup by confirming the temporary token was unauthorized and the guard returned `schedule_disabled`;
 - first controlled dry-shift series completed with runs `#70` and `#71`: both worker jobs completed in dry-run mode, applied `0` mutations, failed `0` items, and kept daily catalog AI token usage unchanged at `135813`;
+- migration `20260513121500_catalog_agent_dev_shift_run_ledger.sql` adds `catalog_agent_dev_shift_runs` and `catalog_agent_dev_shift_health`, separating scheduled-shift health from the broader daily digest;
+- updated `run-catalog-agent-dev-shift` now records started, skipped, completed, and failed shift attempts with guard snapshots, worker results, skipped workers, digest snapshots, and duration;
+- shift-ledger smoke created `catalog_agent_dev_shift_runs.id = 1`, correctly skipped with `schedule_disabled`, and returned `catalog_agent_dev_shift_health.shift_health_status = green`;
+- the admin console now displays shift health and shift runs today, so a red manual-heavy daily digest no longer hides the fact that the scheduled dev lane itself is healthy;
+- the updated console was deployed to `https://catalog.seasonapp.it/` with cache version `20260513-2`;
+- during deployment, missing `.htaccess`, missing `config.local.js`, and directory permissions caused a temporary `403/404`; the folder was restored to `755`, static assets to `644`, `.htaccess` was restored, and `config.local.js` was recreated with the browser-safe Season-dev anon key;
+- verification after restore returned `200` for the console root and both cache-busted assets;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 
@@ -514,13 +521,12 @@ No level may be promoted unless all of these are true:
 
 ## Immediate Next Step
 
-The next target is `5.0 low-risk apply autonomy`.
+The next target is strengthening `6.0 scheduled dev autonomy` without enabling a real unattended schedule yet.
 
 Recommended implementation order:
 
-1. Add a repeatable rollback regression smoke for one reversible dev alias. Completed on `2026-05-13`.
-2. Keep real low-risk apply disabled by default and enable only controlled `limit=1` windows.
-3. Validate at least `20` low-risk proposals on dev.
-4. Run at least `5` real low-risk apply batches on dev with `0` unsafe mutations.
-5. Ensure every applied row has audit and rollback metadata.
-6. Keep staging untouched until Level `6.5`.
+1. Keep the dev schedule disabled by default while using manual dry-shift smokes.
+2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON.
+3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps.
+4. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
+5. Keep staging untouched until Level `6.5`.

@@ -37,6 +37,8 @@ const CORS_HEADERS = {
 Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
   const startedAt = performance.now();
+  let adminClient: ReturnType<typeof createClient> | null = null;
+  let shiftRunId: number | null = null;
 
   try {
     console.log(`[${LOG_PREFIX}] phase=request_received method=${request.method} request_id=${requestId}`);
@@ -83,8 +85,18 @@ Deno.serve(async (request) => {
     const runTriage = payload.run_triage === true;
     const debug = payload.debug === true;
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    shiftRunId = await insertShiftRun(adminClient, {
+      requestId,
+      limit,
+      sourceDomain,
+      dryRun,
+      runLowRiskPreview,
+      runTriage,
+      debug,
     });
 
     const guard = await rpcObject(adminClient, "catalog_agent_dev_schedule_guard", {
@@ -93,6 +105,15 @@ Deno.serve(async (request) => {
 
     if (guard.ok !== true) {
       const digest = await buildDigest(adminClient);
+      await finishShiftRun(adminClient, shiftRunId, {
+        status: "skipped",
+        skipReason: String(guard.reason ?? "guard_blocked"),
+        guard,
+        workerResults: [],
+        skippedWorkers: [],
+        digest,
+        durationMs: elapsedMs(startedAt),
+      });
       return shiftJson({
         ok: true,
         skipped: true,
@@ -143,6 +164,15 @@ Deno.serve(async (request) => {
     }
 
     const digest = await buildDigest(adminClient);
+    await finishShiftRun(adminClient, shiftRunId, {
+      status: "completed",
+      skipReason: null,
+      guard,
+      workerResults,
+      skippedWorkers,
+      digest,
+      durationMs: elapsedMs(startedAt),
+    });
 
     return shiftJson({
       ok: true,
@@ -158,6 +188,9 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     console.log(`[${LOG_PREFIX}] phase=unhandled_error request_id=${requestId} error=${String(error)}`);
+    if (adminClient && shiftRunId !== null) {
+      await failShiftRun(adminClient, shiftRunId, String(error), elapsedMs(startedAt));
+    }
     return shiftJson({
       ok: false,
       error: {
@@ -168,6 +201,82 @@ Deno.serve(async (request) => {
     }, 500);
   }
 });
+
+async function insertShiftRun(
+  adminClient: ReturnType<typeof createClient>,
+  requestPayload: Record<string, unknown>,
+): Promise<number> {
+  const { data, error } = await adminClient
+    .from("catalog_agent_dev_shift_runs")
+    .insert({
+      environment: "dev",
+      status: "started",
+      request_payload: requestPayload,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(`insert_dev_shift_run_failed:${error?.message ?? "missing id"}`);
+  }
+
+  return Number(data.id);
+}
+
+async function finishShiftRun(
+  adminClient: ReturnType<typeof createClient>,
+  shiftRunId: number,
+  input: {
+    status: "skipped" | "completed";
+    skipReason: string | null;
+    guard: Record<string, unknown>;
+    workerResults: Record<string, unknown>[];
+    skippedWorkers: Record<string, unknown>[];
+    digest: Record<string, unknown>;
+    durationMs: number;
+  },
+): Promise<void> {
+  const { error } = await adminClient
+    .from("catalog_agent_dev_shift_runs")
+    .update({
+      status: input.status,
+      skip_reason: input.skipReason,
+      guard_snapshot: input.guard,
+      worker_results: input.workerResults,
+      skipped_workers: input.skippedWorkers,
+      digest_snapshot: input.digest,
+      duration_ms: input.durationMs,
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", shiftRunId);
+
+  if (error) {
+    throw new Error(`finish_dev_shift_run_failed:${error.message}`);
+  }
+}
+
+async function failShiftRun(
+  adminClient: ReturnType<typeof createClient>,
+  shiftRunId: number,
+  message: string,
+  durationMs: number,
+): Promise<void> {
+  const { error } = await adminClient
+    .from("catalog_agent_dev_shift_runs")
+    .update({
+      status: "failed",
+      error_message: message,
+      duration_ms: durationMs,
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", shiftRunId);
+
+  if (error) {
+    console.log(`[${LOG_PREFIX}] phase=fail_shift_run_failed shift_run_id=${shiftRunId} error=${error.message}`);
+  }
+}
 
 async function readPayload(request: Request): Promise<DevShiftRequest> {
   const contentType = request.headers.get("content-type") ?? "";

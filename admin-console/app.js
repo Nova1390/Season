@@ -22,6 +22,7 @@ const state = {
     scheduleStatus: null,
     scheduleGuard: null,
     latestDigest: null,
+    scheduleShiftHealth: null,
     workerJobs: [],
     applyAudits: []
   }
@@ -70,7 +71,10 @@ const elements = {
   scheduleKillSwitch: document.querySelector("#scheduleKillSwitch"),
   scheduleAnomalyCount: document.querySelector("#scheduleAnomalyCount"),
   scheduleLatestDigest: document.querySelector("#scheduleLatestDigest"),
+  scheduleShiftHealth: document.querySelector("#scheduleShiftHealth"),
+  scheduleShiftRunsToday: document.querySelector("#scheduleShiftRunsToday"),
   scheduleNextAction: document.querySelector("#scheduleNextAction"),
+  scheduleShiftMessage: document.querySelector("#scheduleShiftMessage"),
   scheduleAnomalyList: document.querySelector("#scheduleAnomalyList"),
   workerJobsList: document.querySelector("#workerJobsList"),
   applyAuditList: document.querySelector("#applyAuditList")
@@ -153,6 +157,7 @@ function bindEvents() {
       scheduleStatus: null,
       scheduleGuard: null,
       latestDigest: null,
+      scheduleShiftHealth: null,
       workerJobs: [],
       applyAudits: []
     };
@@ -495,6 +500,7 @@ async function loadOperations(options = {}) {
     scheduleStatusResult,
     scheduleGuardResult,
     latestDigestResult,
+    scheduleShiftHealthResult,
     jobsResult,
     applyAuditsResult
   ] = await Promise.all([
@@ -523,6 +529,10 @@ async function loadOperations(options = {}) {
       .eq("environment", "dev")
       .order("report_date", { ascending: false })
       .limit(1)
+      .maybeSingle(),
+    state.client
+      .from("catalog_agent_dev_shift_health")
+      .select("*")
       .maybeSingle(),
     state.client
       .from("catalog_agent_worker_jobs")
@@ -560,6 +570,10 @@ async function loadOperations(options = {}) {
     setStatus(latestDigestResult.error.message, "error");
     return;
   }
+  if (scheduleShiftHealthResult.error) {
+    setStatus(scheduleShiftHealthResult.error.message, "error");
+    return;
+  }
   if (jobsResult.error) {
     setStatus(jobsResult.error.message, "error");
     return;
@@ -576,6 +590,7 @@ async function loadOperations(options = {}) {
     scheduleStatus: scheduleStatusResult.data ?? null,
     scheduleGuard: scheduleGuardResult.data ?? null,
     latestDigest: latestDigestResult.data ?? null,
+    scheduleShiftHealth: scheduleShiftHealthResult.data ?? null,
     workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : [],
     applyAudits: Array.isArray(applyAuditsResult.data) ? applyAuditsResult.data : []
   };
@@ -615,6 +630,7 @@ function renderOperations() {
   const scheduleStatus = state.operations.scheduleStatus ?? {};
   const scheduleGuard = state.operations.scheduleGuard ?? {};
   const latestDigest = state.operations.latestDigest ?? {};
+  const scheduleShiftHealth = state.operations.scheduleShiftHealth ?? {};
   const jobs = state.operations.workerJobs ?? [];
   const applyAudits = state.operations.applyAudits ?? [];
 
@@ -626,7 +642,7 @@ function renderOperations() {
   elements.activeAppliesToday.textContent = String(autoApplySummary.active_applies ?? 0);
   elements.revertedAppliesToday.textContent = String(autoApplySummary.reverted_applies ?? 0);
   elements.failedRevertsToday.textContent = String(autoApplySummary.failed_reverts ?? 0);
-  renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest);
+  renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, scheduleShiftHealth);
   renderAutoApplyDiagnostics(diagnostics);
 
   if (jobs.length === 0) {
@@ -694,30 +710,37 @@ function renderOperations() {
   `).join("");
 }
 
-function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest) {
+function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, scheduleShiftHealth) {
   const guardOk = scheduleGuard?.ok === true;
   const guardReason = scheduleGuard?.reason ?? (guardOk ? "allowed" : "not loaded");
   const digestStatus = latestDigest?.status ?? scheduleStatus?.latest_digest_status ?? "none";
   const anomalyCount = Number(latestDigest?.anomaly_count ?? scheduleStatus?.latest_anomaly_count ?? 0);
   const reportDate = latestDigest?.report_date ?? scheduleStatus?.latest_report_date ?? null;
   const anomalies = Array.isArray(latestDigest?.anomalies) ? latestDigest.anomalies : [];
+  const shiftHealthStatus = scheduleShiftHealth?.shift_health_status ?? "idle";
+  const shiftRunsToday = Number(scheduleShiftHealth?.total_shift_runs_today ?? 0);
 
   elements.scheduleGuardState.textContent = guardOk ? "Allowed" : humanizeToken(guardReason);
   elements.scheduleKillSwitch.textContent = scheduleGuard?.kill_switch === true || scheduleStatus?.enabled === false ? "On" : "Off";
   elements.scheduleAnomalyCount.textContent = String(anomalyCount);
   elements.scheduleLatestDigest.textContent = reportDate ? `${reportDate}` : "None";
+  elements.scheduleShiftHealth.textContent = humanizeToken(shiftHealthStatus);
+  elements.scheduleShiftRunsToday.textContent = String(shiftRunsToday);
   elements.scheduleDigestStatus.textContent = humanizeToken(digestStatus);
   elements.scheduleDigestStatus.dataset.status = digestStatus;
   elements.scheduleNextAction.textContent = latestDigest?.recommended_next_action
     ?? scheduleStatus?.latest_recommended_next_action
     ?? "No scheduled autonomy digest has been stored yet.";
+  elements.scheduleShiftMessage.textContent = scheduleShiftHealth?.shift_health_message
+    ?? "No dev-shift health record loaded yet.";
 
   if (anomalies.length === 0) {
-    elements.scheduleAnomalyList.innerHTML = "<p>No anomalies in the latest digest.</p>";
+    elements.scheduleAnomalyList.innerHTML = renderShiftHealthDetails(scheduleShiftHealth) +
+      "<p>No anomalies in the latest digest.</p>";
     return;
   }
 
-  elements.scheduleAnomalyList.innerHTML = anomalies.map((anomaly) => `
+  elements.scheduleAnomalyList.innerHTML = renderShiftHealthDetails(scheduleShiftHealth) + anomalies.map((anomaly) => `
     <article>
       <strong>${escapeHTML(humanizeToken(anomaly.code ?? "anomaly"))}</strong>
       <span>${escapeHTML(anomaly.severity ?? "unknown")}</span>
@@ -725,6 +748,25 @@ function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest) {
       ${Number.isFinite(Number(anomaly.count)) ? `<small>Count: ${escapeHTML(anomaly.count)}</small>` : ""}
     </article>
   `).join("");
+}
+
+function renderShiftHealthDetails(scheduleShiftHealth) {
+  if (!scheduleShiftHealth || Object.keys(scheduleShiftHealth).length === 0) {
+    return "";
+  }
+
+  return `
+    <article class="shift-health-card ${escapeHTML(scheduleShiftHealth.shift_health_status ?? "idle")}">
+      <strong>Dev-shift lane: ${escapeHTML(humanizeToken(scheduleShiftHealth.shift_health_status ?? "idle"))}</strong>
+      <span>Latest shift #${escapeHTML(scheduleShiftHealth.latest_shift_run_id ?? "none")}</span>
+      <p>${escapeHTML(scheduleShiftHealth.shift_health_message ?? "No shift health message.")}</p>
+      <small>
+        Today: ${escapeHTML(scheduleShiftHealth.completed_shift_runs_today ?? 0)} completed,
+        ${escapeHTML(scheduleShiftHealth.skipped_shift_runs_today ?? 0)} skipped,
+        ${escapeHTML(scheduleShiftHealth.failed_shift_runs_today ?? 0)} failed
+      </small>
+    </article>
+  `;
 }
 
 function renderAutoApplyDiagnostics(diagnostics) {
