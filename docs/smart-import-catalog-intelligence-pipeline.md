@@ -28,6 +28,21 @@ The core invariant is:
 
 `public.ingredients` is the canonical identity model, and `public.create_catalog_ingredient_from_candidate(...)` is the single canonical writer for new ingredient identity.
 
+### Creator-First Smart Import v2
+
+The product goal for Smart Import is: a creator pastes an Instagram/TikTok caption and gets a publishable recipe draft in roughly 30 seconds.
+
+That makes Smart Import a user-facing drafting agent, not a catalog-maintenance agent. It can use deterministic parsing, local catalog memory, and bounded LLM passes to recover:
+
+- recipe title,
+- ingredient names,
+- quantities and units,
+- preparation steps,
+- existing catalog matches,
+- confidence and review hints.
+
+It must still keep catalog authority separate. If a caption contains a new or unresolved ingredient, Smart Import may keep it as custom in the draft and emit observations after save/publish. The Catalog Governance Agent then decides whether that observation should become a canonical ingredient, an alias, or a rejected/no-op case.
+
 ## 2. System Overview
 
 ```mermaid
@@ -108,6 +123,7 @@ Does:
 - Recovers basic quantity/unit patterns.
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
+- Preserves trusted server-returned catalog matches (`produce:*` or `basic:*`) in the final draft instead of rematching by text only.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
 - Emits unresolved custom ingredient observations after publish/save when final ingredients remain custom.
 
@@ -125,8 +141,9 @@ Does:
 - Requires authenticated user context.
 - Accepts `caption`, optional `url`, `languageCode`, and optional `ingredientCandidates`.
 - If candidates are present, calls LLM only for candidates that require it: ambiguous or none, plus low-confidence alias when applicable.
-- Returns existing-compatible recipe parse output.
-- Adds optional audit metadata without requiring Swift contract changes.
+- Returns existing-compatible recipe parse output plus optional metadata per ingredient: `status`, `confidence`, `matchType`, and `matchedIngredientId`.
+- Lets Swift preserve trusted catalog identity when the server confirms a known candidate.
+- Adds optional audit metadata without forcing catalog mutations.
 
 Must not:
 

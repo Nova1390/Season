@@ -4,7 +4,8 @@ Manual validation pack for caption-only Smart Import testing in `CreateRecipeVie
 
 Scope:
 - Local Swift flow only: caption input -> parser -> fallback decision -> final draft ingredients.
-- No backend, SQL, Edge Function, catalog write, translation, or LLM contract changes.
+- Server-assisted draft flow when fallback is triggered: Swift candidates -> `parse-recipe-caption` -> final draft ingredients.
+- No SQL catalog writes, alias approvals, recipe reconciliation, or canonical ingredient creation.
 - Use this pack before further parser work to measure real-world creator behavior.
 
 How to test:
@@ -87,6 +88,12 @@ Run these first because they cover the highest-value creator cases and the most 
 Pass criteria for first 10:
 - No high-value ingredient silently lost.
 - No high-value ingredient degraded to custom when a local catalog match exists.
+- No ingredient degraded to custom when `parse-recipe-caption` returns a trusted `matchedIngredientId` for an existing `produce:*` or `basic:*` catalog item.
 - Explicit quantities survive into the final draft.
 - Non-countable q.b. ingredients avoid invalid `.piece` draft behavior.
 - Weak captions may trigger fallback, but strong inline ingredient blocks should not.
+
+Server-assisted pass criteria:
+- Ingredient metadata returned by the Edge Function (`status`, `confidence`, `matchType`, `matchedIngredientId`) is preserved by Swift decoding.
+- Trusted server matches are applied only when the matched id exists in the locally loaded catalog.
+- Low-confidence or unknown matches stay editable/custom instead of silently authoring catalog truth.

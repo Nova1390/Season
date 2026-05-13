@@ -1005,6 +1005,64 @@ struct ParseRecipeCaptionFunctionIngredient: Codable {
     let name: String
     let quantity: Double?
     let unit: String?
+    let status: String?
+    let confidence: Double?
+    let matchType: String?
+    let matchedIngredientId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case quantity
+        case unit
+        case status
+        case confidence
+        case matchType
+        case matchTypeSnake = "match_type"
+        case matchedIngredientId
+        case matchedIngredientIdSnake = "matched_ingredient_id"
+    }
+
+    init(
+        name: String,
+        quantity: Double?,
+        unit: String?,
+        status: String? = nil,
+        confidence: Double? = nil,
+        matchType: String? = nil,
+        matchedIngredientId: String? = nil
+    ) {
+        self.name = name
+        self.quantity = quantity
+        self.unit = unit
+        self.status = status
+        self.confidence = confidence
+        self.matchType = matchType
+        self.matchedIngredientId = matchedIngredientId
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        quantity = try container.decodeIfPresent(Double.self, forKey: .quantity)
+        unit = try container.decodeIfPresent(String.self, forKey: .unit)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        matchType = try container.decodeIfPresent(String.self, forKey: .matchType)
+            ?? container.decodeIfPresent(String.self, forKey: .matchTypeSnake)
+        matchedIngredientId = try container.decodeIfPresent(String.self, forKey: .matchedIngredientId)
+            ?? container.decodeIfPresent(String.self, forKey: .matchedIngredientIdSnake)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(quantity, forKey: .quantity)
+        try container.encodeIfPresent(unit, forKey: .unit)
+        try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encodeIfPresent(matchType, forKey: .matchType)
+        try container.encodeIfPresent(matchedIngredientId, forKey: .matchedIngredientId)
+    }
 }
 
 struct ParseRecipeCaptionFunctionResult: Codable {

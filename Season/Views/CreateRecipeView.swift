@@ -1836,15 +1836,24 @@ struct CreateRecipeView: View {
                 mappedName = recovered.cleanedName
             }
 
+            let serverCatalogMapping = smartImportServerCatalogMapping(for: item)
+            if serverCatalogMapping != nil {
+                print(
+                    "[SEASON_IMPORT] phase=server_catalog_match_preserved " +
+                    "name=\(cleanedName) matched_id=\(item.matchedIngredientId ?? "nil") " +
+                    "status=\(item.status ?? "nil") confidence=\(item.confidence.map { String($0) } ?? "nil")"
+                )
+            }
+
             return RecipeIngredient(
-                produceID: nil,
-                basicIngredientID: nil,
+                produceID: serverCatalogMapping?.produceID,
+                basicIngredientID: serverCatalogMapping?.basicIngredientID,
                 quality: .basic,
                 name: mappedName,
                 quantityValue: quantity,
                 quantityUnit: unit,
                 rawIngredientLine: rawLine,
-                mappingConfidence: .unmapped
+                mappingConfidence: serverCatalogMapping?.mappingConfidence ?? .unmapped
             )
         }
 
@@ -1861,6 +1870,41 @@ struct CreateRecipeView: View {
             suggestedSteps: mappedSteps,
             confidence: socialImportConfidence(from: result.confidence)
         )
+    }
+
+    private func smartImportServerCatalogMapping(
+        for item: ParseRecipeCaptionFunctionIngredient
+    ) -> (produceID: String?, basicIngredientID: String?, mappingConfidence: RecipeIngredientMappingConfidence)? {
+        guard let rawMatchedID = item.matchedIngredientId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawMatchedID.isEmpty else {
+            return nil
+        }
+
+        let normalizedStatus = item.status?.lowercased()
+        let normalizedMatchType = item.matchType?.lowercased()
+        let confidence = item.confidence ?? 0
+        let isTrustedMatch = normalizedStatus == "resolved"
+            || normalizedMatchType == "exact"
+            || confidence >= 0.85
+        guard isTrustedMatch else { return nil }
+
+        let mappingConfidence: RecipeIngredientMappingConfidence = confidence >= 0.92 || normalizedMatchType == "exact"
+            ? .high
+            : .medium
+
+        if rawMatchedID.hasPrefix("produce:") {
+            let id = String(rawMatchedID.dropFirst("produce:".count))
+            guard viewModel.produceItem(forID: id) != nil else { return nil }
+            return (produceID: id, basicIngredientID: nil, mappingConfidence: mappingConfidence)
+        }
+
+        if rawMatchedID.hasPrefix("basic:") {
+            let id = String(rawMatchedID.dropFirst("basic:".count))
+            guard viewModel.basicIngredient(forID: id) != nil else { return nil }
+            return (produceID: nil, basicIngredientID: id, mappingConfidence: mappingConfidence)
+        }
+
+        return nil
     }
 
     private func socialImportConfidence(from rawValue: String) -> SocialImportConfidence {
