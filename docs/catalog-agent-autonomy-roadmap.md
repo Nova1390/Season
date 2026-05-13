@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `4.5 governed proposal autonomy` on `Season-dev`.
+Status: strategic implementation roadmap. Current level is `5.0 low-risk apply autonomy in progress` on `Season-dev`, with Level `6.0` guardrail infrastructure started but not yet scheduled.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -246,6 +246,20 @@ Required implementation:
 - daily budget and run-count ceiling;
 - anomaly detector for proposal volume, risk mix, token spend, and failed validations;
 - daily digest in admin console or stored report table.
+
+Implementation status:
+
+- started on `2026-05-13` on `Season-dev` only;
+- migration `20260513113000_catalog_agent_dev_schedule_digest.sql` introduces `catalog_agent_dev_schedule_config`, the disabled-by-default kill switch and daily ceilings table;
+- migration `20260513113000_catalog_agent_dev_schedule_digest.sql` introduces `catalog_agent_daily_digests`, a durable daily shift report table for runs, workers, proposals, apply audit, AI usage, and anomaly classification;
+- `catalog_agent_dev_schedule_guard(...)` returns whether scheduled dev work is allowed under the kill switch and daily ceilings;
+- `catalog_agent_build_daily_digest(...)` builds and stores a daily digest with `green`, `yellow`, or `red` status;
+- `catalog_agent_dev_schedule_status` exposes the current schedule config plus latest digest for the admin console;
+- the default dev config is intentionally disabled, with dry-run enabled and real low-risk apply disabled until Level 5.0 gates have more history;
+- dev smoke passed through `scripts/catalog_agent_daily_digest_smoke.sh`: the guard returned `schedule_disabled` with `kill_switch=true`, and the digest stored a `red` status for the current manual-heavy development day;
+- the `red` digest is expected today because manual testing exceeded scheduled-day run, worker, and token ceilings; it proves the schedule guard/digest layer can detect when the agent should not continue unattended;
+- Supabase lint passed with `No schema errors found`;
+- no staging schedule or staging table writes are part of this step.
 
 Exit gates:
 

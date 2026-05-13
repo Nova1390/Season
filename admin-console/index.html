@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260512-2">
+    <link rel="stylesheet" href="./styles.css?v=20260513-1">
     <script src="./config.local.js"></script>
   </head>
   <body>
@@ -156,6 +156,36 @@
             <div id="workerRunResult" class="ops-list" hidden></div>
             <div id="autoApplyDiagnostics" class="ops-list"></div>
 
+            <section class="schedule-card" aria-label="Scheduled autonomy status">
+              <header>
+                <div>
+                  <h3>Scheduled autonomy</h3>
+                  <p>Dev-only shift guard, kill switch, and latest daily digest.</p>
+                </div>
+                <span id="scheduleDigestStatus" class="schedule-pill">not loaded</span>
+              </header>
+              <div class="schedule-grid">
+                <div>
+                  <span>Guard</span>
+                  <strong id="scheduleGuardState">Unknown</strong>
+                </div>
+                <div>
+                  <span>Kill switch</span>
+                  <strong id="scheduleKillSwitch">Unknown</strong>
+                </div>
+                <div>
+                  <span>Anomalies</span>
+                  <strong id="scheduleAnomalyCount">0</strong>
+                </div>
+                <div>
+                  <span>Latest digest</span>
+                  <strong id="scheduleLatestDigest">None</strong>
+                </div>
+              </div>
+              <p id="scheduleNextAction" class="schedule-next-action">Load operations to see scheduled autonomy status.</p>
+              <div id="scheduleAnomalyList" class="schedule-anomalies"></div>
+            </section>
+
             <section class="summary ops-summary" aria-label="Automation summary">
               <div>
                 <span>Agent runs today <span class="help-tip" tabindex="0" aria-label="Quante volte oggi è stato avviato l'agente manager." data-help="Quante volte oggi è stato avviato l'agente manager.">?</span></span>
@@ -206,6 +236,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260512-2"></script>
+    <script type="module" src="./app.js?v=20260513-1"></script>
   </body>
 </html>

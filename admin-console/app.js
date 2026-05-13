@@ -19,6 +19,9 @@ const state = {
     summary: null,
     autoApplySummary: null,
     autoApplyDiagnostics: null,
+    scheduleStatus: null,
+    scheduleGuard: null,
+    latestDigest: null,
     workerJobs: [],
     applyAudits: []
   }
@@ -62,6 +65,13 @@ const elements = {
   activeAppliesToday: document.querySelector("#activeAppliesToday"),
   revertedAppliesToday: document.querySelector("#revertedAppliesToday"),
   failedRevertsToday: document.querySelector("#failedRevertsToday"),
+  scheduleDigestStatus: document.querySelector("#scheduleDigestStatus"),
+  scheduleGuardState: document.querySelector("#scheduleGuardState"),
+  scheduleKillSwitch: document.querySelector("#scheduleKillSwitch"),
+  scheduleAnomalyCount: document.querySelector("#scheduleAnomalyCount"),
+  scheduleLatestDigest: document.querySelector("#scheduleLatestDigest"),
+  scheduleNextAction: document.querySelector("#scheduleNextAction"),
+  scheduleAnomalyList: document.querySelector("#scheduleAnomalyList"),
   workerJobsList: document.querySelector("#workerJobsList"),
   applyAuditList: document.querySelector("#applyAuditList")
 };
@@ -136,7 +146,16 @@ function bindEvents() {
     state.selected = null;
     state.draftsByText = new Map();
     state.learningMemory = null;
-    state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
+    state.operations = {
+      summary: null,
+      autoApplySummary: null,
+      autoApplyDiagnostics: null,
+      scheduleStatus: null,
+      scheduleGuard: null,
+      latestDigest: null,
+      workerJobs: [],
+      applyAudits: []
+    };
     setAuthMessage("");
     renderSession();
   });
@@ -469,7 +488,16 @@ async function loadOperations(options = {}) {
 
   const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
 
-  const [summaryResult, autoApplySummaryResult, diagnosticsResult, jobsResult, applyAuditsResult] = await Promise.all([
+  const [
+    summaryResult,
+    autoApplySummaryResult,
+    diagnosticsResult,
+    scheduleStatusResult,
+    scheduleGuardResult,
+    latestDigestResult,
+    jobsResult,
+    applyAuditsResult
+  ] = await Promise.all([
     state.client
       .from("catalog_agent_daily_automation_summary")
       .select("*")
@@ -481,6 +509,21 @@ async function loadOperations(options = {}) {
       .eq("day", todayISO)
       .maybeSingle(),
     state.client.rpc("get_catalog_agent_auto_apply_diagnostics"),
+    state.client
+      .from("catalog_agent_dev_schedule_status")
+      .select("*")
+      .eq("environment", "dev")
+      .maybeSingle(),
+    state.client.rpc("catalog_agent_dev_schedule_guard", {
+      p_environment: "dev"
+    }),
+    state.client
+      .from("catalog_agent_daily_digests")
+      .select("id,environment,report_date,status,anomaly_count,anomalies,recommended_next_action,updated_at")
+      .eq("environment", "dev")
+      .order("report_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     state.client
       .from("catalog_agent_worker_jobs")
       .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
@@ -505,6 +548,18 @@ async function loadOperations(options = {}) {
     setStatus(diagnosticsResult.error.message, "error");
     return;
   }
+  if (scheduleStatusResult.error) {
+    setStatus(scheduleStatusResult.error.message, "error");
+    return;
+  }
+  if (scheduleGuardResult.error) {
+    setStatus(scheduleGuardResult.error.message, "error");
+    return;
+  }
+  if (latestDigestResult.error) {
+    setStatus(latestDigestResult.error.message, "error");
+    return;
+  }
   if (jobsResult.error) {
     setStatus(jobsResult.error.message, "error");
     return;
@@ -518,6 +573,9 @@ async function loadOperations(options = {}) {
     summary: summaryResult.data ?? null,
     autoApplySummary: autoApplySummaryResult.data ?? null,
     autoApplyDiagnostics: diagnosticsResult.data ?? null,
+    scheduleStatus: scheduleStatusResult.data ?? null,
+    scheduleGuard: scheduleGuardResult.data ?? null,
+    latestDigest: latestDigestResult.data ?? null,
     workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : [],
     applyAudits: Array.isArray(applyAuditsResult.data) ? applyAuditsResult.data : []
   };
@@ -554,6 +612,9 @@ function renderOperations() {
   const summary = state.operations.summary ?? {};
   const autoApplySummary = state.operations.autoApplySummary ?? {};
   const diagnostics = state.operations.autoApplyDiagnostics ?? {};
+  const scheduleStatus = state.operations.scheduleStatus ?? {};
+  const scheduleGuard = state.operations.scheduleGuard ?? {};
+  const latestDigest = state.operations.latestDigest ?? {};
   const jobs = state.operations.workerJobs ?? [];
   const applyAudits = state.operations.applyAudits ?? [];
 
@@ -565,6 +626,7 @@ function renderOperations() {
   elements.activeAppliesToday.textContent = String(autoApplySummary.active_applies ?? 0);
   elements.revertedAppliesToday.textContent = String(autoApplySummary.reverted_applies ?? 0);
   elements.failedRevertsToday.textContent = String(autoApplySummary.failed_reverts ?? 0);
+  renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest);
   renderAutoApplyDiagnostics(diagnostics);
 
   if (jobs.length === 0) {
@@ -628,6 +690,39 @@ function renderOperations() {
         target_ingredient_id: audit.target_ingredient_id,
         reverted_at: audit.reverted_at
       })}
+    </article>
+  `).join("");
+}
+
+function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest) {
+  const guardOk = scheduleGuard?.ok === true;
+  const guardReason = scheduleGuard?.reason ?? (guardOk ? "allowed" : "not loaded");
+  const digestStatus = latestDigest?.status ?? scheduleStatus?.latest_digest_status ?? "none";
+  const anomalyCount = Number(latestDigest?.anomaly_count ?? scheduleStatus?.latest_anomaly_count ?? 0);
+  const reportDate = latestDigest?.report_date ?? scheduleStatus?.latest_report_date ?? null;
+  const anomalies = Array.isArray(latestDigest?.anomalies) ? latestDigest.anomalies : [];
+
+  elements.scheduleGuardState.textContent = guardOk ? "Allowed" : humanizeToken(guardReason);
+  elements.scheduleKillSwitch.textContent = scheduleGuard?.kill_switch === true || scheduleStatus?.enabled === false ? "On" : "Off";
+  elements.scheduleAnomalyCount.textContent = String(anomalyCount);
+  elements.scheduleLatestDigest.textContent = reportDate ? `${reportDate}` : "None";
+  elements.scheduleDigestStatus.textContent = humanizeToken(digestStatus);
+  elements.scheduleDigestStatus.dataset.status = digestStatus;
+  elements.scheduleNextAction.textContent = latestDigest?.recommended_next_action
+    ?? scheduleStatus?.latest_recommended_next_action
+    ?? "No scheduled autonomy digest has been stored yet.";
+
+  if (anomalies.length === 0) {
+    elements.scheduleAnomalyList.innerHTML = "<p>No anomalies in the latest digest.</p>";
+    return;
+  }
+
+  elements.scheduleAnomalyList.innerHTML = anomalies.map((anomaly) => `
+    <article>
+      <strong>${escapeHTML(humanizeToken(anomaly.code ?? "anomaly"))}</strong>
+      <span>${escapeHTML(anomaly.severity ?? "unknown")}</span>
+      <p>${escapeHTML(anomaly.message ?? "No anomaly message.")}</p>
+      ${Number.isFinite(Number(anomaly.count)) ? `<small>Count: ${escapeHTML(anomaly.count)}</small>` : ""}
     </article>
   `).join("");
 }
@@ -1297,6 +1392,13 @@ function formatDuration(value) {
   if (!Number.isFinite(parsed) || parsed <= 0) return "0 ms";
   if (parsed < 1000) return `${Math.round(parsed)} ms`;
   return `${(parsed / 1000).toFixed(1)} s`;
+}
+
+function humanizeToken(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .trim()
+    .replace(/^\w/, (letter) => letter.toUpperCase()) || "Unknown";
 }
 
 function escapeHTML(value) {

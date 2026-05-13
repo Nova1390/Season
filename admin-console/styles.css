@@ -400,6 +400,104 @@ p {
   gap: 10px;
 }
 
+.schedule-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(77, 107, 61, 0.28);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(77, 107, 61, 0.1), transparent 42%),
+    var(--surface);
+  padding: 14px;
+}
+
+.schedule-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.schedule-card header p {
+  margin-top: 4px;
+}
+
+.schedule-pill {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.schedule-pill[data-status="green"] {
+  border-color: rgba(73, 111, 58, 0.35);
+  color: var(--ok);
+  background: rgba(73, 111, 58, 0.08);
+}
+
+.schedule-pill[data-status="yellow"] {
+  border-color: rgba(166, 106, 32, 0.35);
+  color: var(--warning);
+  background: rgba(166, 106, 32, 0.08);
+}
+
+.schedule-pill[data-status="red"] {
+  border-color: rgba(168, 69, 45, 0.35);
+  color: var(--danger);
+  background: rgba(168, 69, 45, 0.08);
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.schedule-grid div {
+  display: grid;
+  gap: 5px;
+  background: #fbf7ef;
+  padding: 12px;
+}
+
+.schedule-grid span,
+.schedule-anomalies span,
+.schedule-anomalies small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.schedule-grid strong {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.schedule-next-action {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+
+.schedule-anomalies {
+  display: grid;
+  gap: 8px;
+}
+
+.schedule-anomalies article {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.68);
+  padding: 10px;
+}
+
 .worker-job {
   display: grid;
   gap: 10px;
@@ -822,6 +920,8 @@ p {
   .filters,
   .worker-run-form,
   .run-metrics,
+  .schedule-card header,
+  .schedule-grid,
   .canonical-steps,
   .pipeline-flow,
   .ops-panel > header,

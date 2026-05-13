@@ -361,13 +361,17 @@ Implemented on dev:
 - `catalog_agent_worker_jobs` records manager-authorized worker jobs;
 - `catalog_ai_usage_events` records shared LLM usage across agent and Autopilot;
 - `catalog_agent_daily_automation_summary` powers the console overview;
+- `catalog_agent_dev_schedule_config` stores the dev-only schedule kill switch and daily ceilings;
+- `catalog_agent_daily_digests` stores daily shift reports with anomaly classification;
+- `catalog_agent_dev_schedule_guard(...)` blocks scheduled work when the kill switch is off or daily limits are reached;
+- `catalog_agent_build_daily_digest(...)` creates the operator-facing daily report;
 - `run-catalog-agent-orchestrator` delegates bounded enrichment work to Autopilot;
 - `run-catalog-enrichment-draft-batch` reports job lifecycle back to the ledger;
 - admin console shows orchestration summary and recent worker jobs.
 
 Next technical step:
 
-- run dry operational history for `low_risk_apply_batch` from the orchestrator, then decide daily limits before enabling real apply.
+- surface the latest schedule guard and digest in the admin console, then run dry scheduled-dev history before enabling any real scheduler.
 
 ## 7. Dev/Staging Policy
 
