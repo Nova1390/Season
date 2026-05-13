@@ -980,3 +980,38 @@ Level 4.5 conclusion:
 - Level 4.5 governed proposal autonomy is complete on `Season-dev`.
 - The agent can persist useful governed proposals, escalate ambiguity, avoid duplicate LLM spend through recent-proposal guardrails, and leave mutation to validators/workers/humans.
 - The next roadmap target is Level 5.0 low-risk apply autonomy, starting with rollback regression tests and low-risk apply batch limits.
+
+### Level 5.0 Rollback Regression Smoke
+
+The first Level 5.0 microstep tested whether a low-risk catalog mutation can be applied and then reverted without leaving catalog residue.
+
+Scope:
+
+- Environment: `Season-dev`.
+- Staging: untouched.
+- Run: `catalog_agent_runs.id = 55`.
+- Proposal: `catalog_agent_proposals.id = 30`.
+- Apply audit: `catalog_agent_apply_audit.id = 4`.
+- Proposal type: `approve_alias`.
+- Alias text: `season rollback smoke sale fino 20260513`.
+- Target canonical ingredient: `sale_fino`.
+
+Result:
+
+- `apply_catalog_agent_low_risk_proposal(...)` returned `ok=true`.
+- The apply path inserted alias id `178`.
+- The apply path wrote rollback plan `delete_inserted_alias`.
+- The apply path emitted `auto_apply_succeeded`.
+- `rollback_catalog_agent_apply(...)` returned `ok=true`.
+- The rollback path deleted alias id `178`.
+- The rollback path emitted `auto_apply_rollback_succeeded`.
+- Final alias rows for `season rollback smoke sale fino 20260513`: `0`.
+- Final proposal status: `validated`.
+- Final audit status: `reverted`.
+
+Interpretation:
+
+- The core apply/rollback contract works for an intentionally reversible low-risk alias.
+- The proposal is still visible as historical evidence, but the catalog row was removed.
+- This satisfies the first Level 5.0 rollback gate, not the full Level 5.0 autonomy gate.
+- The next Level 5.0 microstep is controlled `limit=1` low-risk apply behavior with real eligible proposals and audit verification.

@@ -209,3 +209,24 @@ Production:
 - rollback requires a human operator note;
 - the console calls only `rollback_catalog_agent_apply(...)`;
 - updated rollback failure semantics so failed rollback attempts remain visible in audit history.
+
+## Dev Rollback Regression Smoke
+
+2026-05-13:
+
+- created run `#55` for a Level 5.0 rollback smoke on `Season-dev`;
+- created validated low-risk proposal `#30`;
+- proposal type: `approve_alias`;
+- target: `sale_fino`;
+- alias text: `season rollback smoke sale fino 20260513`;
+- applied the proposal through `apply_catalog_agent_low_risk_proposal(...)`;
+- apply audit row: `#4`;
+- rollback plan: `delete_inserted_alias` for alias id `178`;
+- rolled the mutation back through `rollback_catalog_agent_apply(...)`;
+- final audit status: `reverted`;
+- final proposal status: `validated`;
+- final alias rows for the smoke alias: `0`;
+- emitted both `auto_apply_succeeded` and `auto_apply_rollback_succeeded`;
+- no staging data was touched.
+
+This proves the reversible alias path can be applied and rolled back without leaving a catalog alias behind. It does not yet enable broad unattended auto-apply; it only closes the first Level 5.0 rollback safety gate.

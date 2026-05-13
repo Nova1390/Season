@@ -113,6 +113,16 @@ Goal:
 
 The agent can authorize Autopilot to apply only validated, low-risk, existing-canonical proposals.
 
+Implementation status:
+
+- started on `2026-05-13` on `Season-dev` only;
+- rollback regression smoke passed with run `#55`, proposal `#30`, and apply audit `#4`;
+- the smoke created an intentionally reversible `approve_alias` proposal for `season rollback smoke sale fino 20260513` -> `sale_fino`;
+- the apply path inserted alias id `178`, wrote audit metadata, and emitted `auto_apply_succeeded`;
+- the rollback path deleted the inserted alias, marked audit `#4` as `reverted`, returned proposal `#30` to `validated`, and emitted `auto_apply_rollback_succeeded`;
+- final verification showed `remaining_alias_rows=0`, `proposal_status=validated`, and `audit_status=reverted`;
+- no staging data or schedules were touched.
+
 Allowed actions:
 
 - queue deterministic validation;
@@ -477,7 +487,7 @@ The next target is `5.0 low-risk apply autonomy`.
 
 Recommended implementation order:
 
-1. Add a repeatable rollback regression smoke for one reversible dev alias.
+1. Add a repeatable rollback regression smoke for one reversible dev alias. Completed on `2026-05-13`.
 2. Keep real low-risk apply disabled by default and enable only controlled `limit=1` windows.
 3. Validate at least `20` low-risk proposals on dev.
 4. Run at least `5` real low-risk apply batches on dev with `0` unsafe mutations.
