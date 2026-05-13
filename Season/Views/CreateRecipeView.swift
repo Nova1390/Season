@@ -98,6 +98,12 @@ private struct SmartImportAgentStatusCard: View {
                     }
                 }
             }
+
+            if let actionLabel {
+                Label(actionLabel, systemImage: "arrow.forward.circle")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(color)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,6 +119,15 @@ private struct SmartImportAgentStatusCard: View {
 
     private var visibleHints: [String] {
         Array(summary.reviewHints.prefix(3))
+    }
+
+    private var actionLabel: String? {
+        guard let nextAction = summary.nextAction, nextAction != "publish" else {
+            return nil
+        }
+        let key = "create.smart_import_agent.next_action.\(nextAction)"
+        let localized = localizer.localized(key)
+        return localized == key ? nil : localized
     }
 
     private var title: String {

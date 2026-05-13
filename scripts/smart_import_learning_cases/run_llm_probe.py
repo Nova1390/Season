@@ -301,6 +301,8 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
         "ok": response.get("ok") is True,
         "usedServerLLM": meta.get("usedServerLLM"),
         "draftQuality": agent.get("draftQuality"),
+        "nextAction": agent.get("nextAction"),
+        "actionReason": agent.get("actionReason"),
         "title": result.get("title") if isinstance(result.get("title"), str) else None,
         "step_count": len(steps),
         "steps": steps,
@@ -334,6 +336,8 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
         "ok": False,
         "usedServerLLM": None,
         "draftQuality": None,
+        "nextAction": None,
+        "actionReason": None,
         "title": None,
         "step_count": 0,
         "steps": [],
@@ -437,6 +441,7 @@ def main(argv: list[str]) -> int:
                 f"quantities {summary['matched_quantity_count']}/{summary['expected_quantity_count']} "
                 f"steps={summary['step_count']} title={bool(summary['title'])} "
                 f"usedLLM={summary['usedServerLLM']} quality={summary['draftQuality']} "
+                f"next={summary['nextAction']} "
                 f"missing={summary['missing']} missing_quantities={summary['missing_quantities']}"
             )
 

@@ -38,6 +38,13 @@ interface PreparsedIngredientCandidate {
 
 type ImportConfidence = "high" | "medium" | "low";
 type SmartImportDraftQuality = "publishable" | "needs_creator_review" | "needs_more_input";
+type SmartImportNextAction =
+  | "publish"
+  | "review_draft"
+  | "add_more_recipe_detail"
+  | "add_method_steps"
+  | "add_ingredient_amounts"
+  | "resolve_ingredients";
 
 interface ParsedIngredient {
   name: string;
@@ -68,6 +75,8 @@ interface SmartImportLearningSummary {
 interface SmartImportAgentSummary {
   version: "smart_import_agent_v1";
   draftQuality: SmartImportDraftQuality;
+  nextAction: SmartImportNextAction;
+  actionReason: string;
   reviewHints: string[];
   unresolvedIngredients: string[];
   passes: SmartImportAgentPass[];
@@ -756,6 +765,7 @@ function buildSmartImportAgentSummary(
     .map((ingredient) => ingredient.name)
     .filter(Boolean)
     .slice(0, 12);
+  const nextAction = smartImportNextAction(result, input.outputAudit, reviewHints);
 
   let draftQuality: SmartImportDraftQuality = "publishable";
   if (result.ingredients.length === 0 || result.steps.length === 0) {
@@ -809,9 +819,52 @@ function buildSmartImportAgentSummary(
   return {
     version: "smart_import_agent_v1",
     draftQuality,
+    nextAction: nextAction.name,
+    actionReason: nextAction.reason,
     reviewHints,
     unresolvedIngredients,
     passes,
+  };
+}
+
+function smartImportNextAction(
+  result: ParseRecipeCaptionResult,
+  outputAudit: SmartImportOutputAudit,
+  reviewHints: string[],
+): { name: SmartImportNextAction; reason: string } {
+  if (result.ingredients.length === 0) {
+    return {
+      name: "add_more_recipe_detail",
+      reason: "The caption does not contain enough ingredient structure to create a reliable draft.",
+    };
+  }
+  if (result.steps.length === 0) {
+    return {
+      name: "add_method_steps",
+      reason: "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
+    };
+  }
+  if (outputAudit.unknown > 0) {
+    return {
+      name: "resolve_ingredients",
+      reason: "Some ingredients remain unresolved against the catalog and should be checked before publishing.",
+    };
+  }
+  if (reviewHints.includes("quantities_missing")) {
+    return {
+      name: "add_ingredient_amounts",
+      reason: "The recipe structure is usable, but ingredient amounts are missing or too vague for a creator-ready draft.",
+    };
+  }
+  if (reviewHints.length > 0 || result.confidence === "low") {
+    return {
+      name: "review_draft",
+      reason: "The draft is usable, but the assistant found details that deserve a final creator review.",
+    };
+  }
+  return {
+    name: "publish",
+    reason: "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
   };
 }
 

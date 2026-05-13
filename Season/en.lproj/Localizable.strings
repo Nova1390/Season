@@ -171,6 +171,11 @@
 "create.smart_import_agent.hint.unresolved_ingredients_present" = "Some ingredients still need verification.";
 "create.smart_import_agent.hint.quantities_missing" = "Amounts are not clear enough.";
 "create.smart_import_agent.hint.low_confidence_parse" = "The import has low confidence.";
+"create.smart_import_agent.next_action.review_draft" = "Next step: review the draft before publishing.";
+"create.smart_import_agent.next_action.add_more_recipe_detail" = "Next step: add more detail to the caption.";
+"create.smart_import_agent.next_action.add_method_steps" = "Next step: add at least one preparation step.";
+"create.smart_import_agent.next_action.add_ingredient_amounts" = "Next step: complete the ingredient amounts.";
+"create.smart_import_agent.next_action.resolve_ingredients" = "Next step: verify unresolved ingredients.";
 "create.import.subtitle" = "Import and refine from social links or caption";
 "create.recipe_title.placeholder" = "Recipe title";
 "create.servings.title" = "Servings";

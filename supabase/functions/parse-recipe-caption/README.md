@@ -55,6 +55,8 @@ At least one between `caption` or `url` must be non-empty.
     "smartImportAgent": {
       "version": "smart_import_agent_v1",
       "draftQuality": "needs_creator_review",
+      "nextAction": "resolve_ingredients",
+      "actionReason": "Some ingredients remain unresolved against the catalog and should be checked before publishing.",
       "reviewHints": ["unresolved_ingredients_present"],
       "unresolvedIngredients": ["pomodorini"],
       "passes": [

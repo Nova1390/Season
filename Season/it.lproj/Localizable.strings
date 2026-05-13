@@ -171,6 +171,11 @@
 "create.smart_import_agent.hint.unresolved_ingredients_present" = "Alcuni ingredienti restano da verificare.";
 "create.smart_import_agent.hint.quantities_missing" = "Le quantità non sono abbastanza chiare.";
 "create.smart_import_agent.hint.low_confidence_parse" = "L'importazione ha confidenza bassa.";
+"create.smart_import_agent.next_action.review_draft" = "Prossimo passo: controlla la bozza prima di pubblicare.";
+"create.smart_import_agent.next_action.add_more_recipe_detail" = "Prossimo passo: aggiungi più dettagli alla caption.";
+"create.smart_import_agent.next_action.add_method_steps" = "Prossimo passo: aggiungi almeno un passaggio di preparazione.";
+"create.smart_import_agent.next_action.add_ingredient_amounts" = "Prossimo passo: completa le dosi degli ingredienti.";
+"create.smart_import_agent.next_action.resolve_ingredients" = "Prossimo passo: verifica gli ingredienti non riconciliati.";
 "create.import.subtitle" = "Importa e rifinisci da link social o didascalia";
 "create.recipe_title.placeholder" = "Titolo ricetta";
 "create.servings.title" = "Porzioni";

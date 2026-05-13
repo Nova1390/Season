@@ -1075,6 +1075,8 @@ struct ParseRecipeCaptionFunctionAgentPass: Codable {
 struct ParseRecipeCaptionFunctionAgentSummary: Codable {
     let version: String
     let draftQuality: String
+    let nextAction: String?
+    let actionReason: String?
     let reviewHints: [String]
     let unresolvedIngredients: [String]
     let passes: [ParseRecipeCaptionFunctionAgentPass]
