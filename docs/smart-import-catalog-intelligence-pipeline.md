@@ -97,6 +97,8 @@ Validation:
 - Operational notes live in `docs/smart-import-learning-cases.md`.
 - These checks verify that lessons such as `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena` are available before targeted LLM reasoning.
 - They intentionally do not create catalog rows, approve aliases, run OpenAI, or judge final recipe quality.
+- `scripts/smart_import_learning_cases/run_edge_contract.py` can additionally call `parse-recipe-caption` with exact candidates to verify that `smartImportAgent.passes` includes `learning_memory_context` while `meta.usedServerLLM=false`.
+- `consume_recipe_import_quota(...)` must allow the first request for a new daily usage row; cooldown applies only after a request has been consumed.
 
 ## 2. System Overview
 

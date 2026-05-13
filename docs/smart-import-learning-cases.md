@@ -41,10 +41,43 @@ JSON output for automation:
 python3 scripts/smart_import_learning_cases/run_learning_context.py --json
 ```
 
+Edge Function contract check:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+USER_JWT="..." \
+python3 scripts/smart_import_learning_cases/run_edge_contract.py
+```
+
+Or sign in with a disposable dev test account:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_TEST_EMAIL="..." \
+SUPABASE_TEST_PASSWORD="..." \
+python3 scripts/smart_import_learning_cases/run_edge_contract.py
+```
+
+Or let the runner create and delete a temporary dev user:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/run_edge_contract.py --use-temp-user
+```
+
+The Edge Function contract check sends exact local-catalog candidates, so it should not call OpenAI. It verifies that `smartImportAgent.passes` includes `learning_memory_context` when the selected terms have learning memory.
+
+Operational note: the first live run of this smoke exposed a quota edge case where a newly created user could hit cooldown before consuming any request. Migration `20260513205500_fix_recipe_import_quota_first_request.sql` updates `consume_recipe_import_quota(...)` so cooldown applies only when `count > 0`.
+
 ## Boundaries
 
 - The suite reads from dev through `get_catalog_agent_learning_context(...)`.
-- It does not call `parse-recipe-caption` directly.
+- `run_learning_context.py` does not call `parse-recipe-caption` directly.
+- `run_edge_contract.py` calls `parse-recipe-caption` with exact candidates and expects `meta.usedServerLLM=false`.
 - It does not call OpenAI or any other LLM.
 - It does not create canonical ingredients, aliases, proposals, or recipe data.
 - It catches missing or stale memory context, not final recipe-draft quality.
