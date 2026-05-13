@@ -182,4 +182,5 @@ Action-specific guard budgets:
 - migration `20260513153000_split_dev_schedule_guard_action_budgets.sql` lets the guard allow non-mutating `low_risk_dry_run` even when manual same-day LLM usage has already exceeded triage ceilings;
 - `triage` and real apply remain independently blocked by their stricter budgets;
 - first successful autonomous cron dry-run: shift `#10`, orchestrator run `#74`, worker job `#29`, `0` eligible preview, `0` applied, `0` failed;
+- repeat autonomous cron dry-run: shift `#11`, orchestrator run `#75`, worker job `#30`, `0` eligible preview, `0` applied, `0` failed;
 - cleanup restored the default cron schedule and disabled the schedule window.
