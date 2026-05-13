@@ -70,7 +70,7 @@ const OPERATOR_TOKEN = env("CATALOG_AGENT_OPERATOR_TOKEN");
 const AGENT_ENABLED = env("CATALOG_AGENT_ENABLED", "false").toLowerCase() === "true";
 const MAX_ITEMS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_ITEMS_PER_RUN", 10), 1, 25);
 const MAX_RUNS_PER_DAY = boundedInteger(numberEnv("CATALOG_AGENT_MAX_RUNS_PER_DAY", 3), 1, 24);
-const RECENT_PROPOSAL_DAYS = boundedInteger(numberEnv("CATALOG_AGENT_RECENT_PROPOSAL_DAYS", 7), 1, 90);
+const RECENT_PROPOSAL_DAYS = boundedInteger(numberEnv("CATALOG_AGENT_RECENT_PROPOSAL_DAYS", 7), 0, 90);
 const PROVIDER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_PROVIDER_TIMEOUT_MS", 20000), 1000, 60000);
 const PROPOSAL_PERSISTENCE_ENABLED = env("CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED", "false").toLowerCase() === "true";
 const REASONING_MODE = env("CATALOG_AGENT_REASONING_MODE", "multi_pass").toLowerCase() === "single_pass"
@@ -220,15 +220,20 @@ Deno.serve(async (request) => {
       return errorJson(500, "PROVIDER_NOT_CONFIGURED", "OPENAI_API_KEY is not configured.");
     }
 
-    const snapshot = await fetchSnapshot(adminClient, limit, sourceDomain, includeNonNew);
-    const workItems = readWorkItems(snapshot).slice(0, limit);
+    // Fetch beyond the requested LLM limit because recent-proposal dedupe can
+    // remove high-priority rows before provider selection.
+    const snapshotLimit = Math.min(100, Math.max(limit, limit * 4));
+    const snapshot = await fetchSnapshot(adminClient, snapshotLimit, sourceDomain, includeNonNew);
+    const workItems = readWorkItems(snapshot);
     const learningContext = await fetchLearningContext(adminClient, workItems);
     const enrichedWorkItems = attachLearningMemory(workItems, learningContext);
-    const { eligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
+    const { eligibleItems: allEligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
+    const eligibleItems = allEligibleItems.slice(0, limit);
 
     if (eligibleItems.length === 0) {
       const summary = {
         items_in_snapshot: workItems.length,
+        items_eligible_before_limit: allEligibleItems.length,
         items_sent_to_llm: 0,
         proposals_created: 0,
         skipped_recent_proposal: skippedRecent.length,
@@ -315,6 +320,7 @@ Deno.serve(async (request) => {
     const cost = estimateCost(providerResult.usage);
     const summary = {
       items_in_snapshot: workItems.length,
+      items_eligible_before_limit: allEligibleItems.length,
       items_eligible_before_retry: eligibleItems.length,
       items_sent_to_llm: providerEligibleItems.length,
       proposals_returned: proposals.length,
@@ -820,13 +826,31 @@ function repairProviderOutputForValidation(parsed: unknown): {
     if (!isRecord(proposal)) return proposal;
 
     const proposalType = String(proposal.proposal_type ?? "");
+    const autoApplySupported = ["approve_alias", "add_localization"].includes(proposalType) &&
+      String(proposal.risk_level ?? "") === "low";
+    let nextProposal: Record<string, unknown> = proposal;
+
+    if (proposal.auto_apply_eligible === true && !autoApplySupported) {
+      repairs.push({
+        proposal_index: index,
+        normalized_text: typeof proposal.normalized_text === "string" ? proposal.normalized_text : null,
+        original_proposal_type: proposalType,
+        repair: "disable_auto_apply_eligible",
+        reason: "auto_apply_not_supported_for_proposal",
+      });
+      nextProposal = {
+        ...nextProposal,
+        auto_apply_eligible: false,
+      };
+    }
+
     const missingTarget = ["approve_alias", "add_localization"].includes(proposalType) &&
       !nonEmptyString(proposal.target_ingredient_id) &&
       !nonEmptyString(proposal.target_slug);
     const incompleteCanonical = proposalType === "create_canonical" &&
       (!nonEmptyString(proposal.proposed_slug) || !nonEmptyString(proposal.proposed_localized_name));
 
-    if (!missingTarget && !incompleteCanonical) return proposal;
+    if (!missingTarget && !incompleteCanonical) return nextProposal;
 
     const reason = missingTarget
       ? `${proposalType}_missing_target`
@@ -845,7 +869,7 @@ function repairProviderOutputForValidation(parsed: unknown): {
     const evidence = Array.isArray(proposal.evidence) ? [...proposal.evidence] : [];
 
     return {
-      ...proposal,
+      ...nextProposal,
       proposal_type: "needs_human_review",
       target_ingredient_id: null,
       target_slug: null,

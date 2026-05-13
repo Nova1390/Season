@@ -148,7 +148,7 @@ Implemented learning memory can make this stronger. If accepted/implemented lear
 - `CATALOG_AGENT_OPENAI_MODEL`: defaults to `gpt-5.4-mini`.
 - `CATALOG_AGENT_MAX_ITEMS_PER_RUN`: defaults to `10`, capped at `25`.
 - `CATALOG_AGENT_MAX_RUNS_PER_DAY`: defaults to `3`, capped at `24`.
-- `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`: defaults to `7`.
+- `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`: defaults to `7`; set `0` only for controlled dev/eval reruns after runtime or context changes.
 - `CATALOG_AGENT_PROVIDER_TIMEOUT_MS`: defaults to `20000`.
 - `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`: defaults to `false`; required for `dry_run=false`.
 - `CATALOG_AGENT_REASONING_MODE`: defaults to `multi_pass`; set `single_pass` for the legacy one-call path.
@@ -156,6 +156,8 @@ Implemented learning memory can make this stronger. If accepted/implemented lear
 - `CATALOG_AGENT_RISK_REVIEW_ENABLED`: defaults to `true`.
 - `CATALOG_AGENT_INPUT_COST_PER_1M_USD`: optional cost estimate.
 - `CATALOG_AGENT_OUTPUT_COST_PER_1M_USD`: optional cost estimate.
+
+The runtime may fetch a larger internal snapshot than the request limit before applying recent-proposal dedupe. The request limit still caps how many eligible work items are sent to the LLM, so this improves queue coverage without increasing the configured model batch size.
 
 ## Request
 

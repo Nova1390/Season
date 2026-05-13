@@ -1021,3 +1021,146 @@ Interpretation:
 - Smoke proposals are not left in the real apply queue.
 - This satisfies the first Level 5.0 rollback gate, not the full Level 5.0 autonomy gate.
 - The next Level 5.0 microstep is controlled `limit=1` low-risk apply behavior with real eligible proposals and audit verification.
+
+### Level 5.0 Proposal Generation Run 60
+
+Run `#60` was executed on `Season-dev` with proposal persistence enabled and real apply disabled.
+
+Result:
+
+- Snapshot items: `12`.
+- Items skipped because of recent proposals: `10`.
+- Items sent to the LLM: `2`.
+- Proposals created: `2`.
+- Proposal `#34`: `pepe`, `needs_human_review`, medium risk.
+- Proposal `#35`: `olive`, `needs_human_review`, high risk.
+- Token usage: `13,771` total tokens.
+- Dev flags were disabled and the temporary operator token was removed immediately after the run.
+- No catalog mutation occurred.
+- No staging changes were made.
+
+Interpretation:
+
+- The agent behaved safely: it did not force ambiguous terms into low-risk apply.
+- The run exposed an orchestration inefficiency: recent-proposal dedupe happened after the snapshot limit, so most of the requested batch was skipped before the LLM call.
+- `run-catalog-agent-triage` now oversamples the snapshot before dedupe and still caps the final LLM batch to the requested limit.
+- This should increase the chance of finding real low-risk proposals without increasing the maximum items sent to the model.
+
+### Level 5.0 Oversampling Regression Run 61
+
+Run `#61` was executed after deploying candidate oversampling.
+
+Result:
+
+- The function reached the provider with a larger eligible set.
+- Provider usage: `28,183` total tokens.
+- The run failed before proposal persistence.
+- Validation error: `proposals[4].auto_apply_eligible is only supported for approve_alias/add_localization`.
+- No proposals were inserted.
+- Dev flags were disabled and the temporary operator token was removed immediately after the failed run.
+- No catalog mutation occurred.
+- No staging changes were made.
+
+Interpretation:
+
+- The oversampling change exposed a second safety improvement: provider output can contain an over-eager `auto_apply_eligible=true` flag on a proposal type that is not apply-supported.
+- This is not a semantic catalog decision and should not discard an otherwise useful batch.
+- `run-catalog-agent-triage` now repairs that field to `false` before contract validation and records `provider_output_repaired`.
+
+### Level 5.0 Proposal Generation Run 62
+
+Run `#62` was executed after the repair-layer fix.
+
+Result:
+
+- Snapshot items: `19`.
+- Eligible before final limit: `7`.
+- Items sent to the LLM: `7`.
+- Proposals returned: `7`.
+- Proposals persisted: `6`.
+- Quality-gate blocks: `1`.
+- Token usage: `28,169` total tokens.
+- Proposal `#36`: `pinoli`, `create_canonical`, medium risk.
+- Proposal `#37`: `pollo`, `needs_human_review`, medium risk.
+- Proposal `#38`: `riso basmati`, `create_canonical`, medium risk.
+- Proposal `#39`: `robiola`, `create_canonical`, medium risk.
+- Blocked proposal: `spezie`, `ignore_noise`, low risk, blocked because confidence was below `0.8`.
+- Proposal `#40`: `stracchino`, `needs_human_review`, medium risk.
+- Proposal `#41`: `tacchino`, `needs_human_review`, medium risk.
+- Dev flags were disabled and the temporary operator token was removed immediately after the run.
+- No catalog mutation occurred.
+- No staging changes were made.
+
+Interpretation:
+
+- Oversampling works: the LLM batch grew from `2` useful items in run `#60` to `7` useful items in run `#62`.
+- The current queue is dominated by missing canonical ingredients and genuinely ambiguous protein/cheese terms, not low-risk alias/localization work.
+- The quality gate correctly blocked low-confidence noise.
+- `CATALOG_AGENT_RECENT_PROPOSAL_DAYS=0` is now allowed for controlled dev/eval reruns after context/runtime changes, avoiding term-specific fake learning just to bypass dedupe.
+
+### Level 5.0 Parent Candidate Cleanup And First New Auto-Apply
+
+The `cipolle` review outcome showed a broader target-grounding issue: the work packet included active `onion`, active duplicate/localized `cipolla`, and color-specific onion variants. The agent correctly escalated because the candidate set looked noisier than the source text required.
+
+Migration:
+
+- `20260513103000_govern_generic_plural_parent_candidates.sql`.
+- `cipolla` now redirects to active canonical `onion`.
+- `cipolla` quality status changed to `deprecated_duplicate`.
+- Implemented learning added for `cipolle`.
+- Existing `cipolle` review proposals were superseded.
+
+Policy learned:
+
+- For unqualified plural or singular base produce terms, prefer `approve_alias` to the active parent canonical when the recipe has no color/cultivar/product-form modifier.
+- Meaningful variants remain distinct; they should not block a parent mapping for unqualified source text.
+
+Run `#64`:
+
+- Snapshot items: `16`.
+- Eligible before final limit: `1`.
+- Items sent to the LLM: `1`.
+- Proposal created: `#50`.
+- Proposal: `cipolle` -> `onion`.
+- Proposal type: `approve_alias`.
+- Risk: `low`.
+- Confidence: `0.96`.
+- Auto-apply eligible: `true`.
+- Token usage: `10,380` total tokens.
+
+Validation:
+
+- `review_catalog_agent_proposal(50, 'queue_for_validation', ...)`.
+- `validate_catalog_agent_proposal(50)` returned `ok=true`.
+- Final validation status before apply: `validated`.
+- Validation errors: `[]`.
+
+Worker dry-run:
+
+- Orchestrator run: `#65`.
+- Worker job: `#20`.
+- Worker: `low_risk_apply_batch`.
+- Result: `1` eligible previewed, `0` applied, `0` failed.
+
+Worker real apply:
+
+- Orchestrator run: `#66`.
+- Worker job: `#21`.
+- Worker: `low_risk_apply_batch`.
+- Real apply was temporarily enabled with `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED=true`.
+- Result: `1` applied, `0` failed.
+- Proposal `#50` status: `auto_applied`.
+- Alias created: `ingredient_aliases_v2.id = 182`.
+- Alias: `cipolle`.
+- Target: `onion`.
+- Approval source: `agent_auto_apply`.
+- Apply audit: `catalog_agent_apply_audit.id = 8`.
+- Audit status: `applied`.
+- Rollback plan: `delete_inserted_alias` for alias id `182`.
+
+Safety:
+
+- The worker applied only one validated low-risk alias.
+- The mutation is reversible.
+- Feature flags were disabled and the temporary operator token was removed immediately after verification.
+- No staging changes were made.

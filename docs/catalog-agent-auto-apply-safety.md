@@ -201,6 +201,27 @@ Production:
 - result: `1` applied, `0` failed;
 - disabled both feature flags and removed the temporary operator token after verification.
 
+2026-05-13:
+
+- cleaned duplicate localized candidate `cipolla` by redirecting it to active canonical `onion`;
+- added implemented learning for generic unqualified plural produce terms: variants such as color-specific onions remain distinct, but their existence should not block parent mapping when the source text has no modifier;
+- run `#64` created proposal `#50`: `cipolle` -> `onion`, `approve_alias`, low risk, confidence `0.96`, auto-apply eligible;
+- deterministic validation marked proposal `#50` as `validated`;
+- ran `low_risk_apply_batch` through the orchestrator in dry-run mode first;
+- dry-run result: `1` eligible previewed, `0` applied, `0` failed;
+- dry-run worker job: `catalog_agent_worker_jobs.id = 20`;
+- enabled `CATALOG_AGENT_LOW_RISK_APPLY_ENABLED` temporarily and ran real apply with `limit=1`;
+- real apply run: `catalog_agent_runs.id = 66`;
+- worker job: `catalog_agent_worker_jobs.id = 21`;
+- applied proposal `catalog_agent_proposals.id = 50`;
+- created alias `cipolle` for `onion`;
+- alias row: `ingredient_aliases_v2.id = 182`;
+- approval source: `agent_auto_apply`;
+- wrote audit row `catalog_agent_apply_audit.id = 8`;
+- rollback plan: `delete_inserted_alias` for alias id `182`;
+- result: `1` applied, `0` failed;
+- disabled feature flags and removed the temporary operator token after verification.
+
 ## Dev Rollback Console Follow-Up
 
 2026-05-11:

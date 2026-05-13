@@ -125,6 +125,15 @@ Implementation status:
 - scripted smoke passed with run `#58`, proposal `#33`, apply audit `#7`, and `rollback_smoke_ok=true`;
 - the repeatable smoke now retires its own test proposal to `superseded` after verification, so future real low-risk batches cannot re-apply smoke aliases;
 - post-cleanup verification showed no remaining `validated + low + auto_apply_eligible` proposals;
+- first Level 5.0 proposal-generation run after cleanup created proposals `#34` and `#35`, but both were correctly routed to human review (`pepe` medium risk, `olive` high risk) because the work packet did not provide a grounded unique target;
+- runtime improvement added: `run-catalog-agent-triage` now oversamples the candidate snapshot before recent-proposal dedupe, then sends only the bounded eligible subset to the LLM. This keeps token spend capped while avoiding runs where most of the requested batch is skipped before the provider call.
+- oversampling regression run `#61` exposed an over-eager provider `auto_apply_eligible=true` flag on an unsupported proposal type; the runtime now repairs unsupported auto-apply flags to `false` before contract validation instead of discarding the whole batch.
+- run `#62` confirmed the improvement: useful LLM items increased from `2` to `7`, with `6` proposals persisted and `1` low-confidence noise proposal blocked by the quality gate.
+- `CATALOG_AGENT_RECENT_PROPOSAL_DAYS=0` is now allowed only for controlled dev/eval reruns after context/runtime changes, avoiding term-specific fake learning while preserving the default dedupe behavior.
+- parent-candidate cleanup applied on dev: duplicate `cipolla` now redirects to active canonical `onion`, and implemented learning teaches generic unqualified plural produce terms to prefer the active parent when no identity-bearing modifier is present.
+- run `#64` produced the first new Level 5.0 candidate: proposal `#50` `cipolle -> onion`, `approve_alias`, low risk, confidence `0.96`, auto-apply eligible.
+- proposal `#50` passed deterministic validation and was auto-applied by the orchestrated `low_risk_apply_batch` worker in run `#66`, worker job `#21`.
+- apply audit `#8` is active with rollback plan `delete_inserted_alias` for alias id `182`; verification found one active alias row for `cipolle` with `approval_source='agent_auto_apply'`.
 - no staging data or schedules were touched.
 
 Allowed actions:
