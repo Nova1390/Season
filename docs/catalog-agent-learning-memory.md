@@ -119,4 +119,24 @@ Excluded learning statuses:
 - `rejected`
 - `superseded`
 
+## Smart Import Read Path
+
+Smart Import also reads this memory, but with a narrower contract than Catalog Governance.
+
+`parse-recipe-caption` may call `get_catalog_agent_learning_context(...)` for the ingredient candidates sent by Swift before targeted ingredient-resolution LLM calls. The memory is included as compact advisory context so the drafting agent can avoid repeated semantic mistakes, for example:
+
+- not collapsing identity-bearing variants into a generic parent when implemented learning says the variant matters;
+- keeping non-identity conditions as recipe text when learning says they should not become catalog identity;
+- separating ingredient-existence confidence from canonical-target confidence.
+
+Smart Import must not:
+
+- write learning artifacts;
+- approve aliases;
+- create canonical ingredients;
+- reconcile saved recipe ingredients;
+- block import if learning lookup fails.
+
+This keeps the learning loop useful for creators while preserving the Catalog Governance Agent as the manager for durable catalog policy.
+
 Runtime learning memory still does not mutate catalog data. It only changes the evidence available to the proposal-only model.

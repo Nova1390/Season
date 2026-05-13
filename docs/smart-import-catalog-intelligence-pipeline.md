@@ -46,6 +46,7 @@ It must still keep catalog authority separate. If a caption contains a new or un
 The Smart Import Agent is the server-side drafting orchestrator inside `parse-recipe-caption`. Its current responsibilities are intentionally narrow:
 
 - decide whether the Swift preparse is enough or targeted LLM help is needed,
+- load compact relevant learning memory for the ingredient candidates before targeted LLM reasoning,
 - keep LLM calls scoped to unresolved ingredients when possible,
 - preserve trusted catalog matches back to Swift,
 - score the draft as `publishable`, `needs_creator_review`, or `needs_more_input`,
@@ -61,6 +62,33 @@ As of the creator-flow UI integration, Swift surfaces the Smart Import Agent res
 - `needs_more_input` means the caption lacks enough recipe structure and the creator should add ingredients, amounts, or steps.
 
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
+
+### Smart Import Learning Memory Contract
+
+Smart Import may read Catalog Agent learning memory, but only as advisory import context.
+
+Runtime behavior:
+
+- Swift sends candidate ingredient lines and local catalog match metadata.
+- `parse-recipe-caption` calls `get_catalog_agent_learning_context(...)` for those normalized terms.
+- The function sends only a compact subset to the targeted ingredient-resolution LLM prompt.
+- Implemented and accepted lessons should guide normalization when current evidence matches.
+- Needs-review lessons are warnings, not hard rules.
+- If the learning lookup fails, Smart Import continues without memory rather than blocking the creator.
+
+Safety boundaries:
+
+- Smart Import does not write to `catalog_agent_learnings`.
+- Smart Import does not create canonical ingredients or aliases.
+- Smart Import does not treat learning memory as catalog truth.
+- Any unresolved custom ingredient still becomes an observation for Catalog Governance after save/publish.
+
+Cost posture:
+
+- Memory is fetched once per server-assisted import.
+- At most a small number of lessons per term and global lessons are included.
+- Deterministically resolved ingredients still avoid LLM calls.
+- The memory exists to reduce repeated LLM confusion, not to expand reasoning loops indiscriminately.
 
 ## 2. System Overview
 

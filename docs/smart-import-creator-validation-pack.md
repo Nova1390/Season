@@ -100,6 +100,8 @@ Server-assisted pass criteria:
 - `smartImportAgent.draftQuality` is present on server-assisted responses and is consistent with the draft: missing steps or ingredients should not be marked `publishable`.
 - `smartImportAgent.reviewHints` explains creator-facing blockers without requiring the creator to understand catalog internals.
 - `smartImportAgent.passes` shows whether the server used full recipe parse or targeted ingredient resolution.
+- If relevant learning memory exists for imported terms, `smartImportAgent.passes` should include `learning_memory_context`.
+- Learning-memory usage must not turn an unresolved ingredient into a canonical catalog mutation during import.
 
 Creator UI pass criteria:
 - Server-assisted imports show a concise Smart Import Agent status card under the import quality badge.

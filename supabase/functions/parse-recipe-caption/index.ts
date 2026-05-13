@@ -56,6 +56,15 @@ interface SmartImportAgentPass {
   candidateCount?: number;
 }
 
+interface SmartImportLearningSummary {
+  source: string | null;
+  termsRequested: number;
+  termsWithLearning: number;
+  termLearningCount: number;
+  globalLearningCount: number;
+  unavailable: boolean;
+}
+
 interface SmartImportAgentSummary {
   version: "smart_import_agent_v1";
   draftQuality: SmartImportDraftQuality;
@@ -249,11 +258,16 @@ Deno.serve(async (request) => {
     if (smartImportCandidates.length > 0) {
       const targetedCandidates = smartImportCandidates.filter(candidateNeedsLLM);
       const smartImportAudit = computeSmartImportAudit(smartImportCandidates);
+      const learningContext = await fetchSmartImportLearningContext(adminClient, smartImportCandidates);
+      const learningSummary = summarizeSmartImportLearningContext(learningContext);
       console.log(
         `[SEASON_IMPORT_EDGE] phase=smart_import_decision request_id=${requestId} candidates=${smartImportCandidates.length} targeted_llm_candidates=${targetedCandidates.length}`,
       );
       console.log(
         `[SEASON_SMART_IMPORT_AUDIT] phase=edge_input request_id=${requestId} total=${smartImportAudit.total} resolved=${smartImportAudit.resolved} ambiguous=${smartImportAudit.ambiguous} none=${smartImportAudit.none} sent_to_llm=${smartImportAudit.sentToLLM}`,
+      );
+      console.log(
+        `[SEASON_IMPORT_LEARNING] phase=context_loaded request_id=${requestId} source=${learningSummary.source ?? "none"} terms_requested=${learningSummary.termsRequested} terms_with_learning=${learningSummary.termsWithLearning} term_lessons=${learningSummary.termLearningCount} global_lessons=${learningSummary.globalLearningCount} unavailable=${learningSummary.unavailable}`,
       );
 
       if (targetedCandidates.length === 0) {
@@ -270,6 +284,7 @@ Deno.serve(async (request) => {
           outputAudit,
           usedLLM: false,
           mode: "candidate_resolution",
+          learningSummary,
         });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=false`,
@@ -325,6 +340,7 @@ Deno.serve(async (request) => {
         const providerResult = await invokeProviderForIngredientResolution({
           candidates: targetedCandidates,
           languageCode,
+          learningContext,
         });
         const validation = validateLLMIngredientResolutionOutput(providerResult.parsed);
 
@@ -384,6 +400,7 @@ Deno.serve(async (request) => {
           outputAudit,
           usedLLM: true,
           mode: "candidate_resolution",
+          learningSummary,
         });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=true`,
@@ -710,6 +727,7 @@ function attachSmartImportAgentSummary(
     outputAudit?: SmartImportOutputAudit;
     usedLLM: boolean;
     mode: "candidate_resolution" | "full_recipe_parse";
+    learningSummary?: SmartImportLearningSummary;
   },
 ): ParseRecipeCaptionResult {
   const outputAudit = input.outputAudit ?? computeSmartImportOutputAudit(result.ingredients);
@@ -729,6 +747,7 @@ function buildSmartImportAgentSummary(
     outputAudit: SmartImportOutputAudit;
     usedLLM: boolean;
     mode: "candidate_resolution" | "full_recipe_parse";
+    learningSummary?: SmartImportLearningSummary;
   },
 ): SmartImportAgentSummary {
   const reviewHints = smartImportReviewHints(result, input.outputAudit);
@@ -757,7 +776,9 @@ function buildSmartImportAgentSummary(
       passes.push({
         name: "targeted_ingredient_resolution",
         usedLLM: true,
-        reason: "Only ambiguous, unknown, or low-confidence ingredient candidates were sent to the LLM.",
+        reason: input.learningSummary && !input.learningSummary.unavailable
+          ? "Only ambiguous, unknown, or low-confidence ingredient candidates were sent to the LLM with relevant learning memory attached."
+          : "Only ambiguous, unknown, or low-confidence ingredient candidates were sent to the LLM.",
         candidateCount: input.inputAudit?.sentToLLM,
       });
     }
@@ -766,6 +787,15 @@ function buildSmartImportAgentSummary(
       name: "full_recipe_caption_parse",
       usedLLM: true,
       reason: "No preparsed candidates were provided, so the LLM extracted the full draft from caption and URL context.",
+    });
+  }
+
+  if (input.learningSummary && !input.learningSummary.unavailable && input.learningSummary.termLearningCount + input.learningSummary.globalLearningCount > 0) {
+    passes.push({
+      name: "learning_memory_context",
+      usedLLM: false,
+      reason: `Loaded ${input.learningSummary.termLearningCount} term lessons and ${input.learningSummary.globalLearningCount} global lessons as advisory context for import reasoning.`,
+      candidateCount: input.learningSummary.termsWithLearning,
     });
   }
 
@@ -876,12 +906,102 @@ function llmResolutionMap(items: LLMResolvedIngredient[]): Map<number, LLMResolv
   return byIndex;
 }
 
+async function fetchSmartImportLearningContext(
+  adminClient: ReturnType<typeof createClient>,
+  candidates: NormalizedIngredientCandidate[],
+): Promise<Record<string, unknown>> {
+  const normalizedTexts = Array.from(
+    new Set(
+      candidates
+        .map((candidate) => normalizeIngredientCandidateText(candidate.normalizedText))
+        .filter(Boolean),
+    ),
+  ).slice(0, 40);
+
+  if (normalizedTexts.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await adminClient.rpc("get_catalog_agent_learning_context", {
+    p_normalized_texts: normalizedTexts,
+    p_limit_per_term: 2,
+  });
+
+  if (error) {
+    console.log(`[SEASON_IMPORT_LEARNING] phase=context_unavailable error=${error.message}`);
+    return {
+      metadata: {
+        source: "catalog_agent_learning_context_unavailable",
+        unavailable: true,
+        error_message: error.message,
+        terms_requested: normalizedTexts.length,
+      },
+    };
+  }
+
+  return isRecord(data) ? data : {};
+}
+
+function summarizeSmartImportLearningContext(context: Record<string, unknown>): SmartImportLearningSummary {
+  const metadata = readNestedRecord(context, ["metadata"]);
+  const globalLearnings = readNestedArray(context, ["global_learnings"]);
+  const termLearnings = readNestedRecord(context, ["term_learnings"]);
+
+  return {
+    source: typeof metadata.source === "string" ? metadata.source : null,
+    termsRequested: numberOrZero(metadata.terms_requested),
+    termsWithLearning: numberOrZero(metadata.terms_with_learning),
+    termLearningCount: Object.values(termLearnings)
+      .filter(Array.isArray)
+      .reduce((total, learnings) => total + learnings.length, 0),
+    globalLearningCount: globalLearnings.length,
+    unavailable: metadata.unavailable === true,
+  };
+}
+
+function compactSmartImportLearningContextForPrompt(context: Record<string, unknown>): Record<string, unknown> {
+  const termLearnings = readNestedRecord(context, ["term_learnings"]);
+  const compactTermLearnings: Record<string, unknown> = {};
+
+  for (const [term, rawLearnings] of Object.entries(termLearnings)) {
+    if (!Array.isArray(rawLearnings)) continue;
+    compactTermLearnings[term] = rawLearnings
+      .filter(isRecord)
+      .slice(0, 2)
+      .map(compactLearningArtifact);
+  }
+
+  return {
+    runtime_instruction: readNestedRecord(context, ["runtime_instruction"]),
+    term_learnings: compactTermLearnings,
+    global_learnings: readNestedArray(context, ["global_learnings"])
+      .filter(isRecord)
+      .slice(0, 4)
+      .map(compactLearningArtifact),
+  };
+}
+
+function compactLearningArtifact(learning: Record<string, unknown>): Record<string, unknown> {
+  return {
+    learning_type: learning.learning_type ?? null,
+    status: learning.status ?? null,
+    severity: learning.severity ?? null,
+    observed_problem: learning.observed_problem ?? null,
+    corrected_decision: learning.corrected_decision ?? null,
+    policy_implication: learning.policy_implication ?? null,
+    prompt_recommendation: learning.prompt_recommendation ?? null,
+  };
+}
+
 async function invokeProviderForIngredientResolution(input: {
   candidates: NormalizedIngredientCandidate[];
   languageCode: string;
+  learningContext: Record<string, unknown>;
 }): Promise<ProviderInvocationResult> {
   const userContent = [
     `languageCode: ${input.languageCode}`,
+    "relevant_learning_memory:",
+    JSON.stringify(compactSmartImportLearningContextForPrompt(input.learningContext)),
     "candidates:",
     JSON.stringify(input.candidates.map((candidate) => ({
       index: candidate.index,
@@ -1307,6 +1427,29 @@ function extractBearerToken(authHeader: string): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readNestedRecord(value: unknown, path: string[]): Record<string, unknown> {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return {};
+    current = current[key];
+  }
+  return isRecord(current) ? current : {};
+}
+
+function readNestedArray(value: unknown, path: string[]): unknown[] {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!isRecord(current)) return [];
+    current = current[key];
+  }
+  return Array.isArray(current) ? current : [];
+}
+
+function numberOrZero(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function errorJson(status: number, code: string, message: string): Response {

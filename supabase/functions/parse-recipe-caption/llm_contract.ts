@@ -181,7 +181,11 @@ Rules:
 6) If unit is unclear, return unit null.
 7) Use status "inferred" when you can confidently normalize the candidate.
 8) Use status "unknown" when the candidate is too ambiguous.
-9) Return one item for each candidate index you can process.`;
+9) Return one item for each candidate index you can process.
+10) Treat relevant_learning_memory as advisory operational memory, not as catalog truth.
+11) Follow implemented/accepted learning when it matches the current candidate evidence.
+12) If learning memory says a term is a meaningful variant, do not collapse it into a generic parent name.
+13) If learning memory says a term condition is not catalog identity, keep the ingredient name simple and leave the condition for recipe text.`;
 
 export function validateLLMRecipeImportOutput(payload: unknown): {
   ok: boolean;
