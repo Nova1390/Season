@@ -55,6 +55,16 @@ Expected behavior:
 - temporary token is removed;
 - final guard returns `schedule_disabled`.
 
+Latest validation evidence:
+
+- 2026-05-13: two controlled dry-shift smokes passed;
+- runs: `#72` and `#73`;
+- worker jobs: `#27` and `#28`;
+- both ran `low_risk_apply_batch` in dry-run mode;
+- both returned `0` eligible preview, `0` applied, and `0` failed;
+- no scheduled triage LLM call was triggered;
+- final `catalog_agent_dev_shift_health` was `green`.
+
 ## Reading Results
 
 Prefer these read models before inspecting raw tables:

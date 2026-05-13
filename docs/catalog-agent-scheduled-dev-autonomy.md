@@ -224,3 +224,16 @@ Admin-console readability:
 - the timeline summarizes shift id, status, guard result, skip/error reason, duration, worker result count, and skipped-worker count;
 - this keeps routine scheduler checks visual and avoids using raw JSON as the operator interface;
 - `docs/catalog-agent-dev-scheduler-runbook.md` now documents safe default state, temporary dry-shift windows, hard stops, and recovery.
+
+Timeline validation series:
+
+- ran two additional controlled dry-shift smokes with `scripts/catalog_agent_dev_shift_smoke.sh`;
+- both runs temporarily enabled dev schedule only for low-risk dry-run preview;
+- both runs kept `triage_enabled=false` and `low_risk_apply_enabled=false`;
+- run `#72`, worker job `#27`: completed, dry-run, `0` eligible preview, `0` applied, `0` failed;
+- run `#73`, worker job `#28`: completed, dry-run, `0` eligible preview, `0` applied, `0` failed;
+- LLM token usage stayed at `135813`, confirming the dry-shift series did not trigger scheduled triage calls;
+- latest shift ledger rows: shift `#3` completed with `1` worker result, shift `#2` completed with `1` worker result, shift `#1` skipped with `schedule_disabled`;
+- `catalog_agent_dev_shift_health` returned `green`, with `3` total shift attempts today, `2` completed, `1` skipped, `0` failed, and `2` worker results;
+- final guard returned `schedule_disabled`, confirming the kill switch was restored after the smokes;
+- stopped after two new runs to avoid unnecessary manual-day noise.

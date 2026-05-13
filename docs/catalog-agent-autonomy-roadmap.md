@@ -271,6 +271,8 @@ Implementation status:
 - verification after restore returned `200` for the console root and both cache-busted assets;
 - cache version `20260513-3` adds `Recent dev shifts`, a readable timeline for shift id, status, guard result, skip/error reason, duration, worker result count, and skipped-worker count;
 - `docs/catalog-agent-dev-scheduler-runbook.md` documents safe default state, dry-shift smoke, temporary enablement windows, hard stops, recovery, and the rule that staging remains out of scope until Level 6.5;
+- timeline validation series passed with runs `#72` and `#73`, worker jobs `#27` and `#28`: both completed in dry-run mode with `0` eligible preview, `0` applied, `0` failed, no scheduled triage LLM calls, and final guard restored to `schedule_disabled`;
+- `catalog_agent_dev_shift_health` reported `green` after the series: `3` shift attempts today, `2` completed, `1` skipped, `0` failed, and `2` worker results;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 

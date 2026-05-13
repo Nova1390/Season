@@ -149,3 +149,12 @@ Console follow-up:
 
 - admin console cache version `20260513-3` shows recent dev-shift attempts as a timeline;
 - the operator can now see shift id, status, guard result, duration, reason, and worker count without reading raw JSON.
+
+Timeline validation:
+
+- controlled dry-shift smokes produced runs `#72` and `#73`;
+- worker jobs `#27` and `#28` completed in dry-run mode;
+- both returned `0` eligible preview, `0` applied, and `0` failed;
+- no scheduled triage LLM call was triggered;
+- `catalog_agent_dev_shift_health` returned `green` with `2` completed shift runs, `1` skipped shift run, and `0` failed shift runs for the day;
+- the final guard returned `schedule_disabled`.
