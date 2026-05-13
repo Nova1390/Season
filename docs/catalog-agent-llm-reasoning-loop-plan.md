@@ -575,4 +575,6 @@ Dev smoke:
 - `run_id=50` executed `ingredient_creation_batch` through the agent orchestrator with `limit=1` and the creation flag temporarily enabled.
 - The worker created `pasta_corta` as an active child ingredient of `pasta`, marked the draft `applied`, and left the orchestrator and creation flags disabled again afterwards.
 - A deployed-worker drift gap was discovered during this smoke: the ingredient was created and the agent run completed, but the worker-job row did not update until the current worker was deployed and the job was reconciled through the official worker-job RPC.
-- The next allowed improvement is a repeatable ledger regression smoke before expanding creation autonomy beyond one reviewed item.
+- A repeatable worker-ledger regression smoke now exists at `scripts/catalog_agent_worker_ledger_smoke.sh`.
+- `run_id=52` passed the ledger regression using non-mutating `low_risk_apply_batch` dry-run mode: run completed, worker job completed, summaries were present, and run/job links were bidirectional.
+- The next allowed improvement is a small mixed-term persisted-proposal batch to close the remaining 4.5 quantitative gate before expanding creation autonomy beyond one reviewed item.

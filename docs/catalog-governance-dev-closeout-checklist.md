@@ -820,3 +820,49 @@ Interpretation:
 
 - This proves the complete governed creation chain on dev: agent proposal -> enrichment draft -> validation -> orchestrated creation -> applied draft -> active catalog child ingredient.
 - This is a Level 5-adjacent capability, but it should not be scheduled autonomously yet. The next microstep is to add a repeatable ledger regression smoke so deployed worker drift cannot silently reduce audit quality again.
+
+### Worker Ledger Regression Smoke
+
+A repeatable worker-ledger regression smoke was added and executed on dev.
+
+Artifact:
+
+- Script: `scripts/catalog_agent_worker_ledger_smoke.sh`.
+- Runbook: `supabase/devops/dev_catalog_agent_worker_ledger_smoke.md`.
+
+Default behavior:
+
+- Worker: `low_risk_apply_batch`.
+- Action: `dry_run`.
+- Limit: `1`.
+- Mutation scope: none.
+- Verification scope: `catalog_agent_runs`, `catalog_agent_worker_jobs`, run summary, worker summary, bidirectional run/job linkage.
+
+Execution notes:
+
+- First script attempt invoked the worker successfully as `run_id=51`, `worker_job_id=18`, but the verification SQL used `jsonb_object_length(...)`, which is not available in the deployed Postgres environment.
+- The script was fixed to use `coalesce(summary, '{}'::jsonb) <> '{}'::jsonb`.
+- Second attempt passed as `run_id=52`, `worker_job_id=19`.
+
+Successful smoke verification:
+
+- Agent run `52` status: `completed`.
+- Worker job `19` status: `completed`.
+- Worker job had `started_at` and `finished_at`.
+- Worker summary was present.
+- Run summary linked to worker job `19`.
+- Worker job linked back to run `52`.
+- `ledger_ok=true`.
+
+Safety verification:
+
+- The worker was dry-run only.
+- No low-risk apply happened.
+- Orchestrator was disabled again after the smoke.
+- The temporary operator token was removed by script cleanup.
+- A post-run orchestrator request returned `ORCHESTRATOR_DISABLED`.
+
+Interpretation:
+
+- This closes the specific audit gap found during the ingredient-creation smoke.
+- Before expanding autonomy, this smoke should be run after any worker deploy or orchestration change.
