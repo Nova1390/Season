@@ -572,4 +572,7 @@ Dev smoke:
 - Proposal `#25` was then routed through `prepare_catalog_agent_canonical_enrichment_draft(...)`, creating or refreshing a pending enrichment draft for `pasta corta` / `short_pasta`.
 - `run_id=49` executed `enrichment_draft_batch` through the agent orchestrator with `limit=1`.
 - The worker enriched `pasta corta`, validated it, and promoted the draft to `ready` as `pasta_corta`, with parent candidate `pasta`, variant kind `shape`, default unit `g`, and confidence `0.93`.
-- No ingredient creation occurred; the next allowed worker is `ingredient_creation_batch`, but only after explicitly enabling the creation flag for a reviewed `limit=1` smoke.
+- `run_id=50` executed `ingredient_creation_batch` through the agent orchestrator with `limit=1` and the creation flag temporarily enabled.
+- The worker created `pasta_corta` as an active child ingredient of `pasta`, marked the draft `applied`, and left the orchestrator and creation flags disabled again afterwards.
+- A deployed-worker drift gap was discovered during this smoke: the ingredient was created and the agent run completed, but the worker-job row did not update until the current worker was deployed and the job was reconciled through the official worker-job RPC.
+- The next allowed improvement is a repeatable ledger regression smoke before expanding creation autonomy beyond one reviewed item.

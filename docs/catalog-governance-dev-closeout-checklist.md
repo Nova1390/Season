@@ -747,3 +747,76 @@ Interpretation:
 
 - This proves the manager-worker handoff: persisted agent proposal -> draft preparation -> orchestrated Autopilot enrichment -> ready draft.
 - This still does not create catalog identity. The next microstep would be an explicit reviewed ingredient-creation test with `limit=1` and creation flag enabled only for the smoke.
+
+### Agent-Orchestrated Ingredient Creation Smoke
+
+The agent orchestrator ran the first bounded ingredient-creation worker job for the reviewed `pasta corta` ready draft.
+
+Temporary runtime settings:
+
+- `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true`.
+- `CATALOG_AGENT_OPERATOR_TOKEN` was set for the smoke and removed afterwards.
+- `CATALOG_AGENT_MAX_WORKER_ITEMS_PER_RUN=1`.
+- `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=true`.
+- `CATALOG_AGENT_INGREDIENT_CREATION_MAX_ITEMS=1`.
+
+Preflight verification:
+
+- Target environment: `Season-dev` (`gyuedxycbnqljryenapx`).
+- Draft `pasta corta` was `ready`.
+- Suggested slug was `pasta_corta`.
+- Parent candidate `pasta` existed as an active base ingredient.
+- No existing ingredient row existed for `pasta_corta` or `short_pasta`.
+
+Run result:
+
+- Agent run: `50`.
+- Worker job: `17`.
+- Worker: `ingredient_creation_batch`.
+- Worker function: `run-catalog-ingredient-creation-batch`.
+- Limit: `1`.
+- Total processed: `1`.
+- Created: `1`.
+- Failed: `0`.
+- Skipped existing: `0`.
+- Skipped invalid: `0`.
+- Created ingredient: `pasta_corta`.
+- Created ingredient id: `4349c672-fff0-426e-abda-7e15e4db5293`.
+
+Ingredient verification:
+
+- Slug: `pasta_corta`.
+- Type: `basic`.
+- Quality status: `active`.
+- Parent ingredient: `pasta` (`56952b5b-f411-4b5f-b6ef-8c4df9534651`).
+- Variant kind: `shape`.
+- Specificity rank: `1`.
+- Default unit: `g`.
+- Supported units: `g`, `kg`, `pack`.
+
+Draft verification:
+
+- Draft `pasta corta` is now `applied`.
+- Confidence remains `0.93`.
+- Validated ready remains `true`.
+- Validation errors remain `[]`.
+
+Ledger note:
+
+- The first worker invocation succeeded and the agent run summary was completed, but the worker-job row initially remained `queued`.
+- Root cause: `run-catalog-ingredient-creation-batch` deployed on dev was older than the local worker bridge and did not update `agent_worker_job_id`.
+- Fix applied: deployed the current `run-catalog-ingredient-creation-batch` function to dev.
+- Ledger reconciliation: job `17` was completed through the official `complete_catalog_agent_worker_job(...)` RPC with the actual creation summary and `reconciled_after_deploy_gap=true`.
+
+Safety verification:
+
+- Orchestrator was disabled again after the smoke.
+- Ingredient creation was disabled again after the smoke.
+- The temporary operator token was removed.
+- A post-run orchestrator request returned `ORCHESTRATOR_DISABLED`.
+- No staging changes were made.
+
+Interpretation:
+
+- This proves the complete governed creation chain on dev: agent proposal -> enrichment draft -> validation -> orchestrated creation -> applied draft -> active catalog child ingredient.
+- This is a Level 5-adjacent capability, but it should not be scheduled autonomously yet. The next microstep is to add a repeatable ledger regression smoke so deployed worker drift cannot silently reduce audit quality again.
