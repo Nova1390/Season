@@ -111,6 +111,8 @@ The first scheduler should run dry-only:
 
 Real low-risk apply remains a separate escalation and should stay disabled until the Level 5.0 gates are stronger.
 
+Operational details live in `docs/catalog-agent-dev-scheduler-runbook.md`.
+
 ## Anomaly Semantics
 
 `red` means stop scheduled autonomy and review before the next run:
@@ -215,3 +217,10 @@ Shift-lane health split:
 - shift-health message explicitly distinguishes a healthy scheduled-shift lane from the red global daily digest caused by manual development history;
 - temporary operator token was removed after the smoke, and reuse returned `UNAUTHORIZED`;
 - Supabase lint result: `No schema errors found`.
+
+Admin-console readability:
+
+- cache version `20260513-3` adds a `Recent dev shifts` timeline to the scheduled autonomy card;
+- the timeline summarizes shift id, status, guard result, skip/error reason, duration, worker result count, and skipped-worker count;
+- this keeps routine scheduler checks visual and avoids using raw JSON as the operator interface;
+- `docs/catalog-agent-dev-scheduler-runbook.md` now documents safe default state, temporary dry-shift windows, hard stops, and recovery.

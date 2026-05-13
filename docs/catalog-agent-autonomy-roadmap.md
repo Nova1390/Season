@@ -269,6 +269,8 @@ Implementation status:
 - the updated console was deployed to `https://catalog.seasonapp.it/` with cache version `20260513-2`;
 - during deployment, missing `.htaccess`, missing `config.local.js`, and directory permissions caused a temporary `403/404`; the folder was restored to `755`, static assets to `644`, `.htaccess` was restored, and `config.local.js` was recreated with the browser-safe Season-dev anon key;
 - verification after restore returned `200` for the console root and both cache-busted assets;
+- cache version `20260513-3` adds `Recent dev shifts`, a readable timeline for shift id, status, guard result, skip/error reason, duration, worker result count, and skipped-worker count;
+- `docs/catalog-agent-dev-scheduler-runbook.md` documents safe default state, dry-shift smoke, temporary enablement windows, hard stops, recovery, and the rule that staging remains out of scope until Level 6.5;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 
@@ -526,7 +528,7 @@ The next target is strengthening `6.0 scheduled dev autonomy` without enabling a
 Recommended implementation order:
 
 1. Keep the dev schedule disabled by default while using manual dry-shift smokes.
-2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON.
-3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps.
+2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON. Completed with cache version `20260513-3`.
+3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps. Completed in `docs/catalog-agent-dev-scheduler-runbook.md`.
 4. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
 5. Keep staging untouched until Level `6.5`.

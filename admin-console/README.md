@@ -8,6 +8,7 @@ Operator docs:
 
 - `docs/catalog-admin-operator-runbook.md`
 - `docs/catalog-governance-dev-closeout-checklist.md`
+- `docs/catalog-agent-dev-scheduler-runbook.md`
 
 ## Current Scope
 
@@ -42,6 +43,7 @@ It currently supports:
 - rolling back active auto-apply audit records with a required operator reason.
 - viewing scheduled-dev autonomy guard state, kill switch state, latest daily digest, and detected anomalies.
 - viewing scheduled dev-shift lane health separately from the broader daily digest.
+- viewing recent dev-shift attempts as a readable timeline.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
 
@@ -76,6 +78,13 @@ Operations worker controls are deliberately narrow:
 - verified `https://catalog.seasonapp.it/` returns `200`;
 - verified cache-busted `app.js?v=20260513-2` and `styles.css?v=20260513-2` return `200`;
 - verified the deployed HTML includes the shift-health UI.
+
+2026-05-13 second follow-up:
+
+- deployed cache version `20260513-3` with a readable `Recent dev shifts` timeline;
+- the timeline shows shift id, status, guard result, duration, skip/error reason, and worker count without requiring raw JSON;
+- verified `https://catalog.seasonapp.it/` returns `200`;
+- verified cache-busted `app.js?v=20260513-3` and `styles.css?v=20260513-3` return `200`.
 
 ## Local Setup
 
@@ -148,6 +157,19 @@ scp -i ~/.ssh/codex-season-website-deploy -P 65002 \
   admin-console/app.js \
   admin-console/styles.css \
   u280052083@82.198.227.60:/home/u280052083/domains/seasonapp.it/public_html/catalog/
+```
+
+After every static deploy, restore the non-code files and permissions:
+
+```bash
+scp -i ~/.ssh/codex-season-website-deploy -P 65002 \
+  admin-console/.htaccess \
+  admin-console/config.local.js \
+  u280052083@82.198.227.60:/home/u280052083/domains/seasonapp.it/public_html/catalog/
+
+ssh -i ~/.ssh/codex-season-website-deploy -p 65002 \
+  u280052083@82.198.227.60 \
+  "chmod 755 /home/u280052083/domains/seasonapp.it/public_html/catalog && chmod 644 /home/u280052083/domains/seasonapp.it/public_html/catalog/*"
 ```
 
 Staging can be enabled later with explicit config and release-governance checks.

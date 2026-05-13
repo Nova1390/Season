@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260513-2">
+    <link rel="stylesheet" href="./styles.css?v=20260513-3">
     <script src="./config.local.js"></script>
   </head>
   <body>
@@ -193,6 +193,9 @@
               <p id="scheduleNextAction" class="schedule-next-action">Load operations to see scheduled autonomy status.</p>
               <p id="scheduleShiftMessage" class="schedule-next-action">Load operations to see dev-shift health.</p>
               <div id="scheduleAnomalyList" class="schedule-anomalies"></div>
+              <div id="scheduleShiftRunsList" class="shift-run-list">
+                <p>No dev-shift history loaded yet.</p>
+              </div>
             </section>
 
             <section class="summary ops-summary" aria-label="Automation summary">
@@ -245,6 +248,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260513-2"></script>
+    <script type="module" src="./app.js?v=20260513-3"></script>
   </body>
 </html>

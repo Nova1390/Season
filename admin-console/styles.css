@@ -513,6 +513,64 @@ p {
   background: rgba(168, 69, 45, 0.08);
 }
 
+.shift-run-list {
+  display: grid;
+  gap: 8px;
+}
+
+.shift-run-list-header,
+.shift-run-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shift-run-list-header span,
+.shift-run-main span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shift-run-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.shift-run-card.completed {
+  border-color: rgba(73, 111, 58, 0.28);
+}
+
+.shift-run-card.failed {
+  border-color: rgba(168, 69, 45, 0.35);
+}
+
+.shift-run-card.skipped {
+  background: rgba(251, 247, 239, 0.62);
+}
+
+.shift-run-card p {
+  margin: 0;
+}
+
+.shift-workers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shift-workers span {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 4px 7px;
+  font-size: 12px;
+}
+
 .worker-job {
   display: grid;
   gap: 10px;

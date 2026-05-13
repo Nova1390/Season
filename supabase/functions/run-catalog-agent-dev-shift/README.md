@@ -30,6 +30,8 @@ The default dev database config has the kill switch enabled, so a normal call cu
 
 That is expected until we intentionally enable scheduled dev autonomy.
 
+Operator procedure lives in `docs/catalog-agent-dev-scheduler-runbook.md`.
+
 ## Request Body
 
 ```json
@@ -142,3 +144,8 @@ Shift-ledger smoke:
 - `catalog_agent_dev_shift_health` returned `green`, proving the shift lane is healthy even while the global daily digest stays red from manual dev test history;
 - the temporary operator token was removed after the smoke and reuse returned `UNAUTHORIZED`;
 - Supabase lint returned `No schema errors found`.
+
+Console follow-up:
+
+- admin console cache version `20260513-3` shows recent dev-shift attempts as a timeline;
+- the operator can now see shift id, status, guard result, duration, reason, and worker count without reading raw JSON.

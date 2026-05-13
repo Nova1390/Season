@@ -23,6 +23,7 @@ const state = {
     scheduleGuard: null,
     latestDigest: null,
     scheduleShiftHealth: null,
+    scheduleShiftRuns: [],
     workerJobs: [],
     applyAudits: []
   }
@@ -76,6 +77,7 @@ const elements = {
   scheduleNextAction: document.querySelector("#scheduleNextAction"),
   scheduleShiftMessage: document.querySelector("#scheduleShiftMessage"),
   scheduleAnomalyList: document.querySelector("#scheduleAnomalyList"),
+  scheduleShiftRunsList: document.querySelector("#scheduleShiftRunsList"),
   workerJobsList: document.querySelector("#workerJobsList"),
   applyAuditList: document.querySelector("#applyAuditList")
 };
@@ -158,6 +160,7 @@ function bindEvents() {
       scheduleGuard: null,
       latestDigest: null,
       scheduleShiftHealth: null,
+      scheduleShiftRuns: [],
       workerJobs: [],
       applyAudits: []
     };
@@ -501,6 +504,7 @@ async function loadOperations(options = {}) {
     scheduleGuardResult,
     latestDigestResult,
     scheduleShiftHealthResult,
+    scheduleShiftRunsResult,
     jobsResult,
     applyAuditsResult
   ] = await Promise.all([
@@ -534,6 +538,12 @@ async function loadOperations(options = {}) {
       .from("catalog_agent_dev_shift_health")
       .select("*")
       .maybeSingle(),
+    state.client
+      .from("catalog_agent_dev_shift_runs")
+      .select("id,status,skip_reason,error_message,duration_ms,started_at,finished_at,guard_snapshot,worker_results,skipped_workers")
+      .eq("environment", "dev")
+      .order("started_at", { ascending: false })
+      .limit(8),
     state.client
       .from("catalog_agent_worker_jobs")
       .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
@@ -574,6 +584,10 @@ async function loadOperations(options = {}) {
     setStatus(scheduleShiftHealthResult.error.message, "error");
     return;
   }
+  if (scheduleShiftRunsResult.error) {
+    setStatus(scheduleShiftRunsResult.error.message, "error");
+    return;
+  }
   if (jobsResult.error) {
     setStatus(jobsResult.error.message, "error");
     return;
@@ -591,6 +605,7 @@ async function loadOperations(options = {}) {
     scheduleGuard: scheduleGuardResult.data ?? null,
     latestDigest: latestDigestResult.data ?? null,
     scheduleShiftHealth: scheduleShiftHealthResult.data ?? null,
+    scheduleShiftRuns: Array.isArray(scheduleShiftRunsResult.data) ? scheduleShiftRunsResult.data : [],
     workerJobs: Array.isArray(jobsResult.data) ? jobsResult.data : [],
     applyAudits: Array.isArray(applyAuditsResult.data) ? applyAuditsResult.data : []
   };
@@ -631,6 +646,7 @@ function renderOperations() {
   const scheduleGuard = state.operations.scheduleGuard ?? {};
   const latestDigest = state.operations.latestDigest ?? {};
   const scheduleShiftHealth = state.operations.scheduleShiftHealth ?? {};
+  const scheduleShiftRuns = state.operations.scheduleShiftRuns ?? [];
   const jobs = state.operations.workerJobs ?? [];
   const applyAudits = state.operations.applyAudits ?? [];
 
@@ -643,6 +659,7 @@ function renderOperations() {
   elements.revertedAppliesToday.textContent = String(autoApplySummary.reverted_applies ?? 0);
   elements.failedRevertsToday.textContent = String(autoApplySummary.failed_reverts ?? 0);
   renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, scheduleShiftHealth);
+  renderShiftRunHistory(scheduleShiftRuns);
   renderAutoApplyDiagnostics(diagnostics);
 
   if (jobs.length === 0) {
@@ -766,6 +783,74 @@ function renderShiftHealthDetails(scheduleShiftHealth) {
         ${escapeHTML(scheduleShiftHealth.failed_shift_runs_today ?? 0)} failed
       </small>
     </article>
+  `;
+}
+
+function renderShiftRunHistory(shiftRuns) {
+  if (!Array.isArray(shiftRuns) || shiftRuns.length === 0) {
+    elements.scheduleShiftRunsList.innerHTML = "<p>No dev-shift runs yet. The scheduler lane is still waiting for its first attempt.</p>";
+    return;
+  }
+
+  elements.scheduleShiftRunsList.innerHTML = `
+    <header class="shift-run-list-header">
+      <strong>Recent dev shifts</strong>
+      <span>Latest ${escapeHTML(shiftRuns.length)} attempts</span>
+    </header>
+    ${shiftRuns.map(renderShiftRunCard).join("")}
+  `;
+}
+
+function renderShiftRunCard(shiftRun) {
+  const workerResults = Array.isArray(shiftRun.worker_results) ? shiftRun.worker_results : [];
+  const skippedWorkers = Array.isArray(shiftRun.skipped_workers) ? shiftRun.skipped_workers : [];
+  const guard = shiftRun.guard_snapshot && typeof shiftRun.guard_snapshot === "object"
+    ? shiftRun.guard_snapshot
+    : {};
+  const guardReason = guard.reason ?? (guard.ok === true ? "allowed" : "unknown");
+  const workerSummary = workerResults.length > 0
+    ? `${workerResults.length} worker result${workerResults.length === 1 ? "" : "s"}`
+    : "no workers";
+  const skippedSummary = skippedWorkers.length > 0
+    ? `${skippedWorkers.length} skipped`
+    : "none skipped";
+  const reason = shiftRun.error_message
+    ?? shiftRun.skip_reason
+    ?? `Guard ${humanizeToken(guardReason)}`;
+
+  return `
+    <article class="shift-run-card ${escapeHTML(shiftRun.status ?? "unknown")}">
+      <div class="shift-run-main">
+        <div>
+          <strong>Shift #${escapeHTML(shiftRun.id)}</strong>
+          <span>${escapeHTML(formatDate(shiftRun.started_at))}</span>
+        </div>
+        <div class="badge-line">
+          ${badge(shiftRun.status)}
+          ${badge(guard.ok === true ? "guard_allowed" : "guard_blocked")}
+        </div>
+      </div>
+      <p>${escapeHTML(reason)}</p>
+      <div class="worker-job-meta">
+        <span>Duration ${escapeHTML(formatDuration(shiftRun.duration_ms))}</span>
+        <span>${escapeHTML(workerSummary)}</span>
+        <span>${escapeHTML(skippedSummary)}</span>
+      </div>
+      ${workerResults.length > 0 ? renderShiftWorkers(workerResults) : ""}
+    </article>
+  `;
+}
+
+function renderShiftWorkers(workerResults) {
+  return `
+    <div class="shift-workers">
+      ${workerResults.map((result) => `
+        <span>
+          ${escapeHTML(result.worker_name ?? result.worker ?? "worker")}
+          ${result.dry_run === true ? "(dry-run)" : ""}
+        </span>
+      `).join("")}
+    </div>
   `;
 }
 
