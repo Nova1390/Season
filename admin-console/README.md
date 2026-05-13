@@ -40,6 +40,7 @@ It currently supports:
 - viewing today's catalog AI usage rollup.
 - viewing auto-apply audit and rollback summary.
 - rolling back active auto-apply audit records with a required operator reason.
+- viewing scheduled-dev autonomy guard state, kill switch state, latest daily digest, and detected anomalies.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
 
@@ -53,6 +54,17 @@ Operations worker controls are deliberately narrow:
 - real low-risk apply remains unavailable from the console;
 - every run is still authorized by Supabase Auth and recorded in `catalog_agent_worker_jobs`.
 - readiness diagnostics come from `get_catalog_agent_auto_apply_diagnostics()`, not browser-side policy guesses.
+- scheduled autonomy status is read-only in the console and comes from `catalog_agent_dev_schedule_status`, `catalog_agent_dev_schedule_guard(...)`, and `catalog_agent_daily_digests`.
+
+## Deployment History
+
+2026-05-13:
+
+- deployed `index.html`, `app.js`, `styles.css`, and `.htaccess` to `https://catalog.seasonapp.it/`;
+- left remote `config.local.js` unchanged;
+- verified `https://catalog.seasonapp.it/` returns `200`;
+- verified cache-busted `app.js?v=20260513-1` and `styles.css?v=20260513-1` return `200`;
+- verified the deployed HTML includes the `Scheduled autonomy` card.
 
 ## Local Setup
 
