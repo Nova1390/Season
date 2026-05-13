@@ -1776,6 +1776,13 @@ struct CreateRecipeView: View {
         fallbackCaption: String
     ) -> SocialImportSuggestion? {
         guard response.ok, let result = response.result else { return nil }
+        if let agent = result.smartImportAgent {
+            print(
+                "[SEASON_IMPORT_AGENT] version=\(agent.version) " +
+                "draft_quality=\(agent.draftQuality) review_hints=\(agent.reviewHints.joined(separator: ",")) " +
+                "unresolved=\(agent.unresolvedIngredients.joined(separator: ",")) passes=\(agent.passes.count)"
+            )
+        }
 
         let mappedIngredients: [RecipeIngredient] = result.ingredients.compactMap { item in
             let cleanedName = removingEmojis(from: item.name).trimmingCharacters(in: .whitespacesAndNewlines)

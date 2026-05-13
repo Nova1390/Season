@@ -1065,6 +1065,21 @@ struct ParseRecipeCaptionFunctionIngredient: Codable {
     }
 }
 
+struct ParseRecipeCaptionFunctionAgentPass: Codable {
+    let name: String
+    let usedLLM: Bool?
+    let reason: String?
+    let candidateCount: Int?
+}
+
+struct ParseRecipeCaptionFunctionAgentSummary: Codable {
+    let version: String
+    let draftQuality: String
+    let reviewHints: [String]
+    let unresolvedIngredients: [String]
+    let passes: [ParseRecipeCaptionFunctionAgentPass]
+}
+
 struct ParseRecipeCaptionFunctionResult: Codable {
     let title: String?
     let ingredients: [ParseRecipeCaptionFunctionIngredient]
@@ -1073,6 +1088,7 @@ struct ParseRecipeCaptionFunctionResult: Codable {
     let cookTimeMinutes: Double?
     let confidence: String
     let inferredDish: String?
+    let smartImportAgent: ParseRecipeCaptionFunctionAgentSummary?
 }
 
 struct ParseRecipeCaptionFunctionError: Codable {

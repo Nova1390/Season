@@ -43,6 +43,17 @@ That makes Smart Import a user-facing drafting agent, not a catalog-maintenance 
 
 It must still keep catalog authority separate. If a caption contains a new or unresolved ingredient, Smart Import may keep it as custom in the draft and emit observations after save/publish. The Catalog Governance Agent then decides whether that observation should become a canonical ingredient, an alias, or a rejected/no-op case.
 
+The Smart Import Agent is the server-side drafting orchestrator inside `parse-recipe-caption`. Its current responsibilities are intentionally narrow:
+
+- decide whether the Swift preparse is enough or targeted LLM help is needed,
+- keep LLM calls scoped to unresolved ingredients when possible,
+- preserve trusted catalog matches back to Swift,
+- score the draft as `publishable`, `needs_creator_review`, or `needs_more_input`,
+- return review hints such as `steps_missing`, `quantities_missing`, or `unresolved_ingredients_present`,
+- expose the passes it executed so future debugging can explain what happened.
+
+It does not own catalog policy. If the Smart Import Agent cannot safely map an ingredient, it leaves the draft editable and lets Catalog Governance learn from the eventual custom observation.
+
 ## 2. System Overview
 
 ```mermaid
@@ -143,6 +154,7 @@ Does:
 - If candidates are present, calls LLM only for candidates that require it: ambiguous or none, plus low-confidence alias when applicable.
 - Returns existing-compatible recipe parse output plus optional metadata per ingredient: `status`, `confidence`, `matchType`, and `matchedIngredientId`.
 - Lets Swift preserve trusted catalog identity when the server confirms a known candidate.
+- Adds `smartImportAgent` metadata to the result with draft quality, review hints, unresolved ingredients, and executed passes.
 - Adds optional audit metadata without forcing catalog mutations.
 
 Must not:

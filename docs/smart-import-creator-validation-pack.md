@@ -97,3 +97,6 @@ Server-assisted pass criteria:
 - Ingredient metadata returned by the Edge Function (`status`, `confidence`, `matchType`, `matchedIngredientId`) is preserved by Swift decoding.
 - Trusted server matches are applied only when the matched id exists in the locally loaded catalog.
 - Low-confidence or unknown matches stay editable/custom instead of silently authoring catalog truth.
+- `smartImportAgent.draftQuality` is present on server-assisted responses and is consistent with the draft: missing steps or ingredients should not be marked `publishable`.
+- `smartImportAgent.reviewHints` explains creator-facing blockers without requiring the creator to understand catalog internals.
+- `smartImportAgent.passes` shows whether the server used full recipe parse or targeted ingredient resolution.

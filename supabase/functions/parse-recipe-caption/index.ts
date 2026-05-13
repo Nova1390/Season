@@ -37,6 +37,7 @@ interface PreparsedIngredientCandidate {
 }
 
 type ImportConfidence = "high" | "medium" | "low";
+type SmartImportDraftQuality = "publishable" | "needs_creator_review" | "needs_more_input";
 
 interface ParsedIngredient {
   name: string;
@@ -46,6 +47,21 @@ interface ParsedIngredient {
   confidence?: number;
   matchType?: SmartImportMatchType;
   matchedIngredientId?: string | null;
+}
+
+interface SmartImportAgentPass {
+  name: string;
+  usedLLM: boolean;
+  reason: string;
+  candidateCount?: number;
+}
+
+interface SmartImportAgentSummary {
+  version: "smart_import_agent_v1";
+  draftQuality: SmartImportDraftQuality;
+  reviewHints: string[];
+  unresolvedIngredients: string[];
+  passes: SmartImportAgentPass[];
 }
 
 interface ParseRecipeCaptionResponse {
@@ -59,6 +75,7 @@ interface ParseRecipeCaptionResponse {
     servings: number | null;
     confidence: ImportConfidence;
     inferredDish: string | null;
+    smartImportAgent?: SmartImportAgentSummary;
   };
   error?: {
     code: string;
@@ -248,14 +265,20 @@ Deno.serve(async (request) => {
           llmResolvedByIndex: new Map(),
         });
         const outputAudit = computeSmartImportOutputAudit(mappedResult.ingredients);
+        const agentResult = attachSmartImportAgentSummary(mappedResult, {
+          inputAudit: smartImportAudit,
+          outputAudit,
+          usedLLM: false,
+          mode: "candidate_resolution",
+        });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=false`,
         );
-        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence} smart_import=true used_llm=false`);
+        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${agentResult.ingredients.length} steps=${agentResult.steps.length} confidence=${agentResult.confidence} smart_import=true used_llm=false draft_quality=${agentResult.smartImportAgent?.draftQuality}`);
         return json(
           {
             ok: true,
-            result: mappedResult,
+            result: agentResult,
             meta: {
               languageCode,
               usedServerLLM: false,
@@ -356,14 +379,20 @@ Deno.serve(async (request) => {
           llmResolvedByIndex: llmResolutionMap(validation.value.ingredients),
         });
         const outputAudit = computeSmartImportOutputAudit(mappedResult.ingredients);
+        const agentResult = attachSmartImportAgentSummary(mappedResult, {
+          inputAudit: smartImportAudit,
+          outputAudit,
+          usedLLM: true,
+          mode: "candidate_resolution",
+        });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=true`,
         );
-        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence} smart_import=true used_llm=true`);
+        console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${agentResult.ingredients.length} steps=${agentResult.steps.length} confidence=${agentResult.confidence} smart_import=true used_llm=true draft_quality=${agentResult.smartImportAgent?.draftQuality}`);
         return json(
           {
             ok: true,
-            result: mappedResult,
+            result: agentResult,
             meta: {
               languageCode,
               usedServerLLM: true,
@@ -506,12 +535,16 @@ Deno.serve(async (request) => {
         confidence: validation.value.confidence,
         inferredDish: null,
       };
+      const agentResult = attachSmartImportAgentSummary(mappedResult, {
+        usedLLM: true,
+        mode: "full_recipe_parse",
+      });
 
-      console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${mappedResult.ingredients.length} steps=${mappedResult.steps.length} confidence=${mappedResult.confidence}`);
+      console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${agentResult.ingredients.length} steps=${agentResult.steps.length} confidence=${agentResult.confidence} draft_quality=${agentResult.smartImportAgent?.draftQuality}`);
       return json(
         {
           ok: true,
-          result: mappedResult,
+          result: agentResult,
           meta: {
             languageCode,
             usedServerLLM: true,
@@ -668,6 +701,114 @@ function buildSmartImportAuditResponse(
     sent_to_llm: inputAudit.sentToLLM,
     final_unknown: outputAudit.unknown,
   };
+}
+
+function attachSmartImportAgentSummary(
+  result: ParseRecipeCaptionResult,
+  input: {
+    inputAudit?: SmartImportInputAudit;
+    outputAudit?: SmartImportOutputAudit;
+    usedLLM: boolean;
+    mode: "candidate_resolution" | "full_recipe_parse";
+  },
+): ParseRecipeCaptionResult {
+  const outputAudit = input.outputAudit ?? computeSmartImportOutputAudit(result.ingredients);
+  return {
+    ...result,
+    smartImportAgent: buildSmartImportAgentSummary(result, {
+      ...input,
+      outputAudit,
+    }),
+  };
+}
+
+function buildSmartImportAgentSummary(
+  result: ParseRecipeCaptionResult,
+  input: {
+    inputAudit?: SmartImportInputAudit;
+    outputAudit: SmartImportOutputAudit;
+    usedLLM: boolean;
+    mode: "candidate_resolution" | "full_recipe_parse";
+  },
+): SmartImportAgentSummary {
+  const reviewHints = smartImportReviewHints(result, input.outputAudit);
+  const unresolvedIngredients = result.ingredients
+    .filter((ingredient) => ingredient.status === "unknown" || !ingredient.matchedIngredientId && ingredient.matchType === "none")
+    .map((ingredient) => ingredient.name)
+    .filter(Boolean)
+    .slice(0, 12);
+
+  let draftQuality: SmartImportDraftQuality = "publishable";
+  if (result.ingredients.length === 0 || result.steps.length === 0) {
+    draftQuality = "needs_more_input";
+  } else if (result.confidence === "low" || input.outputAudit.unknown > 0 || reviewHints.length > 0) {
+    draftQuality = "needs_creator_review";
+  }
+
+  const passes: SmartImportAgentPass[] = [];
+  if (input.mode === "candidate_resolution") {
+    passes.push({
+      name: "swift_preparse_catalog_memory",
+      usedLLM: false,
+      reason: "Swift extracted ingredient candidates and local catalog matches before calling the server.",
+      candidateCount: input.inputAudit?.total,
+    });
+    if (input.usedLLM) {
+      passes.push({
+        name: "targeted_ingredient_resolution",
+        usedLLM: true,
+        reason: "Only ambiguous, unknown, or low-confidence ingredient candidates were sent to the LLM.",
+        candidateCount: input.inputAudit?.sentToLLM,
+      });
+    }
+  } else {
+    passes.push({
+      name: "full_recipe_caption_parse",
+      usedLLM: true,
+      reason: "No preparsed candidates were provided, so the LLM extracted the full draft from caption and URL context.",
+    });
+  }
+
+  passes.push({
+    name: "draft_quality_gate",
+    usedLLM: false,
+    reason: "Server scored draft completeness and surfaced creator review hints without mutating the catalog.",
+    candidateCount: result.ingredients.length,
+  });
+
+  return {
+    version: "smart_import_agent_v1",
+    draftQuality,
+    reviewHints,
+    unresolvedIngredients,
+    passes,
+  };
+}
+
+function smartImportReviewHints(
+  result: ParseRecipeCaptionResult,
+  outputAudit: SmartImportOutputAudit,
+): string[] {
+  const hints: string[] = [];
+  if (!result.title || result.title.trim().length === 0) {
+    hints.push("title_missing");
+  }
+  if (result.ingredients.length === 0) {
+    hints.push("ingredients_missing");
+  }
+  if (result.steps.length === 0) {
+    hints.push("steps_missing");
+  }
+  if (outputAudit.unknown > 0) {
+    hints.push("unresolved_ingredients_present");
+  }
+  if (result.ingredients.length > 0 && !result.ingredients.some((ingredient) => ingredient.quantity !== null)) {
+    hints.push("quantities_missing");
+  }
+  if (result.confidence === "low") {
+    hints.push("low_confidence_parse");
+  }
+  return hints;
 }
 
 function buildSmartImportResult(input: {
