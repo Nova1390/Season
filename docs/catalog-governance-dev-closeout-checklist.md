@@ -690,3 +690,60 @@ Interpretation:
 
 - This proves the correct `create_canonical` path after proposal persistence: agent proposal -> enrichment draft -> future Autopilot enrichment/validation.
 - The next microstep is to run a bounded enrichment worker for this pending draft, still without enabling ingredient creation.
+
+### Agent-Orchestrated Enrichment Worker Smoke
+
+The agent orchestrator ran one bounded enrichment worker job for the pending `pasta corta` draft.
+
+Temporary runtime settings:
+
+- `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true`.
+- `CATALOG_AGENT_OPERATOR_TOKEN` was set for the smoke and removed afterwards.
+- `CATALOG_AGENT_MAX_WORKER_ITEMS_PER_RUN=1`.
+- `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED=false`.
+
+Run result:
+
+- Agent run: `49`.
+- Worker job: `16`.
+- Worker: `enrichment_draft_batch`.
+- Worker function: `run-catalog-enrichment-draft-batch`.
+- Limit: `1`.
+- Total processed: `1`.
+- Succeeded: `1`.
+- Failed: `0`.
+- Skipped: `0`.
+- Ready: `1`.
+- Pending: `0`.
+- Processed item: `pasta corta`.
+- Detail: `proposal_auto_promoted_ready`.
+
+Draft after enrichment:
+
+- Normalized text: `pasta corta`.
+- Status: `ready`.
+- Suggested slug: `pasta_corta`.
+- Italian name: `pasta corta`.
+- English name: `short pasta`.
+- Ingredient type: `basic`.
+- Parent candidate slug: `pasta`.
+- Variant kind: `shape`.
+- Specificity rank suggestion: `1`.
+- Default unit: `g`.
+- Supported units: `g`, `kg`, `pack`.
+- Confidence: `0.93`.
+- Needs manual review: `false`.
+- Validated ready: `true`.
+- Validation errors: `[]`.
+
+Safety verification:
+
+- No `ingredients` row exists for `short_pasta` or `pasta_corta`.
+- Worker job `16` is completed and linked to agent run `49`.
+- Orchestrator was disabled again after the smoke.
+- Ingredient creation remains disabled.
+
+Interpretation:
+
+- This proves the manager-worker handoff: persisted agent proposal -> draft preparation -> orchestrated Autopilot enrichment -> ready draft.
+- This still does not create catalog identity. The next microstep would be an explicit reviewed ingredient-creation test with `limit=1` and creation flag enabled only for the smoke.

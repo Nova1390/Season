@@ -80,6 +80,7 @@ Implementation status:
 - Full LLM quality-gate smoke passed in dry-run with `run_id=47`: `1` returned proposal, `1` persistable proposal, `0` blocked proposals, and `0` persisted proposals because persistence remained disabled.
 - First governed persistence smoke passed with `run_id=48`: `1` persistable proposal was inserted as proposal `#25`, with `0` quality-gate blocks and no catalog apply.
 - First persisted `create_canonical` proposal was routed into the enrichment-draft lane: proposal `#25` prepared a pending draft for `pasta corta` / `short_pasta`, with no ingredient creation.
+- First agent-orchestrated enrichment worker smoke passed with `run_id=49`, `worker_job_id=16`: one pending draft was enriched, validated, and promoted to `ready` without ingredient creation.
 - The dev run window was closed afterwards: `CATALOG_AGENT_ENABLED=false`, `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=false`, and the temporary operator token was removed.
 
 Exit gates:
