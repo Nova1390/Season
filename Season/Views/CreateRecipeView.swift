@@ -67,6 +67,99 @@ private struct ImportQualityBadge: View {
     }
 }
 
+private struct SmartImportAgentStatusCard: View {
+    let summary: ParseRecipeCaptionFunctionAgentSummary
+    let localizer: AppLocalizer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: iconName)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(color)
+                    .frame(width: 22, height: 22)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.caption.weight(.bold))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if !visibleHints.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(visibleHints, id: \.self) { hint in
+                        Label(hintLabel(hint), systemImage: "checklist")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(color.opacity(0.10))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(color.opacity(0.22), lineWidth: 1)
+        }
+    }
+
+    private var visibleHints: [String] {
+        Array(summary.reviewHints.prefix(3))
+    }
+
+    private var title: String {
+        switch summary.draftQuality {
+        case "publishable":
+            return localizer.localized("create.smart_import_agent.publishable.title")
+        case "needs_more_input":
+            return localizer.localized("create.smart_import_agent.more_input.title")
+        default:
+            return localizer.localized("create.smart_import_agent.review.title")
+        }
+    }
+
+    private var subtitle: String {
+        switch summary.draftQuality {
+        case "publishable":
+            return localizer.localized("create.smart_import_agent.publishable.subtitle")
+        case "needs_more_input":
+            return localizer.localized("create.smart_import_agent.more_input.subtitle")
+        default:
+            return localizer.localized("create.smart_import_agent.review.subtitle")
+        }
+    }
+
+    private var iconName: String {
+        switch summary.draftQuality {
+        case "publishable": return "sparkles"
+        case "needs_more_input": return "text.badge.plus"
+        default: return "exclamationmark.magnifyingglass"
+        }
+    }
+
+    private var color: Color {
+        switch summary.draftQuality {
+        case "publishable": return .green
+        case "needs_more_input": return .orange
+        default: return .orange
+        }
+    }
+
+    private func hintLabel(_ hint: String) -> String {
+        let key = "create.smart_import_agent.hint.\(hint)"
+        let localized = localizer.localized(key)
+        return localized == key ? hint.replacingOccurrences(of: "_", with: " ") : localized
+    }
+}
+
 struct CreateRecipeView: View {
     private enum ComposerStateKind {
         case start
@@ -122,6 +215,7 @@ struct CreateRecipeView: View {
     @State private var importFeedbackText = ""
     @State private var importConfidence: SocialImportConfidence?
     @State private var importServerNoticeText = ""
+    @State private var smartImportAgentSummary: ParseRecipeCaptionFunctionAgentSummary?
     @State private var isImportAnalyzing = false
     @State private var showCaptionImportHint = false
     @State private var showImportTools = false
@@ -386,6 +480,11 @@ struct CreateRecipeView: View {
                         ImportQualityBadge(confidence: importConfidence, localizer: localizer)
                             .padding(.top, 4)
                             .scaleEffect(importConfidence == .low ? 1.02 : 1.0)
+                    }
+
+                    if let smartImportAgentSummary {
+                        SmartImportAgentStatusCard(summary: smartImportAgentSummary, localizer: localizer)
+                            .padding(.top, 4)
                     }
 
                     if !importServerNoticeText.isEmpty {
@@ -1449,11 +1548,13 @@ struct CreateRecipeView: View {
     private func applySocialImport() async {
         guard canRunSmartImport else {
             importConfidence = nil
+            smartImportAgentSummary = nil
             importServerNoticeText = ""
             importFeedbackText = localizer.text(.importMissingSource)
             return
         }
         importConfidence = nil
+        smartImportAgentSummary = nil
         importServerNoticeText = ""
 
         let sourceURL = normalizedImportSourceURL ?? ""
@@ -1739,6 +1840,7 @@ struct CreateRecipeView: View {
 
     @MainActor
     private func applyImportedSuggestion(_ suggestion: SocialImportSuggestion, sourceURL: String) {
+        smartImportAgentSummary = suggestion.smartImportAgent
         detectedSourcePlatform = suggestion.sourcePlatform ?? detectedPlatform(for: sourceURL)
         mediaLink = sourceURL
         importConfidence = suggestion.confidence
@@ -1875,7 +1977,8 @@ struct CreateRecipeView: View {
             suggestedTitle: cleanedTitle(result.title ?? ""),
             suggestedIngredients: mappedIngredients,
             suggestedSteps: mappedSteps,
-            confidence: socialImportConfidence(from: result.confidence)
+            confidence: socialImportConfidence(from: result.confidence),
+            smartImportAgent: result.smartImportAgent
         )
     }
 

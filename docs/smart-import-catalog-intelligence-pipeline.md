@@ -54,6 +54,14 @@ The Smart Import Agent is the server-side drafting orchestrator inside `parse-re
 
 It does not own catalog policy. If the Smart Import Agent cannot safely map an ingredient, it leaves the draft editable and lets Catalog Governance learn from the eventual custom observation.
 
+As of the creator-flow UI integration, Swift surfaces the Smart Import Agent result directly in `CreateRecipeView` after a server-assisted import. The card intentionally uses creator-friendly language:
+
+- `publishable` means the draft looks coherent but still deserves a final human read before publishing.
+- `needs_creator_review` means the draft is useful but one or more visible hints should be checked.
+- `needs_more_input` means the caption lacks enough recipe structure and the creator should add ingredients, amounts, or steps.
+
+The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
+
 ## 2. System Overview
 
 ```mermaid

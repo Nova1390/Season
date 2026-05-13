@@ -14,6 +14,7 @@ struct SocialImportSuggestion {
     let suggestedIngredients: [RecipeIngredient]
     let suggestedSteps: [String]
     let confidence: SocialImportConfidence
+    let smartImportAgent: ParseRecipeCaptionFunctionAgentSummary?
 }
 
 enum SmartImportMatchType: String, Codable, Hashable {
@@ -124,7 +125,8 @@ enum SocialImportParser {
             suggestedTitle: title,
             suggestedIngredients: ingredients,
             suggestedSteps: steps,
-            confidence: confidence
+            confidence: confidence,
+            smartImportAgent: nil
         )
     }
 
