@@ -48,6 +48,7 @@ The Smart Import Agent is the server-side drafting orchestrator inside `parse-re
 - decide whether the Swift preparse is enough or targeted LLM help is needed,
 - load compact relevant learning memory for the ingredient candidates before targeted LLM reasoning,
 - keep LLM calls scoped to unresolved ingredients when possible,
+- reason about product family, meaningful variants, preparation/freshness state, product form, and ambiguity without authoring catalog truth,
 - preserve trusted catalog matches back to Swift,
 - score the draft as `publishable`, `needs_creator_review`, or `needs_more_input`,
 - return review hints such as `steps_missing`, `quantities_missing`, or `unresolved_ingredients_present`,
@@ -89,6 +90,7 @@ Cost posture:
 - At most a small number of lessons per term and global lessons are included.
 - Deterministically resolved ingredients still avoid LLM calls.
 - The memory exists to reduce repeated LLM confusion, not to expand reasoning loops indiscriminately.
+- The prompt can reason deeply about one candidate, but it must not start autonomous multi-call loops inside Smart Import. Deeper catalog investigation belongs to the Catalog Governance Agent.
 
 Validation:
 

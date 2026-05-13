@@ -109,9 +109,13 @@ Rules:
 7) Do not invent steps not present in the caption.
 8) Do not infer prep/cook times unless explicitly stated.
 9) Do not infer servings unless explicitly stated.
-10) Keep ingredient names human-readable.
+10) Keep ingredient names human-readable and in the caption language when possible.
 11) confidence should reflect extraction quality (high/medium/low), not certainty about cooking quality.
 12) "prefer null over guessing" applies only when quantity is NOT explicitly present in the caption.
+13) Do not collapse meaningful food variants into broad parents when the caption uses a specific market/culinary term (e.g. pomodorini should remain pomodorini, not generic pomodoro).
+14) Do not turn preparation or freshness states into new ingredient identities. Keep the base ingredient as the name and place the state in notes when it matters (e.g. pane raffermo -> name pane, notes raffermo).
+15) Product forms can be identity-bearing when the parent would be too broad for shopping/fridge matching (e.g. fiocchi d'avena is not just avena).
+16) Generic family words that are truly underspecified can stay generic with medium/low confidence; do not over-specialize without evidence (e.g. olive without green/black/pitted context stays olive).
 
 Example 1 (structured, high quality)
 INPUT:
@@ -185,7 +189,23 @@ Rules:
 10) Treat relevant_learning_memory as advisory operational memory, not as catalog truth.
 11) Follow implemented/accepted learning when it matches the current candidate evidence.
 12) If learning memory says a term is a meaningful variant, do not collapse it into a generic parent name.
-13) If learning memory says a term condition is not catalog identity, keep the ingredient name simple and leave the condition for recipe text.`;
+13) If learning memory says a term condition is not catalog identity, keep the ingredient name simple and leave the condition for recipe text.
+
+Decision model:
+A) Product family: identify the broad family only to avoid wrong collapses; do not output the family if the candidate names a more useful child identity.
+B) Meaningful variant: preserve terms that change shopping, fridge matching, nutrition, seasonality, allergy/dietary meaning, culinary behavior, or creator intent.
+C) Non-identity modifier: remove preparation/freshness/shape adjectives only when they do not change ingredient identity; examples include stale, chopped, grated, cooked, toasted.
+D) Product form: forms such as flakes, flour, powder, concentrate, whole grain, or pasta shape may be identity-bearing if the base parent would be too generic.
+E) Ambiguity: if a term can mean multiple different products and the candidate provides no evidence, return the safest human-readable name with status "unknown" and lower confidence.
+F) Language: keep the output in the user's ingredient language when possible; do not translate Italian ingredient names into English unless the candidate is already English.
+G) Cost discipline: do not broaden reasoning beyond the provided candidate and relevant_learning_memory.
+
+Examples:
+- Candidate "pomodorini 200g" with learning about small tomato variants -> {"name":"pomodorini","quantity":200,"unit":"g","status":"inferred","confidence":0.9}
+- Candidate "pane raffermo 120g" with learning about stale bread -> {"name":"pane","quantity":120,"unit":"g","status":"inferred","confidence":0.86}
+- Candidate "uovo 1" with learning about bare singular egg -> {"name":"uovo","quantity":1,"unit":"piece","status":"inferred","confidence":0.9}
+- Candidate "fiocchi d avena 40g" with learning about oat flakes/product form -> {"name":"fiocchi d'avena","quantity":40,"unit":"g","status":"inferred","confidence":0.88}
+- Candidate "olive" without color/form evidence -> {"name":"olive","quantity":null,"unit":null,"status":"unknown","confidence":0.45}`;
 
 export function validateLLMRecipeImportOutput(payload: unknown): {
   ok: boolean;

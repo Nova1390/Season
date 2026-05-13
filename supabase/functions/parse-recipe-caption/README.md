@@ -114,6 +114,7 @@ Error responses are JSON-only (`ok: false`) with `error.code` and `error.message
   - targeted LLM is used only for ambiguous, unknown, or low-confidence candidate matches;
   - full recipe parse is used when no Swift candidate packet is available;
   - `get_catalog_agent_learning_context(...)` supplies compact advisory memory for targeted candidate resolution;
+  - the targeted prompt explicitly distinguishes product family, meaningful variants, preparation/freshness state, product form, and ambiguity;
   - provider JSON is validated before returning to the app.
 
 Smart Import must not create catalog records, approve aliases, or reconcile recipes. Unresolved custom ingredients are handled later by Catalog Governance observations.
