@@ -234,7 +234,8 @@ This proves the reversible alias path can be applied and rolled back without lea
 Repeatable smoke:
 
 - script: `scripts/catalog_agent_rollback_smoke.sh`;
-- latest passing run: `catalog_agent_runs.id = 57`;
-- latest passing proposal: `catalog_agent_proposals.id = 32`;
-- latest passing apply audit: `catalog_agent_apply_audit.id = 6`;
+- latest passing run: `catalog_agent_runs.id = 58`;
+- latest passing proposal: `catalog_agent_proposals.id = 33`;
+- latest passing apply audit: `catalog_agent_apply_audit.id = 7`;
 - latest verification: `rollback_smoke_ok=true`.
+- the script retires the smoke proposal to `superseded` after verification to keep real apply queues clean.

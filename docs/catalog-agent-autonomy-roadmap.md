@@ -122,7 +122,9 @@ Implementation status:
 - the rollback path deleted the inserted alias, marked audit `#4` as `reverted`, returned proposal `#30` to `validated`, and emitted `auto_apply_rollback_succeeded`;
 - final verification showed `remaining_alias_rows=0`, `proposal_status=validated`, and `audit_status=reverted`;
 - the smoke was converted into repeatable script `scripts/catalog_agent_rollback_smoke.sh`;
-- scripted smoke passed with run `#57`, proposal `#32`, apply audit `#6`, and `rollback_smoke_ok=true`;
+- scripted smoke passed with run `#58`, proposal `#33`, apply audit `#7`, and `rollback_smoke_ok=true`;
+- the repeatable smoke now retires its own test proposal to `superseded` after verification, so future real low-risk batches cannot re-apply smoke aliases;
+- post-cleanup verification showed no remaining `validated + low + auto_apply_eligible` proposals;
 - no staging data or schedules were touched.
 
 Allowed actions:

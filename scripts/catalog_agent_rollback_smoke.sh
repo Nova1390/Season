@@ -228,4 +228,48 @@ if [[ "$(echo "$verification" | jq -r '.rows[0].rollback_smoke_ok')" != "true" ]
   exit 1
 fi
 
-echo "Rollback smoke passed for proposal ${proposal_id}, audit ${apply_audit_id}."
+retire_sql="
+with retired as (
+  update public.catalog_agent_proposals
+  set
+    status = 'superseded',
+    updated_at = now()
+  where id = ${proposal_id}
+    and status = 'validated'
+    and normalized_text = '${SMOKE_ALIAS}'
+  returning id, run_id
+)
+insert into public.catalog_agent_proposal_events (
+  proposal_id,
+  run_id,
+  event_type,
+  event_payload
+)
+select
+  id,
+  run_id,
+  'rollback_smoke_retired',
+  jsonb_build_object(
+    'reason',
+    'Retire reversible smoke proposal after rollback verification so real low-risk apply batches do not re-apply test aliases.',
+    'previous_status',
+    'validated',
+    'next_status',
+    'superseded'
+  )
+from retired
+returning proposal_id, event_type;
+"
+
+retirement="$(
+  SUPABASE_ACCESS_TOKEN="$SUPABASE_ACCESS_TOKEN" supabase db query --linked "$retire_sql"
+)"
+
+echo "$retirement" | jq .
+
+if [[ "$(echo "$retirement" | jq -r '.rows[0].event_type')" != "rollback_smoke_retired" ]]; then
+  echo "Rollback smoke passed, but proposal retirement failed for proposal ${proposal_id}." >&2
+  exit 1
+fi
+
+echo "Rollback smoke passed and retired for proposal ${proposal_id}, audit ${apply_audit_id}."

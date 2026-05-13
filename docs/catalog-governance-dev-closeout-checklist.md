@@ -1009,11 +1009,15 @@ Result:
 - Final proposal status: `validated`.
 - Final audit status: `reverted`.
 - The same check is now repeatable through `scripts/catalog_agent_rollback_smoke.sh`.
-- Scripted smoke passed with run `#57`, proposal `#32`, apply audit `#6`, rollback plan `delete_inserted_alias` for alias id `180`, and `rollback_smoke_ok=true`.
+- Scripted smoke passed with run `#58`, proposal `#33`, apply audit `#7`, rollback plan `delete_inserted_alias` for alias id `181`, and `rollback_smoke_ok=true`.
+- The script now retires its own smoke proposal to `superseded` after verification.
+- Post-cleanup verification confirmed proposals `#30`, `#31`, `#32`, and `#33` are `superseded`.
+- Post-cleanup verification found `0` remaining `validated + low + auto_apply_eligible` proposals.
 
 Interpretation:
 
 - The core apply/rollback contract works for an intentionally reversible low-risk alias.
 - The proposal is still visible as historical evidence, but the catalog row was removed.
+- Smoke proposals are not left in the real apply queue.
 - This satisfies the first Level 5.0 rollback gate, not the full Level 5.0 autonomy gate.
 - The next Level 5.0 microstep is controlled `limit=1` low-risk apply behavior with real eligible proposals and audit verification.
