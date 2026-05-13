@@ -86,6 +86,13 @@ Operations worker controls are deliberately narrow:
 - verified `https://catalog.seasonapp.it/` returns `200`;
 - verified cache-busted `app.js?v=20260513-3` and `styles.css?v=20260513-3` return `200`.
 
+2026-05-13 scheduler-window follow-up:
+
+- deployed cache version `20260513-4` with scheduler `Window` status;
+- the console now explains whether the dev scheduler window is `disabled`, `open`, `expired`, or missing an expiry;
+- verified `https://catalog.seasonapp.it/` returns `200`;
+- verified cache-busted `app.js?v=20260513-4` and `styles.css?v=20260513-4` return `200`.
+
 ## Local Setup
 
 Create a local config file from the example:

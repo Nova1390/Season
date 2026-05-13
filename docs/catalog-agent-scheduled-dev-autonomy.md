@@ -21,6 +21,7 @@ The goal is to reduce routine founder review, not to hide risk.
 `catalog_agent_dev_schedule_config`
 
 - Stores the environment kill switch.
+- Stores the expiry and label for temporary scheduler windows.
 - Stores daily ceilings for agent runs, worker jobs, real applies, LLM tokens, and estimated AI cost.
 - Defaults `dev` to disabled.
 - Keeps low-risk dry-run enabled by default.
@@ -36,6 +37,8 @@ The goal is to reduce routine founder review, not to hide risk.
 `catalog_agent_dev_schedule_guard(...)`
 
 - Returns `ok=false` when the kill switch is off.
+- Returns `ok=false` when a schedule window is enabled without `enabled_until`.
+- Returns `ok=false` when the schedule window has expired.
 - Returns `ok=false` when any daily ceiling is reached.
 - Returns allowed action flags for triage, dry-run worker, and real low-risk apply.
 - Rejects non-dev environments for scheduled autonomy.
@@ -251,4 +254,14 @@ Micro-scheduler install:
 - cron-created shift `#4` was skipped with `schedule_disabled`, with `0` worker results;
 - manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`, with `0` worker results;
 - final `catalog_agent_dev_shift_health` returned `green`, with `5` total shift attempts today, `2` completed, `3` skipped, `0` failed, and `2` worker results;
+- Supabase lint result: `No schema errors found`.
+
+Window-expiry guard:
+
+- applied migration `20260513143000_add_dev_schedule_window_expiry.sql` to `Season-dev`;
+- added `enabled_until` and `window_label` to `catalog_agent_dev_schedule_config`;
+- `catalog_agent_dev_schedule_status` now exposes `window_status`;
+- admin console cache version `20260513-4` shows the current scheduler window state;
+- guard smoke with `enabled=true` and `enabled_until=null` returned `schedule_window_missing_expiry`;
+- final status returned `window_status=disabled`, `enabled=false`, `enabled_until=null`, and `window_label=null`;
 - Supabase lint result: `No schema errors found`.

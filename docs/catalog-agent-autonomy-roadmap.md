@@ -278,6 +278,9 @@ Implementation status:
 - first real cron tick succeeded at `2026-05-13 14:17:00 UTC` and produced shift `#4`, safely skipped with `schedule_disabled`;
 - manual scheduler-token verification produced shift `#5`, also skipped with `schedule_disabled`;
 - final shift health after scheduler install stayed `green`: `5` attempts today, `2` completed dry-runs, `3` skipped guard checks, `0` failed, and `2` worker results;
+- migration `20260513143000_add_dev_schedule_window_expiry.sql` added required temporary-window expiry fields, `enabled_until` and `window_label`, to prevent accidentally leaving dev scheduling open;
+- guard smoke proved `enabled=true` without `enabled_until` is blocked with `schedule_window_missing_expiry`, then dev was restored to `window_status=disabled`;
+- admin console cache version `20260513-4` surfaces the scheduler window status and explanation;
 - Supabase lint passed with `No schema errors found`;
 - no staging schedule or staging table writes are part of this step.
 
@@ -538,6 +541,8 @@ Recommended implementation order:
 2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON. Completed with cache version `20260513-3`.
 3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps. Completed in `docs/catalog-agent-dev-scheduler-runbook.md`.
 4. Install real dev micro-scheduler with kill-switch guard and Vault-backed credentials. Completed with `dev_catalog_agent_shift_dryrun_q2h`.
-5. Observe at least a few scheduled skipped ticks with `0` failed shifts.
-6. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
-7. Keep staging untouched until Level `6.5`.
+5. Add mandatory expiry for any enabled scheduler window. Completed with `enabled_until` guard.
+6. Observe at least a few scheduled skipped ticks with `0` failed shifts.
+7. Open one short dry-run-only scheduled window with explicit expiry.
+8. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
+9. Keep staging untouched until Level `6.5`.

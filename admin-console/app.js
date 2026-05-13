@@ -74,7 +74,9 @@ const elements = {
   scheduleLatestDigest: document.querySelector("#scheduleLatestDigest"),
   scheduleShiftHealth: document.querySelector("#scheduleShiftHealth"),
   scheduleShiftRunsToday: document.querySelector("#scheduleShiftRunsToday"),
+  scheduleWindowStatus: document.querySelector("#scheduleWindowStatus"),
   scheduleNextAction: document.querySelector("#scheduleNextAction"),
+  scheduleWindowMessage: document.querySelector("#scheduleWindowMessage"),
   scheduleShiftMessage: document.querySelector("#scheduleShiftMessage"),
   scheduleAnomalyList: document.querySelector("#scheduleAnomalyList"),
   scheduleShiftRunsList: document.querySelector("#scheduleShiftRunsList"),
@@ -736,6 +738,7 @@ function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, sched
   const anomalies = Array.isArray(latestDigest?.anomalies) ? latestDigest.anomalies : [];
   const shiftHealthStatus = scheduleShiftHealth?.shift_health_status ?? "idle";
   const shiftRunsToday = Number(scheduleShiftHealth?.total_shift_runs_today ?? 0);
+  const windowStatus = scheduleStatus?.window_status ?? "unknown";
 
   elements.scheduleGuardState.textContent = guardOk ? "Allowed" : humanizeToken(guardReason);
   elements.scheduleKillSwitch.textContent = scheduleGuard?.kill_switch === true || scheduleStatus?.enabled === false ? "On" : "Off";
@@ -743,11 +746,13 @@ function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, sched
   elements.scheduleLatestDigest.textContent = reportDate ? `${reportDate}` : "None";
   elements.scheduleShiftHealth.textContent = humanizeToken(shiftHealthStatus);
   elements.scheduleShiftRunsToday.textContent = String(shiftRunsToday);
+  elements.scheduleWindowStatus.textContent = humanizeToken(windowStatus);
   elements.scheduleDigestStatus.textContent = humanizeToken(digestStatus);
   elements.scheduleDigestStatus.dataset.status = digestStatus;
   elements.scheduleNextAction.textContent = latestDigest?.recommended_next_action
     ?? scheduleStatus?.latest_recommended_next_action
     ?? "No scheduled autonomy digest has been stored yet.";
+  elements.scheduleWindowMessage.textContent = schedulerWindowMessage(scheduleStatus, scheduleGuard);
   elements.scheduleShiftMessage.textContent = scheduleShiftHealth?.shift_health_message
     ?? "No dev-shift health record loaded yet.";
 
@@ -765,6 +770,28 @@ function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, sched
       ${Number.isFinite(Number(anomaly.count)) ? `<small>Count: ${escapeHTML(anomaly.count)}</small>` : ""}
     </article>
   `).join("");
+}
+
+function schedulerWindowMessage(scheduleStatus, scheduleGuard) {
+  const status = scheduleStatus?.window_status ?? "unknown";
+  const label = scheduleStatus?.window_label ? ` (${scheduleStatus.window_label})` : "";
+  const until = scheduleStatus?.enabled_until ? formatDate(scheduleStatus.enabled_until) : null;
+
+  if (status === "disabled") {
+    return "Scheduler window is closed. Cron may tick, but the guard will skip.";
+  }
+  if (status === "missing_expiry") {
+    return "Scheduler is enabled without an expiry. Guard blocks this as unsafe.";
+  }
+  if (status === "expired") {
+    return `Scheduler window expired${until ? ` at ${until}` : ""}. Guard blocks future work.`;
+  }
+  if (status === "open") {
+    return `Scheduler window is open until ${until ?? "unknown time"}${label}.`;
+  }
+
+  const reason = scheduleGuard?.reason ? humanizeToken(scheduleGuard.reason) : "not loaded";
+  return `Scheduler window state unavailable; guard says ${reason}.`;
 }
 
 function renderShiftHealthDetails(scheduleShiftHealth) {

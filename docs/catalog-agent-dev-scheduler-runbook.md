@@ -22,6 +22,8 @@ It must always:
 The expected safe default is:
 
 - `catalog_agent_dev_schedule_config.enabled = false`;
+- `enabled_until = null`;
+- `window_label = null`;
 - `triage_enabled = false`;
 - `low_risk_dry_run_enabled = true`;
 - `low_risk_apply_enabled = false`;
@@ -29,6 +31,10 @@ The expected safe default is:
 - `dev_catalog_agent_shift_dryrun_q2h` cron is active but guarded by the kill switch.
 
 In this state, a scheduled or manual function call should return `skipped=true` and `reason=schedule_disabled`.
+
+If `enabled=true` but `enabled_until` is null, the guard must return `schedule_window_missing_expiry`. This is intentional: every scheduler window needs an expiry.
+
+If `enabled=true` but `enabled_until <= now()`, the guard must return `schedule_window_expired`.
 
 The admin console should show:
 
@@ -96,6 +102,13 @@ Scheduler install evidence:
 - manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`;
 - final shift health remained `green`: `5` shift attempts today, `2` completed, `3` skipped, `0` failed.
 
+Window-expiry validation:
+
+- migration `20260513143000_add_dev_schedule_window_expiry.sql` added `enabled_until` and `window_label`;
+- `catalog_agent_dev_schedule_guard('dev')` now blocks enabled windows without expiry;
+- missing-expiry smoke returned `schedule_window_missing_expiry`;
+- final schedule status returned `disabled` with `enabled_until=null` and `window_label=null`.
+
 ## Reading Results
 
 Prefer these read models before inspecting raw tables:
@@ -120,17 +133,21 @@ Before opening:
 - confirm budget is acceptable for the intended run;
 - confirm the admin console is reachable at `https://catalog.seasonapp.it/`;
 - confirm the current PAT is intended for active development and will be rotated later.
+- choose a short `enabled_until` before setting `enabled=true`.
 
 During the window:
 
 - keep `triage_enabled=false` unless the purpose is explicitly to test LLM triage;
 - keep `low_risk_apply_enabled=false` unless running a separate approved Level 5.0 real-apply window;
 - keep `limit` at `1` unless the runbook for that exact test says otherwise;
+- set `window_label` to the purpose of the window;
 - watch the console `Shift health` and `Recent dev shifts` panel.
 
 After the window:
 
 - set `enabled=false`;
+- set `enabled_until=null`;
+- set `window_label=null`;
 - set `CATALOG_AGENT_ORCHESTRATOR_ENABLED=false`;
 - remove any temporary operator token;
 - run the final guard check;
@@ -158,6 +175,8 @@ update public.catalog_agent_dev_schedule_config
 set enabled = false,
     triage_enabled = false,
     low_risk_apply_enabled = false,
+    enabled_until = null,
+    window_label = null,
     updated_at = now()
 where environment = 'dev';
 ```

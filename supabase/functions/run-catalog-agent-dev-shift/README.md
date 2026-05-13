@@ -169,3 +169,10 @@ Micro-scheduler:
 - shift `#4` skipped safely with `schedule_disabled`;
 - manual scheduler-token verification created shift `#5`, also skipped with `schedule_disabled`;
 - final shift health stayed `green`.
+
+Window expiry:
+
+- migration `20260513143000_add_dev_schedule_window_expiry.sql` added `enabled_until` and `window_label`;
+- the schedule guard now blocks enabled windows that do not have an expiry;
+- missing-expiry smoke returned `schedule_window_missing_expiry`;
+- final status returned `disabled` with no open expiry.
