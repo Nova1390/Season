@@ -165,12 +165,16 @@
 "create.smart_import_agent.review.subtitle" = "La bozza è utile, ma l'assistente ha trovato alcuni punti da verificare prima di pubblicare.";
 "create.smart_import_agent.more_input.title" = "Servono più dettagli";
 "create.smart_import_agent.more_input.subtitle" = "La caption non basta ancora per creare una ricetta affidabile. Aggiungi ingredienti, dosi o passaggi.";
+"create.smart_import_agent.section.blocking" = "Da completare prima";
+"create.smart_import_agent.section.nice_to_fix" = "Migliora quando vuoi";
 "create.smart_import_agent.hint.title_missing" = "Manca un titolo chiaro.";
 "create.smart_import_agent.hint.ingredients_missing" = "Mancano gli ingredienti.";
 "create.smart_import_agent.hint.steps_missing" = "Mancano i passaggi di preparazione.";
 "create.smart_import_agent.hint.unresolved_ingredients_present" = "Alcuni ingredienti restano da verificare.";
 "create.smart_import_agent.hint.quantities_missing" = "Le quantità non sono abbastanza chiare.";
 "create.smart_import_agent.hint.low_confidence_parse" = "L'importazione ha confidenza bassa.";
+"create.smart_import_agent.hint.servings_missing" = "Le porzioni non sono indicate.";
+"create.smart_import_agent.hint.timings_missing" = "I tempi non sono indicati.";
 "create.smart_import_agent.next_action.review_draft" = "Prossimo passo: controlla la bozza prima di pubblicare.";
 "create.smart_import_agent.next_action.add_more_recipe_detail" = "Prossimo passo: aggiungi più dettagli alla caption.";
 "create.smart_import_agent.next_action.add_method_steps" = "Prossimo passo: aggiungi almeno un passaggio di preparazione.";

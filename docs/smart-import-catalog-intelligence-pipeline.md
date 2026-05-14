@@ -71,6 +71,13 @@ As of the creator-flow UI integration, Swift surfaces the Smart Import Agent res
 - `autoFixPlan.safeFixes` may be applied by a future deterministic worker.
 - `autoFixPlan.deferredFixes` explicitly names why the server is not allowed to guess, for example missing method steps, ingredient amounts, servings, timings, or unresolved catalog identity.
 
+The creator card groups scorecard issues into two visible sections:
+
+- "Complete before publishing" for `blockingIssues`.
+- "Improve when you can" for `niceToFix`.
+
+If an older function response has no `scorecard`, the app falls back to the legacy `reviewHints` list.
+
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
 
 ### Smart Import Learning Memory Contract

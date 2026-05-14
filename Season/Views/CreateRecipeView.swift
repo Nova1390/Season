@@ -89,12 +89,25 @@ private struct SmartImportAgentStatusCard: View {
                 }
             }
 
-            if !visibleHints.isEmpty {
+            if let scorecard = summary.scorecard {
+                VStack(alignment: .leading, spacing: 6) {
+                    issueSection(
+                        title: localizer.localized("create.smart_import_agent.section.blocking"),
+                        issues: Array(scorecard.blockingIssues.prefix(2)),
+                        icon: "exclamationmark.circle.fill",
+                        color: color
+                    )
+                    issueSection(
+                        title: localizer.localized("create.smart_import_agent.section.nice_to_fix"),
+                        issues: Array(scorecard.niceToFix.prefix(2)),
+                        icon: "wand.and.sparkles",
+                        color: .secondary
+                    )
+                }
+            } else if !visibleHints.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(visibleHints, id: \.self) { hint in
-                        Label(hintLabel(hint), systemImage: "checklist")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                        issueRow(issue: hint, icon: "checklist", color: .secondary)
                     }
                 }
             }
@@ -119,6 +132,26 @@ private struct SmartImportAgentStatusCard: View {
 
     private var visibleHints: [String] {
         Array(summary.reviewHints.prefix(3))
+    }
+
+    @ViewBuilder
+    private func issueSection(title: String, issues: [String], icon: String, color: Color) -> some View {
+        if !issues.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(issues, id: \.self) { issue in
+                    issueRow(issue: issue, icon: icon, color: color)
+                }
+            }
+        }
+    }
+
+    private func issueRow(issue: String, icon: String, color: Color) -> some View {
+        Label(hintLabel(issue), systemImage: icon)
+            .font(.caption2)
+            .foregroundStyle(color)
     }
 
     private var actionLabel: String? {
