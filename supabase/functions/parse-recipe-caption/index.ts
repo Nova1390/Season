@@ -579,10 +579,11 @@ Deno.serve(async (request) => {
     console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_start request_id=${requestId}`);
 
     try {
-      const providerResult = await invokeProviderForRecipeParse({ caption, url, languageCode });
+      let providerResult = await invokeProviderForRecipeParse({ caption, url, languageCode });
       console.log(`[SEASON_IMPORT_EDGE] phase=provider_call_success request_id=${requestId}`);
 
-      const validation = validateLLMRecipeImportOutput(providerResult.parsed);
+      let validation = validateLLMRecipeImportOutput(providerResult.parsed);
+      let schemaRepairAttempted = false;
 
       if (!validation.ok || !validation.value) {
         console.log(`[SEASON_IMPORT_EDGE] phase=validator_failed request_id=${requestId} error_count=${validation.errors.length}`);
@@ -595,24 +596,49 @@ Deno.serve(async (request) => {
           inputTokens: providerResult.usage.inputTokens,
           outputTokens: providerResult.usage.outputTokens,
           totalTokens: providerResult.usage.totalTokens,
-          reason: "validator_failed",
+          reason: "validator_failed_first_pass",
         });
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "VALIDATION_FAILED",
-              message: "Provider response did not match expected schema.",
+
+        schemaRepairAttempted = true;
+        console.log(`[SEASON_IMPORT_EDGE] phase=provider_schema_repair_start request_id=${requestId}`);
+        providerResult = await invokeProviderForRecipeParse({
+          caption,
+          url,
+          languageCode,
+          repairErrors: validation.errors,
+        });
+        validation = validateLLMRecipeImportOutput(providerResult.parsed);
+
+        if (!validation.ok || !validation.value) {
+          console.log(`[SEASON_IMPORT_EDGE] phase=validator_failed_after_repair request_id=${requestId} error_count=${validation.errors.length}`);
+          logLLMUsage("SEASON_IMPORT_EDGE", {
+            functionName: "parse-recipe-caption",
+            requestId,
+            status: "error",
+            providerDurationMs: providerResult.durationMs,
+            model: OPENAI_MODEL,
+            inputTokens: providerResult.usage.inputTokens,
+            outputTokens: providerResult.usage.outputTokens,
+            totalTokens: providerResult.usage.totalTokens,
+            reason: "validator_failed_after_schema_repair",
+          });
+          return json(
+            {
+              ok: false,
+              error: {
+                code: "VALIDATION_FAILED",
+                message: "Provider response did not match expected schema.",
+              },
+              meta: {
+                usedServerLLM: true,
+                userId: userID,
+                dayBucket,
+                remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+              },
             },
-            meta: {
-              usedServerLLM: true,
-              userId: userID,
-              dayBucket,
-              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
-            },
-          },
-          502,
-        );
+            502,
+          );
+        }
       }
       console.log(`[SEASON_IMPORT_EDGE] phase=validator_success request_id=${requestId}`);
       logLLMUsage("SEASON_IMPORT_EDGE", {
@@ -624,11 +650,13 @@ Deno.serve(async (request) => {
         inputTokens: providerResult.usage.inputTokens,
         outputTokens: providerResult.usage.outputTokens,
         totalTokens: providerResult.usage.totalTokens,
+        reason: schemaRepairAttempted ? "full_recipe_parse_schema_repair" : "full_recipe_parse",
       });
 
+      const recipeOutput = validation.value;
       const mappedResult: ParseRecipeCaptionResult = {
-        title: validation.value.title.trim() ? validation.value.title : null,
-        ingredients: validation.value.ingredients.map((item) => {
+        title: recipeOutput.title.trim() ? recipeOutput.title : null,
+        ingredients: recipeOutput.ingredients.map((item) => {
           const normalized = recoverExplicitMeasuredIngredient({
             name: item.name.trim(),
             quantity: item.quantity,
@@ -641,11 +669,11 @@ Deno.serve(async (request) => {
           }
           return normalized;
         }),
-        steps: validation.value.steps.map((step) => step.trim()).filter(Boolean),
-        prepTimeMinutes: validation.value.prepTimeMinutes,
-        cookTimeMinutes: validation.value.cookTimeMinutes,
-        servings: validation.value.servings,
-        confidence: validation.value.confidence,
+        steps: recipeOutput.steps.map((step) => step.trim()).filter(Boolean),
+        prepTimeMinutes: recipeOutput.prepTimeMinutes,
+        cookTimeMinutes: recipeOutput.cookTimeMinutes,
+        servings: recipeOutput.servings,
+        confidence: recipeOutput.confidence,
         inferredDish: null,
       };
       const agentResult = attachSmartImportAgentSummary(mappedResult, {
@@ -1362,10 +1390,19 @@ async function invokeProviderForRecipeParse(input: {
   caption: string;
   url: string;
   languageCode: string;
+  repairErrors?: string[];
 }): Promise<ProviderInvocationResult> {
   const userContent = [
     `languageCode: ${input.languageCode}`,
     `url: ${input.url || ""}`,
+    ...(input.repairErrors && input.repairErrors.length > 0
+      ? [
+        "schema_repair_context:",
+        "Your previous JSON failed validation. Return the same recipe extraction intent, but fix ONLY the schema errors below.",
+        JSON.stringify(input.repairErrors.slice(0, 12)),
+        "Remember: output one JSON object only, with exactly the required keys and allowed enum values.",
+      ]
+      : []),
     "caption:",
     input.caption,
   ].join("\n");

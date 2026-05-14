@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "mode": "learning_context",
+  "cases": 4,
+  "passed": 4,
+  "coverage": {
+    "terms": 4,
+    "terms_with_learning": 4,
+    "coverage_ratio": 1.0,
+    "missing_learning_terms": []
+  },
+  "results": [
+    {
+      "case_id": "SIL-001",
+      "term": "pomodorini",
+      "ok": true,
+      "detail": "2 lesson(s) available"
+    },
+    {
+      "case_id": "SIL-002",
+      "term": "pane raffermo",
+      "ok": true,
+      "detail": "1 lesson(s) available"
+    },
+    {
+      "case_id": "SIL-003",
+      "term": "uovo",
+      "ok": true,
+      "detail": "1 lesson(s) available"
+    },
+    {
+      "case_id": "SIL-004",
+      "term": "fiocchi d avena",
+      "ok": true,
+      "detail": "1 lesson(s) available"
+    }
+  ],
+  "metadata": {
+    "generated_at": "2026-05-14T15:25:40.87194+00:00",
+    "included_statuses": [
+      "needs_review",
+      "accepted",
+      "implemented"
+    ],
+    "limit_per_term": 2,
+    "source": "catalog_agent_learning_context_v1",
+    "terms_requested": 4,
+    "terms_with_learning": 4
+  }
+}

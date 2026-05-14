@@ -269,6 +269,13 @@ Latest dev probe notes:
 - `2026-05-14`: self-repair smoke run `98` exposed a guardrail weakness: generated rationale/evidence could make a generic aggregate term look like a concrete blend. Generic-aggregate and recipe-process guardrails now trust only source/work-item evidence, not model-generated justification.
 - `2026-05-14`: repeat smoke run `99` confirmed the prompt + source-only guardrail improved upstream behavior: `spezie` returned as `needs_human_review` with no quality-gate block and no catalog mutation. Self-repair remained available but was not needed for this case.
 - `2026-05-14`: the no-LLM learning-context runner now supports `--write-report`, so Smart Import/Catalog Governance alignment can be tracked as a reusable JSON coverage artifact.
+- `2026-05-14`: rebuilt the real-caption corpus from Apify exports: 2,035 raw captions, 734 recipe-like captions, and 80 top ingredient-like terms. Top repeated signals include `farina`, `sale`, `zucchero`, `uovo`, `yogurt greco`, `lievito per dolci`, `olio evo`, `fiocchi d'avena`, and other catalog-training candidates.
+- `2026-05-14`: first 25-caption live stress exposed two non-product issues: the dev per-user daily import quota capped long batches, and one mixed Spanish caption returned `VALIDATION_FAILED` because provider JSON did not match the strict schema.
+- `2026-05-14`: `run_real_caption_e2e.py` now rotates temporary users during stress runs with `--requests-per-temp-user`, so large dev batches test Smart Import quality instead of the per-user daily quota.
+- `2026-05-14`: `parse-recipe-caption` now has one bounded full-parse schema-repair retry. The retry receives validation errors and the original caption context; if repair fails, the function still returns `VALIDATION_FAILED`.
+- `2026-05-14`: post-repair live stress on 40 stratified real captions passed `40/40` Edge responses. Results: 27 publishable drafts, 12 `needs_more_input`, 1 `needs_creator_review`, 11 `add_method_steps`, 1 `add_more_recipe_detail`, 1 `add_ingredient_amounts`, and no runtime errors.
+- `2026-05-14`: imported 46 high-frequency corpus terms into dev `catalog_agent_training_signals` with `min_count >= 8`. This is advisory training memory only; it does not create ingredients, aliases, implemented learning, or recipe mutations.
+- `2026-05-14`: live no-LLM learning-context report passed `4/4` cases with `100%` term-memory coverage for `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena`; report stored in `docs/smart-import-learning-context-latest.json`.
 
 ## Boundaries
 

@@ -377,6 +377,20 @@ def grouped_counts(items: list[dict[str, Any]], key: str) -> dict[str, int]:
     return dict(sorted(counts.items(), key=lambda pair: pair[0]))
 
 
+def error_code(summary: dict[str, Any]) -> str:
+    if summary.get("ok"):
+        return "none"
+    error = str(summary.get("error") or "")
+    match = re.search(r'"code"\s*:\s*"([^"]+)"', error)
+    if match:
+        return match.group(1)
+    if "HTTP 429" in error:
+        return "HTTP_429"
+    if "HTTP 502" in error:
+        return "HTTP_502"
+    return "unknown"
+
+
 def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: int, discovered_count: int, strategy: str) -> None:
     ok_count = sum(1 for item in summaries if item.get("ok"))
     publishable_count = sum(1 for item in summaries if item.get("nextAction") in {"publish", "ready_to_review"})
@@ -401,6 +415,7 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
         f"- Caption categories: {json.dumps(grouped_counts(summaries, 'caption_category'), sort_keys=True)}",
         f"- Draft qualities: {json.dumps(grouped_counts(summaries, 'draftQuality'), sort_keys=True)}",
         f"- Agent next actions: {json.dumps(grouped_counts(summaries, 'nextAction'), sort_keys=True)}",
+        f"- Error codes: {json.dumps(grouped_counts([{**item, 'errorCode': error_code(item)} for item in summaries], 'errorCode'), sort_keys=True)}",
         "",
         "## Findings",
         "",
@@ -443,6 +458,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--strategy", choices=("top", "stratified"), default="top")
     parser.add_argument("--sleep-seconds", type=float, default=2.2)
     parser.add_argument("--use-temp-user", action="store_true")
+    parser.add_argument(
+        "--requests-per-temp-user",
+        type=int,
+        default=18,
+        help="Rotate temporary users before the dev per-user daily quota is reached.",
+    )
     parser.add_argument("--json", action="store_true", dest="json_output")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
@@ -478,13 +499,26 @@ def main(argv: list[str]) -> int:
     if not args.anon_key:
         raise RuntimeError("SUPABASE_ANON_KEY is required.")
 
-    cleanup_user: tuple[str, str] | None = None
+    cleanup_users: list[tuple[str, str]] = []
     summaries: list[dict[str, Any]] = []
+    token = ""
+    requests_for_current_user = 0
     try:
         token, cleanup_user = auth_token(args.supabase_url, args.anon_key, args.use_temp_user)
+        if cleanup_user is not None:
+            cleanup_users.append(cleanup_user)
         for index, post in enumerate(selected):
             if index > 0:
                 time.sleep(max(0, args.sleep_seconds))
+            if (
+                args.use_temp_user
+                and cleanup_user is not None
+                and requests_for_current_user >= max(1, args.requests_per_temp_user)
+            ):
+                token, cleanup_user = auth_token(args.supabase_url, args.anon_key, args.use_temp_user)
+                if cleanup_user is not None:
+                    cleanup_users.append(cleanup_user)
+                requests_for_current_user = 0
             start = time.monotonic()
             try:
                 response = call_parse_recipe_caption(
@@ -498,9 +532,10 @@ def main(argv: list[str]) -> int:
             except Exception as error:
                 duration_ms = int((time.monotonic() - start) * 1000)
                 summaries.append(summarize_error(post, error, duration_ms))
+            finally:
+                requests_for_current_user += 1
     finally:
-        if cleanup_user is not None:
-            user_id, service_role_key = cleanup_user
+        for user_id, service_role_key in cleanup_users:
             try:
                 delete_temp_user(args.supabase_url, service_role_key, user_id)
             except Exception as error:

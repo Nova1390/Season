@@ -137,6 +137,8 @@ Validation:
 - `scripts/smart_import_learning_cases/build_real_caption_training_set.py` screens the full Apify caption corpus offline and writes non-mutating training artifacts for Smart Import and Catalog Governance.
 - The first high-signal real-caption E2E used 7 creator captions and produced 7/7 publish-ready drafts with no blocking issues.
 - The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
+- The latest stratified stress used 40 real creator captions and produced 40/40 successful Edge responses after adding bounded schema repair. It produced 27 publishable drafts, 12 `needs_more_input` drafts, and 1 `needs_creator_review` draft. The main residual issues were expected creator-input gaps: missing method steps, servings, timings, and one amount-completion case.
+- Long live stress runs must rotate temporary users in dev with `--requests-per-temp-user`, otherwise the per-user daily quota correctly interrupts the batch and makes quality metrics noisy.
 
 ### Real-Caption Operational Training Loop
 
@@ -177,6 +179,7 @@ Backend bridge:
 - `public.upsert_catalog_agent_training_signal(...)` imports reviewed terms from the offline corpus.
 - `public.get_catalog_agent_training_signal_context(...)` exposes compact term-specific context to the Catalog Agent, runs with invoker privileges so authenticated calls still respect catalog-admin RLS, and matches punctuation/apostrophe variants such as `fiocchi d avena` vs `fiocchi d'avena`.
 - `run-catalog-agent-triage` attaches matching `training_signals` to each work item and passes a `training_signal_policy` to the LLM packet.
+- The current real-caption corpus contains 2,035 raw captions, 734 recipe-like captions, and 80 top ingredient-like terms. The latest dev import added 46 high-frequency terms with `min_count >= 8` as advisory training signals only.
 
 Training signals are intentionally weaker than learning memory:
 
