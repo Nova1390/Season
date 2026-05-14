@@ -116,6 +116,8 @@ Error responses are JSON-only (`ok: false`) with `error.code` and `error.message
   - `PARSE_RECIPE_DAILY_LIMIT`
   - `PARSE_RECIPE_MIN_COOLDOWN_SECONDS`
   - `PARSE_RECIPE_PROVIDER_TIMEOUT_MS`
+  - `PARSE_RECIPE_LLM_ENABLED=false` to disable provider calls in emergency cost-control mode.
+  - `PARSE_RECIPE_PROVIDER_MAX_OUTPUT_TOKENS` to cap provider output tokens per call; default `1800`, clamped between `256` and `4000`.
 - No provider secret is exposed to iOS.
 - The function uses `SUPABASE_SERVICE_ROLE_KEY` only server-side for quota and read-only learning context.
 - Learning-memory lookup is best-effort; failures do not block creator import.

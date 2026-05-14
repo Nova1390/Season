@@ -84,6 +84,15 @@ The card and publish gate re-evaluate imported issues against the current compos
 
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
 
+### Smart Import Cost Governor
+
+The function has two server-side cost controls in addition to per-user quota:
+
+- `PARSE_RECIPE_LLM_ENABLED=false` disables provider calls and returns `PROVIDER_DISABLED`.
+- `PARSE_RECIPE_PROVIDER_MAX_OUTPUT_TOKENS` caps provider output tokens per call; it defaults to `1800` and is clamped between `256` and `4000`.
+
+These controls are intentionally server-only so the app cannot bypass them.
+
 ### Smart Import Learning Memory Contract
 
 Smart Import may read Catalog Agent learning memory, but only as advisory import context.

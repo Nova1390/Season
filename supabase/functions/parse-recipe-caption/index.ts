@@ -166,6 +166,8 @@ const DEFAULT_LANGUAGE_CODE = "en";
 const DAILY_IMPORT_LIMIT = Number(Deno.env.get("PARSE_RECIPE_DAILY_LIMIT") ?? "20");
 const MIN_COOLDOWN_SECONDS = Number(Deno.env.get("PARSE_RECIPE_MIN_COOLDOWN_SECONDS") ?? "2");
 const PROVIDER_TIMEOUT_MS = Number(Deno.env.get("PARSE_RECIPE_PROVIDER_TIMEOUT_MS") ?? "20000");
+const LLM_ENABLED = Deno.env.get("PARSE_RECIPE_LLM_ENABLED") !== "false";
+const PROVIDER_MAX_OUTPUT_TOKENS = Number(Deno.env.get("PARSE_RECIPE_PROVIDER_MAX_OUTPUT_TOKENS") ?? "1800");
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -343,6 +345,34 @@ Deno.serve(async (request) => {
         );
       }
 
+      if (!LLM_ENABLED) {
+        console.log(`[SEASON_IMPORT_EDGE] phase=provider_disabled request_id=${requestId}`);
+        logLLMUsage("SEASON_IMPORT_EDGE", {
+          functionName: "parse-recipe-caption",
+          requestId,
+          status: "error",
+          providerDurationMs: null,
+          model: OPENAI_MODEL,
+          reason: "provider_disabled",
+        });
+        return json(
+          {
+            ok: false,
+            error: {
+              code: "PROVIDER_DISABLED",
+              message: "Smart Import AI is temporarily disabled on the server.",
+            },
+            meta: {
+              usedServerLLM: false,
+              userId: userID,
+              dayBucket,
+              remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+            },
+          },
+          503,
+        );
+      }
+
       if (!OPENAI_API_KEY) {
         console.log(`[SEASON_IMPORT_EDGE] phase=provider_not_configured request_id=${requestId}`);
         logLLMUsage("SEASON_IMPORT_EDGE", {
@@ -490,6 +520,34 @@ Deno.serve(async (request) => {
     }
 
     console.log(`[SEASON_IMPORT_EDGE] phase=provider_key_present value=${OPENAI_API_KEY.length > 0}`);
+    if (!LLM_ENABLED) {
+      console.log(`[SEASON_IMPORT_EDGE] phase=provider_disabled request_id=${requestId}`);
+      logLLMUsage("SEASON_IMPORT_EDGE", {
+        functionName: "parse-recipe-caption",
+        requestId,
+        status: "error",
+        providerDurationMs: null,
+        model: OPENAI_MODEL,
+        reason: "provider_disabled",
+      });
+      return json(
+        {
+          ok: false,
+          error: {
+            code: "PROVIDER_DISABLED",
+            message: "Smart Import AI is temporarily disabled on the server.",
+          },
+          meta: {
+            usedServerLLM: false,
+            userId: userID,
+            dayBucket,
+            remainingToday: Math.max(0, quota.limit_count - quota.current_count),
+          },
+        },
+        503,
+      );
+    }
+
     if (!OPENAI_API_KEY) {
       console.log(`[SEASON_IMPORT_EDGE] phase=provider_not_configured request_id=${requestId}`);
       logLLMUsage("SEASON_IMPORT_EDGE", {
@@ -1273,6 +1331,7 @@ async function invokeProviderForIngredientResolution(input: {
 
   const payload = {
     model: OPENAI_MODEL,
+    max_output_tokens: providerMaxOutputTokens(),
     input: [
       {
         role: "system",
@@ -1313,6 +1372,7 @@ async function invokeProviderForRecipeParse(input: {
 
   const payload = {
     model: OPENAI_MODEL,
+    max_output_tokens: providerMaxOutputTokens(),
     input: [
       {
         role: "system",
@@ -1383,6 +1443,11 @@ async function invokeOpenAIProvider(payload: unknown): Promise<ProviderInvocatio
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function providerMaxOutputTokens(): number {
+  if (!Number.isFinite(PROVIDER_MAX_OUTPUT_TOKENS)) return 1800;
+  return Math.max(256, Math.min(4000, Math.floor(PROVIDER_MAX_OUTPUT_TOKENS)));
 }
 
 function extractProviderOutputText(payload: unknown): string {
