@@ -226,7 +226,11 @@ Deno.serve(async (request) => {
     const snapshot = await fetchSnapshot(adminClient, snapshotLimit, sourceDomain, includeNonNew);
     const workItems = readWorkItems(snapshot);
     const learningContext = await fetchLearningContext(adminClient, workItems);
-    const enrichedWorkItems = attachLearningMemory(workItems, learningContext);
+    const trainingSignalContext = await fetchTrainingSignalContext(adminClient, workItems);
+    const enrichedWorkItems = attachTrainingSignals(
+      attachLearningMemory(workItems, learningContext),
+      trainingSignalContext,
+    );
     const { eligibleItems: allEligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
     const eligibleItems = allEligibleItems.slice(0, limit);
 
@@ -239,6 +243,7 @@ Deno.serve(async (request) => {
         skipped_recent_proposal: skippedRecent.length,
         dry_run: dryRun,
         learning_memory: summarizeLearningContext(learningContext),
+        training_signals: summarizeTrainingSignalContext(trainingSignalContext),
         budget: budgetSummary(),
         duration_ms: elapsedMs(startedAt),
       };
@@ -255,6 +260,7 @@ Deno.serve(async (request) => {
       snapshot,
       eligibleItems,
       learningContext,
+      trainingSignalContext,
       auth.userId,
     );
     providerEligibleItems = providerAttempt.eligibleItems;
@@ -335,6 +341,7 @@ Deno.serve(async (request) => {
       model: OPENAI_MODEL,
       prompt_version: PROMPT_VERSION,
       learning_memory: summarizeLearningContext(learningContext),
+      training_signals: summarizeTrainingSignalContext(trainingSignalContext),
       provider_duration_ms: providerResult.durationMs,
       reasoning_mode: REASONING_MODE,
       reasoning_trace: providerResult.reasoningTrace,
@@ -599,6 +606,33 @@ async function fetchLearningContext(
   return data;
 }
 
+async function fetchTrainingSignalContext(
+  adminClient: ReturnType<typeof createClient>,
+  eligibleItems: WorkItem[],
+): Promise<Record<string, unknown>> {
+  const normalizedTexts = eligibleItems
+    .map((item) => normalizeText(item.normalized_text))
+    .filter((text) => text.length > 0);
+
+  if (normalizedTexts.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await adminClient.rpc("get_catalog_agent_training_signal_context", {
+    p_normalized_texts: normalizedTexts,
+    p_limit_per_term: 3,
+  });
+
+  if (error) {
+    throw new Error(`training_signal_context_failed:${error.message}`);
+  }
+  if (!isRecord(data)) {
+    throw new Error("training_signal_context_failed:payload_not_object");
+  }
+
+  return data;
+}
+
 const SEMANTIC_PROFILER_SYSTEM_PROMPT = `You are Season's catalog semantic profiler.
 
 Return ONLY valid JSON.
@@ -672,10 +706,12 @@ async function invokeProvider(
   snapshot: Record<string, unknown>,
   eligibleItems: WorkItem[],
   learningContext: Record<string, unknown>,
+  trainingSignalContext: Record<string, unknown>,
 ): Promise<ProviderInvocationResult> {
   const compactPacket = {
     policy: snapshot.policy,
     learning_memory_policy: readNestedRecord(learningContext, ["runtime_instruction"]),
+    training_signal_policy: readNestedRecord(trainingSignalContext, ["runtime_instruction"]),
     global_learning_memory: readNestedArray(learningContext, ["global_learnings"]).slice(0, 6),
     work_items: eligibleItems.map(compactWorkItem),
   };
@@ -716,6 +752,7 @@ async function invokeProviderWithAdaptiveRetry(
   snapshot: Record<string, unknown>,
   eligibleItems: WorkItem[],
   learningContext: Record<string, unknown>,
+  trainingSignalContext: Record<string, unknown>,
   authUserId: string | null,
 ): Promise<{
   result: ProviderInvocationResult;
@@ -730,6 +767,7 @@ async function invokeProviderWithAdaptiveRetry(
       snapshot,
       eligibleItems,
       learningContext,
+      trainingSignalContext,
     );
     return {
       result,
@@ -778,6 +816,7 @@ async function invokeProviderWithAdaptiveRetry(
       snapshot,
       retryItems,
       learningContext,
+      trainingSignalContext,
     );
 
     retryResult.reasoningTrace = {
@@ -1641,6 +1680,7 @@ function compactWorkItem(item: WorkItem): Record<string, unknown> {
       previous_catalog_decisions: readNestedArray(item, ["context", "previous_catalog_decisions"]).slice(0, 3),
       previous_agent_proposals: readNestedArray(item, ["context", "previous_agent_proposals"]).slice(0, 3),
       relevant_learning_memory: readNestedArray(item, ["context", "relevant_learning_memory"]).slice(0, 3),
+      training_signals: readNestedArray(item, ["context", "training_signals"]).slice(0, 3),
     },
     agent_instruction: item.agent_instruction,
   };
@@ -1665,6 +1705,25 @@ function attachLearningMemory(items: WorkItem[], learningContext: Record<string,
   });
 }
 
+function attachTrainingSignals(items: WorkItem[], trainingSignalContext: Record<string, unknown>): WorkItem[] {
+  const termSignals = readNestedRecord(trainingSignalContext, ["term_training_signals"]);
+
+  return items.map((item) => {
+    const normalizedText = normalizeText(item.normalized_text);
+    const relevantSignals = Array.isArray(termSignals[normalizedText])
+      ? (termSignals[normalizedText] as unknown[])
+      : [];
+
+    return {
+      ...item,
+      context: {
+        ...readNestedRecord(item, ["context"]),
+        training_signals: relevantSignals,
+      },
+    };
+  });
+}
+
 function summarizeLearningContext(learningContext: Record<string, unknown>): Record<string, unknown> {
   const metadata = readNestedRecord(learningContext, ["metadata"]);
   const globalLearnings = readNestedArray(learningContext, ["global_learnings"]);
@@ -1677,6 +1736,19 @@ function summarizeLearningContext(learningContext: Record<string, unknown>): Rec
     term_learning_count: Object.values(termLearnings)
       .filter(Array.isArray)
       .reduce((total, learnings) => total + learnings.length, 0),
+  };
+}
+
+function summarizeTrainingSignalContext(trainingSignalContext: Record<string, unknown>): Record<string, unknown> {
+  const metadata = readNestedRecord(trainingSignalContext, ["metadata"]);
+  const termSignals = readNestedRecord(trainingSignalContext, ["term_training_signals"]);
+  return {
+    source: metadata.source ?? null,
+    terms_requested: metadata.terms_requested ?? null,
+    terms_with_training_signals: metadata.terms_with_training_signals ?? null,
+    training_signal_count: Object.values(termSignals)
+      .filter(Array.isArray)
+      .reduce((total, signals) => total + signals.length, 0),
   };
 }
 

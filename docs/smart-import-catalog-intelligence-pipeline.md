@@ -156,6 +156,19 @@ This preserves the separation of responsibilities:
 - Catalog Governance learns which ingredient identities, aliases, variants, and state-vs-identity decisions recur in real use.
 - Neither raw social text nor a single LLM run becomes source-of-truth catalog data.
 
+Backend bridge:
+
+- `public.catalog_agent_training_signals` stores non-mutating corpus-derived signals.
+- `public.upsert_catalog_agent_training_signal(...)` imports reviewed terms from the offline corpus.
+- `public.get_catalog_agent_training_signal_context(...)` exposes compact term-specific context to the Catalog Agent and runs with invoker privileges so authenticated calls still respect catalog-admin RLS.
+- `run-catalog-agent-triage` attaches matching `training_signals` to each work item and passes a `training_signal_policy` to the LLM packet.
+
+Training signals are intentionally weaker than learning memory:
+
+- `implemented`/`accepted` `catalog_agent_learnings` can encode durable behavior.
+- `catalog_agent_training_signals` are corpus evidence only; they can influence evidence, priority, and blocking questions.
+- A training signal must be promoted through a governed review path before it becomes learning memory or catalog mutation.
+
 ## 2. System Overview
 
 ```mermaid

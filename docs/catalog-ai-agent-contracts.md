@@ -134,6 +134,7 @@ Phase 1 mode:
 - Runtime: `supabase/functions/run-catalog-agent-triage`
 - Initial environment: `Season-dev` only while TestFlight staging remains release-sensitive.
 - Runtime memory: `public.get_catalog_agent_learning_context(...)`
+- Runtime training-signal context: `public.get_catalog_agent_training_signal_context(...)`
 - Runtime reasoning: fixed multi-pass by default with `semantic_profiler`, optional `risk_reviewer`, and `decision_writer`.
 
 Agent/autopilot authority contract:
@@ -166,6 +167,14 @@ Planned multi-pass LLM task roles:
 - `risk_reviewer`: implemented as optional pass; challenge the proposed decision for variant, nutrition, allergy, seasonality, language, and product/package risks.
 - `decision_writer`: implemented; produce the final governed proposal shape.
 - `learning_writer`: planned; turn failures, corrections, and repeated ambiguity into advisory learning memory.
+
+Training-signal bridge:
+
+- `catalog_agent_training_signals` may be attached to work items as corpus evidence from Smart Import real-caption training.
+- Training signals are weaker than learning memory. They can influence evidence, priority, risk questions, and proposal rationale.
+- Training signals must not be treated as catalog truth and must not authorize direct catalog mutation.
+- Durable behavior requires a governed promotion into policy, prompt, validator, evaluation fixture, or `catalog_agent_learnings`.
+- The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 
 Default proposal-only reasoning budget:
 

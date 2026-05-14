@@ -161,6 +161,28 @@ The corpus is non-mutating. It does not call OpenAI, does not write to Supabase,
 - `compound_identity_candidate`
 - `egg_family_candidate`
 
+Import reviewed corpus terms as Catalog Agent training signals:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/import_training_signals.py \
+  --limit 40 \
+  --min-count 8
+```
+
+Preview before writing:
+
+```bash
+python3 scripts/smart_import_learning_cases/import_training_signals.py \
+  --dry-run \
+  --limit 40 \
+  --min-count 8 \
+  --json
+```
+
+This writes only to `public.catalog_agent_training_signals`. It does not insert custom ingredient observations, create aliases, create canonical ingredients, or write implemented learning.
+
 Bounded real-caption E2E:
 
 ```bash
@@ -181,6 +203,7 @@ Training boundary:
 - Smart Import E2E results may create regression fixtures, prompt changes, scorecard rules, or reviewed learning candidates.
 - They must not directly create canonical ingredients, aliases, or implemented learning.
 - Catalog Agent must govern any catalog mutation or durable learning promotion.
+- `catalog_agent_training_signals` are advisory corpus signals. They become durable behavior only after review and promotion into explicit policy, prompt, validator, evaluation, or `catalog_agent_learnings` changes.
 
 Latest dev probe notes:
 
@@ -202,6 +225,8 @@ Latest dev probe notes:
 - `2026-05-14`: dev probe on `SI-TRAIN-040` passed `--expect-blocking steps_missing` and `--expect-nice-to-fix quantities_missing`; `autoFixPlan.safeFixes=[]` and deferred fixes ask for method steps, amounts, servings, and timings instead of guessing them.
 - `2026-05-14`: Smart Import now has a safe autofix worker. It records `appliedAutoFixes` and can fill a missing title from deterministic fallback context only: explicit caption title, `inferredDish`, or URL host. It still refuses to invent steps, quantities, servings, timings, or catalog identity.
 - `2026-05-14`: dev probe on `SI-TRAIN-040` after safe autofix deploy preserved `appliedAutoFixes=[]`, `blockingIssues=["steps_missing"]`, and `nextAction=add_method_steps`, confirming the worker does not mask real creator-input blockers.
+- `2026-05-14`: imported the first 40 high-frequency real-caption corpus terms into dev `catalog_agent_training_signals` as advisory signals only. The smoke query confirmed runtime context for `uovo` and `fiocchi d'avena`; `pomodorini` was absent because it was not part of this bounded first import batch.
+- `2026-05-14`: deployed `run-catalog-agent-triage` on dev with training-signal context attached to work items and passed into the LLM packet as `training_signal_policy`.
 
 ## Boundaries
 
