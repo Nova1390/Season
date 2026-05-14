@@ -69,6 +69,8 @@ private struct ImportQualityBadge: View {
 
 private struct SmartImportAgentStatusCard: View {
     let summary: ParseRecipeCaptionFunctionAgentSummary
+    let activeBlockingIssues: [String]
+    let visibleNiceToFixIssues: [String]
     let localizer: AppLocalizer
 
     var body: some View {
@@ -89,17 +91,17 @@ private struct SmartImportAgentStatusCard: View {
                 }
             }
 
-            if let scorecard = summary.scorecard {
+            if summary.scorecard != nil {
                 VStack(alignment: .leading, spacing: 6) {
                     issueSection(
                         title: localizer.localized("create.smart_import_agent.section.blocking"),
-                        issues: Array(scorecard.blockingIssues.prefix(2)),
+                        issues: Array(activeBlockingIssues.prefix(2)),
                         icon: "exclamationmark.circle.fill",
                         color: color
                     )
                     issueSection(
                         title: localizer.localized("create.smart_import_agent.section.nice_to_fix"),
-                        issues: Array(scorecard.niceToFix.prefix(2)),
+                        issues: visibleNiceToFixIssues,
                         icon: "wand.and.sparkles",
                         color: .secondary
                     )
@@ -531,7 +533,12 @@ struct CreateRecipeView: View {
                     }
 
                     if let smartImportAgentSummary {
-                        SmartImportAgentStatusCard(summary: smartImportAgentSummary, localizer: localizer)
+                        SmartImportAgentStatusCard(
+                            summary: smartImportAgentSummary,
+                            activeBlockingIssues: activeSmartImportBlockingIssues,
+                            visibleNiceToFixIssues: visibleSmartImportNiceToFixIssues,
+                            localizer: localizer
+                        )
                             .padding(.top, 4)
                     }
 
@@ -1207,6 +1214,53 @@ struct CreateRecipeView: View {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && !recipeIngredientsForPublish.isEmpty
         && !stepTextsForPublish.isEmpty
+        && activeSmartImportBlockingIssues.isEmpty
+    }
+
+    private var activeSmartImportBlockingIssues: [String] {
+        guard let issues = smartImportAgentSummary?.scorecard?.blockingIssues else {
+            return []
+        }
+        return issues.filter { smartImportIssueIsStillActive($0) }
+    }
+
+    private var visibleSmartImportNiceToFixIssues: [String] {
+        guard let issues = smartImportAgentSummary?.scorecard?.niceToFix else {
+            return []
+        }
+        return Array(issues.filter { smartImportIssueIsStillActive($0) }.prefix(2))
+    }
+
+    private func smartImportIssueIsStillActive(_ issue: String) -> Bool {
+        switch issue {
+        case "title_missing":
+            return title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case "ingredients_missing":
+            return recipeIngredientsForPublish.isEmpty
+        case "steps_missing":
+            return stepTextsForPublish.isEmpty
+        case "unresolved_ingredients_present":
+            return smartImportReviewNeedsConfirmationCount > 0
+        case "quantities_missing":
+            return ingredientDrafts.contains { draft in
+                !ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    && !isSubsectionHeaderDraft(draft)
+                    && draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        case "servings_missing":
+            return selectedServings <= 0
+        case "timings_missing":
+            // The current composer does not expose prep/cook time fields yet, so do not
+            // keep this nice-to-fix item visible after import.
+            return false
+        case "low_confidence_parse":
+            return title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || recipeIngredientsForPublish.isEmpty
+                || stepTextsForPublish.isEmpty
+                || smartImportReviewNeedsConfirmationCount > 0
+        default:
+            return true
+        }
     }
 
     private var canSaveDraft: Bool {

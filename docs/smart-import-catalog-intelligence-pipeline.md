@@ -80,6 +80,8 @@ The creator card groups scorecard issues into two visible sections:
 
 If an older function response has no `scorecard`, the app falls back to the legacy `reviewHints` list.
 
+The card and publish gate re-evaluate imported issues against the current composer state. If the creator adds missing steps, fills a title, or confirms ingredients after import, those blockers disappear without requiring another LLM call.
+
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
 
 ### Smart Import Learning Memory Contract
