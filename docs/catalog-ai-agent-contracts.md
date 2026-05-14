@@ -178,6 +178,7 @@ Training-signal bridge:
 - Durable behavior requires a governed promotion into policy, prompt, validator, evaluation fixture, or `catalog_agent_learnings`.
 - The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.
+- Parallel dry-run eval is allowed in dev only when `dry_run=true`, persistence is disabled, and the dev enable flags are restored immediately after the batch.
 
 Default proposal-only reasoning budget:
 

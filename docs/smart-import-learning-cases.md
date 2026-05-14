@@ -231,6 +231,7 @@ Latest dev probe notes:
 - `2026-05-14`: training-signal lookup now includes lexical candidate terms and punctuation-tolerant matching so corpus terms like `fiocchi d'avena` can inform work items normalized as `fiocchi d avena`.
 - `2026-05-14`: repeat dry-run `catalog_agent_runs.id=77` confirmed the fix. Training-signal coverage increased to `terms_with_training_signals=2`, the runtime source changed to `catalog_agent_training_signal_context_v2_broadened_lookup`, and `pepe` changed from unsafe `create_canonical` to `needs_human_review` because no safe canonical target was present.
 - `2026-05-14`: the runtime quality gate now enforces the same lesson deterministically and is deployed on dev. Future LLM regressions that propose `create_canonical` for `catalog_alias_candidate` terms without a safe target will be blocked before persistence.
+- `2026-05-14`: parallel dry-run eval batch completed with dev still non-mutating. `run_id=78` (`import_recovery`) had no eligible items; `run_id=79` (`import`) reviewed 2 items and produced 2 persistable human-review proposals; `run_id=80` (`smart_import_training_captions`) reviewed 2 items, blocked the attempted `pepe -> create_canonical` regression through `alias_candidate_requires_target_before_canonical_creation`, and left `olive` as human review.
 
 ## Boundaries
 
