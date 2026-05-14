@@ -132,6 +132,8 @@ Validation:
 - They intentionally do not create catalog rows, approve aliases, run OpenAI, or judge final recipe quality.
 - `scripts/smart_import_learning_cases/run_edge_contract.py` can additionally call `parse-recipe-caption` with exact candidates to verify that `smartImportAgent.passes` includes `learning_memory_context` while `meta.usedServerLLM=false`.
 - `consume_recipe_import_quota(...)` must allow the first request for a new daily usage row; cooldown applies only after a request has been consumed.
+- `scripts/smart_import_learning_cases/run_real_caption_e2e.py` runs bounded dev E2E probes against real Apify Instagram caption exports and writes `docs/smart-import-real-caption-e2e.md`.
+- The first real-caption E2E used 7 high-signal creator captions and produced 7/7 publish-ready drafts with no blocking issues. Remaining gaps were non-blocking servings/timing metadata.
 
 ## 2. System Overview
 
