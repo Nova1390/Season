@@ -771,7 +771,6 @@ function normalizedPreparsedIngredientCandidates(value: unknown): NormalizedIngr
   if (!Array.isArray(value)) return [];
 
   const candidates: NormalizedIngredientCandidate[] = [];
-  const seen = new Set<string>();
   for (const item of value.slice(0, MAX_PREPARSED_INGREDIENT_CANDIDATES)) {
     if (!isRecord(item)) continue;
 
@@ -787,12 +786,8 @@ function normalizedPreparsedIngredientCandidates(value: unknown): NormalizedIngr
     const matchType = normalizedMatchType(catalogMatch.matchType ?? catalogMatch.match_type);
     const matchedIngredientId = normalizeText(catalogMatch.matchedIngredientId ?? catalogMatch.matched_ingredient_id) || null;
     const matchConfidence = normalizedConfidence(catalogMatch.confidence);
-    const dedupeKey = `${normalizedText}|${quantity ?? "nil"}|${unit ?? "nil"}`;
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    candidates.push({
-      index: candidates.length,
+    const candidate: NormalizedIngredientCandidate = {
+      index: 0,
       rawText: rawText || normalizedText,
       normalizedText,
       possibleQuantity: quantity,
@@ -800,9 +795,28 @@ function normalizedPreparsedIngredientCandidates(value: unknown): NormalizedIngr
       matchType,
       matchedIngredientId,
       matchConfidence,
-    });
+    };
+
+    const existingIndex = candidates.findIndex((existing) => existing.normalizedText === candidate.normalizedText);
+    if (existingIndex >= 0) {
+      if (candidateQualityScore(candidate) > candidateQualityScore(candidates[existingIndex])) {
+        candidates[existingIndex] = candidate;
+      }
+      continue;
+    }
+
+    candidates.push(candidate);
   }
-  return candidates;
+  return candidates.map((candidate, index) => ({ ...candidate, index }));
+}
+
+function candidateQualityScore(candidate: NormalizedIngredientCandidate): number {
+  return (candidate.possibleQuantity !== null ? 1_000 : 0)
+    + (candidate.possibleUnit !== null ? 100 : 0)
+    + (candidate.matchedIngredientId !== null ? 50 : 0)
+    + (candidate.matchType === "exact" ? 30 : candidate.matchType === "alias" ? 20 : 0)
+    + Math.round(candidate.matchConfidence * 10)
+    + Math.min(candidate.rawText.length, 80);
 }
 
 function candidateNeedsLLM(candidate: NormalizedIngredientCandidate): boolean {
@@ -1256,17 +1270,70 @@ function buildSmartImportResult(input: {
       matchedIngredientId: candidate.matchedIngredientId,
     };
   });
+  const dedupedIngredients = dedupeParsedIngredients(ingredients);
 
   return {
     title: inferDeterministicTitle(input.caption) || inferTitleFromURL(input.url),
-    ingredients,
+    ingredients: dedupedIngredients,
     steps: extractDeterministicSteps(input.caption),
     prepTimeMinutes: null,
     cookTimeMinutes: null,
     servings: null,
-    confidence: confidenceFromIngredients(ingredients),
+    confidence: confidenceFromIngredients(dedupedIngredients),
     inferredDish: null,
   };
+}
+
+function dedupeParsedIngredients(ingredients: ParsedIngredient[]): ParsedIngredient[] {
+  const result: ParsedIngredient[] = [];
+
+  for (const ingredient of ingredients) {
+    const existingIndex = parsedIngredientDuplicateIndex(ingredient, result);
+    if (existingIndex >= 0) {
+      if (parsedIngredientQualityScore(ingredient) > parsedIngredientQualityScore(result[existingIndex])) {
+        result[existingIndex] = ingredient;
+      }
+      continue;
+    }
+    result.push(ingredient);
+  }
+
+  return result;
+}
+
+function parsedIngredientDuplicateIndex(
+  ingredient: ParsedIngredient,
+  existingIngredients: ParsedIngredient[],
+): number {
+  const normalizedName = normalizeIngredientCandidateText(ingredient.name);
+  const hasQuantity = ingredient.quantity !== null;
+
+  return existingIngredients.findIndex((existing) => {
+    const existingName = normalizeIngredientCandidateText(existing.name);
+    if (normalizedName && normalizedName === existingName) {
+      return true;
+    }
+
+    const sameCatalogIdentity = ingredient.matchedIngredientId !== null
+      && ingredient.matchedIngredientId !== undefined
+      && ingredient.matchedIngredientId === existing.matchedIngredientId;
+    if (!sameCatalogIdentity) {
+      return false;
+    }
+
+    const existingHasQuantity = existing.quantity !== null;
+    return !hasQuantity || !existingHasQuantity;
+  });
+}
+
+function parsedIngredientQualityScore(ingredient: ParsedIngredient): number {
+  const statusScore = ingredient.status === "resolved" ? 60 : ingredient.status === "inferred" ? 40 : 0;
+  return (ingredient.quantity !== null ? 1_000 : 0)
+    + (ingredient.unit !== null ? 100 : 0)
+    + (ingredient.matchedIngredientId ? 70 : 0)
+    + statusScore
+    + Math.round((ingredient.confidence ?? 0) * 10)
+    + Math.min(ingredient.name.length, 80);
 }
 
 function llmResolutionMap(items: LLMResolvedIngredient[]): Map<number, LLMResolvedIngredient> {

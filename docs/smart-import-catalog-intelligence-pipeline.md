@@ -133,12 +133,14 @@ Validation:
 - They intentionally do not create catalog rows, approve aliases, run OpenAI, or judge final recipe quality.
 - `scripts/smart_import_learning_cases/run_edge_contract.py` can additionally call `parse-recipe-caption` with exact candidates to verify that `smartImportAgent.passes` includes `learning_memory_context` while `meta.usedServerLLM=false`.
 - `consume_recipe_import_quota(...)` must allow the first request for a new daily usage row; cooldown applies only after a request has been consumed.
+- `scripts/smart_import_learning_cases/run_exact_caption_probe.py` covers short creator captions such as `Risotto ai funghi per 2: riso 180g...`; it verifies that measured candidates survive server dedupe and lower-quality duplicate candidates do not create duplicate draft rows.
 - `scripts/smart_import_learning_cases/run_real_caption_e2e.py` runs bounded dev E2E probes against real Apify Instagram caption exports and writes `docs/smart-import-real-caption-e2e.md`.
 - `scripts/smart_import_learning_cases/build_real_caption_training_set.py` screens the full Apify caption corpus offline and writes non-mutating training artifacts for Smart Import and Catalog Governance.
 - The first high-signal real-caption E2E used 7 creator captions and produced 7/7 publish-ready drafts with no blocking issues.
 - The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
 - The latest stratified stress used 40 real creator captions and produced 40/40 successful Edge responses after adding bounded schema repair. It produced 27 publishable drafts, 12 `needs_more_input` drafts, and 1 `needs_creator_review` draft. The main residual issues were expected creator-input gaps: missing method steps, servings, timings, and one amount-completion case.
 - Smart Import now returns `smartImportAgent.operationalSignals` so stress results become structured learning/eval data rather than free-text notes. Current signals include `ingredients_only_caption`, `low_signal_caption`, `method_without_amounts`, `missing_servings_metadata`, `missing_timing_metadata`, `catalog_identity_review_needed`, and `low_confidence_parse`.
+- Quantity preservation now has two defensive layers: Swift scans comma/semicolon/slash fragments when recovering explicit quantities from single-line captions, and the Edge Function dedupes preparsed candidates by normalized ingredient while preferring entries with explicit quantity/unit.
 - Long live stress runs must rotate temporary users in dev with `--requests-per-temp-user`, otherwise the per-user daily quota correctly interrupts the batch and makes quality metrics noisy.
 
 ### Real-Caption Operational Training Loop

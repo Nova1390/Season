@@ -1955,9 +1955,9 @@ struct CreateRecipeView: View {
         stepDrafts = mappedSteps.isEmpty ? [CreateStepDraft()] : mappedSteps
 
         if !suggestion.suggestedIngredients.isEmpty {
-            let mappedIngredientDrafts = suggestion.suggestedIngredients.map {
+            let mappedIngredientDrafts = dedupedImportedIngredientDrafts(suggestion.suggestedIngredients.map {
                 normalizedImportedIngredientDraft(from: $0)
-            }
+            })
             ingredientDrafts = mappedIngredientDrafts
             for draft in mappedIngredientDrafts {
                 let displayName = ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1972,6 +1972,84 @@ struct CreateRecipeView: View {
         }
 
         print("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
+    }
+
+    private func dedupedImportedIngredientDrafts(_ drafts: [CreateIngredientDraft]) -> [CreateIngredientDraft] {
+        var result: [CreateIngredientDraft] = []
+
+        for draft in drafts {
+            guard !ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                continue
+            }
+
+            if let existingIndex = importedIngredientDuplicateIndex(for: draft, in: result) {
+                let existing = result[existingIndex]
+                if importedIngredientDedupScore(draft) > importedIngredientDedupScore(existing) {
+                    print(
+                        "[SEASON_IMPORT] phase=import_dedup_replaced " +
+                        "old=\(ingredientDraftDisplayName(existing)) old_quantity=\(existing.quantityValue) " +
+                        "new=\(ingredientDraftDisplayName(draft)) new_quantity=\(draft.quantityValue)"
+                    )
+                    result[existingIndex] = draft
+                } else {
+                    print(
+                        "[SEASON_IMPORT] phase=import_dedup_skipped " +
+                        "kept=\(ingredientDraftDisplayName(existing)) skipped=\(ingredientDraftDisplayName(draft))"
+                    )
+                }
+                continue
+            }
+
+            result.append(draft)
+        }
+
+        return result
+    }
+
+    private func importedIngredientDuplicateIndex(
+        for draft: CreateIngredientDraft,
+        in existingDrafts: [CreateIngredientDraft]
+    ) -> Int? {
+        let displayName = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
+        let identity = importedDraftCatalogIdentity(draft)
+        let hasQuantity = !draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        for (index, existing) in existingDrafts.enumerated() {
+            let existingDisplayName = normalizedIngredientMatchText(ingredientDraftDisplayName(existing))
+            if !displayName.isEmpty, displayName == existingDisplayName {
+                return index
+            }
+
+            guard let identity, identity == importedDraftCatalogIdentity(existing) else {
+                continue
+            }
+
+            let existingHasQuantity = !existing.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !hasQuantity || !existingHasQuantity {
+                return index
+            }
+        }
+
+        return nil
+    }
+
+    private func importedDraftCatalogIdentity(_ draft: CreateIngredientDraft) -> String? {
+        if !draft.produceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "produce:\(draft.produceID)"
+        }
+        if !draft.basicIngredientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "basic:\(draft.basicIngredientID)"
+        }
+        return nil
+    }
+
+    private func importedIngredientDedupScore(_ draft: CreateIngredientDraft) -> Int {
+        let hasQuantity = !draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasCatalogID = importedDraftCatalogIdentity(draft) != nil
+        let displayNameLength = ingredientDraftDisplayName(draft).count
+        return (hasQuantity ? 1_000 : 0)
+            + (hasCatalogID ? 100 : 0)
+            + min(displayNameLength, 80)
     }
 
     private func socialImportSuggestionFromServerResponse(
@@ -3273,10 +3351,7 @@ struct CreateRecipeView: View {
             print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=raw_line reason=regex_no_match line=\(rawSourceLine)")
         }
 
-        let lines = caption
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        let lines = explicitQuantityRecoveryScanLines(from: caption)
         print("[SEASON_IMPORT] phase=explicit_quantity_caption_scan line_count=\(lines.count)")
 
         for line in lines {
@@ -3356,10 +3431,7 @@ struct CreateRecipeView: View {
         guard !target.isEmpty else { return nil }
         let targetQueries = Set(importedIngredientMatchQueries(from: ingredientName))
 
-        let lines = caption
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        let lines = explicitQuantityRecoveryScanLines(from: caption)
 
         var best: (recovery: ExplicitQuantityRecovery, score: Int)?
         for line in lines {
@@ -3402,6 +3474,63 @@ struct CreateRecipeView: View {
         }
 
         return best?.recovery
+    }
+
+    private func explicitQuantityRecoveryScanLines(from caption: String) -> [String] {
+        let baseLines = caption
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var seen = Set<String>()
+        var result: [String] = []
+
+        func append(_ candidate: String) {
+            let cleaned = candidate
+                .trimmingCharacters(in: CharacterSet(charactersIn: " \n\t,.;:!?"))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.isEmpty else { return }
+            let key = normalizedIngredientMatchText(cleaned)
+            guard !key.isEmpty, seen.insert(key).inserted else { return }
+            result.append(cleaned)
+        }
+
+        for line in baseLines {
+            append(line)
+            for fragment in explicitQuantityRecoveryFragments(from: line) {
+                append(fragment)
+            }
+        }
+
+        return result
+    }
+
+    private func explicitQuantityRecoveryFragments(from rawLine: String) -> [String] {
+        let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        var sources = [trimmed]
+        if let colonRange = trimmed.range(of: ":") {
+            let remainder = String(trimmed[colonRange.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !remainder.isEmpty {
+                sources.append(remainder)
+            }
+        }
+
+        let separators = CharacterSet(charactersIn: ",/;+")
+        return sources.flatMap { source in
+            source
+                .components(separatedBy: separators)
+                .flatMap { fragment in
+                    fragment
+                        .components(separatedBy: CharacterSet(charactersIn: ".!?"))
+                }
+                .map {
+                    $0.trimmingCharacters(in: CharacterSet(charactersIn: " \n\t,.;:!?"))
+                }
+                .filter { !$0.isEmpty }
+        }
     }
 
     private func normalizedImportedNameWithoutLeadingUnit(_ rawName: String, unit: RecipeQuantityUnit) -> String {

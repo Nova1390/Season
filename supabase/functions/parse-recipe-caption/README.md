@@ -6,6 +6,7 @@ The function supports:
 
 - authenticated caption/URL parsing;
 - Swift-provided ingredient candidates;
+- candidate deduplication that prefers the version with explicit quantity/unit;
 - targeted LLM fallback for ambiguous ingredient candidates;
 - full recipe-caption LLM parsing when no candidate packet is available;
 - one bounded schema-repair retry when provider JSON fails the runtime contract;
@@ -138,9 +139,15 @@ Error responses are JSON-only (`ok: false`) with `error.code` and `error.message
   - `get_catalog_agent_learning_context(...)` supplies compact advisory memory for targeted candidate resolution;
   - the targeted prompt explicitly distinguishes product family, meaningful variants, preparation/freshness state, product form, and ambiguity;
   - provider JSON is validated before returning to the app;
-  - full recipe parse gets one schema-repair retry if the first provider JSON is valid JSON but fails the strict recipe contract.
+  - full recipe parse gets one schema-repair retry if the first provider JSON is valid JSON but fails the strict recipe contract;
+  - exact-candidate responses are deduped before the quality gate, so duplicate preparsed candidates such as `riso` + `riso 180g` preserve the measured candidate and do not create duplicate draft rows.
 
 The schema-repair retry is deliberately narrow: it only receives validation errors and the original caption context, then must return the same strict JSON shape. If the repair also fails, the function still returns `VALIDATION_FAILED` instead of inventing a partial response.
+
+## Smoke tests
+
+- `scripts/smart_import_learning_cases/run_edge_contract.py` verifies the authenticated Edge contract and learning-memory pass without using LLM when exact candidates are supplied.
+- `scripts/smart_import_learning_cases/run_exact_caption_probe.py` verifies the risotto-style creator caption case: quantities are preserved from preparsed candidates and lower-quality duplicate candidates are collapsed without an LLM call.
 
 `smartImportAgent.operationalSignals` is a machine-readable learning/eval layer for batches. It turns recurring creator-caption patterns into compact labels such as:
 
