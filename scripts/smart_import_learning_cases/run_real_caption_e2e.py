@@ -325,6 +325,7 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
         "blockingIssues": scorecard.get("blockingIssues") or [],
         "niceToFix": scorecard.get("niceToFix") or [],
         "autoFixable": scorecard.get("autoFixable") or [],
+        "operationalSignals": agent.get("operationalSignals") or [],
         "safeFixes": auto_fix_plan.get("safeFixes") or [],
         "deferredFixes": auto_fix_plan.get("deferredFixes") or [],
         "appliedAutoFixes": agent.get("appliedAutoFixes") or [],
@@ -361,6 +362,7 @@ def summarize_error(post: dict[str, Any], error: Exception, duration_ms: int) ->
         "blockingIssues": [],
         "niceToFix": [],
         "autoFixable": [],
+        "operationalSignals": [],
         "safeFixes": [],
         "deferredFixes": [],
         "appliedAutoFixes": [],
@@ -374,6 +376,19 @@ def grouped_counts(items: list[dict[str, Any]], key: str) -> dict[str, int]:
     for item in items:
         value = str(item.get(key) or "none")
         counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items(), key=lambda pair: pair[0]))
+
+
+def grouped_list_counts(items: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        values = item.get(key)
+        if not isinstance(values, list) or not values:
+            counts["none"] = counts.get("none", 0) + 1
+            continue
+        for value in values:
+            label = str(value or "none")
+            counts[label] = counts.get(label, 0) + 1
     return dict(sorted(counts.items(), key=lambda pair: pair[0]))
 
 
@@ -416,6 +431,7 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
         f"- Draft qualities: {json.dumps(grouped_counts(summaries, 'draftQuality'), sort_keys=True)}",
         f"- Agent next actions: {json.dumps(grouped_counts(summaries, 'nextAction'), sort_keys=True)}",
         f"- Error codes: {json.dumps(grouped_counts([{**item, 'errorCode': error_code(item)} for item in summaries], 'errorCode'), sort_keys=True)}",
+        f"- Operational signals: {json.dumps(grouped_list_counts(summaries, 'operationalSignals'), sort_keys=True)}",
         "",
         "## Findings",
         "",
@@ -440,6 +456,7 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
             f"- Agent: quality={summary.get('draftQuality')} next={summary.get('nextAction')}",
             f"- Blocking issues: {', '.join(summary.get('blockingIssues') or []) or 'none'}",
             f"- Nice to fix: {', '.join(summary.get('niceToFix') or []) or 'none'}",
+            f"- Operational signals: {', '.join(summary.get('operationalSignals') or []) or 'none'}",
             f"- Applied autofixes: {', '.join(summary.get('appliedAutoFixes') or []) or 'none'}",
             "",
         ])

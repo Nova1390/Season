@@ -276,6 +276,8 @@ Latest dev probe notes:
 - `2026-05-14`: post-repair live stress on 40 stratified real captions passed `40/40` Edge responses. Results: 27 publishable drafts, 12 `needs_more_input`, 1 `needs_creator_review`, 11 `add_method_steps`, 1 `add_more_recipe_detail`, 1 `add_ingredient_amounts`, and no runtime errors.
 - `2026-05-14`: imported 46 high-frequency corpus terms into dev `catalog_agent_training_signals` with `min_count >= 8`. This is advisory training memory only; it does not create ingredients, aliases, implemented learning, or recipe mutations.
 - `2026-05-14`: live no-LLM learning-context report passed `4/4` cases with `100%` term-memory coverage for `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena`; report stored in `docs/smart-import-learning-context-latest.json`.
+- `2026-05-14`: Smart Import responses now include `smartImportAgent.operationalSignals`, a machine-readable learning/eval layer for recurring caption patterns such as `ingredients_only_caption`, `method_without_amounts`, `missing_servings_metadata`, and `missing_timing_metadata`.
+- `2026-05-14`: smoke test confirmed the new operational signals in dev. The official 40-caption stratified report was regenerated with 40/40 successful responses and signal counts: `ingredients_only_caption=11`, `method_without_amounts=1`, `low_signal_caption=1`, `missing_servings_metadata=29`, `missing_timing_metadata=31`.
 
 ## Boundaries
 

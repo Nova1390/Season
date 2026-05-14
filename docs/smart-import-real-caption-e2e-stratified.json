@@ -9,7 +9,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g",
-      "duration_ms": 6607,
+      "duration_ms": 5502,
       "usedServerLLM": true,
       "title": "Zuppa inglese",
       "ingredient_count": 16,
@@ -23,7 +23,7 @@
         "latte intero",
         "panna fresca liquida",
         "tuorli",
-        "amido di mais",
+        "amido di mais (maizena)",
         "zucchero",
         "baccello di vaniglia",
         "cacao amaro",
@@ -34,22 +34,32 @@
       "step_count": 18,
       "servings": null,
       "prepTimeMinutes": null,
-      "cookTimeMinutes": 40,
+      "cookTimeMinutes": null,
       "confidence": "high",
       "draftQuality": "publishable",
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
       "niceToFix": [
-        "servings_missing"
+        "servings_missing",
+        "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
           "issue": "servings_missing",
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
         }
       ],
       "appliedAutoFixes": [],
@@ -66,7 +76,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti",
-      "duration_ms": 5575,
+      "duration_ms": 5374,
       "usedServerLLM": true,
       "title": "Zeppole di San Giuseppe al forno",
       "ingredient_count": 15,
@@ -101,6 +111,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -128,7 +142,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori",
-      "duration_ms": 4729,
+      "duration_ms": 4859,
       "usedServerLLM": true,
       "title": "Per la Festa della Mamma ho scelto la semplicità",
       "ingredient_count": 17,
@@ -164,6 +178,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -186,7 +203,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro.",
-      "duration_ms": 4892,
+      "duration_ms": 5271,
       "usedServerLLM": true,
       "title": "Doveva essere un cookie. Poi è degenerata.",
       "ingredient_count": 16,
@@ -221,6 +238,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -243,7 +263,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr",
-      "duration_ms": 4756,
+      "duration_ms": 4861,
       "usedServerLLM": true,
       "title": "Pastiera Napoletana",
       "ingredient_count": 15,
@@ -258,7 +278,7 @@
         "ricotta vaccina o di pecora",
         "zucchero",
         "uova",
-        "buccia grattugiata di limone",
+        "limone",
         "canditi",
         "Essenza di vaniglia",
         "tuorlo",
@@ -278,6 +298,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -305,7 +329,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "✨ LATTE FRITTO… versione tropicale 🥥🌴 Un grande classico della tradizione siciliana… ma con un twist inaspettato! Oggi",
-      "duration_ms": 4145,
+      "duration_ms": 4038,
       "usedServerLLM": true,
       "title": "LATTE FRITTO… versione tropicale",
       "ingredient_count": 9,
@@ -334,6 +358,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -361,15 +389,15 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Ora che ho perso la vista ci vedo di più. !! Se cuocete in casa o in forni",
-      "duration_ms": 3353,
+      "duration_ms": 4681,
       "usedServerLLM": true,
       "title": "Ricetta Pizza al Piatto",
       "ingredient_count": 4,
       "ingredients": [
-        "Farina",
-        "Acqua",
-        "Lievito di birra fresco",
-        "Sale"
+        "farina",
+        "acqua",
+        "lievito di birra fresco",
+        "sale"
       ],
       "step_count": 12,
       "servings": 4,
@@ -384,6 +412,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -406,9 +437,9 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I",
-      "duration_ms": 3840,
+      "duration_ms": 3302,
       "usedServerLLM": true,
-      "title": "Sempre voglia di tiramisù?",
+      "title": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I C A ma anche sana,leggera e saziante.",
       "ingredient_count": 15,
       "ingredients": [
         "farina bianca 0",
@@ -441,6 +472,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -468,7 +503,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Panini per hamburger avrebbe detto uno dei miei insegnanti. Questa è una variante di Giorilli appunto. Ho solo",
-      "duration_ms": 2883,
+      "duration_ms": 2792,
       "usedServerLLM": true,
       "title": "Panini per hamburger",
       "ingredient_count": 9,
@@ -496,6 +531,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -518,7 +556,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "La crostata che ha conquistato i miei bambini per merenda. Base friabile, cuore cremoso e tanta frutta fresca…",
-      "duration_ms": 3431,
+      "duration_ms": 4263,
       "usedServerLLM": true,
       "title": "La crostata che ha conquistato i miei bambini per merenda",
       "ingredient_count": 10,
@@ -548,6 +586,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -575,7 +617,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "🍜 ZARU SOBA: NOODLES FREDDI GIAPPONESI 🇯🇵 Il piatto estivo più amato in Giappone: semplice, fresco e super",
-      "duration_ms": 4210,
+      "duration_ms": 3100,
       "usedServerLLM": true,
       "title": "ZARU SOBA: NOODLES FREDDI GIAPPONESI",
       "ingredient_count": 9,
@@ -590,7 +632,7 @@
         "cipollotto",
         "alga nori"
       ],
-      "step_count": 6,
+      "step_count": 5,
       "servings": 2,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
@@ -603,6 +645,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -625,7 +670,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia",
-      "duration_ms": 2744,
+      "duration_ms": 2836,
       "usedServerLLM": true,
       "title": "Brownies proteici senza zuccheri aggiunti",
       "ingredient_count": 10,
@@ -654,6 +699,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -676,7 +724,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto",
-      "duration_ms": 2804,
+      "duration_ms": 2812,
       "usedServerLLM": true,
       "title": "Brownie al cioccolato in padella (senza forno!)",
       "ingredient_count": 9,
@@ -693,7 +741,7 @@
       ],
       "step_count": 5,
       "servings": null,
-      "prepTimeMinutes": null,
+      "prepTimeMinutes": 15,
       "cookTimeMinutes": 35,
       "confidence": "high",
       "draftQuality": "publishable",
@@ -704,6 +752,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -726,7 +777,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?",
-      "duration_ms": 2518,
+      "duration_ms": 2609,
       "usedServerLLM": true,
       "title": "crepes proteica",
       "ingredient_count": 7,
@@ -739,7 +790,7 @@
         "crema proteica al cioccolato",
         "banana"
       ],
-      "step_count": 3,
+      "step_count": 2,
       "servings": 4,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
@@ -752,6 +803,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -774,7 +828,7 @@
       "caption_category": "ingredient_rich",
       "caption_score": 18,
       "caption_excerpt": "CIAMBELLONE CACHI E CASTAGNE INGREDIENTI: • 200 gr. di farina normale o integrale • 4 cachi medi maturi",
-      "duration_ms": 1888,
+      "duration_ms": 1943,
       "usedServerLLM": true,
       "title": "CIAMBELLONE CACHI E CASTAGNE",
       "ingredient_count": 6,
@@ -802,6 +856,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -834,7 +893,7 @@
       "caption_category": "ingredient_rich",
       "caption_score": 18,
       "caption_excerpt": "Gnocchetti di zucca 🎃 Ingredienti per 2 persone * 250gr di polpa di zucca (cotta al forno con",
-      "duration_ms": 2411,
+      "duration_ms": 1887,
       "usedServerLLM": true,
       "title": "Gnocchetti di zucca",
       "ingredient_count": 8,
@@ -863,6 +922,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -890,7 +953,7 @@
       "caption_category": "ingredient_rich",
       "caption_score": 13,
       "caption_excerpt": "Cheesecake a colazione? Perché no! E sì, si può anche a “dieta”! 🙃 Che dici, ti ispira? ✨seguimi",
-      "duration_ms": 2829,
+      "duration_ms": 2149,
       "usedServerLLM": true,
       "title": "Cheesecake a colazione",
       "ingredient_count": 8,
@@ -920,6 +983,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -952,13 +1020,13 @@
       "caption_category": "method_rich",
       "caption_score": 22,
       "caption_excerpt": "🥑 HUMMUS DI AVOCADO E CECI Una crema pronta in 5 minuti che ti salva aperitivi, pranzi veloci",
-      "duration_ms": 2782,
+      "duration_ms": 2058,
       "usedServerLLM": true,
       "title": "Hummus di avocado e ceci",
       "ingredient_count": 6,
       "ingredients": [
         "avocado",
-        "ceci cotti",
+        "ceci",
         "limone",
         "prezzemolo fresco",
         "olio extravergine d’oliva",
@@ -979,6 +1047,10 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1006,7 +1078,7 @@
       "caption_category": "method_rich",
       "caption_score": 22,
       "caption_excerpt": "TORTA DI MELE🍂 Ingredienti: • 2 uova • 150 zucchero • 60 burro sciolto a bagno maria •",
-      "duration_ms": 2914,
+      "duration_ms": 2117,
       "usedServerLLM": true,
       "title": "TORTA DI MELE",
       "ingredient_count": 8,
@@ -1036,6 +1108,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1068,7 +1145,7 @@
       "caption_category": "method_rich",
       "caption_score": 21,
       "caption_excerpt": "UN SUPERFOOD DA COLTIVARE IN CASA?!? 🌱 Niente strane polveri o ingredieti assurdi: parlo dei GERMOGLI DI LENTICCHIE!",
-      "duration_ms": 3406,
+      "duration_ms": 3228,
       "usedServerLLM": true,
       "title": "UN SUPERFOOD DA COLTIVARE IN CASA?!?",
       "ingredient_count": 7,
@@ -1085,7 +1162,7 @@
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
-      "confidence": "high",
+      "confidence": "medium",
       "draftQuality": "publishable",
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
@@ -1095,6 +1172,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1122,7 +1203,7 @@
       "caption_category": "method_rich",
       "caption_score": 21,
       "caption_excerpt": "🔥Pollo Huli Huli🔥 . . 🧑‍🍳Pollo marinato a lungo, cotto fino alla giusta caramellizzazione e glassato più volte",
-      "duration_ms": 2934,
+      "duration_ms": 3835,
       "usedServerLLM": true,
       "title": "Pollo Huli Huli",
       "ingredient_count": 12,
@@ -1131,7 +1212,7 @@
         "succo d’ananas",
         "ketchup",
         "aglio",
-        "zenzero fresco",
+        "zenzero fresco grattugiato",
         "aceto di mele",
         "worchestershire",
         "pollo",
@@ -1154,6 +1235,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1181,7 +1266,7 @@
       "caption_category": "method_rich",
       "caption_score": 21,
       "caption_excerpt": "Torta soffice allo yogurt Perfetta per una merenda semplice o una colazione fatta in casa 🥰 👉🏻 Da",
-      "duration_ms": 3018,
+      "duration_ms": 3632,
       "usedServerLLM": true,
       "title": "Torta soffice allo yogurt",
       "ingredient_count": 8,
@@ -1208,6 +1293,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1230,7 +1318,7 @@
       "caption_category": "method_rich",
       "caption_score": 21,
       "caption_excerpt": "Biscotto morbido al cioccolato🍫 • 1 uovo • 1 avocado • 100 g di zucchero di canna •",
-      "duration_ms": 3728,
+      "duration_ms": 2410,
       "usedServerLLM": true,
       "title": "Biscotto morbido al cioccolato",
       "ingredient_count": 8,
@@ -1257,6 +1345,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1279,7 +1370,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 16,
       "caption_excerpt": "SANGUCHITOS DE CARNE DESMECHADA🥩, en un pancito de papa que la rompe toda. 🎥 receta de @kulinaria.recetas .",
-      "duration_ms": 10303,
+      "duration_ms": 3727,
       "usedServerLLM": true,
       "title": "SANGUCHITOS DE CARNE DESMECHADA",
       "ingredient_count": 22,
@@ -1290,19 +1381,19 @@
         "azúcar",
         "huevos",
         "aceite",
-        "pure de papa",
+        "puré de papa",
         "sal",
         "queso rallado",
         "perejil",
         "huevo batido",
         "roast beef",
         "cebolla",
-        "morron",
+        "morrón",
         "dientes de ajo",
         "vino",
         "agua o caldo",
         "perejil",
-        "aji molido",
+        "ají molido",
         "laurel"
       ],
       "step_count": 0,
@@ -1320,6 +1411,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1347,7 +1442,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 14,
       "caption_excerpt": "POSTRE SÚPER CHOCOLATOSO CON SOLO 4 INGREDIENTES 🍫✨ receta de @lasrecetasdesimon 🫶 • Ideal para el verano, sin",
-      "duration_ms": 2296,
+      "duration_ms": 1788,
       "usedServerLLM": true,
       "title": "POSTRE SÚPER CHOCOLATOSO CON SOLO 4 INGREDIENTES",
       "ingredient_count": 4,
@@ -1371,6 +1466,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1398,31 +1497,31 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 12,
       "caption_excerpt": "𝙊𝙛𝙮𝙧 𝙏𝙪𝙧𝙠𝙞𝙨𝙝 𝘼𝘿𝘼𝙉𝘼 𝙆𝙀𝘽𝘼𝘽🔥🔥 Pollo o il classico agnello?🐔🐑 Direttamente dalla Turchia. Costruito sulle spade. Come vuole la",
-      "duration_ms": 6599,
+      "duration_ms": 4143,
       "usedServerLLM": true,
       "title": "Ofyr Turkish Adana Kebab",
-      "ingredient_count": 30,
+      "ingredient_count": 29,
       "ingredients": [
-        "Pollo macinato",
+        "pollo macinato",
         "cipolla",
         "zenzero grattugiato",
-        "spicchio d'aglio",
+        "aglio",
         "peperoncino verde",
         "succo di limone",
         "coriandolo fresco",
-        "Ras el hanout",
-        "Sale",
-        "Macinato di agnello",
+        "ras el hanout",
+        "sale",
+        "macinato di agnello",
         "cipolla rossa",
         "peperone rosso",
         "prezzemolo",
-        "spicchio d'aglio",
+        "aglio",
         "sale",
-        "Baharat",
-        "Paprika",
-        "Cumino",
-        "Chili",
-        "Aglio in polvere"
+        "baharat",
+        "paprika",
+        "cumino",
+        "chili",
+        "aglio in polvere"
       ],
       "step_count": 0,
       "servings": null,
@@ -1440,6 +1539,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1472,7 +1576,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 12,
       "caption_excerpt": "-𝙏𝙀𝘼𝙈 𝘽𝙊𝘽𝘽𝙔- Being chosen by @bobbyflay was a true honor for me. Our team had a strong connection",
-      "duration_ms": 1704,
+      "duration_ms": 1892,
       "usedServerLLM": true,
       "title": "TEAM BOBBY",
       "ingredient_count": 0,
@@ -1495,6 +1599,12 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "low_signal_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata",
+        "low_confidence_parse"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1537,7 +1647,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 10,
       "caption_excerpt": "👉🏻seguimi @martinalasaluteincucina avere ogni giorno consigli e ricette. 👉🏻trovi le mie guide nutrizionali con i miei menu settimanali",
-      "duration_ms": 3225,
+      "duration_ms": 2286,
       "usedServerLLM": true,
       "title": "pancake di mele",
       "ingredient_count": 7,
@@ -1565,6 +1675,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1592,7 +1706,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 10,
       "caption_excerpt": "🚨 ISSO AQUI É PERIGOSO 🚨 Não era pra ser só um docinho… Virou uma travessa inteira 🍫🤯",
-      "duration_ms": 2669,
+      "duration_ms": 1906,
       "usedServerLLM": true,
       "title": "ISSO AQUI É PERIGOSO",
       "ingredient_count": 6,
@@ -1620,6 +1734,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1652,7 +1771,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 10,
       "caption_excerpt": "PANE SENZA FARINA 😱 senza glutine ✨ Soffice, proteico e con solo 2 ingredienti: 👉 300g di albumi",
-      "duration_ms": 2441,
+      "duration_ms": 3223,
       "usedServerLLM": true,
       "title": "PANE SENZA FARINA",
       "ingredient_count": 3,
@@ -1677,6 +1796,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1709,7 +1833,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 10,
       "caption_excerpt": "Cantucci 🤩❤️ 3 uova 200 g zucchero 500 g farina 100 g di burro ammorbidito 200 g di",
-      "duration_ms": 2714,
+      "duration_ms": 2928,
       "usedServerLLM": true,
       "title": "Cantucci",
       "ingredient_count": 7,
@@ -1738,6 +1862,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1770,7 +1899,7 @@
       "caption_category": "weak_recipe_signal",
       "caption_score": 20,
       "caption_excerpt": "Burger di zucchine 🥒✨ Se pensi che le verdure siano noiose… questa ricetta ti farà cambiare idea. Salvala",
-      "duration_ms": 2176,
+      "duration_ms": 1694,
       "usedServerLLM": true,
       "title": "Burger di zucchine",
       "ingredient_count": 4,
@@ -1794,6 +1923,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1821,7 +1954,7 @@
       "caption_category": "weak_recipe_signal",
       "caption_score": 20,
       "caption_excerpt": "STRAWBERRY CHIA SEED BOWL 🍓 📍 se ami le fragole e se alla ricerca di una ricetta sana",
-      "duration_ms": 1814,
+      "duration_ms": 2165,
       "usedServerLLM": true,
       "title": "STRAWBERRY CHIA SEED BOWL",
       "ingredient_count": 5,
@@ -1846,6 +1979,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1873,14 +2010,14 @@
       "caption_category": "weak_recipe_signal",
       "caption_score": 19,
       "caption_excerpt": "Panino gourmet con salsiccia di Bra e Toma 🔥 Questo panino è possibile solo in Piemonte. Perché solo",
-      "duration_ms": 2412,
+      "duration_ms": 2430,
       "usedServerLLM": true,
       "title": "Panino gourmet con salsiccia di Bra e Toma",
       "ingredient_count": 5,
       "ingredients": [
         "salsiccia di Bra",
         "Toma piemontese",
-        "pane per hamburger",
+        "pane per hamburger oppure pane rustico",
         "senape",
         "miele"
       ],
@@ -1899,6 +2036,11 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "method_without_amounts",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1931,7 +2073,7 @@
       "caption_category": "weak_recipe_signal",
       "caption_score": 19,
       "caption_excerpt": "EP. 3 ✨ Riso in teglia al forno: una ricetta veloce, pratica e con pochi ingredienti 💛 ⚠️",
-      "duration_ms": 3191,
+      "duration_ms": 3228,
       "usedServerLLM": true,
       "title": "Riso in teglia al forno",
       "ingredient_count": 12,
@@ -1949,7 +2091,7 @@
         "olio",
         "noci"
       ],
-      "step_count": 5,
+      "step_count": 3,
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": 35,
@@ -1962,6 +2104,9 @@
         "servings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -1984,7 +2129,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 26,
       "caption_excerpt": "FONDUTA VALDOSTANA (quella vera) La fonduta valdostana non è una crema al formaggio qualsiasi. È una preparazione lenta,",
-      "duration_ms": 4145,
+      "duration_ms": 3737,
       "usedServerLLM": true,
       "title": "FONDUTA VALDOSTANA (quella vera)",
       "ingredient_count": 5,
@@ -2008,6 +2153,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -2030,7 +2178,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 26,
       "caption_excerpt": "Overnight lamponi e cioccolato 🍫💗 Una colazione golosa, fresca e pronta al risveglio. Perfetta quando vuoi qualcosa di",
-      "duration_ms": 2215,
+      "duration_ms": 2416,
       "usedServerLLM": true,
       "title": "Overnight lamponi e cioccolato",
       "ingredient_count": 7,
@@ -2056,6 +2204,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -2078,12 +2229,12 @@
       "caption_category": "complete_recipe",
       "caption_score": 26,
       "caption_excerpt": "🥑 SALSA FIT AVOCADO & UOVA (cremosa, veloce, proteica!) Vuoi qualcosa di buono da spalmare sul pane ma",
-      "duration_ms": 5312,
+      "duration_ms": 2378,
       "usedServerLLM": true,
       "title": "SALSA FIT AVOCADO & UOVA",
       "ingredient_count": 5,
       "ingredients": [
-        "avocado",
+        "avocado maturo",
         "uova sode",
         "sale",
         "pepe",
@@ -2102,6 +2253,9 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {
@@ -2124,7 +2278,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 26,
       "caption_excerpt": "Una “focaccia” furba, pronta in pochi minuti! Croccante fuori, morbida dentro… ma molto più leggera e bilanciata. Ingredienti",
-      "duration_ms": 2088,
+      "duration_ms": 7511,
       "usedServerLLM": true,
       "title": "Una “focaccia” furba, pronta in pochi minuti!",
       "ingredient_count": 7,
@@ -2141,13 +2295,14 @@
       "servings": 4,
       "prepTimeMinutes": null,
       "cookTimeMinutes": 15,
-      "confidence": "medium",
+      "confidence": "high",
       "draftQuality": "publishable",
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
       "niceToFix": [],
       "autoFixable": [],
+      "operationalSignals": [],
       "safeFixes": [],
       "deferredFixes": [],
       "appliedAutoFixes": [],
@@ -2164,7 +2319,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 26,
       "caption_excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai",
-      "duration_ms": 2555,
+      "duration_ms": 2524,
       "usedServerLLM": true,
       "title": "Colazione sana, proteica e che sa di tiramisù",
       "ingredient_count": 7,
@@ -2191,6 +2346,10 @@
         "timings_missing"
       ],
       "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
       "safeFixes": [],
       "deferredFixes": [
         {

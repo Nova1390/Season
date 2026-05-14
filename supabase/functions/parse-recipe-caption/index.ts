@@ -99,6 +99,7 @@ interface SmartImportAgentSummary {
   draftQuality: SmartImportDraftQuality;
   nextAction: SmartImportNextAction;
   actionReason: string;
+  operationalSignals: string[];
   scorecard: SmartImportQualityScorecard;
   autoFixPlan: SmartImportAutoFixPlan;
   appliedAutoFixes: SmartImportAutoFixPlanItem[];
@@ -924,6 +925,7 @@ function buildSmartImportAgentSummary(
   const scorecard = smartImportQualityScorecard(result, input.outputAudit, reviewHints);
   const autoFixPlan = smartImportAutoFixPlan(result, scorecard);
   const nextAction = smartImportNextAction(result, input.outputAudit, reviewHints);
+  const operationalSignals = smartImportOperationalSignals(result, input.outputAudit, reviewHints, scorecard);
 
   let draftQuality: SmartImportDraftQuality = "publishable";
   if (result.ingredients.length === 0 || result.steps.length === 0) {
@@ -987,6 +989,7 @@ function buildSmartImportAgentSummary(
     draftQuality,
     nextAction: nextAction.name,
     actionReason: nextAction.reason,
+    operationalSignals,
     scorecard,
     autoFixPlan,
     appliedAutoFixes: input.appliedAutoFixes ?? [],
@@ -994,6 +997,39 @@ function buildSmartImportAgentSummary(
     unresolvedIngredients,
     passes,
   };
+}
+
+function smartImportOperationalSignals(
+  result: ParseRecipeCaptionResult,
+  outputAudit: SmartImportOutputAudit,
+  reviewHints: string[],
+  scorecard: SmartImportQualityScorecard,
+): string[] {
+  const signals: string[] = [];
+
+  if (result.ingredients.length > 0 && result.steps.length === 0) {
+    signals.push("ingredients_only_caption");
+  }
+  if (result.ingredients.length === 0 && result.steps.length === 0) {
+    signals.push("low_signal_caption");
+  }
+  if (result.steps.length > 0 && reviewHints.includes("quantities_missing")) {
+    signals.push("method_without_amounts");
+  }
+  if (result.servings === null) {
+    signals.push("missing_servings_metadata");
+  }
+  if (result.prepTimeMinutes === null && result.cookTimeMinutes === null) {
+    signals.push("missing_timing_metadata");
+  }
+  if (outputAudit.unknown > 0 || scorecard.blockingIssues.includes("unresolved_ingredients_present")) {
+    signals.push("catalog_identity_review_needed");
+  }
+  if (result.confidence === "low") {
+    signals.push("low_confidence_parse");
+  }
+
+  return uniqueStrings(signals);
 }
 
 function smartImportQualityScorecard(

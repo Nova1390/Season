@@ -58,6 +58,7 @@ At least one between `caption` or `url` must be non-empty.
       "draftQuality": "needs_creator_review",
       "nextAction": "resolve_ingredients",
       "actionReason": "Some ingredients remain unresolved against the catalog and should be checked before publishing.",
+      "operationalSignals": ["catalog_identity_review_needed"],
       "scorecard": {
         "blockingIssues": ["unresolved_ingredients_present"],
         "niceToFix": ["quantities_missing"],
@@ -140,5 +141,17 @@ Error responses are JSON-only (`ok: false`) with `error.code` and `error.message
   - full recipe parse gets one schema-repair retry if the first provider JSON is valid JSON but fails the strict recipe contract.
 
 The schema-repair retry is deliberately narrow: it only receives validation errors and the original caption context, then must return the same strict JSON shape. If the repair also fails, the function still returns `VALIDATION_FAILED` instead of inventing a partial response.
+
+`smartImportAgent.operationalSignals` is a machine-readable learning/eval layer for batches. It turns recurring creator-caption patterns into compact labels such as:
+
+- `ingredients_only_caption`
+- `low_signal_caption`
+- `method_without_amounts`
+- `missing_servings_metadata`
+- `missing_timing_metadata`
+- `catalog_identity_review_needed`
+- `low_confidence_parse`
+
+These signals are not catalog truth. They are used to decide whether Smart Import should ask the creator for more recipe detail, whether a regression fixture should be added, or whether Catalog Governance should later inspect unresolved ingredient observations.
 
 Smart Import must not create catalog records, approve aliases, or reconcile recipes. Unresolved custom ingredients are handled later by Catalog Governance observations.

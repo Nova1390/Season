@@ -138,6 +138,7 @@ Validation:
 - The first high-signal real-caption E2E used 7 creator captions and produced 7/7 publish-ready drafts with no blocking issues.
 - The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
 - The latest stratified stress used 40 real creator captions and produced 40/40 successful Edge responses after adding bounded schema repair. It produced 27 publishable drafts, 12 `needs_more_input` drafts, and 1 `needs_creator_review` draft. The main residual issues were expected creator-input gaps: missing method steps, servings, timings, and one amount-completion case.
+- Smart Import now returns `smartImportAgent.operationalSignals` so stress results become structured learning/eval data rather than free-text notes. Current signals include `ingredients_only_caption`, `low_signal_caption`, `method_without_amounts`, `missing_servings_metadata`, `missing_timing_metadata`, `catalog_identity_review_needed`, and `low_confidence_parse`.
 - Long live stress runs must rotate temporary users in dev with `--requests-per-temp-user`, otherwise the per-user daily quota correctly interrupts the batch and makes quality metrics noisy.
 
 ### Real-Caption Operational Training Loop
