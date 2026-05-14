@@ -160,13 +160,14 @@ Backend bridge:
 
 - `public.catalog_agent_training_signals` stores non-mutating corpus-derived signals.
 - `public.upsert_catalog_agent_training_signal(...)` imports reviewed terms from the offline corpus.
-- `public.get_catalog_agent_training_signal_context(...)` exposes compact term-specific context to the Catalog Agent and runs with invoker privileges so authenticated calls still respect catalog-admin RLS.
+- `public.get_catalog_agent_training_signal_context(...)` exposes compact term-specific context to the Catalog Agent, runs with invoker privileges so authenticated calls still respect catalog-admin RLS, and matches punctuation/apostrophe variants such as `fiocchi d avena` vs `fiocchi d'avena`.
 - `run-catalog-agent-triage` attaches matching `training_signals` to each work item and passes a `training_signal_policy` to the LLM packet.
 
 Training signals are intentionally weaker than learning memory:
 
 - `implemented`/`accepted` `catalog_agent_learnings` can encode durable behavior.
 - `catalog_agent_training_signals` are corpus evidence only; they can influence evidence, priority, and blocking questions.
+- `catalog_alias_candidate` should slow down duplicate canonical creation when no safe target is available; the agent should request matching/review evidence instead of assuming the alias text is a new ingredient.
 - A training signal must be promoted through a governed review path before it becomes learning memory or catalog mutation.
 
 ## 2. System Overview

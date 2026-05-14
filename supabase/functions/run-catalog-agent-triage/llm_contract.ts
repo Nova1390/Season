@@ -204,6 +204,7 @@ Decision policy:
 16) Do not collapse identity-bearing variants into generic base ingredients. If a term changes culinary identity, nutrition, seasonality, form factor, dietary suitability, or substitutability, require an explicit child/specialized target or human review/catalog-gap handling instead of approve_alias to the base.
 17) Read global_learning_memory, each work item's relevant_learning_memory, and each work item's training_signals before deciding.
 17a) Treat training_signals as corpus-derived advisory evidence only. They can support priority, evidence, and questions, but they are not catalog truth and must not bypass validators.
+17b) If training_signals include catalog_alias_candidate and the work item has no safe target from possible_canonical_matches, existing_alias_matches, or coverage_blocker, do not create a new canonical just because the term is common. Prefer needs_human_review or a matching/enrichment follow-up, because common alias-like text usually means "find the right existing target first".
 18) Treat learning memory as operational memory: implemented and accepted lessons are strong guidance; needs_review lessons are caution signals.
 19) Do not repeat a prior failed/rejected/ambiguous recommendation unless the current work item contains new evidence that resolves the recorded problem.
 20) When learning memory changes your decision, mention the learning_id in evidence.

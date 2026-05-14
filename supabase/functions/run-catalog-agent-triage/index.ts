@@ -610,9 +610,10 @@ async function fetchTrainingSignalContext(
   adminClient: ReturnType<typeof createClient>,
   eligibleItems: WorkItem[],
 ): Promise<Record<string, unknown>> {
-  const normalizedTexts = eligibleItems
-    .map((item) => normalizeText(item.normalized_text))
-    .filter((text) => text.length > 0);
+  const normalizedTexts = Array.from(new Set(eligibleItems
+    .flatMap((item) => catalogContextLookupTerms(item))
+    .filter((text) => text.length > 0)
+  ));
 
   if (normalizedTexts.length === 0) {
     return {};
@@ -1709,10 +1710,8 @@ function attachTrainingSignals(items: WorkItem[], trainingSignalContext: Record<
   const termSignals = readNestedRecord(trainingSignalContext, ["term_training_signals"]);
 
   return items.map((item) => {
-    const normalizedText = normalizeText(item.normalized_text);
-    const relevantSignals = Array.isArray(termSignals[normalizedText])
-      ? (termSignals[normalizedText] as unknown[])
-      : [];
+    const relevantSignals = uniqueTrainingSignals(catalogContextLookupTerms(item)
+      .flatMap((term) => Array.isArray(termSignals[term]) ? (termSignals[term] as unknown[]) : []));
 
     return {
       ...item,
@@ -1722,6 +1721,49 @@ function attachTrainingSignals(items: WorkItem[], trainingSignalContext: Record<
       },
     };
   });
+}
+
+function catalogContextLookupTerms(item: WorkItem): string[] {
+  const terms = new Set<string>();
+  addCatalogContextLookupTerm(terms, item.normalized_text);
+
+  for (const lexicalCandidate of readNestedArray(item, ["context", "lexical_candidate_terms"])) {
+    addCatalogContextLookupTerm(terms, isRecord(lexicalCandidate) ? lexicalCandidate.term : null);
+  }
+
+  return Array.from(terms);
+}
+
+function addCatalogContextLookupTerm(terms: Set<string>, value: unknown): void {
+  const normalized = normalizeText(value);
+  const simplified = simplifyCatalogSignalText(value);
+  if (normalized.length > 0) terms.add(normalized);
+  if (simplified.length > 0) terms.add(simplified);
+}
+
+function uniqueTrainingSignals(signals: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  const unique: unknown[] = [];
+
+  for (const signal of signals) {
+    const key = stableSignalKey(signal);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(signal);
+  }
+
+  return unique;
+}
+
+function stableSignalKey(signal: unknown): string {
+  if (!isRecord(signal)) return JSON.stringify(signal);
+  const id = signal.id;
+  if (typeof id === "number" || typeof id === "string") return `id:${id}`;
+  return [
+    signal.training_signal,
+    signal.source,
+    signal.occurrence_count,
+  ].map((value) => String(value ?? "")).join("|");
 }
 
 function summarizeLearningContext(learningContext: Record<string, unknown>): Record<string, unknown> {
@@ -1897,6 +1939,17 @@ function normalizeNullableText(value: unknown): string | null {
 
 function normalizeText(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function simplifyCatalogSignalText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function boundedInteger(value: number, min: number, max: number): number {

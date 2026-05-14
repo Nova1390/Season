@@ -227,6 +227,9 @@ Latest dev probe notes:
 - `2026-05-14`: dev probe on `SI-TRAIN-040` after safe autofix deploy preserved `appliedAutoFixes=[]`, `blockingIssues=["steps_missing"]`, and `nextAction=add_method_steps`, confirming the worker does not mask real creator-input blockers.
 - `2026-05-14`: imported the first 40 high-frequency real-caption corpus terms into dev `catalog_agent_training_signals` as advisory signals only. The smoke query confirmed runtime context for `uovo` and `fiocchi d'avena`; `pomodorini` was absent because it was not part of this bounded first import batch.
 - `2026-05-14`: deployed `run-catalog-agent-triage` on dev with training-signal context attached to work items and passed into the LLM packet as `training_signal_policy`.
+- `2026-05-14`: dry-run `catalog_agent_runs.id=76` confirmed the agent reads training signals (`terms_with_training_signals=1`) without persisting proposals. It also exposed a policy gap: a `catalog_alias_candidate` without target evidence must not become `create_canonical`. The contract now routes that shape toward matching/review evidence instead.
+- `2026-05-14`: training-signal lookup now includes lexical candidate terms and punctuation-tolerant matching so corpus terms like `fiocchi d'avena` can inform work items normalized as `fiocchi d avena`.
+- `2026-05-14`: repeat dry-run `catalog_agent_runs.id=77` confirmed the fix. Training-signal coverage increased to `terms_with_training_signals=2`, the runtime source changed to `catalog_agent_training_signal_context_v2_broadened_lookup`, and `pepe` changed from unsafe `create_canonical` to `needs_human_review` because no safe canonical target was present.
 
 ## Boundaries
 
