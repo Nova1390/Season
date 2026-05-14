@@ -1465,6 +1465,13 @@ function proposalQualityIssues(
   }
 
   if (proposal.proposal_type === "create_canonical") {
+    if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item)) {
+      addIssue(
+        "error",
+        "alias_candidate_requires_target_before_canonical_creation",
+        "catalog_alias_candidate signals require safe target matching/review before create_canonical can be persisted.",
+      );
+    }
     if (proposalConfidence === null || proposalConfidence < 0.75) {
       addIssue("error", "low_create_canonical_confidence", "create_canonical proposals require confidence_score >= 0.75.");
     }
@@ -1501,6 +1508,23 @@ function proposalQualityIssues(
   }
 
   return issues;
+}
+
+function hasTrainingSignal(item: WorkItem | undefined, trainingSignal: string): boolean {
+  if (!item) return false;
+  return readNestedArray(item, ["context", "training_signals"]).some((signal) =>
+    normalizeText(isRecord(signal) ? signal.training_signal : null) === trainingSignal
+  );
+}
+
+function itemHasSafeTarget(item: WorkItem | undefined): boolean {
+  if (!item) return false;
+  const context = readNestedRecord(item, ["context"]);
+  const coverageBlocker = readNestedRecord(item, ["coverage_blocker"]);
+  return readNestedArray(context, ["possible_canonical_matches"]).length > 0 ||
+    readNestedArray(context, ["existing_alias_matches"]).length > 0 ||
+    normalizeText(coverageBlocker.canonical_candidate_ingredient_id).length > 0 ||
+    normalizeText(coverageBlocker.canonical_candidate_slug).length > 0;
 }
 
 function proposalInsertedId(

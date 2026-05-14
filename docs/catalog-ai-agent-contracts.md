@@ -174,6 +174,7 @@ Training-signal bridge:
 - Training signals are weaker than learning memory. They can influence evidence, priority, risk questions, and proposal rationale.
 - Training signals must not be treated as catalog truth and must not authorize direct catalog mutation.
 - `catalog_alias_candidate` means "common real-caption text likely needs target matching", not "create a new canonical". If no safe target is provided, the agent should ask for review or matching evidence instead of inventing a duplicate canonical.
+- Runtime quality gate enforces that rule: `create_canonical` is blocked when a work item has `catalog_alias_candidate` training signals and no safe target from canonical matches, alias matches, or coverage blocker context.
 - Durable behavior requires a governed promotion into policy, prompt, validator, evaluation fixture, or `catalog_agent_learnings`.
 - The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.

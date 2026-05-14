@@ -230,6 +230,7 @@ Latest dev probe notes:
 - `2026-05-14`: dry-run `catalog_agent_runs.id=76` confirmed the agent reads training signals (`terms_with_training_signals=1`) without persisting proposals. It also exposed a policy gap: a `catalog_alias_candidate` without target evidence must not become `create_canonical`. The contract now routes that shape toward matching/review evidence instead.
 - `2026-05-14`: training-signal lookup now includes lexical candidate terms and punctuation-tolerant matching so corpus terms like `fiocchi d'avena` can inform work items normalized as `fiocchi d avena`.
 - `2026-05-14`: repeat dry-run `catalog_agent_runs.id=77` confirmed the fix. Training-signal coverage increased to `terms_with_training_signals=2`, the runtime source changed to `catalog_agent_training_signal_context_v2_broadened_lookup`, and `pepe` changed from unsafe `create_canonical` to `needs_human_review` because no safe canonical target was present.
+- `2026-05-14`: the runtime quality gate now enforces the same lesson deterministically and is deployed on dev. Future LLM regressions that propose `create_canonical` for `catalog_alias_candidate` terms without a safe target will be blocked before persistence.
 
 ## Boundaries
 

@@ -168,6 +168,7 @@ Training signals are intentionally weaker than learning memory:
 - `implemented`/`accepted` `catalog_agent_learnings` can encode durable behavior.
 - `catalog_agent_training_signals` are corpus evidence only; they can influence evidence, priority, and blocking questions.
 - `catalog_alias_candidate` should slow down duplicate canonical creation when no safe target is available; the agent should request matching/review evidence instead of assuming the alias text is a new ingredient.
+- The proposal quality gate also enforces this: alias-candidate training evidence with no safe target blocks `create_canonical` persistence, even if the LLM suggests it.
 - A training signal must be promoted through a governed review path before it becomes learning memory or catalog mutation.
 
 ## 2. System Overview
