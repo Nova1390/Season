@@ -101,8 +101,11 @@ The run still completes when weak proposals are blocked. The summary records:
 - `proposals_persistable`;
 - `proposals_blocked_by_quality_gate`;
 - `proposal_quality_gate` with issue codes and counts.
+- `quality_gate_self_repair` when the agent attempted one governed repair pass for blocked proposals.
 
 This is the first `4.5 governed proposal autonomy` guardrail: the agent may persist work only when the output is both structurally valid and operationally reviewable.
+
+When `CATALOG_AGENT_SELF_REPAIR_ENABLED` is enabled, the function can make one bounded repair pass after the quality gate. The repair pass sees only blocked work items, the original blocked proposals, and the concrete gate issues. It must return exactly one corrected proposal per blocked normalized text. If it cannot produce a safe actionable proposal, it must downgrade to `needs_human_review`.
 
 ## Semantic Profile
 
@@ -161,6 +164,8 @@ Recipe-process byproducts are also protected. Cooking water, pasta water, soakin
 - `CATALOG_AGENT_REASONING_MODE`: defaults to `multi_pass`; set `single_pass` for the legacy one-call path.
 - `CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN`: defaults to `3`, capped at `5`.
 - `CATALOG_AGENT_RISK_REVIEW_ENABLED`: defaults to `true`.
+- `CATALOG_AGENT_SELF_REPAIR_ENABLED`: defaults to `true`.
+- `CATALOG_AGENT_MAX_SELF_REPAIR_ITEMS`: defaults to `5`, capped at `10`.
 - `CATALOG_AGENT_INPUT_COST_PER_1M_USD`: optional cost estimate.
 - `CATALOG_AGENT_OUTPUT_COST_PER_1M_USD`: optional cost estimate.
 

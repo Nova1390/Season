@@ -78,6 +78,8 @@ const REASONING_MODE = env("CATALOG_AGENT_REASONING_MODE", "multi_pass").toLower
   : "multi_pass";
 const MAX_REASONING_CALLS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN", 3), 1, 5);
 const RISK_REVIEW_ENABLED = env("CATALOG_AGENT_RISK_REVIEW_ENABLED", "true").toLowerCase() !== "false";
+const SELF_REPAIR_ENABLED = env("CATALOG_AGENT_SELF_REPAIR_ENABLED", "true").toLowerCase() !== "false";
+const MAX_SELF_REPAIR_ITEMS = boundedInteger(numberEnv("CATALOG_AGENT_MAX_SELF_REPAIR_ITEMS", 5), 1, 10);
 const INPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_INPUT_COST_PER_1M_USD");
 const OUTPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_OUTPUT_COST_PER_1M_USD");
 
@@ -330,7 +332,7 @@ Deno.serve(async (request) => {
       auth.userId,
     );
     providerEligibleItems = providerAttempt.eligibleItems;
-    const providerResult = providerAttempt.result;
+    let providerResult = providerAttempt.result;
     const allowedTexts = new Set(providerEligibleItems.map((item) => normalizeText(item.normalized_text)));
     const repair = repairProviderOutputForValidation(providerResult.parsed);
     if (repair.repairs.length > 0) {
@@ -381,9 +383,40 @@ Deno.serve(async (request) => {
       return errorJson(502, "PROVIDER_OUTPUT_INVALID", `Provider output failed validation: ${validation.errors.join(" | ")}`);
     }
 
-    const proposals = normalizeProposalStatuses(validation.value.proposals);
-    const qualityGate = evaluateProposalQuality(proposals, providerEligibleItems, dryRun);
+    let proposals = normalizeProposalStatuses(validation.value.proposals);
+    let qualityGate = evaluateProposalQuality(proposals, providerEligibleItems, dryRun);
     await insertRunEvent(adminClient, runId, "proposal_quality_gate_evaluated", qualityGate.summary, auth.userId);
+
+    let selfRepairSummary: Record<string, unknown> | null = null;
+    if (SELF_REPAIR_ENABLED && qualityGate.issues.some((issue) => issue.level === "error")) {
+      const selfRepair = await attemptQualityGateSelfRepair(
+        requestId,
+        runId,
+        snapshot,
+        providerEligibleItems,
+        learningContext,
+        trainingSignalContext,
+        proposals,
+        qualityGate,
+        allowedTexts,
+      );
+      selfRepairSummary = selfRepair.summary;
+
+      providerResult = {
+        ...providerResult,
+        durationMs: providerResult.durationMs + selfRepair.durationMs,
+        usage: addUsage(providerResult.usage, selfRepair.usage),
+        reasoningTrace: {
+          ...providerResult.reasoningTrace,
+          quality_gate_self_repair: selfRepair.summary,
+        },
+      };
+      proposals = selfRepair.proposals;
+      qualityGate = evaluateProposalQuality(proposals, providerEligibleItems, dryRun);
+
+      await insertRunEvent(adminClient, runId, "proposal_quality_gate_self_repair_completed", selfRepair.summary, auth.userId);
+      await insertRunEvent(adminClient, runId, "proposal_quality_gate_evaluated_after_self_repair", qualityGate.summary, auth.userId);
+    }
 
     const insertedProposalIDs = dryRun
       ? []
@@ -412,6 +445,7 @@ Deno.serve(async (request) => {
       reasoning_mode: REASONING_MODE,
       reasoning_trace: providerResult.reasoningTrace,
       adaptive_retry: providerAttempt.retrySummary,
+      quality_gate_self_repair: selfRepairSummary,
       budget: budgetSummary(),
       duration_ms: elapsedMs(startedAt),
     };
@@ -1429,6 +1463,13 @@ type ProposalQualityGateResult = {
   summary: Record<string, unknown>;
 };
 
+type QualityGateSelfRepairResult = {
+  proposals: CatalogAgentProposalOutput[];
+  usage: TokenUsage;
+  durationMs: number;
+  summary: Record<string, unknown>;
+};
+
 function evaluateProposalQuality(
   proposals: CatalogAgentProposalOutput[],
   eligibleItems: WorkItem[],
@@ -1486,6 +1527,141 @@ function evaluateProposalQuality(
       warning_count: issues.filter((issue) => issue.level === "warning").length,
       issues: issues.slice(0, 25),
     },
+  };
+}
+
+async function attemptQualityGateSelfRepair(
+  requestId: string,
+  runId: number,
+  snapshot: Record<string, unknown>,
+  eligibleItems: WorkItem[],
+  learningContext: Record<string, unknown>,
+  trainingSignalContext: Record<string, unknown>,
+  proposals: CatalogAgentProposalOutput[],
+  qualityGate: ProposalQualityGateResult,
+  allowedTexts: Set<string>,
+): Promise<QualityGateSelfRepairResult> {
+  const errorIssues = qualityGate.issues.filter((issue) => issue.level === "error");
+  const repairTexts = Array.from(new Set(errorIssues.map((issue) => issue.normalized_text).filter(Boolean)))
+    .slice(0, MAX_SELF_REPAIR_ITEMS);
+  const repairTextSet = new Set(repairTexts);
+
+  if (repairTexts.length === 0) {
+    return {
+      proposals,
+      usage: { inputTokens: null, outputTokens: null, totalTokens: null },
+      durationMs: 0,
+      summary: {
+        enabled: SELF_REPAIR_ENABLED,
+        attempted: false,
+        reason: "no_error_issues",
+      },
+    };
+  }
+
+  const repairItems = eligibleItems.filter((item) => repairTextSet.has(normalizeText(item.normalized_text)));
+  const originalBlockedProposals = proposals.filter((proposal) => repairTextSet.has(normalizeText(proposal.normalized_text)));
+  const result = await invokeProviderRole({
+    taskRole: "quality_gate_self_repair",
+    systemPrompt: CATALOG_AGENT_TRIAGE_SYSTEM_PROMPT,
+    userPrompt: [
+      "Repair only the catalog governance proposals that failed the runtime quality gate.",
+      "Return strict JSON only using the required proposal shape.",
+      "Return exactly one proposal per blocked normalized_text listed in repair_targets.",
+      "Do not include unaffected work items.",
+      "Do not apply changes.",
+      "If an actionable proposal cannot be made safe, return needs_human_review with a concrete blocking question.",
+      JSON.stringify({
+        policy: snapshot.policy,
+        learning_memory_policy: readNestedRecord(learningContext, ["runtime_instruction"]),
+        training_signal_policy: readNestedRecord(trainingSignalContext, ["runtime_instruction"]),
+        repair_targets: repairTexts,
+        quality_gate_issues: errorIssues.filter((issue) => repairTextSet.has(issue.normalized_text)),
+        original_blocked_proposals: originalBlockedProposals,
+        work_items: repairItems.map(compactWorkItem),
+      }),
+    ].join("\n"),
+    maxOutputTokens: 3500,
+  });
+  await recordProviderRoleUsage(requestId, runId, "quality_gate_self_repair", result);
+
+  const outputRepair = repairProviderOutputForValidation(result.parsed);
+  const validation = validateCatalogAgentTriageOutput(outputRepair.parsed, new Set(repairTexts.filter((text) => allowedTexts.has(text))));
+  let repairedProposals = validation.ok && validation.value
+    ? normalizeProposalStatuses(validation.value.proposals)
+    : [];
+
+  const uniqueRepaired: CatalogAgentProposalOutput[] = [];
+  const seenRepairedTexts = new Set<string>();
+  for (const proposal of repairedProposals) {
+    const text = normalizeText(proposal.normalized_text);
+    if (!repairTextSet.has(text) || seenRepairedTexts.has(text)) continue;
+    seenRepairedTexts.add(text);
+    uniqueRepaired.push(proposal);
+  }
+  repairedProposals = uniqueRepaired;
+
+  for (const text of repairTexts) {
+    if (seenRepairedTexts.has(text)) continue;
+    const fallback = originalBlockedProposals.find((proposal) => normalizeText(proposal.normalized_text) === text);
+    if (fallback) {
+      repairedProposals.push(downgradeProposalToHumanReview(fallback, errorIssues.filter((issue) => issue.normalized_text === text)));
+    }
+  }
+
+  const mergedProposals = [
+    ...proposals.filter((proposal) => !repairTextSet.has(normalizeText(proposal.normalized_text))),
+    ...repairedProposals,
+  ];
+
+  return {
+    proposals: mergedProposals,
+    usage: result.usage,
+    durationMs: result.durationMs,
+    summary: {
+      enabled: SELF_REPAIR_ENABLED,
+      attempted: true,
+      repair_targets: repairTexts,
+      original_error_count: errorIssues.length,
+      output_repairs: outputRepair.repairs,
+      validation_ok: validation.ok,
+      validation_errors: validation.errors,
+      repaired_proposals_returned: repairedProposals.length,
+      fallback_review_count: repairedProposals.filter((proposal) =>
+        proposal.evidence.some((evidence) => isRecord(evidence) && evidence.type === "quality_gate_self_repair_fallback")
+      ).length,
+      usage: result.usage,
+      duration_ms: result.durationMs,
+    },
+  };
+}
+
+function downgradeProposalToHumanReview(
+  proposal: CatalogAgentProposalOutput,
+  issues: ProposalQualityIssue[],
+): CatalogAgentProposalOutput {
+  const messages = issues.map((issue) => `${issue.code}: ${issue.message}`);
+  return {
+    ...proposal,
+    proposal_type: "needs_human_review",
+    risk_level: proposal.risk_level === "low" ? "medium" : proposal.risk_level,
+    status: "needs_human_review",
+    auto_apply_eligible: false,
+    rationale: [
+      proposal.rationale,
+      "Downgraded to human review by the quality-gate self-repair fallback because the actionable proposal was not safe to persist.",
+    ].filter((text) => text.trim().length > 0).join(" "),
+    evidence: [
+      {
+        type: "quality_gate_self_repair_fallback",
+        issues: messages,
+      },
+      ...proposal.evidence,
+    ],
+    blocking_questions: [
+      ...proposal.blocking_questions,
+      "Which safe catalog action should replace the blocked proposal?",
+    ],
   };
 }
 
@@ -1640,9 +1816,6 @@ function isGenericAggregateCanonicalCandidate(
   if (!hasGenericAggregateTerm) return false;
 
   const evidenceText = [
-    proposal.rationale,
-    ...(Array.isArray(proposal.evidence) ? proposal.evidence : []),
-    ...(Array.isArray(proposal.semantic_profile.evidence) ? proposal.semantic_profile.evidence : []),
     item?.normalized_text,
     ...readNestedArray(item, ["observation", "raw_examples"]),
     readNestedRecord(item, ["observation"]).latest_example,
@@ -1671,9 +1844,6 @@ function isRecipeProcessByproductCanonicalCandidate(
   if (!hasProcessByproductTerm) return false;
 
   const evidenceText = [
-    proposal.rationale,
-    ...(Array.isArray(proposal.evidence) ? proposal.evidence : []),
-    ...(Array.isArray(proposal.semantic_profile.evidence) ? proposal.semantic_profile.evidence : []),
     ...readNestedArray(item, ["observation", "raw_examples"]),
     readNestedRecord(item, ["observation"]).latest_example,
     readNestedRecord(item, ["context", "recipe_context"]).title,
@@ -2031,6 +2201,8 @@ function budgetSummary(): Record<string, unknown> {
     reasoning_mode: REASONING_MODE,
     max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
     risk_review_enabled: RISK_REVIEW_ENABLED,
+    self_repair_enabled: SELF_REPAIR_ENABLED,
+    max_self_repair_items: MAX_SELF_REPAIR_ITEMS,
     input_cost_per_1m_usd: INPUT_COST_PER_1M_USD,
     output_cost_per_1m_usd: OUTPUT_COST_PER_1M_USD,
   };
