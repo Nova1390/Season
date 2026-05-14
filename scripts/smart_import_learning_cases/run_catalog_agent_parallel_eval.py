@@ -30,7 +30,7 @@ DEFAULT_SOURCES = [
 ]
 DEFAULT_REPORT = Path("docs/catalog-agent-parallel-eval-latest.json")
 MAX_SOURCES = 8
-MAX_LIMIT = 5
+MAX_LIMIT = 10
 MAX_CONCURRENCY = 4
 
 

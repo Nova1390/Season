@@ -182,6 +182,7 @@ Training-signal bridge:
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.
 - Parallel dry-run eval is allowed in dev only when `dry_run=true`, persistence is disabled, and the dev enable flags are restored immediately after the batch.
 - Parallel dry-run eval should use `scripts/smart_import_learning_cases/run_catalog_agent_parallel_eval.py` so batches are attributable, bounded, and summarized consistently.
+- Larger eval batches are useful only when they produce policy feedback. Current disagreement targets from the 20-item batch are: cooking water as recipe technique vs ingredient identity, baking powder specificity, gluten-free pasta as dietary/product variant, and protected-designation cheese terms.
 
 Default proposal-only reasoning budget:
 
