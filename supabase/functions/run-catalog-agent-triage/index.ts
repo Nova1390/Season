@@ -55,7 +55,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4.6-generic-aggregate-guard";
+const AGENT_VERSION = "proposal-only-v4.7-variant-process-guards";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -124,6 +124,27 @@ const CONCRETE_AGGREGATE_QUALIFIERS = [
   "seasoning mix",
   "spice blend",
   "vegetable mix",
+];
+
+const RECIPE_PROCESS_BYPRODUCT_TERMS = new Set([
+  "acqua cottura",
+  "acqua della pasta",
+  "acqua di cottura",
+  "acqua di cottura della pasta",
+  "cooking liquid",
+  "cooking water",
+  "liquido cottura",
+  "liquido di cottura",
+  "pasta water",
+]);
+
+const REUSABLE_LIQUID_IDENTITY_TERMS = [
+  "aquafaba",
+  "brodo",
+  "broth",
+  "dashi",
+  "fumetto",
+  "stock",
 ];
 
 Deno.serve(async (request) => {
@@ -1418,9 +1439,26 @@ function evaluateProposalQuality(
   const blockedProposals: CatalogAgentProposalOutput[] = [];
   const acceptedIndexes = new Set<number>();
   const issues: ProposalQualityIssue[] = [];
+  const proposalTextCounts = new Map<string, number>();
+
+  for (const proposal of proposals) {
+    const text = normalizeText(proposal.normalized_text);
+    if (!text) continue;
+    proposalTextCounts.set(text, (proposalTextCounts.get(text) ?? 0) + 1);
+  }
 
   proposals.forEach((proposal, index) => {
-    const proposalIssues = proposalQualityIssues(proposal, index, itemByText.get(normalizeText(proposal.normalized_text)));
+    const normalizedText = normalizeText(proposal.normalized_text);
+    const proposalIssues = proposalQualityIssues(proposal, index, itemByText.get(normalizedText));
+    if ((proposalTextCounts.get(normalizedText) ?? 0) > 1) {
+      proposalIssues.push({
+        proposal_index: index,
+        normalized_text: normalizedText,
+        code: "duplicate_proposal_for_work_item",
+        level: "error",
+        message: "Each work item can have at most one proposal per run.",
+      });
+    }
     issues.push(...proposalIssues);
 
     const hasError = proposalIssues.some((issue) => issue.level === "error");
@@ -1524,6 +1562,13 @@ function proposalQualityIssues(
         "Broad aggregate/category terms require evidence of a concrete product, blend, mix, or identity-bearing aggregate before create_canonical can be persisted.",
       );
     }
+    if (isRecipeProcessByproductCanonicalCandidate(proposal, item)) {
+      addIssue(
+        "error",
+        "recipe_process_byproduct_not_canonical",
+        "Recipe-process liquids/byproducts require evidence of a reusable ingredient identity before create_canonical can be persisted.",
+      );
+    }
     if (proposalConfidence === null || proposalConfidence < 0.75) {
       addIssue("error", "low_create_canonical_confidence", "create_canonical proposals require confidence_score >= 0.75.");
     }
@@ -1610,6 +1655,36 @@ function isGenericAggregateCanonicalCandidate(
     .join(" ");
 
   return !CONCRETE_AGGREGATE_QUALIFIERS.some((qualifier) => evidenceText.includes(qualifier));
+}
+
+function isRecipeProcessByproductCanonicalCandidate(
+  proposal: CatalogAgentProposalOutput,
+  item: WorkItem | undefined,
+): boolean {
+  const terms = new Set([
+    normalizeText(proposal.normalized_text),
+    normalizeText(proposal.proposed_slug).replaceAll("_", " "),
+    normalizeText(proposal.proposed_localized_name),
+  ].filter((text) => text.length > 0));
+
+  const hasProcessByproductTerm = Array.from(terms).some((term) => RECIPE_PROCESS_BYPRODUCT_TERMS.has(term));
+  if (!hasProcessByproductTerm) return false;
+
+  const evidenceText = [
+    proposal.rationale,
+    ...(Array.isArray(proposal.evidence) ? proposal.evidence : []),
+    ...(Array.isArray(proposal.semantic_profile.evidence) ? proposal.semantic_profile.evidence : []),
+    ...readNestedArray(item, ["observation", "raw_examples"]),
+    readNestedRecord(item, ["observation"]).latest_example,
+    readNestedRecord(item, ["context", "recipe_context"]).title,
+    ...readNestedArray(item, ["context", "recipe_context", "nearby_ingredients"]),
+    ...readNestedArray(item, ["context", "recipe_context", "step_snippets"]),
+  ]
+    .map(normalizeText)
+    .filter((text) => text.length > 0)
+    .join(" ");
+
+  return !REUSABLE_LIQUID_IDENTITY_TERMS.some((term) => evidenceText.includes(term));
 }
 
 function proposalInsertedId(

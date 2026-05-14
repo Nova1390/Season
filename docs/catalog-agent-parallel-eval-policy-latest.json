@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-05-14T12:43:42.307068+00:00",
+  "mode": "dry_run_parallel_eval",
+  "mutation_policy": "non_mutating",
+  "input": {
+    "sources": [
+      "smart_import_training_captions",
+      "import"
+    ],
+    "limit": 10,
+    "concurrency": 2,
+    "include_non_new": true
+  },
+  "aggregate": {
+    "sources": 2,
+    "sources_ok": 1,
+    "sources_failed": 1,
+    "runs": [
+      97
+    ],
+    "items_sent_to_llm": 10,
+    "proposals_returned": 11,
+    "proposals_persistable": 11,
+    "proposals_blocked_by_quality_gate": 0,
+    "proposals_created": 0,
+    "total_tokens": 48940,
+    "input_tokens": 40001,
+    "output_tokens": 8939,
+    "proposal_type_counts": {
+      "create_canonical": 5,
+      "needs_human_review": 5,
+      "approve_alias": 1
+    },
+    "quality_gate_issue_counts": {}
+  },
+  "results": [
+    {
+      "source_domain": "import",
+      "ok": false,
+      "error": {
+        "code": "REQUEST_FAILED",
+        "message": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+      },
+      "duration_ms": 60,
+      "run_id": null,
+      "summary": {},
+      "proposals": []
+    },
+    {
+      "source_domain": "smart_import_training_captions",
+      "ok": true,
+      "error": null,
+      "duration_ms": 65082,
+      "run_id": 97,
+      "summary": {
+        "items_in_snapshot": 18,
+        "items_sent_to_llm": 10,
+        "proposals_returned": 11,
+        "proposals_persistable": 11,
+        "proposals_blocked_by_quality_gate": 0,
+        "proposals_created": 0,
+        "skipped_recent_proposal": 0,
+        "dry_run": true,
+        "usage": {
+          "inputTokens": 40001,
+          "outputTokens": 8939,
+          "totalTokens": 48940
+        },
+        "training_signals": {
+          "source": "catalog_agent_training_signal_context_v2_broadened_lookup",
+          "terms_requested": 32,
+          "terms_with_training_signals": 3,
+          "training_signal_count": 3
+        },
+        "learning_memory": {
+          "source": "catalog_agent_learning_context_v1",
+          "terms_requested": 18,
+          "terms_with_learning": 1,
+          "global_learning_count": 0,
+          "term_learning_count": 1
+        },
+        "reasoning_mode": "multi_pass",
+        "quality_gate_issues": [],
+        "quality_gate_error_count": 0,
+        "quality_gate_warning_count": 0
+      },
+      "proposals": [
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "pepe",
+          "risk_level": "medium",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "olive",
+          "risk_level": "high",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "fiocchi d avena",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "acqua di cottura",
+          "risk_level": "low",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "carne macinata",
+          "risk_level": "medium",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "frutti di bosco",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "lenticchie rosse",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "lievito per dolci",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "pasta senza glutine",
+          "risk_level": "high",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "approve_alias",
+          "normalized_text": "pecorino romano",
+          "risk_level": "low",
+          "status": "draft",
+          "quality_gate_status": "persistable"
+        },
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "olive",
+          "risk_level": "high",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        }
+      ]
+    }
+  ]
+}

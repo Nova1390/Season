@@ -177,12 +177,15 @@ Training-signal bridge:
 - Runtime quality gate enforces that rule: `create_canonical` is blocked when a work item has `catalog_alias_candidate` training signals and no safe target from canonical matches, alias matches, or coverage blocker context.
 - Broad aggregate/category terms, for example generic spices, herbs, seasonings, vegetables, fruit, seafood, or cheese, are not enough by themselves to create a canonical ingredient. The agent may draft a canonical only when recipe context identifies a concrete blend, mix, product, or identity-bearing aggregate; otherwise it must ask for specificity.
 - Runtime quality gate enforces that rule with `generic_aggregate_requires_specific_identity`, so a bad LLM draft is blocked before persistence.
+- Recipe-process byproducts such as cooking water are not catalog ingredients by default. The agent must not create canonical ingredients for process liquids unless the context identifies a reusable ingredient identity such as stock, broth, aquafaba, or another named liquid.
+- Clear specific variants should become grounded actions rather than vague review: explicit dessert baking powder should map to `lievito_in_polvere_per_dolci` when that target is present; gluten-free pasta is a dietary/product variant rather than a base-pasta alias; protected-designation cheese terms should use the protected target when it is safely present.
 - Durable behavior requires a governed promotion into policy, prompt, validator, evaluation fixture, or `catalog_agent_learnings`.
 - The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.
 - Parallel dry-run eval is allowed in dev only when `dry_run=true`, persistence is disabled, and the dev enable flags are restored immediately after the batch.
 - Parallel dry-run eval should use `scripts/smart_import_learning_cases/run_catalog_agent_parallel_eval.py` so batches are attributable, bounded, and summarized consistently.
 - Larger eval batches are useful only when they produce policy feedback. Current disagreement targets from the 20-item batch are: cooking water as recipe technique vs ingredient identity, baking powder specificity, gluten-free pasta as dietary/product variant, and protected-designation cheese terms.
+- The proposal quality gate treats duplicate proposals for the same normalized work item in a single run as an error. One work item should produce one governed decision.
 
 Default proposal-only reasoning budget:
 
@@ -233,6 +236,7 @@ Catalog gap rule:
 
 - If the term is clearly a real ingredient and no safe active catalog target exists, the agent should produce a `create_canonical` draft rather than a vague `needs_human_review`.
 - This does not apply to broad category words without enough specificity. A generic group term needs evidence of a concrete catalog identity before it can become a canonical draft.
+- This also does not apply to recipe-process byproducts. Cooking water or similar process liquids need evidence of a reusable ingredient identity before catalog creation.
 - `create_canonical` must never be auto-applied in the current autonomy level.
 - `create_canonical` may carry medium/high risk and still remain `draft`, because risk controls apply to worker/apply eligibility, not to whether a proposal can be validated and routed.
 - `needs_human_review` is for unresolved identity boundaries, meaningful variant policy gaps, cultural/language ambiguity, brand/package ambiguity, or safety-sensitive uncertainty.
