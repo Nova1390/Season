@@ -1,0 +1,182 @@
+{
+  "generated_at": "2026-05-14T10:38:44.448655+00:00",
+  "mode": "dry_run_parallel_eval",
+  "mutation_policy": "non_mutating",
+  "input": {
+    "sources": [
+      "smart_import_training_captions",
+      "import",
+      "import_recovery"
+    ],
+    "limit": 1,
+    "concurrency": 3,
+    "include_non_new": true
+  },
+  "aggregate": {
+    "sources": 3,
+    "sources_ok": 3,
+    "sources_failed": 0,
+    "runs": [
+      83,
+      81,
+      82
+    ],
+    "items_sent_to_llm": 2,
+    "proposals_returned": 2,
+    "proposals_persistable": 1,
+    "proposals_blocked_by_quality_gate": 1,
+    "proposals_created": 0,
+    "total_tokens": 19979,
+    "input_tokens": 17532,
+    "output_tokens": 2447,
+    "proposal_type_counts": {
+      "create_canonical": 1,
+      "needs_human_review": 1
+    },
+    "quality_gate_issue_counts": {
+      "alias_candidate_requires_target_before_canonical_creation": 1
+    }
+  },
+  "results": [
+    {
+      "source_domain": "import",
+      "ok": true,
+      "error": null,
+      "duration_ms": 15880,
+      "run_id": 83,
+      "summary": {
+        "items_in_snapshot": 4,
+        "items_sent_to_llm": 1,
+        "proposals_returned": 1,
+        "proposals_persistable": 1,
+        "proposals_blocked_by_quality_gate": 0,
+        "proposals_created": 0,
+        "skipped_recent_proposal": 0,
+        "dry_run": true,
+        "usage": {
+          "inputTokens": 8776,
+          "outputTokens": 1241,
+          "totalTokens": 10017
+        },
+        "training_signals": {
+          "source": "catalog_agent_training_signal_context_v2_broadened_lookup",
+          "terms_requested": 6,
+          "terms_with_training_signals": 2,
+          "training_signal_count": 2
+        },
+        "learning_memory": {
+          "source": "catalog_agent_learning_context_v1",
+          "terms_requested": 4,
+          "terms_with_learning": 1,
+          "global_learning_count": 0,
+          "term_learning_count": 1
+        },
+        "reasoning_mode": "multi_pass",
+        "quality_gate_issues": [],
+        "quality_gate_error_count": 0,
+        "quality_gate_warning_count": 0
+      },
+      "proposals": [
+        {
+          "proposal_type": "needs_human_review",
+          "normalized_text": "pepe",
+          "risk_level": "medium",
+          "status": "needs_human_review",
+          "quality_gate_status": "persistable"
+        }
+      ]
+    },
+    {
+      "source_domain": "import_recovery",
+      "ok": true,
+      "error": null,
+      "duration_ms": 3275,
+      "run_id": 81,
+      "summary": {
+        "items_in_snapshot": 0,
+        "items_sent_to_llm": 0,
+        "proposals_returned": null,
+        "proposals_persistable": null,
+        "proposals_blocked_by_quality_gate": null,
+        "proposals_created": 0,
+        "skipped_recent_proposal": 0,
+        "dry_run": true,
+        "usage": null,
+        "training_signals": {
+          "source": null,
+          "terms_requested": null,
+          "terms_with_training_signals": null,
+          "training_signal_count": 0
+        },
+        "learning_memory": {
+          "source": null,
+          "terms_requested": null,
+          "terms_with_learning": null,
+          "global_learning_count": 0,
+          "term_learning_count": 0
+        },
+        "reasoning_mode": null,
+        "quality_gate_issues": [],
+        "quality_gate_error_count": null,
+        "quality_gate_warning_count": null
+      },
+      "proposals": []
+    },
+    {
+      "source_domain": "smart_import_training_captions",
+      "ok": true,
+      "error": null,
+      "duration_ms": 16160,
+      "run_id": 82,
+      "summary": {
+        "items_in_snapshot": 4,
+        "items_sent_to_llm": 1,
+        "proposals_returned": 1,
+        "proposals_persistable": 0,
+        "proposals_blocked_by_quality_gate": 1,
+        "proposals_created": 0,
+        "skipped_recent_proposal": 0,
+        "dry_run": true,
+        "usage": {
+          "inputTokens": 8756,
+          "outputTokens": 1206,
+          "totalTokens": 9962
+        },
+        "training_signals": {
+          "source": "catalog_agent_training_signal_context_v2_broadened_lookup",
+          "terms_requested": 6,
+          "terms_with_training_signals": 2,
+          "training_signal_count": 2
+        },
+        "learning_memory": {
+          "source": "catalog_agent_learning_context_v1",
+          "terms_requested": 4,
+          "terms_with_learning": 1,
+          "global_learning_count": 0,
+          "term_learning_count": 1
+        },
+        "reasoning_mode": "multi_pass",
+        "quality_gate_issues": [
+          {
+            "proposal_index": 0,
+            "normalized_text": "pepe",
+            "code": "alias_candidate_requires_target_before_canonical_creation",
+            "level": "error",
+            "message": "catalog_alias_candidate signals require safe target matching/review before create_canonical can be persisted."
+          }
+        ],
+        "quality_gate_error_count": 1,
+        "quality_gate_warning_count": 0
+      },
+      "proposals": [
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "pepe",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "blocked"
+        }
+      ]
+    }
+  ]
+}

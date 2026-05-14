@@ -179,6 +179,7 @@ Training-signal bridge:
 - The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.
 - Parallel dry-run eval is allowed in dev only when `dry_run=true`, persistence is disabled, and the dev enable flags are restored immediately after the batch.
+- Parallel dry-run eval should use `scripts/smart_import_learning_cases/run_catalog_agent_parallel_eval.py` so batches are attributable, bounded, and summarized consistently.
 
 Default proposal-only reasoning budget:
 
