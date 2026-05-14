@@ -103,6 +103,19 @@ SUPABASE_SERVICE_ROLE_KEY="..." \
 python3 scripts/smart_import_learning_cases/run_llm_probe.py --use-temp-user --limit 3
 ```
 
+Run a scorecard expectation probe for an assembly-style caption that must ask for method steps instead of inventing them:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/run_llm_probe.py \
+  --use-temp-user \
+  --case-id SI-TRAIN-040 \
+  --expect-blocking steps_missing \
+  --expect-nice-to-fix quantities_missing
+```
+
 Run a targeted ingredient-resolution probe with Swift-like unresolved candidates:
 
 ```bash
@@ -122,6 +135,7 @@ Budget guardrails:
 - Provider or Edge errors are captured per case in the JSON output so a transient `502` does not hide the rest of the probe results.
 - The runner reports both ingredient-name matches and measurable quantity/unit matches, so we can distinguish "recognized the ingredient" from "creator can publish without fixing doses".
 - The runner also reports draft usability signals: title presence, step count, parsed steps, confidence, servings, prep/cook times, the agent `nextAction`, and the structured `scorecard`. These fields tell us whether Smart Import is producing a creator-ready recipe draft, not just a correct ingredient list.
+- The runner can assert required scorecard entries with `--expect-blocking`, `--expect-nice-to-fix`, and `--expect-auto-fixable`; use those assertions for small targeted probes, not large exploratory runs.
 
 Latest dev probe notes:
 
@@ -139,6 +153,8 @@ Latest dev probe notes:
 - `2026-05-13`: dev probe on `SI-TRAIN-040` after deploy returned `draftQuality=needs_more_input` and `nextAction=add_method_steps`, confirming the agent asks for a real method step instead of inventing one for an assembly-style caption.
 - `2026-05-13`: Smart Import Agent now returns a `scorecard` that separates blocking issues, nice-to-fix improvements, and deterministic autofix opportunities for future autonomous loops.
 - `2026-05-13`: dev probe on `SI-TRAIN-040` after scorecard deploy returned `blockingIssues=["steps_missing"]`, `niceToFix=["quantities_missing","servings_missing","timings_missing"]`, and `autoFixable=[]`, confirming the agent can prioritize creator action without losing secondary cleanup tasks.
+- `2026-05-14`: Smart Import Agent now returns an `autoFixPlan` with deterministic `safeFixes` and guarded `deferredFixes`; the probe runner can assert scorecard expectations for targeted live checks.
+- `2026-05-14`: dev probe on `SI-TRAIN-040` passed `--expect-blocking steps_missing` and `--expect-nice-to-fix quantities_missing`; `autoFixPlan.safeFixes=[]` and deferred fixes ask for method steps, amounts, servings, and timings instead of guessing them.
 
 ## Boundaries
 

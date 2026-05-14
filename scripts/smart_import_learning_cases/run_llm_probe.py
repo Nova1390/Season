@@ -294,6 +294,7 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
     steps = result_steps(result)
     agent = result.get("smartImportAgent") if isinstance(result, dict) and isinstance(result.get("smartImportAgent"), dict) else {}
     scorecard = agent.get("scorecard") if isinstance(agent.get("scorecard"), dict) else {}
+    auto_fix_plan = agent.get("autoFixPlan") if isinstance(agent.get("autoFixPlan"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
     return {
         "id": row.get("id"),
@@ -308,6 +309,10 @@ def response_summary(row: dict[str, str], response: dict[str, Any]) -> dict[str,
             "blockingIssues": scorecard.get("blockingIssues") or [],
             "niceToFix": scorecard.get("niceToFix") or [],
             "autoFixable": scorecard.get("autoFixable") or [],
+        },
+        "autoFixPlan": {
+            "safeFixes": auto_fix_plan.get("safeFixes") or [],
+            "deferredFixes": auto_fix_plan.get("deferredFixes") or [],
         },
         "title": result.get("title") if isinstance(result.get("title"), str) else None,
         "step_count": len(steps),
@@ -349,6 +354,10 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
             "niceToFix": [],
             "autoFixable": [],
         },
+        "autoFixPlan": {
+            "safeFixes": [],
+            "deferredFixes": [],
+        },
         "title": None,
         "step_count": 0,
         "steps": [],
@@ -371,6 +380,38 @@ def error_summary(row: dict[str, str], error: Exception) -> dict[str, Any]:
     }
 
 
+def assert_scorecard_expectations(
+    summaries: list[dict[str, Any]],
+    expected_blocking: set[str],
+    expected_nice_to_fix: set[str],
+    expected_auto_fixable: set[str],
+) -> None:
+    if not expected_blocking and not expected_nice_to_fix and not expected_auto_fixable:
+        return
+
+    failures: list[str] = []
+    for summary in summaries:
+        scorecard = summary.get("scorecard") if isinstance(summary.get("scorecard"), dict) else {}
+        actual_blocking = set(scorecard.get("blockingIssues") or [])
+        actual_nice_to_fix = set(scorecard.get("niceToFix") or [])
+        actual_auto_fixable = set(scorecard.get("autoFixable") or [])
+
+        missing_blocking = sorted(expected_blocking - actual_blocking)
+        missing_nice_to_fix = sorted(expected_nice_to_fix - actual_nice_to_fix)
+        missing_auto_fixable = sorted(expected_auto_fixable - actual_auto_fixable)
+
+        if missing_blocking or missing_nice_to_fix or missing_auto_fixable:
+            failures.append(
+                f"{summary.get('id')}: "
+                f"missing blocking={missing_blocking} "
+                f"nice_to_fix={missing_nice_to_fix} "
+                f"auto_fixable={missing_auto_fixable}"
+            )
+
+    if failures:
+        raise RuntimeError("Scorecard expectations failed: " + "; ".join(failures))
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--captions-csv", type=Path, default=DEFAULT_CAPTIONS_CSV)
@@ -382,6 +423,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--sleep-seconds", type=float, default=2.2)
     parser.add_argument("--use-temp-user", action="store_true")
     parser.add_argument("--with-candidates", action="store_true", help="Send expected ingredients as unresolved Swift-like candidates.")
+    parser.add_argument("--expect-blocking", action="append", default=[], help="Assert every selected case includes this scorecard blocking issue.")
+    parser.add_argument("--expect-nice-to-fix", action="append", default=[], help="Assert every selected case includes this scorecard nice-to-fix issue.")
+    parser.add_argument("--expect-auto-fixable", action="append", default=[], help="Assert every selected case includes this scorecard auto-fixable issue.")
     parser.add_argument("--json", action="store_true", dest="json_output")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
@@ -441,6 +485,13 @@ def main(argv: list[str]) -> int:
                 delete_temp_user(args.supabase_url, service_role_key, user_id)
             except Exception as error:
                 print(f"WARN failed to delete temporary user {user_id}: {error}", file=sys.stderr)
+
+    assert_scorecard_expectations(
+        summaries,
+        {value.strip() for value in args.expect_blocking if value.strip()},
+        {value.strip() for value in args.expect_nice_to_fix if value.strip()},
+        {value.strip() for value in args.expect_auto_fixable if value.strip()},
+    )
 
     if args.json_output:
         print(json.dumps({"ok": all(summary.get("ok") for summary in summaries), "summaries": summaries}, ensure_ascii=False, indent=2))

@@ -1078,12 +1078,24 @@ struct ParseRecipeCaptionFunctionAgentScorecard: Codable {
     let autoFixable: [String]
 }
 
+struct ParseRecipeCaptionFunctionAgentAutoFixPlanItem: Codable {
+    let issue: String
+    let action: String
+    let reason: String
+}
+
+struct ParseRecipeCaptionFunctionAgentAutoFixPlan: Codable {
+    let safeFixes: [ParseRecipeCaptionFunctionAgentAutoFixPlanItem]
+    let deferredFixes: [ParseRecipeCaptionFunctionAgentAutoFixPlanItem]
+}
+
 struct ParseRecipeCaptionFunctionAgentSummary: Codable {
     let version: String
     let draftQuality: String
     let nextAction: String?
     let actionReason: String?
     let scorecard: ParseRecipeCaptionFunctionAgentScorecard?
+    let autoFixPlan: ParseRecipeCaptionFunctionAgentAutoFixPlan?
     let reviewHints: [String]
     let unresolvedIngredients: [String]
     let passes: [ParseRecipeCaptionFunctionAgentPass]

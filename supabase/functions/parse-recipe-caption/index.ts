@@ -69,6 +69,17 @@ interface SmartImportQualityScorecard {
   autoFixable: string[];
 }
 
+interface SmartImportAutoFixPlanItem {
+  issue: string;
+  action: string;
+  reason: string;
+}
+
+interface SmartImportAutoFixPlan {
+  safeFixes: SmartImportAutoFixPlanItem[];
+  deferredFixes: SmartImportAutoFixPlanItem[];
+}
+
 interface SmartImportLearningSummary {
   source: string | null;
   termsRequested: number;
@@ -84,6 +95,7 @@ interface SmartImportAgentSummary {
   nextAction: SmartImportNextAction;
   actionReason: string;
   scorecard: SmartImportQualityScorecard;
+  autoFixPlan: SmartImportAutoFixPlan;
   reviewHints: string[];
   unresolvedIngredients: string[];
   passes: SmartImportAgentPass[];
@@ -773,6 +785,7 @@ function buildSmartImportAgentSummary(
     .filter(Boolean)
     .slice(0, 12);
   const scorecard = smartImportQualityScorecard(result, input.outputAudit, reviewHints);
+  const autoFixPlan = smartImportAutoFixPlan(result, scorecard);
   const nextAction = smartImportNextAction(result, input.outputAudit, reviewHints);
 
   let draftQuality: SmartImportDraftQuality = "publishable";
@@ -830,6 +843,7 @@ function buildSmartImportAgentSummary(
     nextAction: nextAction.name,
     actionReason: nextAction.reason,
     scorecard,
+    autoFixPlan,
     reviewHints,
     unresolvedIngredients,
     passes,
@@ -885,6 +899,77 @@ function smartImportQualityScorecard(
 
 function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+function smartImportAutoFixPlan(
+  result: ParseRecipeCaptionResult,
+  scorecard: SmartImportQualityScorecard,
+): SmartImportAutoFixPlan {
+  const safeFixes: SmartImportAutoFixPlanItem[] = [];
+  const deferredFixes: SmartImportAutoFixPlanItem[] = [];
+
+  if (scorecard.autoFixable.includes("title_missing") && result.inferredDish) {
+    safeFixes.push({
+      issue: "title_missing",
+      action: "use_inferred_dish_as_title",
+      reason: "The model already inferred a dish name, so the server can use it as a draft title without catalog mutation or extra LLM cost.",
+    });
+  }
+
+  for (const issue of scorecard.blockingIssues) {
+    if (issue === "steps_missing") {
+      deferredFixes.push({
+        issue,
+        action: "ask_creator_for_method_steps",
+        reason: "Preparation steps should come from the creator or explicit caption text; the server must not invent a method.",
+      });
+    } else if (issue === "ingredients_missing") {
+      deferredFixes.push({
+        issue,
+        action: "ask_creator_for_ingredients",
+        reason: "A recipe without ingredient structure cannot be repaired safely from context alone.",
+      });
+    } else if (issue === "unresolved_ingredients_present") {
+      deferredFixes.push({
+        issue,
+        action: "route_to_catalog_resolution",
+        reason: "Catalog identity needs reconciliation or creator review before unattended publishing.",
+      });
+    } else {
+      deferredFixes.push({
+        issue,
+        action: "manual_review",
+        reason: "The issue is blocking and does not have a deterministic safe fix yet.",
+      });
+    }
+  }
+
+  for (const issue of scorecard.niceToFix) {
+    if (issue === "quantities_missing") {
+      deferredFixes.push({
+        issue,
+        action: "ask_creator_for_amounts",
+        reason: "Ingredient amounts are useful for publishing quality, but inventing doses would be unsafe.",
+      });
+    } else if (issue === "servings_missing") {
+      deferredFixes.push({
+        issue,
+        action: "ask_creator_for_servings",
+        reason: "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added.",
+      });
+    } else if (issue === "timings_missing") {
+      deferredFixes.push({
+        issue,
+        action: "ask_creator_for_timings",
+        reason: "Prep and cook times are helpful metadata but should not be guessed from a short caption.",
+      });
+    }
+  }
+
+  return {
+    safeFixes,
+    deferredFixes,
+  };
 }
 
 function smartImportNextAction(

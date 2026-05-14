@@ -62,6 +62,16 @@ At least one between `caption` or `url` must be non-empty.
         "niceToFix": ["quantities_missing"],
         "autoFixable": []
       },
+      "autoFixPlan": {
+        "safeFixes": [],
+        "deferredFixes": [
+          {
+            "issue": "unresolved_ingredients_present",
+            "action": "route_to_catalog_resolution",
+            "reason": "Catalog identity needs reconciliation or creator review before unattended publishing."
+          }
+        ]
+      },
       "reviewHints": ["unresolved_ingredients_present"],
       "unresolvedIngredients": ["pomodorini"],
       "passes": [
