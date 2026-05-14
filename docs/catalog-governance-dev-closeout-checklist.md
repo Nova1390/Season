@@ -49,6 +49,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - `catalog.seasonapp.it` was restored after the remote subdomain folder was missing; the deployed console now returns HTTP `200`.
 - Level `6.0` dev scheduler foundation is implemented with a disabled-by-default kill switch, scheduled-shift ledger, readable console shift history, mandatory expiry windows, and two successful autonomous dry-run cron windows (`#10/#11`).
 - Level `7.0` quality-gate foundation is implemented: duplicate proposal blocking, source-grounded generic aggregate guards, recipe-process byproduct guards, and bounded self-repair for blocked LLM output.
+- Level `7.1` foundation started: `catalog_matcher_v1` now gives the LLM and quality gate deterministic target/gap/ambiguity hints, and quality-gate errors now produce learning-writer suggestions.
 - Dev self-repair smoke run `#99` confirmed `spezie` now escalates to `needs_human_review` instead of creating an unsafe broad canonical draft.
 - Latest evaluation JSON reports are kept intentionally as compact audit evidence, not as runtime configuration.
 - Local generated Python cache folders were removed during closeout cleanup; no tracked `__pycache__` artifacts remain.
@@ -63,7 +64,7 @@ Closeout decision:
 
 - the branch is safe to keep developing in dev;
 - it is not yet ready for staging autonomy;
-- the next intelligence work should focus on catalog matcher separation and learning-writer automation, not more manual review volume.
+- the next intelligence work should deepen catalog matcher scoring and expand the learning writer beyond quality-gate errors, not add more manual review volume.
 
 ## Dev Training Import
 

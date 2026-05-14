@@ -1,6 +1,6 @@
 # Catalog Agent LLM Reasoning Loop Plan
 
-Status: implementation contract. Step 1 prompt-contract expansion, Step 3 batch-level multi-pass orchestration, and a bounded Level `7.0` quality-gate self-repair pass are implemented in `run-catalog-agent-triage`. Per-term adaptive loops, catalog matcher split-out, learning writer, and full budget governor remain planned.
+Status: implementation contract. Step 1 prompt-contract expansion, Step 3 batch-level multi-pass orchestration, a bounded Level `7.0` quality-gate self-repair pass, and the first deterministic catalog matcher / learning-writer foundation are implemented in `run-catalog-agent-triage`. Per-term adaptive loops, deeper matcher scoring, broader learning persistence, and the full budget governor remain planned.
 
 This document defines how the Season Catalog Governance Agent should use LLMs as controlled reasoning tools, not as a single-shot autopilot wrapper.
 
@@ -52,13 +52,15 @@ Implemented now:
 - optional risk review pass;
 - final decision writer pass using the existing proposal validator;
 - per-role token attribution in `catalog_ai_usage_events`;
-- aggregate reasoning trace in the run summary.
+- aggregate reasoning trace in the run summary;
+- deterministic catalog matcher hints before LLM calls;
+- bounded learning-writer suggestions from quality-gate errors.
 
 Still planned:
 
 - per-term adaptive continuation when one term needs deeper investigation;
-- separate catalog matcher role or deterministic matcher wrapper;
-- learning writer for failed/rejected/overridden outcomes;
+- deeper catalog matcher scoring across parent/child, redirects, and multilingual aliases;
+- automatic learning persistence for broader failed/rejected/overridden outcomes;
 - stronger pre-call budget stop checks.
 
 Implemented after the original 4.0 checkpoint:
@@ -67,6 +69,8 @@ Implemented after the original 4.0 checkpoint:
 - source-grounded generic aggregate and recipe-process byproduct guardrails;
 - one bounded self-repair pass for quality-gate-blocked proposals;
 - fallback to `needs_human_review` when a repair remains unsafe or incomplete.
+- `catalog_matcher_v1` attached to each work item with safe targets, candidate targets, blockers, and outcome;
+- learning-writer suggestions generated from quality-gate errors, with persistence guarded by `CATALOG_AGENT_LEARNING_WRITER_ENABLED`.
 
 ## 3. Target Loop
 
@@ -399,7 +403,7 @@ Status: partially implemented in `supabase/functions/run-catalog-agent-triage` v
 Deliverables:
 
 - `semantic_profiler` prompt: implemented.
-- `catalog_matcher` prompt or deterministic matcher wrapper: planned.
+- `catalog_matcher` deterministic wrapper: implemented as `catalog_matcher_v1` hints inside each compact work item.
 - optional `risk_reviewer` prompt: implemented.
 - `decision_writer` synthesis prompt: implemented.
 - per-term call budget and stop conditions: planned; current implementation has per-run call ceiling.
@@ -431,11 +435,20 @@ Exit criteria:
 
 Use outcomes to improve future reasoning.
 
+Status: foundation implemented.
+
 Deliverables:
 
-- learning writer prompt for failed/rejected/overridden decisions;
-- structured learning fields for semantic rules and anti-patterns;
-- runtime retrieval of term-specific and family-level lessons.
+- learning writer prompt for failed/rejected/overridden decisions: planned for broader outcome coverage;
+- structured learning fields for semantic rules and anti-patterns: implemented by `catalog_agent_learnings`;
+- runtime retrieval of term-specific and family-level lessons: implemented for work packets;
+- quality-gate learning suggestions: implemented in `run-catalog-agent-triage`.
+
+Current behavior:
+
+- quality-gate errors produce bounded learning-writer suggestions in the run summary and a `learning_writer_suggestions_created` event;
+- each suggestion includes learning type, severity, observed problem, corrected decision, policy implication, prompt recommendation, validator recommendation, and eval recommendation;
+- persistence into `catalog_agent_learnings` is disabled by default and requires `CATALOG_AGENT_LEARNING_WRITER_ENABLED=true`.
 
 Exit criteria:
 

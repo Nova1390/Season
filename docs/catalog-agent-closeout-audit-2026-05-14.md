@@ -30,6 +30,8 @@ The strongest current achievement is not that the model is "smarter". It is that
 - The latest runtime blocks duplicate proposals for the same normalized work item.
 - The latest runtime blocks broad generic aggregates and recipe-process byproducts using source/work-item evidence.
 - The latest runtime can run one bounded self-repair pass over quality-gate-blocked proposals.
+- The runtime now attaches `catalog_matcher_v1` hints before LLM calls so the model sees safe targets, candidate targets, blockers, and catalog-gap signals.
+- The runtime now creates bounded learning-writer suggestions from quality-gate errors; persistence into learning memory stays off unless explicitly enabled.
 
 ## Evidence Kept In Repo
 
@@ -68,8 +70,8 @@ Recent important dev evidence:
 
 - `deno check supabase/functions/run-catalog-agent-triage/index.ts` still reports pre-existing Supabase generic typing noise; `llm_contract.ts` checks cleanly, but the main runtime type-check signal is not yet useful enough.
 - Level `7.0` is a foundation, not complete canonical creation autonomy.
-- Catalog matcher logic is still partly embedded in packet construction and prompt behavior.
-- Learning writer automation is still planned; some learning memory is written by migrations or controlled scripts rather than automatically from every override.
+- Catalog matcher logic now has a first deterministic wrapper, but parent/child scoring, redirects, and multilingual false-friend handling still need deeper treatment.
+- Learning writer automation now covers quality-gate suggestions, but failed/rejected/overridden proposal outcomes and worker surprises still need automatic coverage.
 - Staging has not been validated for this agent workflow.
 - PAT/token rotation is still recommended before any staging promotion or sensitive deploy window.
 - Multi-pass reasoning and self-repair can increase token use, so run size and daily limits must stay conservative.
@@ -77,8 +79,8 @@ Recent important dev evidence:
 ## Recommended Next Steps
 
 1. Freeze the current dev default state after each smoke: agent disabled, proposal persistence disabled, scheduler window closed.
-2. Add a dedicated catalog matcher layer before increasing LLM volume again.
-3. Implement learning-writer automation for rejected, failed, and overridden proposals.
+2. Deepen the catalog matcher layer before increasing LLM volume again.
+3. Expand learning-writer automation for rejected, failed, overridden proposals, and worker-surprise outcomes.
 4. Improve the TypeScript/Supabase type boundary so `deno check index.ts` becomes a reliable release gate.
 5. Keep staging out of scope until there is a separate staging promotion checklist.
 6. Rotate the Supabase PAT before staging or external-tester operations resume.

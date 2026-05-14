@@ -382,6 +382,8 @@ Implementation status:
 - started on `2026-05-14` on `Season-dev` only;
 - `run-catalog-agent-triage` now includes a bounded quality-gate self-repair pass behind `CATALOG_AGENT_SELF_REPAIR_ENABLED`;
 - self-repair only revisits blocked LLM proposals from the same run, is capped by `CATALOG_AGENT_MAX_SELF_REPAIR_ITEMS`, and never expands into recursive worker chains;
+- `catalog_matcher_v1` now annotates work items before LLM calls with safe targets, candidate targets, blockers, and catalog-gap hints;
+- quality-gate learning-writer suggestions are now generated for blocked proposals, with persistence disabled unless `CATALOG_AGENT_LEARNING_WRITER_ENABLED=true`;
 - duplicate proposals for the same normalized work item are blocked by the runtime quality gate;
 - broad generic aggregate terms such as spice/herb/seasoning families are blocked using only source/work-item evidence, not model-generated self-justification;
 - recipe-process byproducts are guarded from accidental canonical creation unless source evidence clearly supports a catalog identity;
@@ -391,9 +393,9 @@ Implementation status:
 
 Remaining before Level `7.0` is complete:
 
-- split catalog matching into a first-class deterministic or LLM-assisted matcher role;
+- deepen catalog matching beyond the first deterministic wrapper, especially parent/child scoring, redirects, and multilingual false friends;
 - promote useful reasoning traces into a cleaner persisted read model for review;
-- implement the learning writer so failed, rejected, and overridden proposals automatically become reusable advisory memory;
+- expand the learning writer from quality-gate suggestions to failed, rejected, overridden, and worker-surprise outcomes;
 - collect more dev volume across real recipe/caption sources before allowing any autonomous ingredient creation window;
 - prove that ready-draft creation workers reject duplicates and incomplete metadata with readable audit notes.
 

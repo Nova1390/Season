@@ -163,10 +163,10 @@ Budget controls required for proposal-only runtime:
 Planned multi-pass LLM task roles:
 
 - `semantic_profiler`: implemented; product family, semantic category, variant dimension, substitutability, and attribute implications.
-- `catalog_matcher`: planned; compare the semantic profile with current catalog candidates and aliases.
+- `catalog_matcher`: first deterministic wrapper implemented; compare the work item with exact canonical matches, active alias matches, coverage-blocker targets, training signals, and generic blockers before the LLM writes the final proposal.
 - `risk_reviewer`: implemented as optional pass; challenge the proposed decision for variant, nutrition, allergy, seasonality, language, and product/package risks.
 - `decision_writer`: implemented; produce the final governed proposal shape.
-- `learning_writer`: planned; turn failures, corrections, and repeated ambiguity into advisory learning memory.
+- `learning_writer`: first quality-gate suggestion foundation implemented; turn failures, corrections, and repeated ambiguity into advisory learning memory, with persistence guarded by `CATALOG_AGENT_LEARNING_WRITER_ENABLED`.
 
 Training-signal bridge:
 
@@ -187,6 +187,9 @@ Training-signal bridge:
 - Larger eval batches are useful only when they produce policy feedback. Current disagreement targets from the 20-item batch are: cooking water as recipe technique vs ingredient identity, baking powder specificity, gluten-free pasta as dietary/product variant, and protected-designation cheese terms.
 - The proposal quality gate treats duplicate proposals for the same normalized work item in a single run as an error. One work item should produce one governed decision.
 - Level 7 autonomy starts with quality-gate self-repair. When blocked proposals appear, the agent can make one bounded repair pass using only the failed work items, original proposals, and concrete gate issues. The repaired output is validated and gated again before any persistence.
+- `catalog_matcher_v1` is attached to each work item before provider calls. It exposes safe targets, candidate targets, blockers, and an outcome such as `safe_existing_target`, `ambiguous_existing_targets`, `needs_target_matching`, or `catalog_gap_candidate`.
+- The quality gate blocks `create_canonical` when `catalog_matcher_v1` found a safe existing target, because that would risk duplicate catalog identity.
+- Quality-gate errors produce bounded learning-writer suggestions. These are audit/readiness artifacts by default; writing them into `catalog_agent_learnings` requires the explicit learning-writer enable flag.
 
 Default proposal-only reasoning budget:
 

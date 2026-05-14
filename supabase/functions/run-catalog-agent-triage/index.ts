@@ -55,7 +55,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4.7-variant-process-guards";
+const AGENT_VERSION = "proposal-only-v4.8-catalog-matcher-learning-writer";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -80,6 +80,8 @@ const MAX_REASONING_CALLS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_
 const RISK_REVIEW_ENABLED = env("CATALOG_AGENT_RISK_REVIEW_ENABLED", "true").toLowerCase() !== "false";
 const SELF_REPAIR_ENABLED = env("CATALOG_AGENT_SELF_REPAIR_ENABLED", "true").toLowerCase() !== "false";
 const MAX_SELF_REPAIR_ITEMS = boundedInteger(numberEnv("CATALOG_AGENT_MAX_SELF_REPAIR_ITEMS", 5), 1, 10);
+const LEARNING_WRITER_ENABLED = env("CATALOG_AGENT_LEARNING_WRITER_ENABLED", "false").toLowerCase() === "true";
+const MAX_LEARNING_WRITER_SUGGESTIONS = boundedInteger(numberEnv("CATALOG_AGENT_MAX_LEARNING_WRITER_SUGGESTIONS", 5), 1, 20);
 const INPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_INPUT_COST_PER_1M_USD");
 const OUTPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_OUTPUT_COST_PER_1M_USD");
 
@@ -295,10 +297,10 @@ Deno.serve(async (request) => {
     const workItems = readWorkItems(snapshot);
     const learningContext = await fetchLearningContext(adminClient, workItems);
     const trainingSignalContext = await fetchTrainingSignalContext(adminClient, workItems);
-    const enrichedWorkItems = attachTrainingSignals(
+    const enrichedWorkItems = attachCatalogMatcherHints(attachTrainingSignals(
       attachLearningMemory(workItems, learningContext),
       trainingSignalContext,
-    );
+    ));
     const { eligibleItems: allEligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
     const eligibleItems = allEligibleItems.slice(0, limit);
 
@@ -312,6 +314,7 @@ Deno.serve(async (request) => {
         dry_run: dryRun,
         learning_memory: summarizeLearningContext(learningContext),
         training_signals: summarizeTrainingSignalContext(trainingSignalContext),
+        catalog_matcher: summarizeCatalogMatcher(eligibleItems),
         budget: budgetSummary(),
         duration_ms: elapsedMs(startedAt),
       };
@@ -418,6 +421,15 @@ Deno.serve(async (request) => {
       await insertRunEvent(adminClient, runId, "proposal_quality_gate_evaluated_after_self_repair", qualityGate.summary, auth.userId);
     }
 
+    const learningWriter = await handleLearningWriterSuggestions(
+      adminClient,
+      runId,
+      qualityGate,
+      proposals,
+      providerEligibleItems,
+      auth.userId,
+    );
+
     const insertedProposalIDs = dryRun
       ? []
       : await insertProposals(adminClient, runId, qualityGate.persistableProposals, providerEligibleItems, repair.parsed, auth.userId);
@@ -435,6 +447,7 @@ Deno.serve(async (request) => {
       skipped_recent_proposal: skippedRecent.length,
       dry_run: dryRun,
       proposal_quality_gate: qualityGate.summary,
+      learning_writer: learningWriter.summary,
       usage: providerResult.usage,
       estimated_cost_usd: cost,
       model: OPENAI_MODEL,
@@ -446,6 +459,7 @@ Deno.serve(async (request) => {
       reasoning_trace: providerResult.reasoningTrace,
       adaptive_retry: providerAttempt.retrySummary,
       quality_gate_self_repair: selfRepairSummary,
+      catalog_matcher: summarizeCatalogMatcher(providerEligibleItems),
       budget: budgetSummary(),
       duration_ms: elapsedMs(startedAt),
     };
@@ -1130,7 +1144,7 @@ async function invokeMultiPassProvider(
             mode: "multi_pass",
             max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
             risk_review_performed: riskReviews.length > 0,
-            instruction: "Semantic profiles are analysis evidence. Final proposals must still obey the triage contract. Clear missing catalog identities should become create_canonical drafts, not vague review outcomes.",
+            instruction: "Semantic profiles and catalog_matcher hints are analysis evidence. Final proposals must still obey the triage contract. Use catalog_matcher.safe_targets for grounded existing-target proposals. If catalog_matcher.outcome is catalog_gap_candidate and semantic identity is clear, create a canonical draft instead of vague review. If catalog_matcher shows ambiguous targets, ask a precise blocking question.",
           },
         },
       }),
@@ -1426,6 +1440,11 @@ function stringOrNull(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function numberOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -1468,6 +1487,19 @@ type QualityGateSelfRepairResult = {
   usage: TokenUsage;
   durationMs: number;
   summary: Record<string, unknown>;
+};
+
+type LearningWriterSuggestion = {
+  normalized_text: string;
+  learning_type: string;
+  severity: string;
+  observed_problem: string;
+  corrected_decision: string;
+  policy_implication: string;
+  evaluation_recommendation: string;
+  prompt_recommendation: string;
+  validator_recommendation: string;
+  original_recommendation: Record<string, unknown>;
 };
 
 function evaluateProposalQuality(
@@ -1528,6 +1560,181 @@ function evaluateProposalQuality(
       issues: issues.slice(0, 25),
     },
   };
+}
+
+async function handleLearningWriterSuggestions(
+  adminClient: ReturnType<typeof createClient>,
+  runId: number,
+  qualityGate: ProposalQualityGateResult,
+  proposals: CatalogAgentProposalOutput[],
+  eligibleItems: WorkItem[],
+  authUserId: string | null,
+): Promise<{ summary: Record<string, unknown>; suggestions: LearningWriterSuggestion[] }> {
+  const suggestions = buildLearningWriterSuggestions(qualityGate, proposals, eligibleItems)
+    .slice(0, MAX_LEARNING_WRITER_SUGGESTIONS);
+
+  const summary: Record<string, unknown> = {
+    enabled: LEARNING_WRITER_ENABLED,
+    suggestion_count: suggestions.length,
+    persisted_count: 0,
+    suggestions: suggestions.slice(0, 10),
+  };
+
+  if (suggestions.length === 0) {
+    return { summary, suggestions };
+  }
+
+  await insertRunEvent(adminClient, runId, "learning_writer_suggestions_created", summary, authUserId);
+
+  if (!LEARNING_WRITER_ENABLED) {
+    return { summary, suggestions };
+  }
+
+  const rows = suggestions.map((suggestion) => ({
+    run_id: runId,
+    normalized_text: suggestion.normalized_text,
+    learning_type: suggestion.learning_type,
+    severity: suggestion.severity,
+    status: "needs_review",
+    original_recommendation: suggestion.original_recommendation,
+    observed_problem: suggestion.observed_problem,
+    corrected_decision: suggestion.corrected_decision,
+    policy_implication: suggestion.policy_implication,
+    evaluation_recommendation: suggestion.evaluation_recommendation,
+    prompt_recommendation: suggestion.prompt_recommendation,
+    validator_recommendation: suggestion.validator_recommendation,
+    created_by: authUserId,
+  }));
+
+  const { data, error } = await (adminClient as any)
+    .from("catalog_agent_learnings")
+    .insert(rows)
+    .select("id");
+
+  if (error) {
+    throw new Error(`learning_writer_insert_failed:${error.message}`);
+  }
+
+  const learningIds = (Array.isArray(data) ? data : [])
+    .map((row) => Number((row as Record<string, unknown>).id))
+    .filter((id) => Number.isFinite(id));
+
+  return {
+    summary: {
+      ...summary,
+      persisted_count: learningIds.length,
+      learning_ids: learningIds,
+    },
+    suggestions,
+  };
+}
+
+function buildLearningWriterSuggestions(
+  qualityGate: ProposalQualityGateResult,
+  proposals: CatalogAgentProposalOutput[],
+  eligibleItems: WorkItem[],
+): LearningWriterSuggestion[] {
+  const itemByText = new Map(eligibleItems.map((item) => [normalizeText(item.normalized_text), item]));
+  const proposalByText = new Map(proposals.map((proposal) => [normalizeText(proposal.normalized_text), proposal]));
+  const seen = new Set<string>();
+  const suggestions: LearningWriterSuggestion[] = [];
+
+  for (const issue of qualityGate.issues.filter((item) => item.level === "error")) {
+    const key = `${issue.normalized_text}|${issue.code}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const proposal = proposalByText.get(issue.normalized_text);
+    const item = itemByText.get(issue.normalized_text);
+    suggestions.push(learningSuggestionForQualityIssue(issue, proposal, item));
+  }
+
+  return suggestions;
+}
+
+function learningSuggestionForQualityIssue(
+  issue: ProposalQualityIssue,
+  proposal: CatalogAgentProposalOutput | undefined,
+  item: WorkItem | undefined,
+): LearningWriterSuggestion {
+  const matcher = readNestedRecord(item, ["context", "catalog_matcher"]);
+  const proposalType = proposal?.proposal_type ?? "unknown";
+  const learningType = learningTypeForQualityIssue(issue.code);
+  const severity = severityForQualityIssue(issue.code);
+
+  return {
+    normalized_text: issue.normalized_text,
+    learning_type: learningType,
+    severity,
+    observed_problem: `Quality gate blocked ${proposalType} for "${issue.normalized_text}": ${issue.code}. ${issue.message}`,
+    corrected_decision: correctedDecisionForQualityIssue(issue.code, matcher),
+    policy_implication: policyImplicationForQualityIssue(issue.code),
+    evaluation_recommendation: `Add or update a golden/eval case for "${issue.normalized_text}" covering ${issue.code}.`,
+    prompt_recommendation: promptRecommendationForQualityIssue(issue.code),
+    validator_recommendation: `Keep runtime/database validators aligned with quality-gate code ${issue.code}.`,
+    original_recommendation: {
+      proposal_type: proposalType,
+      target_slug: proposal?.target_slug ?? null,
+      proposed_slug: proposal?.proposed_slug ?? null,
+      confidence_score: proposal?.confidence_score ?? null,
+      risk_level: proposal?.risk_level ?? null,
+      catalog_matcher: matcher,
+      quality_gate_issue: issue,
+    },
+  };
+}
+
+function learningTypeForQualityIssue(code: string): string {
+  if (code.includes("duplicate") || code.includes("safe_existing_target")) return "duplicate_identity_risk";
+  if (code.includes("generic_aggregate") || code.includes("recipe_process") || code.includes("alias_candidate")) return "policy_gap";
+  if (code.includes("target") || code.includes("confidence") || code.includes("evidence")) return "prompt_improvement";
+  return "other";
+}
+
+function severityForQualityIssue(code: string): string {
+  if (code.includes("duplicate") || code.includes("generic_aggregate") || code.includes("recipe_process")) return "high";
+  if (code.includes("unsafe") || code.includes("critical")) return "high";
+  return "medium";
+}
+
+function correctedDecisionForQualityIssue(code: string, matcher: Record<string, unknown>): string {
+  const outcome = normalizeText(matcher.outcome);
+  if (code === "create_canonical_conflicts_with_safe_existing_target") {
+    return "Use the catalog matcher safe target for approve_alias/add_localization, or escalate if recipe context contradicts the target.";
+  }
+  if (code === "generic_aggregate_requires_specific_identity") {
+    return "Return needs_human_review unless source evidence identifies a concrete blend, mix, or product identity.";
+  }
+  if (code === "recipe_process_byproduct_not_canonical") {
+    return "Keep process byproducts as recipe context unless the text identifies a reusable ingredient such as broth, stock, or aquafaba.";
+  }
+  if (outcome === "catalog_gap_candidate") {
+    return "If semantic identity is clear, create a canonical draft with complete proposed fields; otherwise ask one blocking question.";
+  }
+  return "Downgrade to needs_human_review with a precise blocking question until the missing evidence is available.";
+}
+
+function policyImplicationForQualityIssue(code: string): string {
+  if (code.includes("safe_existing_target")) {
+    return "Safe existing targets take precedence over canonical creation to avoid duplicate catalog identity.";
+  }
+  if (code.includes("generic_aggregate")) {
+    return "Broad aggregate/category words are not ingredients unless source evidence names a concrete product identity.";
+  }
+  if (code.includes("recipe_process")) {
+    return "Technique/process liquids are recipe context by default, not catalog identity.";
+  }
+  return "Quality-gate failures should become advisory learning before future autonomy increases.";
+}
+
+function promptRecommendationForQualityIssue(code: string): string {
+  if (code.includes("target")) {
+    return "Use catalog_matcher.safe_targets and do not invent or ignore target grounding.";
+  }
+  if (code.includes("canonical")) {
+    return "Before create_canonical, check catalog_matcher outcome and explain why no existing target is safe.";
+  }
+  return "Explain the blocked condition directly in rationale/evidence before proposing an action.";
 }
 
 async function attemptQualityGateSelfRepair(
@@ -1724,6 +1931,13 @@ function proposalQualityIssues(
   }
 
   if (proposal.proposal_type === "create_canonical") {
+    if (catalogMatcherOutcome(item) === "safe_existing_target") {
+      addIssue(
+        "error",
+        "create_canonical_conflicts_with_safe_existing_target",
+        "A safe existing catalog target is grounded by the catalog matcher; create_canonical would risk a duplicate identity.",
+      );
+    }
     if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item)) {
       addIssue(
         "error",
@@ -1794,10 +2008,17 @@ function itemHasSafeTarget(item: WorkItem | undefined): boolean {
   if (!item) return false;
   const context = readNestedRecord(item, ["context"]);
   const coverageBlocker = readNestedRecord(item, ["coverage_blocker"]);
-  return readNestedArray(context, ["possible_canonical_matches"]).length > 0 ||
+  const matcher = readNestedRecord(context, ["catalog_matcher"]);
+  return readNestedArray(matcher, ["safe_targets"]).length > 0 ||
+    readNestedArray(context, ["possible_canonical_matches"]).length > 0 ||
     readNestedArray(context, ["existing_alias_matches"]).length > 0 ||
     normalizeText(coverageBlocker.canonical_candidate_ingredient_id).length > 0 ||
     normalizeText(coverageBlocker.canonical_candidate_slug).length > 0;
+}
+
+function catalogMatcherOutcome(item: WorkItem | undefined): string {
+  if (!item) return "";
+  return normalizeText(readNestedRecord(item, ["context", "catalog_matcher"]).outcome);
 }
 
 function isGenericAggregateCanonicalCandidate(
@@ -1873,6 +2094,8 @@ function contextContainsTarget(item: WorkItem | undefined, proposal: CatalogAgen
   if (!targetSlug && !targetId) return false;
 
   const candidateRecords = [
+    ...readNestedArray(item, ["context", "catalog_matcher", "safe_targets"]),
+    ...readNestedArray(item, ["context", "catalog_matcher", "candidate_targets"]),
     ...readNestedArray(item, ["context", "possible_canonical_matches"]),
     ...readNestedArray(item, ["context", "existing_alias_matches"]),
     readNestedRecord(item, ["coverage_blocker"]),
@@ -2030,6 +2253,7 @@ function compactWorkItem(item: WorkItem): Record<string, unknown> {
     context: {
       recipe_context: readNestedRecord(item, ["context", "recipe_context"]),
       semantic_disambiguation: readNestedRecord(item, ["context", "semantic_disambiguation"]),
+      catalog_matcher: readNestedRecord(item, ["context", "catalog_matcher"]),
       possible_canonical_matches: readNestedArray(item, ["context", "possible_canonical_matches"]).slice(0, 8),
       existing_alias_matches: readNestedArray(item, ["context", "existing_alias_matches"]).slice(0, 8),
       previous_catalog_decisions: readNestedArray(item, ["context", "previous_catalog_decisions"]).slice(0, 3),
@@ -2075,6 +2299,184 @@ function attachTrainingSignals(items: WorkItem[], trainingSignalContext: Record<
       },
     };
   });
+}
+
+function attachCatalogMatcherHints(items: WorkItem[]): WorkItem[] {
+  return items.map((item) => ({
+    ...item,
+    context: {
+      ...readNestedRecord(item, ["context"]),
+      catalog_matcher: buildCatalogMatcherHint(item),
+    },
+  }));
+}
+
+function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
+  const normalizedText = normalizeText(item.normalized_text);
+  const possibleMatches = readNestedArray(item, ["context", "possible_canonical_matches"]).filter(isRecord);
+  const aliasMatches = readNestedArray(item, ["context", "existing_alias_matches"]).filter(isRecord);
+  const coverageBlocker = readNestedRecord(item, ["coverage_blocker"]);
+  const trainingSignals = readNestedArray(item, ["context", "training_signals"]).filter(isRecord);
+  const exactCanonicalTargets = possibleMatches
+    .filter((match) => isExactCanonicalMatch(match))
+    .map((match) => matcherTargetFromCanonical(match))
+    .filter(isRecord);
+  const exactAliasTargets = aliasMatches
+    .filter((match) => isExactActiveAliasMatch(match, normalizedText))
+    .map((match) => matcherTargetFromAlias(match))
+    .filter(isRecord);
+  const coverageTarget = matcherTargetFromCoverageBlocker(coverageBlocker);
+  const safeTargets = uniqueMatcherTargets([
+    ...exactAliasTargets,
+    ...exactCanonicalTargets,
+    ...(coverageTarget ? [coverageTarget] : []),
+  ]);
+  const candidateTargets = uniqueMatcherTargets([
+    ...possibleMatches.map(matcherTargetFromCanonical).filter(isRecord),
+    ...aliasMatches.map(matcherTargetFromAlias).filter(isRecord),
+    ...(coverageTarget ? [coverageTarget] : []),
+  ]);
+  const blockers = matcherBlockers(item, safeTargets, candidateTargets);
+  const hasAliasCandidateSignal = trainingSignals.some((signal) =>
+    normalizeText(signal.training_signal) === "catalog_alias_candidate"
+  );
+  const likelyIngredient = itemLooksLikeIngredient(item);
+
+  let outcome = "review_required";
+  let confidence = 0.45;
+  let rationale = "Catalog matcher found insufficient deterministic evidence for an actionable target.";
+
+  if (safeTargets.length === 1 && blockers.length === 0) {
+    outcome = "safe_existing_target";
+    confidence = 0.9;
+    rationale = "Exactly one active exact target is grounded in aliases, canonical matches, or coverage blocker context.";
+  } else if (safeTargets.length > 1 || candidateTargets.length > 1) {
+    outcome = "ambiguous_existing_targets";
+    confidence = 0.7;
+    rationale = "Multiple plausible catalog targets exist; the LLM must not invent a target and should ask for precise missing evidence if context does not disambiguate.";
+  } else if (hasAliasCandidateSignal && safeTargets.length === 0) {
+    outcome = "needs_target_matching";
+    confidence = 0.75;
+    rationale = "Training signals suggest alias-like text, but no safe existing target is grounded in the packet.";
+  } else if (candidateTargets.length === 1) {
+    outcome = "candidate_target_requires_semantic_check";
+    confidence = 0.65;
+    rationale = "One candidate target exists, but it is not an exact active match and requires semantic validation before it becomes actionable.";
+  } else if (likelyIngredient) {
+    outcome = "catalog_gap_candidate";
+    confidence = 0.6;
+    rationale = "The term looks like a recipe ingredient and no safe target is grounded, so create_canonical may be appropriate if semantic identity is clear.";
+  }
+
+  return {
+    version: "catalog_matcher_v1",
+    normalized_text: normalizedText,
+    outcome,
+    confidence_score: confidence,
+    safe_targets: safeTargets.slice(0, 5),
+    candidate_targets: candidateTargets.slice(0, 8),
+    blockers,
+    rationale,
+    training_signal_count: trainingSignals.length,
+    lexical_candidate_terms: readNestedArray(item, ["context", "lexical_candidate_terms"]).slice(0, 8),
+  };
+}
+
+function isExactCanonicalMatch(match: Record<string, unknown>): boolean {
+  return ["it_name_exact", "en_name_exact", "slug_exact", "compact_key", "it_name_lexical_variant"].includes(
+    normalizeText(match.match_reason),
+  ) && normalizeText(match.quality_status) === "active";
+}
+
+function isExactActiveAliasMatch(match: Record<string, unknown>, normalizedText: string): boolean {
+  return normalizeText(match.normalized_alias_text) === normalizedText &&
+    match.is_active === true &&
+    ["approved", "active"].includes(normalizeText(match.status));
+}
+
+function matcherTargetFromCanonical(match: Record<string, unknown>): Record<string, unknown> {
+  return {
+    source: "possible_canonical_matches",
+    ingredient_id: stringOrNull(match.ingredient_id),
+    slug: stringOrNull(match.slug),
+    parent_slug: stringOrNull(match.parent_slug),
+    match_reason: stringOrNull(match.match_reason),
+    quality_status: stringOrNull(match.quality_status),
+    specificity_rank: numberOrNull(match.specificity_rank),
+  };
+}
+
+function matcherTargetFromAlias(match: Record<string, unknown>): Record<string, unknown> {
+  return {
+    source: "existing_alias_matches",
+    ingredient_id: stringOrNull(match.ingredient_id),
+    slug: stringOrNull(match.ingredient_slug),
+    alias_text: stringOrNull(match.alias_text),
+    normalized_alias_text: stringOrNull(match.normalized_alias_text),
+    confidence_score: numberOrNull(match.confidence_score),
+    status: stringOrNull(match.status),
+    is_active: match.is_active === true,
+  };
+}
+
+function matcherTargetFromCoverageBlocker(blocker: Record<string, unknown>): Record<string, unknown> | null {
+  const ingredientId = stringOrNull(blocker.canonical_candidate_ingredient_id);
+  const slug = stringOrNull(blocker.canonical_candidate_slug);
+  if (!ingredientId && !slug) return null;
+  return {
+    source: "coverage_blocker",
+    ingredient_id: ingredientId,
+    slug,
+    name: stringOrNull(blocker.canonical_candidate_name),
+    likely_fix_type: stringOrNull(blocker.likely_fix_type),
+    recommended_next_action: stringOrNull(blocker.recommended_next_action),
+  };
+}
+
+function uniqueMatcherTargets(targets: Record<string, unknown>[]): Record<string, unknown>[] {
+  const seen = new Set<string>();
+  const unique: Record<string, unknown>[] = [];
+  for (const target of targets) {
+    const key = [
+      normalizeText(target.ingredient_id),
+      normalizeText(target.slug),
+      normalizeText(target.source),
+    ].join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(target);
+  }
+  return unique;
+}
+
+function matcherBlockers(
+  item: WorkItem,
+  safeTargets: Record<string, unknown>[],
+  candidateTargets: Record<string, unknown>[],
+): string[] {
+  const blockers: string[] = [];
+  const normalizedText = normalizeText(item.normalized_text);
+  if (GENERIC_AGGREGATE_TERMS.has(normalizedText)) {
+    blockers.push("generic_aggregate_requires_specific_identity");
+  }
+  if (RECIPE_PROCESS_BYPRODUCT_TERMS.has(normalizedText)) {
+    blockers.push("recipe_process_byproduct_not_canonical");
+  }
+  if (safeTargets.length > 1) {
+    blockers.push("multiple_safe_targets");
+  } else if (safeTargets.length === 0 && candidateTargets.length > 1) {
+    blockers.push("multiple_candidate_targets");
+  }
+  return blockers;
+}
+
+function itemLooksLikeIngredient(item: WorkItem): boolean {
+  const observation = readNestedRecord(item, ["observation"]);
+  const recipeContext = readNestedRecord(item, ["context", "recipe_context"]);
+  return normalizeText(observation.latest_example).length > 0 ||
+    readNestedArray(observation, ["raw_examples"]).length > 0 ||
+    readNestedArray(recipeContext, ["matched_ingredient_rows"]).length > 0 ||
+    readNestedArray(recipeContext, ["nearby_ingredients"]).length > 0;
 }
 
 function catalogContextLookupTerms(item: WorkItem): string[] {
@@ -2148,6 +2550,28 @@ function summarizeTrainingSignalContext(trainingSignalContext: Record<string, un
   };
 }
 
+function summarizeCatalogMatcher(items: WorkItem[]): Record<string, unknown> {
+  const counts = new Map<string, number>();
+  let safeTargetCount = 0;
+  let blockerCount = 0;
+
+  for (const item of items) {
+    const matcher = readNestedRecord(item, ["context", "catalog_matcher"]);
+    const outcome = normalizeText(matcher.outcome) || "missing";
+    counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
+    safeTargetCount += readNestedArray(matcher, ["safe_targets"]).length;
+    blockerCount += readNestedArray(matcher, ["blockers"]).length;
+  }
+
+  return {
+    version: "catalog_matcher_v1",
+    items: items.length,
+    outcome_counts: Object.fromEntries(counts.entries()),
+    safe_target_count: safeTargetCount,
+    blocker_count: blockerCount,
+  };
+}
+
 function normalizeProposalStatuses(proposals: CatalogAgentProposalOutput[]): CatalogAgentProposalOutput[] {
   return proposals.map((proposal) => {
     const actionableAutoApplyType = ["approve_alias", "add_localization"].includes(proposal.proposal_type);
@@ -2203,6 +2627,8 @@ function budgetSummary(): Record<string, unknown> {
     risk_review_enabled: RISK_REVIEW_ENABLED,
     self_repair_enabled: SELF_REPAIR_ENABLED,
     max_self_repair_items: MAX_SELF_REPAIR_ITEMS,
+    learning_writer_enabled: LEARNING_WRITER_ENABLED,
+    max_learning_writer_suggestions: MAX_LEARNING_WRITER_SUGGESTIONS,
     input_cost_per_1m_usd: INPUT_COST_PER_1M_USD,
     output_cost_per_1m_usd: OUTPUT_COST_PER_1M_USD,
   };
