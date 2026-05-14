@@ -137,6 +137,51 @@ Budget guardrails:
 - The runner also reports draft usability signals: title presence, step count, parsed steps, confidence, servings, prep/cook times, the agent `nextAction`, and the structured `scorecard`. These fields tell us whether Smart Import is producing a creator-ready recipe draft, not just a correct ingredient list.
 - The runner can assert required scorecard entries with `--expect-blocking`, `--expect-nice-to-fix`, and `--expect-auto-fixable`; use those assertions for small targeted probes, not large exploratory runs.
 
+## Real Caption Training Corpus
+
+Use Apify caption exports as an operational training corpus, not as direct catalog truth.
+
+Massive offline screening:
+
+```bash
+python3 scripts/smart_import_learning_cases/build_real_caption_training_set.py
+```
+
+This generates:
+
+- `docs/smart-import-caption-training-corpus.md`
+- `docs/smart-import-caption-training-corpus.json`
+
+The corpus is non-mutating. It does not call OpenAI, does not write to Supabase, and does not store full social captions. It classifies recipe-like captions and extracts ingredient-like terms into advisory buckets:
+
+- `catalog_alias_candidate`
+- `meaningful_variant_candidate`
+- `condition_or_state_check`
+- `product_form_candidate`
+- `compound_identity_candidate`
+- `egg_family_candidate`
+
+Bounded real-caption E2E:
+
+```bash
+SUPABASE_URL="https://gyuedxycbnqljryenapx.supabase.co" \
+SUPABASE_ANON_KEY="..." \
+SUPABASE_SERVICE_ROLE_KEY="..." \
+python3 scripts/smart_import_learning_cases/run_real_caption_e2e.py \
+  --use-temp-user \
+  --limit 20 \
+  --strategy stratified \
+  --json-report docs/smart-import-real-caption-e2e-stratified.json
+```
+
+The stratified strategy samples across complete recipes, ingredient-rich captions, method-rich captions, messy recipe-like captions, and weak recipe signals. This is better than repeatedly testing only perfect recipes.
+
+Training boundary:
+
+- Smart Import E2E results may create regression fixtures, prompt changes, scorecard rules, or reviewed learning candidates.
+- They must not directly create canonical ingredients, aliases, or implemented learning.
+- Catalog Agent must govern any catalog mutation or durable learning promotion.
+
 Latest dev probe notes:
 
 - `2026-05-13`: targeted `--with-candidates` probe on `SI-TRAIN-017`, `SI-TRAIN-020`, and `SI-TRAIN-050` matched `19/19` expected ingredient names. The first pass used name-only candidates, so it correctly showed `quantities_missing` as probe noise.

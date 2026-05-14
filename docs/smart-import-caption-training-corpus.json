@@ -1,0 +1,2519 @@
+{
+  "updated_at": "2026-05-14T08:45:56+00:00",
+  "raw_captions_discovered": 2035,
+  "recipe_like_captions": 734,
+  "category_counts": {
+    "complete_recipe": 261,
+    "ingredient_rich": 39,
+    "method_rich": 93,
+    "weak_recipe_signal": 301,
+    "messy_recipe_like": 40
+  },
+  "top_source_files": {
+    "profile_ricette_sane.json": 211,
+    "profile_ricette_facili.json": 206,
+    "profile_chef_a_casa.json": 92,
+    "profile_ricette_veloci.json": 76,
+    "profile_bbq_italia.json": 25,
+    "profile_papa_in_cucina.json": 24,
+    "profile_coppia_in_cucina.json": 21,
+    "profile_dietista_ricette.json": 20,
+    "profile_nutrizionista_ricette.json": 17,
+    "profile_cucina_antispreco.json": 16,
+    "profile_ricette_per_famiglia.json": 9,
+    "profile_pane_pizza_lievitati.json": 8,
+    "profile_cucina_stagionale.json": 5,
+    "profile_meal_prep_italiano.json": 3,
+    "profile_cucina_regionale_italiana.json": 1
+  },
+  "training_signal_counts": {
+    "egg_family_candidate": 71,
+    "product_form_candidate": 285,
+    "catalog_alias_candidate": 1425,
+    "compound_identity_candidate": 1043,
+    "condition_or_state_check": 88,
+    "meaningful_variant_candidate": 14
+  },
+  "top_terms": [
+    {
+      "term": "farina",
+      "count": 97,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFg9t5sIYX/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori"
+        }
+      ]
+    },
+    {
+      "term": "sale",
+      "count": 88,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFg9t5sIYX/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DWEh3OOiP-t/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr"
+        }
+      ]
+    },
+    {
+      "term": "zucchero",
+      "count": 86,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        }
+      ]
+    },
+    {
+      "term": "acqua",
+      "count": 55,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXG8vdWAh6Z/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Porridge d’avena al cacao: la colazione più saziante di sempre! 😉 Quando so di non avere tempo per"
+        },
+        {
+          "source_file": "profile_pane_pizza_lievitati.json",
+          "url": "https://www.instagram.com/p/DGL8oB3u8uI/",
+          "owner": "maxmilian.m",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Ora che ho perso la vista ci vedo di più. !! Se cuocete in casa o in forni"
+        }
+      ]
+    },
+    {
+      "term": "uovo",
+      "count": 44,
+      "training_signal": "egg_family_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DWEh3OOiP-t/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYANCeXs4Lw/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Se sei romano lo sai: quando dici zucchine ripiene, si parla di queste: delle romanesche. La ricetta è"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYFcZCYt30W/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "La cheesecake che sembra “sgarro” ma ti salva la voglia di dolce 👀🍰 Cremosa, super saziante e con"
+        }
+      ]
+    },
+    {
+      "term": "yogurt greco",
+      "count": 40,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpBpykiypq/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.1 — GELATI PROTEICI FATTI IN CASA 🍦🔥 Gelato al Lampone: 30g di proteine, pronto in 2 minuti"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DVZC5vXDKcD/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        }
+      ]
+    },
+    {
+      "term": "lievito per dolci",
+      "count": 40,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXoX_Fqo_G6/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUMHHxmDCvd/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Questa è la 𝘁𝗼𝗿𝘁𝗮 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗮 che preparo quando voglio organizzarmi colazioni e spuntini per la settimana, in modo"
+        }
+      ]
+    },
+    {
+      "term": "olio evo",
+      "count": 39,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXuO75PjH0P/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⏱️10 minuti 🫕Zero fornelli 🍽️Cena pronta ➡️ Pomodori ripieni = il nuovo salvacena estivo ☀️ 👉 Salvate e"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYAQDPGo6jY/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "SPAGHETTI CREMOSI PECORINO E AGRETTI 👉 🌱 Ricetta vegetariana 📌 Salva questa ricetta perché questi spaghetti sono così"
+        }
+      ]
+    },
+    {
+      "term": "latte",
+      "count": 36,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFg9t5sIYX/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC_mnjKWNu/",
+          "owner": "silvi.barbi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXoX_Fqo_G6/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto"
+        }
+      ]
+    },
+    {
+      "term": "olio extravergine d'oliva",
+      "count": 27,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpCte3DNkm/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Non sai cosa cucinare? 3 ingredienti, tutto in teglia e ti esce una cena così 🤤🔥 Una di"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHjQRk-sKim/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "COZZE GRATINATE 🌊 😋 Ingredienti: • 500 g di cozze (o una confezione di cozze pronte con il"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DAdGqn3gfdA/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Hai visto che bello stendere questa pizza bianca? Scegli la farina adatta per pizza e focaccia ed impasta,"
+        }
+      ]
+    },
+    {
+      "term": "cacao amaro",
+      "count": 26,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWtSbKTsrcZ/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXoX_Fqo_G6/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYKezFyou3e/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE AVOCADO E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE 👉"
+        }
+      ]
+    },
+    {
+      "term": "olio",
+      "count": 26,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYJ3mDpO_Yb/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "RICETTE CHE MI HA INSEGNATO MIA MAMMA ❤️ Burek con le pieghe 🇦🇱✨ Croccante fuori, sfogliato e morbidissimo"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYANCeXs4Lw/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Se sei romano lo sai: quando dici zucchine ripiene, si parla di queste: delle romanesche. La ricetta è"
+        },
+        {
+          "source_file": "profile_chef_a_casa.json",
+          "url": "https://www.instagram.com/p/DQmqxM6DJUd/",
+          "owner": "guida_culinariaeconomica",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "Pasta al forno con zucchine e patate 🥔 💚 Ingredienti pesto di zucchine * 2 zucchine * 1"
+        }
+      ]
+    },
+    {
+      "term": "albume",
+      "count": 23,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC_mnjKWNu/",
+          "owner": "silvi.barbi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWtSbKTsrcZ/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXZ0vF6ikpK/",
+          "owner": "silvi.barbi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Torta di Mele 🍎 🍏 🍎 🍏 sana leggera saziante Monoporzione e con KCAL!! 📍ti servirà: •80 gr"
+        }
+      ]
+    },
+    {
+      "term": "lievito",
+      "count": 21,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DSpUk0NgqeZ/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Idee last minute per la colazione di questi giorni di festa? 🎅🏻🎄 Prova il mio roll dolce, super"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYAON-ZtkQW/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "MUFFIN AL CACAO LOW CARB 🍫 SOLO 98 kcal… e sì, sono davvero BUONISSIMI 😍 Hai voglia di"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DUEEusQCpYO/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "🍌 POV: hai appena trovato LA ricetta perfetta di Banana Bread (facile, veloce, sempre riuscito) Salva questo Reel"
+        }
+      ]
+    },
+    {
+      "term": "pepe",
+      "count": 21,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DYEtMvvsZiE/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "🥑 SALSA FIT AVOCADO & UOVA (cremosa, veloce, proteica!) Vuoi qualcosa di buono da spalmare sul pane ma"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DX2VzuEsHxp/",
+          "owner": "ricette_sane_libri_viaggi",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "Per preparare questa Farinata bianca non ti serve saper cucinare ma mescolare 😱 Stasera niente pizza: fai la"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DYMbnovsN8q/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "🥚 TORTA SALATA CON ASPARAGI (facile, veloce e super gustosa!) Vuoi un piatto semplice, leggero e pieno di"
+        }
+      ]
+    },
+    {
+      "term": "burro",
+      "count": 20,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXhXmcoMeUP/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DWEh3OOiP-t/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr"
+        }
+      ]
+    },
+    {
+      "term": "cioccolato fondente",
+      "count": 20,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXhXmcoMeUP/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC20bks-Ca/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "BROWNIE CIOCCOLATO E BANANA PROTEICO 👉 🌱 VEGAN 👉 ❌ SENZA ZUCCHERO 👉 ❌ SENZA GLUTINE 📌 Salva"
+        }
+      ]
+    },
+    {
+      "term": "ricotta",
+      "count": 20,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC_mnjKWNu/",
+          "owner": "silvi.barbi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYJ3mDpO_Yb/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "RICETTE CHE MI HA INSEGNATO MIA MAMMA ❤️ Burek con le pieghe 🇦🇱✨ Croccante fuori, sfogliato e morbidissimo"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXyrJI4IE3-/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "✨TORTA ALLA RICOTTA (senza farina) ✨ cremosa, veloce e perfetta per colazione o merenda 🤍🍰 📝 Ingredienti •"
+        }
+      ]
+    },
+    {
+      "term": "miele",
+      "count": 20,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpBpykiypq/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.1 — GELATI PROTEICI FATTI IN CASA 🍦🔥 Gelato al Lampone: 30g di proteine, pronto in 2 minuti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DX7DRHcCxSu/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "EP.4 — GELATI PROTEICI FATTI IN CASA 🍦Gusto FRUTTI DI BOSCO: ~33g di proteine, il mix definitivo Quarto"
+        }
+      ]
+    },
+    {
+      "term": "fecola di patate",
+      "count": 17,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcNBruDGt4/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Spoiler: sì, è senza burro. Sì, è senza glutine.�E no, non ha nessuna intenzione di essere “triste”. Questa"
+        }
+      ]
+    },
+    {
+      "term": "amido di mais",
+      "count": 16,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFg9t5sIYX/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori"
+        }
+      ]
+    },
+    {
+      "term": "olio di semi",
+      "count": 15,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXbKHTJu9fH/",
+          "owner": "ricette_al_volo",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Salva subito questa ricetta se anche tu hai dei dolcetti di Pasqua ancora in dispensa!🤪 È la ricetta"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYE77qRqJst/",
+          "owner": "ricette_al_volo",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "LTorta semplice da colazione che profuma di casa! 🍰✨ Se cerchi un dolce soffice, veloce e senza burro,"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DW312ZqAv_j/",
+          "owner": "alessia.casprini",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "TORTA FURBA CIOCCOLATINO 🍫 (Lindor) Come tanti di voi anche io ho parecchia cioccolata avanzata delle uova di"
+        }
+      ]
+    },
+    {
+      "term": "farina di mandorle",
+      "count": 15,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DVyraR8M0l9/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA SBRICIOLATA RICOTTA E LAMPONI 👉 ❌ SENZA GLUTINE, ❌ SENZA ZUCCHERO ATTENZIONE: QUESTA È UNA DI QUELLE"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXw1c4xIIk_/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "MUFFIN LAMPONI E CIOCCOLATO 👉❌ senza glutine 👉❌ senza latticini 👉❌ senza zuccheri aggiunti (dolci grazie alla sola"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC20bks-Ca/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "BROWNIE CIOCCOLATO E BANANA PROTEICO 👉 🌱 VEGAN 👉 ❌ SENZA ZUCCHERO 👉 ❌ SENZA GLUTINE 📌 Salva"
+        }
+      ]
+    },
+    {
+      "term": "farina d'avena",
+      "count": 14,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWtSbKTsrcZ/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DVZC5vXDKcD/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXzMLI6sw84/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA PROTEICA ALLA BANANA 🍌✨ con frosting cookie dough Morbida, super saziante e con quel topping cremoso che"
+        }
+      ]
+    },
+    {
+      "term": "succo di limone",
+      "count": 14,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYKezFyou3e/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE AVOCADO E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE 👉"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYFcZCYt30W/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "La cheesecake che sembra “sgarro” ma ti salva la voglia di dolce 👀🍰 Cremosa, super saziante e con"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpJha8MNFd/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "Sembra una nuvola… ma è uno spumone alla fragola 🍓 Cremoso, soffice, spumoso… e sapete qual’è la cosa"
+        }
+      ]
+    },
+    {
+      "term": "fiocchi d'avena",
+      "count": 14,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUMHHxmDCvd/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Questa è la 𝘁𝗼𝗿𝘁𝗮 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗮 che preparo quando voglio organizzarmi colazioni e spuntini per la settimana, in modo"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUoMtkZjAyi/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "𝗕𝗮𝗸𝗲𝗱 𝗼𝗮𝘁𝘀 𝘀𝘁𝗶𝗹𝗲 𝗯𝗼𝘂𝗻𝘁𝘆 🥥🍫 Colazione bilanciata, pratica e perfetta da preparare in anticipo. Gusto cacao e cocco."
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DToMO5UDFPo/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "𝗕𝗜𝗧𝗘𝗦 𝗣𝗥𝗢𝗧𝗘𝗜𝗖𝗜 𝗮𝗿𝗮𝗰𝗵𝗶𝗱𝗶 & 𝗰𝗶𝗼𝗰𝗰𝗼𝗹𝗮𝘁𝗼 🥜 🍫 Piccoli, pratici e super soddisfacenti Uno snack proteico fatto in casa,"
+        }
+      ]
+    },
+    {
+      "term": "zucchero a velo",
+      "count": 13,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFg9t5sIYX/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DXwpm9lMsKq/",
+          "owner": "pappa_e_champagne",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "La crostata che ha conquistato i miei bambini per merenda. Base friabile, cuore cremoso e tanta frutta fresca…"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXuOEv-jEJR/",
+          "owner": "la_cucina_salutare",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Giuro che volevo fare foto migliori… ma la torta è sparita troppo in fretta 😂🍓 🫐🍓 Direi che"
+        }
+      ]
+    },
+    {
+      "term": "cannella",
+      "count": 13,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DVyraR8M0l9/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA SBRICIOLATA RICOTTA E LAMPONI 👉 ❌ SENZA GLUTINE, ❌ SENZA ZUCCHERO ATTENZIONE: QUESTA È UNA DI QUELLE"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYKezFyou3e/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE AVOCADO E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE 👉"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC20bks-Ca/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "BROWNIE CIOCCOLATO E BANANA PROTEICO 👉 🌱 VEGAN 👉 ❌ SENZA ZUCCHERO 👉 ❌ SENZA GLUTINE 📌 Salva"
+        }
+      ]
+    },
+    {
+      "term": "sale e pepe",
+      "count": 13,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYJ3mDpO_Yb/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "RICETTE CHE MI HA INSEGNATO MIA MAMMA ❤️ Burek con le pieghe 🇦🇱✨ Croccante fuori, sfogliato e morbidissimo"
+        },
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYMcFFVinMR/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "SFORMATO DI ZUCCHINE FILANTE ✨ Una di quelle ricette facilissime che ti salva la cena quando vuoi qualcosa"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DR4QhVrDYsN/",
+          "owner": "starbeneofficial",
+          "caption_category": "method_rich",
+          "caption_score": 23,
+          "excerpt": "Non sapete come cucinare il cavolfiore? Allora provate le pizzette della nostra @valeairoldi, preparate con il microonde Samsung"
+        }
+      ]
+    },
+    {
+      "term": "salsa di soia",
+      "count": 12,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DMgOy_8sW-V/",
+          "owner": "ricette_sane_ma_poco_tristi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍜 ZARU SOBA: NOODLES FREDDI GIAPPONESI 🇯🇵 Il piatto estivo più amato in Giappone: semplice, fresco e super"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DW6yQNYAChx/",
+          "owner": "healthy_barta",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "30g di proteine in una ciotola che sembra tutto tranne una “ricetta proteica” 🥗 Tempeh croccante, edamame, asparagi"
+        },
+        {
+          "source_file": "profile_bbq_italia.json",
+          "url": "https://www.instagram.com/p/DWZP4pGClLj/",
+          "owner": "italians_bbq",
+          "caption_category": "method_rich",
+          "caption_score": 21,
+          "excerpt": "🔥Pollo Huli Huli🔥 . . 🧑‍🍳Pollo marinato a lungo, cotto fino alla giusta caramellizzazione e glassato più volte"
+        }
+      ]
+    },
+    {
+      "term": "latte vegetale",
+      "count": 12,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CzCB0iJrWqA/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "FRENCH TOASTS PROTEICI AL COCCO🥥 by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CwFZeOSITYy/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "DOLCETTO CHETO by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto e mi"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DUEEusQCpYO/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "🍌 POV: hai appena trovato LA ricetta perfetta di Banana Bread (facile, veloce, sempre riuscito) Salva questo Reel"
+        }
+      ]
+    },
+    {
+      "term": "mele",
+      "count": 11,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXw1c4xIIk_/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "MUFFIN LAMPONI E CIOCCOLATO 👉❌ senza glutine 👉❌ senza latticini 👉❌ senza zuccheri aggiunti (dolci grazie alla sola"
+        },
+        {
+          "source_file": "profile_chef_a_casa.json",
+          "url": "https://www.instagram.com/p/DQXN_BNjAVW/",
+          "owner": "guida_culinariaeconomica",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "Torta cremosa alle mele 🍎 🍏 Ingredienti * 10 mele * 3 uova * 150 gr di zucchero."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CNAw01BIXp2/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "TORTA SOFFICE DI MELE SENZA BURRO Ingredienti 250 gr di farina (io tipo 1) 4 uova 70 gr"
+        }
+      ]
+    },
+    {
+      "term": "carote",
+      "count": 11,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYHhLuMIvhT/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "GNOCCHI AL RAGÙ DI SOIA 👉 🌱 Ricetta vegan 📌 Salva questo reel perché questi gnocchi sono una"
+        },
+        {
+          "source_file": "profile_chef_a_casa.json",
+          "url": "https://www.instagram.com/p/DUWG3ZVDNce/",
+          "owner": "guida_culinariaeconomica",
+          "caption_category": "method_rich",
+          "caption_score": 21,
+          "excerpt": "Torta salata di carote e ricotta 🥕 Ingredienti * 6 carote * 2 uova * 200gr di ricotta"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXKPf4TDKbU/",
+          "owner": "la_cucina_salutare",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "Se hai 10 minuti e non sai cosa preparare per cena, questa ricetta ti salva la serata! 🥢"
+        }
+      ]
+    },
+    {
+      "term": "cipolla",
+      "count": 11,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYHhLuMIvhT/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "GNOCCHI AL RAGÙ DI SOIA 👉 🌱 Ricetta vegan 📌 Salva questo reel perché questi gnocchi sono una"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CnboxV7JuPv/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "QUADRATINI DI SFOGLIA 🤩 pronti in pochi minuti 🥳 - Non dimenticarti di seguirmi e di lasciarmi un"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DW9Tr-DIUD3/",
+          "owner": "missbimbykatia",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "Se pensi che il cous cous sia noioso… questo ti farà cambiare idea 😏🔥 Facile, veloce e pure"
+        }
+      ]
+    },
+    {
+      "term": "zucchero di canna",
+      "count": 10,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXhXmcoMeUP/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXhXmcoMeUP/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CNDVmk8oYVP/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "350 gr di farina 1 2 uova 1 albume 100 ml di olio evo 60 gr di zucchero"
+        }
+      ]
+    },
+    {
+      "term": "sciroppo d'acero",
+      "count": 10,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXzMLI6sw84/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA PROTEICA ALLA BANANA 🍌✨ con frosting cookie dough Morbida, super saziante e con quel topping cremoso che"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXyrJI4IE3-/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "✨TORTA ALLA RICOTTA (senza farina) ✨ cremosa, veloce e perfetta per colazione o merenda 🤍🍰 📝 Ingredienti •"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DV5_xTIsoQp/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "✨𝗕𝗹𝗼𝗻𝗱𝗶𝗲𝘀 𝗮𝗹𝗹’𝗮𝘃𝗲𝗻𝗮 Ogni tanto mi piace preparare qualcosa di dolce, ma con ingredienti semplici. Questi dolcetti sono morbidi"
+        }
+      ]
+    },
+    {
+      "term": "pangrattato",
+      "count": 9,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcWWSuCBQ0/",
+          "owner": "vale_discoveryfitfood",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "✨ LATTE FRITTO… versione tropicale 🥥🌴 Un grande classico della tradizione siciliana… ma con un twist inaspettato! Oggi"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHjQRk-sKim/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "COZZE GRATINATE 🌊 😋 Ingredienti: • 500 g di cozze (o una confezione di cozze pronte con il"
+        },
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYMcFFVinMR/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "SFORMATO DI ZUCCHINE FILANTE ✨ Una di quelle ricette facilissime che ti salva la cena quando vuoi qualcosa"
+        }
+      ]
+    },
+    {
+      "term": "tazzina di caffè",
+      "count": 9,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC_mnjKWNu/",
+          "owner": "silvi.barbi",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXt11zSjHVa/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DX94QlaCuHZ/",
+          "owner": "silvi.barbi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 23,
+          "excerpt": "6 idee al TIRAMISÙ che devi assolutamente provare 1.Weetabix tiramisù 📍ti servirà : •2 formelle di weetabix (in"
+        }
+      ]
+    },
+    {
+      "term": "gocce di cioccolato",
+      "count": 9,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWtSbKTsrcZ/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYFWa1HiUD8/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "GELATO PROTEICO AL CIOCCOLATO – Ep. 5 della serie GELATI PROTEICI FATTI IN CASA 🍫 Cremoso come in"
+        },
+        {
+          "source_file": "profile_papa_in_cucina.json",
+          "url": "https://www.instagram.com/p/DUvqHdLjKKM/",
+          "owner": "cucinaconmarj_",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Buon San Valentino ❤️ Che ne dite di questa torta cuor di ricotta! Base di frolla croccante con"
+        }
+      ]
+    },
+    {
+      "term": "olio di cocco",
+      "count": 9,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXoX_Fqo_G6/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYFcZCYt30W/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "La cheesecake che sembra “sgarro” ma ti salva la voglia di dolce 👀🍰 Cremosa, super saziante e con"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DT6KkdjjB2K/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "𝗕𝗟𝗔𝗖𝗞 𝗕𝗘𝗔𝗡𝗦 𝗙𝗨𝗗𝗚𝗬 𝗕𝗥𝗢𝗪𝗡𝗜𝗘𝗦 🍫 👉🏻 semplici, ma davvero buoni 𝗜𝗻𝗴𝗿𝗲𝗱𝗶𝗲𝗻𝘁𝗶: • 1 lattina di fagioli neri cotti,"
+        }
+      ]
+    },
+    {
+      "term": "fragole",
+      "count": 9,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DX4jkfWMM2r/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE LAMPO FRAGOLE E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYJsnq7p1Uk/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Fragole 😋😋e ci fai un gran figurone a tavola 😋😋🍓🍓 - Il mio libro “Antipasti con la pasta"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXuQNxWDFG5/",
+          "owner": "divertirsiincucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Voglia di un dolce leggero e freschissimo? 🍓🍋 Prova la Torta Nuvola fragole e limone! Una base soffice"
+        }
+      ]
+    },
+    {
+      "term": "zucchero semolato",
+      "count": 8,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DWEh3OOiP-t/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcWWSuCBQ0/",
+          "owner": "vale_discoveryfitfood",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "✨ LATTE FRITTO… versione tropicale 🥥🌴 Un grande classico della tradizione siciliana… ma con un twist inaspettato! Oggi"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DU8oQ8SiO3Z/",
+          "owner": "vale_discoveryfitfood",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "Tagliatelle Fritte di Carnevale ✨🎭 Le tagliatelle fritte sono un dolce tipico del Carnevale emiliano-romagnolo 🎉�Una pasta all’uovo"
+        }
+      ]
+    },
+    {
+      "term": "olio extravergine di oliva",
+      "count": 8,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DVyraR8M0l9/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA SBRICIOLATA RICOTTA E LAMPONI 👉 ❌ SENZA GLUTINE, ❌ SENZA ZUCCHERO ATTENZIONE: QUESTA È UNA DI QUELLE"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXw1c4xIIk_/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "MUFFIN LAMPONI E CIOCCOLATO 👉❌ senza glutine 👉❌ senza latticini 👉❌ senza zuccheri aggiunti (dolci grazie alla sola"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC20bks-Ca/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "BROWNIE CIOCCOLATO E BANANA PROTEICO 👉 🌱 VEGAN 👉 ❌ SENZA ZUCCHERO 👉 ❌ SENZA GLUTINE 📌 Salva"
+        }
+      ]
+    },
+    {
+      "term": "yogurt",
+      "count": 8,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXt11zSjHVa/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DX94QlaCuHZ/",
+          "owner": "silvi.barbi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 23,
+          "excerpt": "6 idee al TIRAMISÙ che devi assolutamente provare 1.Weetabix tiramisù 📍ti servirà : •2 formelle di weetabix (in"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CM4SaROoyAu/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "TORTA ALBUMI SENZA GLUTINE E SENZA ZUCCHERO Ingredienti 4 albumi 200 gr di farina di grano saraceno 150"
+        }
+      ]
+    },
+    {
+      "term": "parmigiano",
+      "count": 8,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYMcFFVinMR/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "SFORMATO DI ZUCCHINE FILANTE ✨ Una di quelle ricette facilissime che ti salva la cena quando vuoi qualcosa"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DPIot5-lc_g/",
+          "owner": "ricette_mmmeat",
+          "caption_category": "method_rich",
+          "caption_score": 23,
+          "excerpt": "Lasagna Spinaci e Feta🍽 • 4 cipollotti • 2 cucchiai di olio d'oliva • 300 g di spinaci"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHta3M7Ivy_/",
+          "owner": "ricettegram_fit",
+          "caption_category": "method_rich",
+          "caption_score": 22,
+          "excerpt": "Spaghetti con crema di zucchine, capesante e gamberi Ingredienti: 🍝 200 g di spaghetti grossi 🥒2 zucchine medie"
+        }
+      ]
+    },
+    {
+      "term": "farina integrale",
+      "count": 8,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CM_58zyoKGa/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "MINI CAKE INTEGRALE CON CREMA DI CIOCCOLATO E NOCCIOLE Per i cestini di frolla 150 gr di farina"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CM-MAuKIEC7/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "PANE AI 5 CEREALI Ingredienti 150 gr di farina integrale 100 gr di farina di avena 100 gr"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DTtFoZRjTRp/",
+          "owner": "io_cucinofacile",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "Banana Bread, soffice senza zucchero 🍌 Quella sensazione, quando taglio una fetta e si sfalda perfetta. Questo banana"
+        }
+      ]
+    },
+    {
+      "term": "pomodorini",
+      "count": 7,
+      "training_signal": "meaningful_variant_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXuO75PjH0P/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "⏱️10 minuti 🫕Zero fornelli 🍽️Cena pronta ➡️ Pomodori ripieni = il nuovo salvacena estivo ☀️ 👉 Salvate e"
+        },
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYEtLRZio0d/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Una “focaccia” furba, pronta in pochi minuti! Croccante fuori, morbida dentro… ma molto più leggera e bilanciata. Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXrvfMiqW-n/",
+          "owner": "ricette_al_volo",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "Cerchi un’idea per un pranzo leggero ma che ti faccia sentire sazio? 🥑🥚 Ecco la mia Insalata di"
+        }
+      ]
+    },
+    {
+      "term": "calorie kcal",
+      "count": 7,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXuLQgkCytc/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.2 — GELATI PROTEICI FATTI IN CASA 🍦🍪 Gusto COOKIES: 3 ingredienti, ~30g di proteine, 2 minuti Secondo"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXuLQgkCytc/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.2 — GELATI PROTEICI FATTI IN CASA 🍦🍪 Gusto COOKIES: 3 ingredienti, ~30g di proteine, 2 minuti Secondo"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        }
+      ]
+    },
+    {
+      "term": "mozzarella",
+      "count": 7,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpCte3DNkm/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Non sai cosa cucinare? 3 ingredienti, tutto in teglia e ti esce una cena così 🤤🔥 Una di"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWrIa6JjJO_/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Torta salata parmigiana Attenzione: questa torta salata crea dipendenza al primo morso. La parmigiana in versione torta è"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXwm8UpIyl4/",
+          "owner": "healthywith_silvy",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "Pizza Fit & High Protein 🍕🔥Dimentica gli impasti pesanti che ti fanno venire sonno dopo tre morsi. Questa"
+        }
+      ]
+    },
+    {
+      "term": "proteine in polvere",
+      "count": 7,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXzMLI6sw84/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA PROTEICA ALLA BANANA 🍌✨ con frosting cookie dough Morbida, super saziante e con quel topping cremoso che"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DToMO5UDFPo/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "𝗕𝗜𝗧𝗘𝗦 𝗣𝗥𝗢𝗧𝗘𝗜𝗖𝗜 𝗮𝗿𝗮𝗰𝗵𝗶𝗱𝗶 & 𝗰𝗶𝗼𝗰𝗰𝗼𝗹𝗮𝘁𝗼 🥜 🍫 Piccoli, pratici e super soddisfacenti Uno snack proteico fatto in casa,"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DTs_ytejJEt/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "method_rich",
+          "caption_score": 23,
+          "excerpt": "𝗣𝗮𝗻𝗲 𝗮𝗹𝗹'𝗮𝘃𝗲𝗻𝗮, 𝘀𝗽𝗲𝘇𝗶𝗲 & 𝗰𝗼𝘁𝘁𝗮𝗴𝗲 𝗰𝗵𝗲𝗲𝘀𝗲 Un esperimento riuscito alla grande: morbido dentro, compatto fuori 🍞 𝗜𝗻𝗴𝗿𝗲𝗱𝗶𝗲𝗻𝘁𝗶: 120"
+        }
+      ]
+    },
+    {
+      "term": "parmigiano grattugiato",
+      "count": 7,
+      "training_signal": "condition_or_state_check",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYANCeXs4Lw/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Se sei romano lo sai: quando dici zucchine ripiene, si parla di queste: delle romanesche. La ricetta è"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DSFqm-LDFUn/",
+          "owner": "cucinamammaela",
+          "caption_category": "weak_recipe_signal",
+          "caption_score": 21,
+          "excerpt": "PERLE DI PARMIGIANO FRITTE (2 ingredienti, pronte in 5 minuti) 🧀✨ Se cerchi un antipasto facile e super"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYMmoJNoa5p/",
+          "owner": "millegrammi_blog",
+          "caption_category": "complete_recipe",
+          "caption_score": 18,
+          "excerpt": "Risotto agli asparagi. Se non lo hai mai provato, devi farlo adesso😊 ➡️Ingredienti: 1 kg asparagi 1 cipolla"
+        }
+      ]
+    },
+    {
+      "term": "pepe nero",
+      "count": 7,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DRCO0bEiM26/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Polpette al sugo della mamma👩‍🍳( senza lattosio) 🍴Ingredienti: • 1 kgcarne macinata mista • 2 uova • 200g"
+        },
+        {
+          "source_file": "profile_cucina_antispreco.json",
+          "url": "https://www.instagram.com/p/DU8oIc8AtVM/",
+          "owner": "le_ricce_in_cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "SEUPPA À LA VAPELENENTSE (Piatto tipico della Valpelline, Valle d’Aosta) Non è una minestra. È uno dei piatti"
+        },
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DQ6_fpwiPG-/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Canederli: un piatto squisito dal Trentino-Alto Adige! 👩‍🍳🧑‍🍳Ingredienti: Pane raffermo 250 g Speck 150 g Cipolle bianche 50"
+        }
+      ]
+    },
+    {
+      "term": "kcal f c p",
+      "count": 7,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CwNHzWxs1rG/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "TIRAMISÙ PROTEICO low carb by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CwAMxxfoaFL/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "FLUFFY PANCAKES PROTEICI by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto e"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CzCB0iJrWqA/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "FRENCH TOASTS PROTEICI AL COCCO🥥 by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti"
+        }
+      ]
+    },
+    {
+      "term": "farina di riso",
+      "count": 7,
+      "training_signal": "product_form_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcNBruDGt4/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Spoiler: sì, è senza burro. Sì, è senza glutine.�E no, non ha nessuna intenzione di essere “triste”. Questa"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWeWbQTjOdM/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "E se ti dicessi che questa pastiera è senza glutine e senza lattosio? Ok non ha proprio gli"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWtt-gbDM9_/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Un dolce sofficissimo e senza glutine, perfetto per colazione o merenda!!! Se ancora non hai preparato il dolce"
+        }
+      ]
+    },
+    {
+      "term": "bio",
+      "count": 7,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXwuJlQsAM1/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "🥧TORTA MAGICA ✨ RICOTTA E FRAGOLE 🍓 Senza farina ~ senza glutine e con soli 5 ingredienti! L’idea"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXZn8vajKzZ/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "🥧TORTA BAKED PORRIDGE🥧 🍓 FRAGOLE&CIOCCOLATO 🍫 Senza glutine e farina ✨ L’idea perfetta per la tua prossima colazione"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcQKzODNzT/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "🥧 TORTA MAGICA 🥧 ☕️GUSTO TIRAMISÙ☕️ con 7 semplici ingredienti! ✨ il dolce perfetto a colazione, merenda o"
+        }
+      ]
+    },
+    {
+      "term": "vanillina",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DX819GssGOo/",
+          "owner": "lanostramammacucina_light",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "Spoiler: non è una torta \"light\", ma per la mamma questo e altro. - Pronti a prepararle o"
+        },
+        {
+          "source_file": "profile_chef_a_casa.json",
+          "url": "https://www.instagram.com/p/DQXN_BNjAVW/",
+          "owner": "guida_culinariaeconomica",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "Torta cremosa alle mele 🍎 🍏 Ingredienti * 10 mele * 3 uova * 150 gr di zucchero."
+        }
+      ]
+    },
+    {
+      "term": "tuorlo",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DWEh3OOiP-t/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CnboxV7JuPv/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "QUADRATINI DI SFOGLIA 🤩 pronti in pochi minuti 🥳 - Non dimenticarti di seguirmi e di lasciarmi un"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DVv3hIxirtD/",
+          "owner": "gustosamentevale",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "Crostata alla marmellata di albicocche 🍑 INGREDIENTI: - 300 gr di farina 00 - 150 gr di zucchero"
+        }
+      ]
+    },
+    {
+      "term": "banana",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DVZC5vXDKcD/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?"
+        },
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYKgf__KgD5/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "Prova l’avena così 🌾✨ Quante volte hai pensato che i fiocchi d’avena “non sanno di niente”? In realtà"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXoZs7FiJUk/",
+          "owner": "i_love_the_integral",
+          "caption_category": "complete_recipe",
+          "caption_score": 19,
+          "excerpt": "🍊 MUGCAKE CACAO E ARANCIA Segui @i_love_the_integral per altre idee e ricette per la tua sana alimentazione. Se"
+        }
+      ]
+    },
+    {
+      "term": "banane mature",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXzMLI6sw84/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA PROTEICA ALLA BANANA 🍌✨ con frosting cookie dough Morbida, super saziante e con quel topping cremoso che"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CM4SaROoyAu/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "TORTA ALBUMI SENZA GLUTINE E SENZA ZUCCHERO Ingredienti 4 albumi 200 gr di farina di grano saraceno 150"
+        }
+      ]
+    },
+    {
+      "term": "passata di pomodoro",
+      "count": 6,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYHhLuMIvhT/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "GNOCCHI AL RAGÙ DI SOIA 👉 🌱 Ricetta vegan 📌 Salva questo reel perché questi gnocchi sono una"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DWrIa6JjJO_/",
+          "owner": "mara_soul_kitchen",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Torta salata parmigiana Attenzione: questa torta salata crea dipendenza al primo morso. La parmigiana in versione torta è"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DQeAoygCJQY/",
+          "owner": "letmehcook28",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "IL MIO RAGÙ NAPOLETANO No, non è fit. Si, è una coccola che mi sono e ho voluto"
+        }
+      ]
+    },
+    {
+      "term": "uovo intero",
+      "count": 6,
+      "training_signal": "egg_family_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUoMtkZjAyi/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "𝗕𝗮𝗸𝗲𝗱 𝗼𝗮𝘁𝘀 𝘀𝘁𝗶𝗹𝗲 𝗯𝗼𝘂𝗻𝘁𝘆 🥥🍫 Colazione bilanciata, pratica e perfetta da preparare in anticipo. Gusto cacao e cocco."
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DSpUk0NgqeZ/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Idee last minute per la colazione di questi giorni di festa? 🎅🏻🎄 Prova il mio roll dolce, super"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DT6KkdjjB2K/",
+          "owner": "monica.ragazzoli",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "𝗕𝗟𝗔𝗖𝗞 𝗕𝗘𝗔𝗡𝗦 𝗙𝗨𝗗𝗚𝗬 𝗕𝗥𝗢𝗪𝗡𝗜𝗘𝗦 🍫 👉🏻 semplici, ma davvero buoni 𝗜𝗻𝗴𝗿𝗲𝗱𝗶𝗲𝗻𝘁𝗶: • 1 lattina di fagioli neri cotti,"
+        }
+      ]
+    },
+    {
+      "term": "semi di chia",
+      "count": 6,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DX4eLT5KWgM/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Overnight lamponi e cioccolato 🍫💗 Una colazione golosa, fresca e pronta al risveglio. Perfetta quando vuoi qualcosa di"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXt11zSjHVa/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DJuZUIrM1aU/",
+          "owner": "healthywith_silvy",
+          "caption_category": "complete_recipe",
+          "caption_score": 19,
+          "excerpt": "Marmellata ai frutti rossi e semi di chia, facile e veloce da preparare, ottima con lo yogurt, su"
+        }
+      ]
+    },
+    {
+      "term": "per porzioni",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DYMcFFVinMR/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "SFORMATO DI ZUCCHINE FILANTE ✨ Una di quelle ricette facilissime che ti salva la cena quando vuoi qualcosa"
+        },
+        {
+          "source_file": "profile_dietista_ricette.json",
+          "url": "https://www.instagram.com/p/DXtkYEhjWBi/",
+          "owner": "dietista.paolastavolone",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "CHEESECAKE PROTEICA AI MIRTILLI 🫐✨ Una ricetta super semplice, cremosa e leggera, perfetta per una merenda diversa dal"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DT7f-OqDHtM/",
+          "owner": "ricette_sane_libri_viaggi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 21,
+          "excerpt": "Hai comprato dei fogli di riso perché li utilizzavano tutti e ora sono lì in dispensa a guardarti"
+        }
+      ]
+    },
+    {
+      "term": "pollo",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DHs-9OFN5zI/",
+          "owner": "ricette_sane_per_i_bambini",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "👶🏻 Salsiccette di pollo. Ingredienti - 200 gr pollo - 1 zucchina - 1 carota - aglio in"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DPO3CtrDjdF/",
+          "owner": "ricette_mmmeat",
+          "caption_category": "method_rich",
+          "caption_score": 21,
+          "excerpt": "Pasta alla zucca butternut 😋🍽 • 500 g di zucca butternut • 250 g di funghi • 300g"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUjS94gDMza/",
+          "owner": "ricette_sane_ma_poco_tristi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 19,
+          "excerpt": "POLLO AL CURRY CON CAROTE 🥕🍛 ~~~~~~~~~~ Come sempre, una versione svuotafrigo da fare con le verdure che"
+        }
+      ]
+    },
+    {
+      "term": "intere",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DWROE2SCO11/",
+          "owner": "missbimbykatia",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "PASTIERA NAPOLETANA Chi adora e vorrebbe fare la Pastiera, ma leggendo il procedimento ogni volta rimanda ? È"
+        },
+        {
+          "source_file": "profile_papa_in_cucina.json",
+          "url": "https://www.instagram.com/p/DVWSBSIjC1q/",
+          "owner": "cucinaconmarj_",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Diamo il benvenuto al mese di marzo con la Spring cake 🍒 Un croccante scrigno di frolla che"
+        },
+        {
+          "source_file": "profile_papa_in_cucina.json",
+          "url": "https://www.instagram.com/p/CxYSd_sMYMx/",
+          "owner": "cucinaconmarj_",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Dolce farcito Questa torta è davvero salvatempo, si farcisce prima di infornarla, veloce e pratica e poi è"
+        }
+      ]
+    },
+    {
+      "term": "cipolla bianca",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DW1sFE8gxF4/",
+          "owner": "healthy_barta",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "Stai mangiando abbastanza fibre ogni giorno? 🌿 Perché la maggior parte delle persone pensa alle proteine, conta le"
+        },
+        {
+          "source_file": "profile_papa_in_cucina.json",
+          "url": "https://www.instagram.com/p/CqV62NuP_i4/",
+          "owner": "cucinaconmarj_",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "TAGLIATELLE CON PERE AL VINO ROSSO MASCARPONE E NOCI TOSTATE Un piatto delicato, di grande effetto ma ad"
+        },
+        {
+          "source_file": "profile_papa_in_cucina.json",
+          "url": "https://www.instagram.com/p/DVI4BvWjB9r/",
+          "owner": "cucinaconmarj_",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "Una sfoglia croccante sotto e una crosticina di formaggio filante sopra È una di quelle torte salate che"
+        }
+      ]
+    },
+    {
+      "term": "organic eggs",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXwuJlQsAM1/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 22,
+          "excerpt": "🥧TORTA MAGICA ✨ RICOTTA E FRAGOLE 🍓 Senza farina ~ senza glutine e con soli 5 ingredienti! L’idea"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXZn8vajKzZ/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "🥧TORTA BAKED PORRIDGE🥧 🍓 FRAGOLE&CIOCCOLATO 🍫 Senza glutine e farina ✨ L’idea perfetta per la tua prossima colazione"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcQKzODNzT/",
+          "owner": "iamfitandsweet",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "🥧 TORTA MAGICA 🥧 ☕️GUSTO TIRAMISÙ☕️ con 7 semplici ingredienti! ✨ il dolce perfetto a colazione, merenda o"
+        }
+      ]
+    },
+    {
+      "term": "yogurt bianco",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/CNAw01BIXp2/",
+          "owner": "ricettefacili2024",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "TORTA SOFFICE DI MELE SENZA BURRO Ingredienti 250 gr di farina (io tipo 1) 4 uova 70 gr"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DVGuNJ1iHoR/",
+          "owner": "antonella_cascione_",
+          "caption_category": "complete_recipe",
+          "caption_score": 19,
+          "excerpt": "Vi capita mai di mettere insieme degli ingredienti e sperare che vada tutto bene?😂 Ecco è il caso"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXbRRVdjMrG/",
+          "owner": "millegrammi_blog",
+          "caption_category": "complete_recipe",
+          "caption_score": 19,
+          "excerpt": "🍋Torta al limone morbidissima con yogurt, leggera e facilissima da preparare. Perfetta per la colazione, la merenda o"
+        }
+      ]
+    },
+    {
+      "term": "riso",
+      "count": 6,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DQ48nC7jI_L/",
+          "owner": "ricette_sane_ma_poco_tristi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 19,
+          "excerpt": "MELANZANE SALTATE CON CARNE 🍆 ~~~~~~ Oggi avevo voglia di tornare in Cina, prendendo ispirazione da un piatto"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DTbLGE1DPYX/",
+          "owner": "ricette_sane_ma_poco_tristi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 19,
+          "excerpt": "RISOTTO CON OSSOBUCO 💛 ~~~~~~~~~~~~ Se comparato a quello classico alla milanese, questa ricetta contiene almeno 1.532 errori"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DUT1tnCDAq3/",
+          "owner": "ricette_sane_ma_poco_tristi",
+          "caption_category": "ingredient_rich",
+          "caption_score": 19,
+          "excerpt": "RISOTTO AI FUNGHI E MAZZANCOLLE 🍄🦐 ~~~~~~~~~~~~ Un po’ svuotafrigo, un po’ maremonti anni ‘90 🔥360kcal a porzione"
+        }
+      ]
+    },
+    {
+      "term": "uova",
+      "count": 5,
+      "training_signal": "egg_family_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXcWWSuCBQ0/",
+          "owner": "vale_discoveryfitfood",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "✨ LATTE FRITTO… versione tropicale 🥥🌴 Un grande classico della tradizione siciliana… ma con un twist inaspettato! Oggi"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXbKHTJu9fH/",
+          "owner": "ricette_al_volo",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Salva subito questa ricetta se anche tu hai dei dolcetti di Pasqua ancora in dispensa!🤪 È la ricetta"
+        }
+      ]
+    },
+    {
+      "term": "latte intero",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_coppia_in_cucina.json",
+          "url": "https://www.instagram.com/p/DR6sa03CLer/",
+          "owner": "una.coppia.in.cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DHY2YjYMuzz/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti"
+        },
+        {
+          "source_file": "profile_cucina_antispreco.json",
+          "url": "https://www.instagram.com/p/DUi8LmgDQpG/",
+          "owner": "le_ricce_in_cucina",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "FONDUTA VALDOSTANA (quella vera) La fonduta valdostana non è una crema al formaggio qualsiasi. È una preparazione lenta,"
+        }
+      ]
+    },
+    {
+      "term": "gocce di cioccolato fondente",
+      "count": 5,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXhXmcoMeUP/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro."
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXzMLI6sw84/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA PROTEICA ALLA BANANA 🍌✨ con frosting cookie dough Morbida, super saziante e con quel topping cremoso che"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYAON-ZtkQW/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "MUFFIN AL CACAO LOW CARB 🍫 SOLO 98 kcal… e sì, sono davvero BUONISSIMI 😍 Hai voglia di"
+        }
+      ]
+    },
+    {
+      "term": "proteine isolate neutre",
+      "count": 5,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpBpykiypq/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.1 — GELATI PROTEICI FATTI IN CASA 🍦🔥 Gelato al Lampone: 30g di proteine, pronto in 2 minuti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DX7DRHcCxSu/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "EP.4 — GELATI PROTEICI FATTI IN CASA 🍦Gusto FRUTTI DI BOSCO: ~33g di proteine, il mix definitivo Quarto"
+        }
+      ]
+    },
+    {
+      "term": "banana congelata",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpBpykiypq/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "EP.1 — GELATI PROTEICI FATTI IN CASA 🍦🔥 Gelato al Lampone: 30g di proteine, pronto in 2 minuti"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DX7DRHcCxSu/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "EP.4 — GELATI PROTEICI FATTI IN CASA 🍦Gusto FRUTTI DI BOSCO: ~33g di proteine, il mix definitivo Quarto"
+        }
+      ]
+    },
+    {
+      "term": "burro d'arachidi",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DVZC5vXDKcD/",
+          "owner": "sofitsogood_",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CwFZeOSITYy/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "DOLCETTO CHETO by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto e mi"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DPRbx4vjgPK/",
+          "owner": "ricette_mmmeat",
+          "caption_category": "method_rich",
+          "caption_score": 19,
+          "excerpt": "Cheesecake ai frutti di bosco🫐🍓 • 30 g di fiocchi d'avena • 10 g di burro d'arachidi •"
+        }
+      ]
+    },
+    {
+      "term": "patate",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXpCte3DNkm/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 28,
+          "excerpt": "Non sai cosa cucinare? 3 ingredienti, tutto in teglia e ti esce una cena così 🤤🔥 Una di"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DW_o_q3idcy/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "Parmigiana di patate🤩 con tutti gli ingredienti a crudo 😋 questa è buona assai - Trovi il mio"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXPVFx-MZpK/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "weak_recipe_signal",
+          "caption_score": 21,
+          "excerpt": "Se non fanno questo rumore… avete sbagliato tutto 😏🔥 Le patate sabbiose perfette esistono: croccanti fuori e morbide"
+        }
+      ]
+    },
+    {
+      "term": "eritritolo",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXEcIyogtxx/",
+          "owner": "valeairoldi",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Banana bread facile e buonissimo 🍌🍞🥚🍫 ➡️ Ho provato a realizzare questa nuova versione con l’olio evo al"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYKezFyou3e/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE AVOCADO E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE 👉"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYFcZCYt30W/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "La cheesecake che sembra “sgarro” ma ti salva la voglia di dolce 👀🍰 Cremosa, super saziante e con"
+        }
+      ]
+    },
+    {
+      "term": "sale marino integrale",
+      "count": 5,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DVyraR8M0l9/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "TORTA SBRICIOLATA RICOTTA E LAMPONI 👉 ❌ SENZA GLUTINE, ❌ SENZA ZUCCHERO ATTENZIONE: QUESTA È UNA DI QUELLE"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYKezFyou3e/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "CHEESECAKE AVOCADO E CIOCCOLATO 👉 ❌ SENZA ZUCCHERO (dolce grazie alla sola frutta) 👉 ❌ SENZA GLUTINE 👉"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYC20bks-Ca/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "BROWNIE CIOCCOLATO E BANANA PROTEICO 👉 🌱 VEGAN 👉 ❌ SENZA ZUCCHERO 👉 ❌ SENZA GLUTINE 📌 Salva"
+        }
+      ]
+    },
+    {
+      "term": "lievito di birra secco",
+      "count": 5,
+      "training_signal": "condition_or_state_check",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DAdGqn3gfdA/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Hai visto che bello stendere questa pizza bianca? Scegli la farina adatta per pizza e focaccia ed impasta,"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DC5OP9hN8vY/",
+          "owner": "ricettafacili",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "FIORE DI BRIOCHE GIGANTE 🤩 Sofficissimo e perfetto da farcire per feste e compleanni 🎁 Vi piace? INGREDIENTI"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXZ27cxid2-/",
+          "owner": "tuttiatavolaconcinzia",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "Oggi ti svolto il pane fatto in casa e ti lascio la ricetta dei panini al cucchiaio fatti"
+        }
+      ]
+    },
+    {
+      "term": "fibre",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DX7DRHcCxSu/",
+          "owner": "ajoycebolla.alessandra",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "EP.4 — GELATI PROTEICI FATTI IN CASA 🍦Gusto FRUTTI DI BOSCO: ~33g di proteine, il mix definitivo Quarto"
+        }
+      ]
+    }
+  ]
+}

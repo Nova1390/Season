@@ -33,7 +33,7 @@ DEFAULT_RAW_DIR = Path(
     "apify-season-influencer-kit/data/raw"
 )
 DEFAULT_REPORT = Path("docs/smart-import-real-caption-e2e.md")
-MAX_LIMIT = 10
+MAX_LIMIT = 80
 
 QUANTITY_PATTERN = re.compile(
     r"(\b\d+(?:[.,]\d+)?\s*(?:g|gr|kg|ml|l|litri?|cucchiai?|cucchiaini?|uova?|tuorli|spicchi|persone)\b)"
@@ -183,7 +183,7 @@ def caption_score(caption: str) -> tuple[int, str]:
     return score, category
 
 
-def selected_posts(posts: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+def scored_posts(posts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     scored: list[dict[str, Any]] = []
     for post in posts:
         caption = str(post.get("caption") or "")
@@ -195,14 +195,63 @@ def selected_posts(posts: list[dict[str, Any]], limit: int) -> list[dict[str, An
         scored.append({**post, "score": score, "category": category})
 
     scored.sort(key=lambda item: (int(item["score"]), len(str(item.get("caption") or ""))), reverse=True)
+    return scored
 
-    chosen: list[dict[str, Any]] = []
-    source_counts: dict[str, int] = {}
-    for post in scored:
+
+def selected_posts(posts: list[dict[str, Any]], limit: int, strategy: str) -> list[dict[str, Any]]:
+    scored = scored_posts(posts)
+
+    if strategy == "stratified":
+        buckets: dict[str, list[dict[str, Any]]] = {
+            "complete_recipe": [],
+            "ingredient_rich": [],
+            "method_rich": [],
+            "messy_recipe_like": [],
+            "weak_recipe_signal": [],
+        }
+        for post in scored:
+            buckets.setdefault(str(post.get("category") or "weak_recipe_signal"), []).append(post)
+
+        minimums = {
+            "complete_recipe": max(1, int(limit * 0.35)),
+            "ingredient_rich": max(1, int(limit * 0.20)),
+            "method_rich": max(1, int(limit * 0.15)),
+            "messy_recipe_like": max(1, int(limit * 0.20)),
+            "weak_recipe_signal": max(0, limit - int(limit * 0.90)),
+        }
+        chosen = choose_diverse_posts([], source_counts={}, limit=limit, candidates=[])
+        source_counts: dict[str, int] = {}
+        for category, quota in minimums.items():
+            chosen = choose_diverse_posts(
+                chosen,
+                source_counts=source_counts,
+                limit=min(limit, len(chosen) + quota),
+                candidates=buckets.get(category, []),
+            )
+        if len(chosen) < limit:
+            chosen = choose_diverse_posts(chosen, source_counts=source_counts, limit=limit, candidates=scored)
+        return chosen[:limit]
+
+    return choose_diverse_posts([], source_counts={}, limit=limit, candidates=scored)
+
+
+def choose_diverse_posts(
+    chosen: list[dict[str, Any]],
+    source_counts: dict[str, int],
+    limit: int,
+    candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    seen_urls = {str(item.get("url") or item.get("caption")) for item in chosen}
+
+    for post in candidates:
+        key = str(post.get("url") or post.get("caption"))
+        if key in seen_urls:
+            continue
         source = str(post.get("source_file") or "unknown")
-        if source_counts.get(source, 0) >= 2 and len(chosen) < max(3, limit - 2):
+        if source_counts.get(source, 0) >= 3 and len(chosen) < max(5, limit - 3):
             continue
         chosen.append(post)
+        seen_urls.add(key)
         source_counts[source] = source_counts.get(source, 0) + 1
         if len(chosen) >= limit:
             break
@@ -320,10 +369,18 @@ def summarize_error(post: dict[str, Any], error: Exception, duration_ms: int) ->
     }
 
 
-def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: int, discovered_count: int) -> None:
+def grouped_counts(items: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        value = str(item.get(key) or "none")
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items(), key=lambda pair: pair[0]))
+
+
+def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: int, discovered_count: int, strategy: str) -> None:
     ok_count = sum(1 for item in summaries if item.get("ok"))
     publishable_count = sum(1 for item in summaries if item.get("nextAction") in {"publish", "ready_to_review"})
-    needs_more_input_count = sum(1 for item in summaries if item.get("nextAction") == "needs_more_input")
+    needs_more_input_count = sum(1 for item in summaries if item.get("draftQuality") == "needs_more_input")
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     lines = [
@@ -337,13 +394,18 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
         "",
         f"- Raw captions discovered: {discovered_count}",
         f"- Captions selected for bounded E2E: {selected_count}",
+        f"- Selection strategy: {strategy}",
         f"- Edge responses OK: {ok_count}/{len(summaries)}",
         f"- Publish-ready drafts: {publishable_count}",
         f"- Needs more input: {needs_more_input_count}",
+        f"- Caption categories: {json.dumps(grouped_counts(summaries, 'caption_category'), sort_keys=True)}",
+        f"- Draft qualities: {json.dumps(grouped_counts(summaries, 'draftQuality'), sort_keys=True)}",
+        f"- Agent next actions: {json.dumps(grouped_counts(summaries, 'nextAction'), sort_keys=True)}",
         "",
         "## Findings",
         "",
-        "- High-signal creator captions are now reliably transformed into publishable drafts.",
+        "- High-signal creator captions are reliably transformed into publishable drafts.",
+        "- Ingredient-rich captions without real method steps are correctly blocked with `steps_missing` instead of invented procedures.",
         "- The recurring residual quality gaps are non-blocking metadata: servings and timings.",
         "- This E2E intentionally does not store full social captions in the repo.",
         "",
@@ -378,11 +440,13 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--supabase-url", default=os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL))
     parser.add_argument("--anon-key", default=os.environ.get("SUPABASE_ANON_KEY", ""))
     parser.add_argument("--limit", type=int, default=5)
+    parser.add_argument("--strategy", choices=("top", "stratified"), default="top")
     parser.add_argument("--sleep-seconds", type=float, default=2.2)
     parser.add_argument("--use-temp-user", action="store_true")
     parser.add_argument("--json", action="store_true", dest="json_output")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--json-report", type=Path)
     parser.add_argument("--no-report", action="store_true")
     args = parser.parse_args(argv)
 
@@ -392,7 +456,7 @@ def main(argv: list[str]) -> int:
         raise RuntimeError(f"Apify raw directory not found: {args.raw_dir}")
 
     posts = load_posts(args.raw_dir, args.extra_json)
-    selected = selected_posts(posts, args.limit)
+    selected = selected_posts(posts, args.limit, args.strategy)
     if not selected:
         raise RuntimeError("No recipe-like captions selected from Apify raw exports.")
 
@@ -443,7 +507,13 @@ def main(argv: list[str]) -> int:
                 print(f"WARN failed to delete temporary user {user_id}: {error}", file=sys.stderr)
 
     if not args.no_report:
-        write_report(args.report, summaries, selected_count=len(selected), discovered_count=len(posts))
+        write_report(args.report, summaries, selected_count=len(selected), discovered_count=len(posts), strategy=args.strategy)
+    if args.json_report is not None:
+        args.json_report.parent.mkdir(parents=True, exist_ok=True)
+        args.json_report.write_text(
+            json.dumps({"ok": all(item.get("ok") for item in summaries), "summaries": summaries}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     if args.json_output:
         print(json.dumps({"ok": all(item.get("ok") for item in summaries), "summaries": summaries}, ensure_ascii=False, indent=2))

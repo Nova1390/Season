@@ -133,7 +133,28 @@ Validation:
 - `scripts/smart_import_learning_cases/run_edge_contract.py` can additionally call `parse-recipe-caption` with exact candidates to verify that `smartImportAgent.passes` includes `learning_memory_context` while `meta.usedServerLLM=false`.
 - `consume_recipe_import_quota(...)` must allow the first request for a new daily usage row; cooldown applies only after a request has been consumed.
 - `scripts/smart_import_learning_cases/run_real_caption_e2e.py` runs bounded dev E2E probes against real Apify Instagram caption exports and writes `docs/smart-import-real-caption-e2e.md`.
-- The first real-caption E2E used 7 high-signal creator captions and produced 7/7 publish-ready drafts with no blocking issues. Remaining gaps were non-blocking servings/timing metadata.
+- `scripts/smart_import_learning_cases/build_real_caption_training_set.py` screens the full Apify caption corpus offline and writes non-mutating training artifacts for Smart Import and Catalog Governance.
+- The first high-signal real-caption E2E used 7 creator captions and produced 7/7 publish-ready drafts with no blocking issues.
+- The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
+
+### Real-Caption Operational Training Loop
+
+Real creator captions should train Season operationally, not mutate the catalog automatically.
+
+Loop:
+
+1. Apify exports social captions into an offline corpus.
+2. `build_real_caption_training_set.py` classifies all captions and extracts repeated ingredient-like surface terms.
+3. `run_real_caption_e2e.py --strategy stratified` spends bounded LLM budget on representative cases.
+4. Smart Import outcomes become regression fixtures, prompt improvements, scorecard rules, or reviewed learning candidates.
+5. Unresolved/custom ingredient patterns flow to Catalog Governance for alias/canonical review.
+6. Only governed Catalog Agent paths may promote a lesson into `catalog_agent_learnings` or mutate catalog identity.
+
+This preserves the separation of responsibilities:
+
+- Smart Import learns to draft recipes from messy creator captions.
+- Catalog Governance learns which ingredient identities, aliases, variants, and state-vs-identity decisions recur in real use.
+- Neither raw social text nor a single LLM run becomes source-of-truth catalog data.
 
 ## 2. System Overview
 
