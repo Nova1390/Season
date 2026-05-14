@@ -56,6 +56,7 @@ Recent important dev evidence:
 - run `#98` exposed an unsafe `spezie` broad-canonical behavior;
 - source-grounded guardrails were tightened so model-generated rationale cannot justify its own broad aggregate;
 - run `#99` confirmed `spezie` became `needs_human_review` with no catalog mutation.
+- run `#100` confirmed `catalog_matcher_v1` and `learning_writer` appear in the deployed dev runtime summary with `dry_run=true`, `0` persisted proposals, and the agent disabled again afterwards.
 
 ## Cleanup Performed
 

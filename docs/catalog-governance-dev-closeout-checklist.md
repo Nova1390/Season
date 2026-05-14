@@ -51,6 +51,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Level `7.0` quality-gate foundation is implemented: duplicate proposal blocking, source-grounded generic aggregate guards, recipe-process byproduct guards, and bounded self-repair for blocked LLM output.
 - Level `7.1` foundation started: `catalog_matcher_v1` now gives the LLM and quality gate deterministic target/gap/ambiguity hints, and quality-gate errors now produce learning-writer suggestions.
 - Dev self-repair smoke run `#99` confirmed `spezie` now escalates to `needs_human_review` instead of creating an unsafe broad canonical draft.
+- Dev dry-run `#100` verified the deployed matcher/learning-writer foundation with `limit=1`: `catalog_matcher_v1` reported `needs_target_matching` for `pepe`, `learning_writer` was visible and disabled, `0` proposals were persisted, and the agent was disabled again immediately after the smoke.
 - Latest evaluation JSON reports are kept intentionally as compact audit evidence, not as runtime configuration.
 - Local generated Python cache folders were removed during closeout cleanup; no tracked `__pycache__` artifacts remain.
 
