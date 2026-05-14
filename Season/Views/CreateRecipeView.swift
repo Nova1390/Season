@@ -3771,6 +3771,10 @@ struct CreateRecipeView: View {
     }
 
     private func customIngredientObservationSource(for ingredient: RecipeIngredient) -> String {
+        if smartImportAgentSummary != nil,
+           ingredient.mappingConfidence == .unmapped || ingredient.rawIngredientLine != nil {
+            return "smart_import"
+        }
         if ingredient.mappingConfidence == .unmapped || ingredient.rawIngredientLine != nil {
             return "import"
         }

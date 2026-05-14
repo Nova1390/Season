@@ -84,6 +84,8 @@ The card and publish gate re-evaluate imported issues against the current compos
 
 The UI must not expose catalog-governance jargon here. The purpose is to help creators complete a recipe faster, while unresolved catalog identity still flows through observations and the Catalog Governance Agent later.
 
+When a published recipe still contains unresolved custom ingredients from a Smart Import draft, the app sends `custom_ingredient_observations.source = smart_import`. This keeps the existing Catalog Governance ingestion path, while making Smart Import-originated catalog work separable from manual or legacy import observations.
+
 ### Smart Import Cost Governor
 
 The function has two server-side cost controls in addition to per-user quota:
