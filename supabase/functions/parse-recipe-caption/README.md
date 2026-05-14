@@ -72,6 +72,7 @@ At least one between `caption` or `url` must be non-empty.
           }
         ]
       },
+      "appliedAutoFixes": [],
       "reviewHints": ["unresolved_ingredients_present"],
       "unresolvedIngredients": ["pomodorini"],
       "passes": [

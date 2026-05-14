@@ -80,6 +80,11 @@ interface SmartImportAutoFixPlan {
   deferredFixes: SmartImportAutoFixPlanItem[];
 }
 
+interface SmartImportSafeAutoFixResult {
+  result: ParseRecipeCaptionResult;
+  appliedFixes: SmartImportAutoFixPlanItem[];
+}
+
 interface SmartImportLearningSummary {
   source: string | null;
   termsRequested: number;
@@ -96,6 +101,7 @@ interface SmartImportAgentSummary {
   actionReason: string;
   scorecard: SmartImportQualityScorecard;
   autoFixPlan: SmartImportAutoFixPlan;
+  appliedAutoFixes: SmartImportAutoFixPlanItem[];
   reviewHints: string[];
   unresolvedIngredients: string[];
   passes: SmartImportAgentPass[];
@@ -313,6 +319,8 @@ Deno.serve(async (request) => {
           usedLLM: false,
           mode: "candidate_resolution",
           learningSummary,
+          caption,
+          url,
         });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=false`,
@@ -429,6 +437,8 @@ Deno.serve(async (request) => {
           usedLLM: true,
           mode: "candidate_resolution",
           learningSummary,
+          caption,
+          url,
         });
         console.log(
           `[SEASON_SMART_IMPORT_AUDIT] phase=edge_output request_id=${requestId} resolved_final=${outputAudit.resolvedFinal} inferred=${outputAudit.inferred} unknown=${outputAudit.unknown} llm_used=true`,
@@ -583,6 +593,8 @@ Deno.serve(async (request) => {
       const agentResult = attachSmartImportAgentSummary(mappedResult, {
         usedLLM: true,
         mode: "full_recipe_parse",
+        caption,
+        url,
       });
 
       console.log(`[SEASON_IMPORT_EDGE] phase=response_success request_id=${requestId} ingredients=${agentResult.ingredients.length} steps=${agentResult.steps.length} confidence=${agentResult.confidence} draft_quality=${agentResult.smartImportAgent?.draftQuality}`);
@@ -756,15 +768,53 @@ function attachSmartImportAgentSummary(
     usedLLM: boolean;
     mode: "candidate_resolution" | "full_recipe_parse";
     learningSummary?: SmartImportLearningSummary;
+    caption?: string;
+    url?: string;
   },
 ): ParseRecipeCaptionResult {
-  const outputAudit = input.outputAudit ?? computeSmartImportOutputAudit(result.ingredients);
+  const safeAutoFix = applySmartImportSafeAutoFixes(result, {
+    caption: input.caption ?? "",
+    url: input.url ?? "",
+  });
+  const outputAudit = input.outputAudit ?? computeSmartImportOutputAudit(safeAutoFix.result.ingredients);
   return {
-    ...result,
-    smartImportAgent: buildSmartImportAgentSummary(result, {
+    ...safeAutoFix.result,
+    smartImportAgent: buildSmartImportAgentSummary(safeAutoFix.result, {
       ...input,
       outputAudit,
+      appliedAutoFixes: safeAutoFix.appliedFixes,
     }),
+  };
+}
+
+function applySmartImportSafeAutoFixes(
+  result: ParseRecipeCaptionResult,
+  context: { caption: string; url: string },
+): SmartImportSafeAutoFixResult {
+  const appliedFixes: SmartImportAutoFixPlanItem[] = [];
+  let fixedResult = result;
+
+  if (!result.title?.trim()) {
+    const fallbackTitle = result.inferredDish?.trim() ||
+      inferDeterministicTitle(context.caption) ||
+      inferTitleFromURL(context.url);
+
+    if (fallbackTitle) {
+      fixedResult = {
+        ...fixedResult,
+        title: fallbackTitle,
+      };
+      appliedFixes.push({
+        issue: "title_missing",
+        action: "use_safe_title_fallback",
+        reason: "The server filled a missing title using an explicit caption title, inferred dish, or URL host without calling the LLM again.",
+      });
+    }
+  }
+
+  return {
+    result: fixedResult,
+    appliedFixes,
   };
 }
 
@@ -776,6 +826,7 @@ function buildSmartImportAgentSummary(
     usedLLM: boolean;
     mode: "candidate_resolution" | "full_recipe_parse";
     learningSummary?: SmartImportLearningSummary;
+    appliedAutoFixes?: SmartImportAutoFixPlanItem[];
   },
 ): SmartImportAgentSummary {
   const reviewHints = smartImportReviewHints(result, input.outputAudit);
@@ -836,6 +887,14 @@ function buildSmartImportAgentSummary(
     reason: "Server scored draft completeness and surfaced creator review hints without mutating the catalog.",
     candidateCount: result.ingredients.length,
   });
+  if ((input.appliedAutoFixes?.length ?? 0) > 0) {
+    passes.push({
+      name: "safe_autofix_worker",
+      usedLLM: false,
+      reason: "Server applied deterministic draft cleanup that does not mutate the catalog or invent recipe content.",
+      candidateCount: input.appliedAutoFixes?.length,
+    });
+  }
 
   return {
     version: "smart_import_agent_v1",
@@ -844,6 +903,7 @@ function buildSmartImportAgentSummary(
     actionReason: nextAction.reason,
     scorecard,
     autoFixPlan,
+    appliedAutoFixes: input.appliedAutoFixes ?? [],
     reviewHints,
     unresolvedIngredients,
     passes,

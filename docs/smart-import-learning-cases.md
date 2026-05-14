@@ -155,6 +155,8 @@ Latest dev probe notes:
 - `2026-05-13`: dev probe on `SI-TRAIN-040` after scorecard deploy returned `blockingIssues=["steps_missing"]`, `niceToFix=["quantities_missing","servings_missing","timings_missing"]`, and `autoFixable=[]`, confirming the agent can prioritize creator action without losing secondary cleanup tasks.
 - `2026-05-14`: Smart Import Agent now returns an `autoFixPlan` with deterministic `safeFixes` and guarded `deferredFixes`; the probe runner can assert scorecard expectations for targeted live checks.
 - `2026-05-14`: dev probe on `SI-TRAIN-040` passed `--expect-blocking steps_missing` and `--expect-nice-to-fix quantities_missing`; `autoFixPlan.safeFixes=[]` and deferred fixes ask for method steps, amounts, servings, and timings instead of guessing them.
+- `2026-05-14`: Smart Import now has a safe autofix worker. It records `appliedAutoFixes` and can fill a missing title from deterministic fallback context only: explicit caption title, `inferredDish`, or URL host. It still refuses to invent steps, quantities, servings, timings, or catalog identity.
+- `2026-05-14`: dev probe on `SI-TRAIN-040` after safe autofix deploy preserved `appliedAutoFixes=[]`, `blockingIssues=["steps_missing"]`, and `nextAction=add_method_steps`, confirming the worker does not mask real creator-input blockers.
 
 ## Boundaries
 

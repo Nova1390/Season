@@ -1096,6 +1096,7 @@ struct ParseRecipeCaptionFunctionAgentSummary: Codable {
     let actionReason: String?
     let scorecard: ParseRecipeCaptionFunctionAgentScorecard?
     let autoFixPlan: ParseRecipeCaptionFunctionAgentAutoFixPlan?
+    let appliedAutoFixes: [ParseRecipeCaptionFunctionAgentAutoFixPlanItem]?
     let reviewHints: [String]
     let unresolvedIngredients: [String]
     let passes: [ParseRecipeCaptionFunctionAgentPass]
