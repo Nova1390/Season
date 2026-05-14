@@ -25,6 +25,7 @@ Implemented by:
 
 - `supabase/migrations/20260511120000_catalog_agent_structured_learning.sql`
 - `supabase/migrations/20260511123000_catalog_agent_learning_context.sql`
+- `supabase/migrations/20260514153000_catalog_agent_worker_learning_writer.sql`
 
 Table:
 
@@ -72,6 +73,12 @@ The migration also updates existing RPCs so learning artifacts are created autom
 - a reviewer requests more evidence;
 - deterministic validation fails;
 - manual apply fails.
+- a delegated worker job fails;
+- a delegated worker job completes with failed items.
+
+Worker learning is intentionally manager-level. A worker failure does not prove a catalog policy by itself, but it is evidence that future delegation should become smaller, safer, or better preflighted. The worker lifecycle RPCs now record proposal events such as `worker_job_failed` and `worker_job_completed_with_failures`, then create `catalog_agent_learnings` rows with status `needs_review`.
+
+Worker learning must not block the worker ledger from closing. If the learning insert fails, the job still records its terminal status and emits a database notice so operations are not left half-open.
 
 ## Safety Boundary
 
@@ -140,3 +147,21 @@ Smart Import must not:
 This keeps the learning loop useful for creators while preserving the Catalog Governance Agent as the manager for durable catalog policy.
 
 Runtime learning memory still does not mutate catalog data. It only changes the evidence available to the proposal-only model.
+
+## Evaluation Reports
+
+The Smart Import learning-context runner can now write a compact JSON coverage report:
+
+```bash
+python3 scripts/smart_import_learning_cases/run_learning_context.py \
+  --write-report docs/smart-import-learning-context-latest.json
+```
+
+The report records:
+
+- pass/fail per learning fixture;
+- how many fixture terms currently have memory;
+- which terms are missing memory;
+- Supabase learning-context metadata.
+
+This gives the two-agent system a shared, no-LLM health check: Smart Import can prove it is receiving relevant catalog lessons before it asks for targeted ingredient reasoning, while Catalog Governance remains the only writer of durable catalog knowledge.

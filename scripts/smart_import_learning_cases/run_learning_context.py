@@ -168,12 +168,62 @@ def print_text_results(results: list[CheckResult]) -> None:
     print(f"\n{passed}/{len(results)} Smart Import learning cases passed.")
 
 
+def build_report(
+    fixture: dict[str, Any],
+    context: dict[str, Any] | None,
+    results: list[CheckResult] | None,
+    mode: str,
+) -> dict[str, Any]:
+    cases = fixture["cases"]
+    passed = sum(1 for result in results or [] if result.ok)
+    total = len(results or cases)
+    terms = [str(case["term"]) for case in cases]
+    term_learnings = (context or {}).get("term_learnings") or {}
+    if context is None:
+        terms_with_learning: list[str] = []
+        missing_learning_terms: list[str] = []
+        coverage_ratio: float | None = None
+    else:
+        terms_with_learning = sorted(
+            term
+            for term in terms
+            if isinstance(term_learnings.get(term), list) and len(term_learnings[term]) > 0
+        )
+        missing_learning_terms = sorted(set(terms) - set(terms_with_learning))
+        coverage_ratio = round(len(terms_with_learning) / max(len(set(terms)), 1), 4)
+
+    return {
+        "ok": passed == total if results is not None else True,
+        "mode": mode,
+        "cases": len(cases),
+        "passed": passed if results is not None else None,
+        "coverage": {
+            "terms": len(set(terms)),
+            "terms_with_learning": len(terms_with_learning) if context is not None else None,
+            "coverage_ratio": coverage_ratio,
+            "missing_learning_terms": missing_learning_terms,
+        },
+        "results": [result.__dict__ for result in results or []],
+        "metadata": (context or {}).get("metadata") or {},
+    }
+
+
+def write_report(path: Path, report: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE)
     parser.add_argument("--schema-only", action="store_true")
     parser.add_argument("--limit-per-term", type=int, default=2)
     parser.add_argument("--json", action="store_true", dest="json_output")
+    parser.add_argument(
+        "--write-report",
+        type=Path,
+        help="Write a JSON report with pass/fail and learning coverage details.",
+    )
     args = parser.parse_args(argv)
 
     fixture = load_fixture(args.fixture)
@@ -184,8 +234,11 @@ def main(argv: list[str]) -> int:
         return 2
 
     if args.schema_only:
+        report = build_report(fixture, context=None, results=None, mode="schema_only")
+        if args.write_report:
+            write_report(args.write_report, report)
         if args.json_output:
-            print(json.dumps({"ok": True, "mode": "schema_only", "cases": len(fixture["cases"])}, indent=2))
+            print(json.dumps(report, ensure_ascii=False, indent=2))
         else:
             print(f"Schema OK: {len(fixture['cases'])} Smart Import learning cases.")
         return 0
@@ -193,18 +246,22 @@ def main(argv: list[str]) -> int:
     terms = [str(case["term"]) for case in fixture["cases"]]
     context = fetch_learning_context(terms, args.limit_per_term)
     results = [evaluate_case(context, case) for case in fixture["cases"]]
+    report = build_report(fixture, context=context, results=results, mode="learning_context")
+    if args.write_report:
+        write_report(args.write_report, report)
 
     if args.json_output:
-        print(json.dumps(
-            {
-                "ok": all(result.ok for result in results),
-                "results": [result.__dict__ for result in results],
-                "metadata": context.get("metadata") or {},
-            },
-            indent=2,
-        ))
+        print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
         print_text_results(results)
+        coverage = report["coverage"]
+        print(
+            "Learning coverage: "
+            f"{coverage['terms_with_learning']}/{coverage['terms']} terms "
+            f"({coverage['coverage_ratio']:.0%})."
+        )
+        if coverage["missing_learning_terms"]:
+            print("Missing learning terms: " + ", ".join(coverage["missing_learning_terms"]))
 
     return 0 if all(result.ok for result in results) else 1
 

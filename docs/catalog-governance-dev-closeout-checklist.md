@@ -50,6 +50,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - Level `6.0` dev scheduler foundation is implemented with a disabled-by-default kill switch, scheduled-shift ledger, readable console shift history, mandatory expiry windows, and two successful autonomous dry-run cron windows (`#10/#11`).
 - Level `7.0` quality-gate foundation is implemented: duplicate proposal blocking, source-grounded generic aggregate guards, recipe-process byproduct guards, and bounded self-repair for blocked LLM output.
 - Level `7.1` foundation started: `catalog_matcher_v1` now gives the LLM and quality gate deterministic target/gap/ambiguity hints, and quality-gate errors now produce learning-writer suggestions.
+- Worker lifecycle learning is implemented: failed worker jobs and worker completions with failed items now record manager-level learning candidates.
+- Dev transactional smoke checks verified worker-learning behavior with rollback and no persistent test data.
 - Dev self-repair smoke run `#99` confirmed `spezie` now escalates to `needs_human_review` instead of creating an unsafe broad canonical draft.
 - Dev dry-run `#100` verified the deployed matcher/learning-writer foundation with `limit=1`: `catalog_matcher_v1` reported `needs_target_matching` for `pepe`, `learning_writer` was visible and disabled, `0` proposals were persisted, and the agent was disabled again immediately after the smoke.
 - Latest evaluation JSON reports are kept intentionally as compact audit evidence, not as runtime configuration.
@@ -65,7 +67,7 @@ Closeout decision:
 
 - the branch is safe to keep developing in dev;
 - it is not yet ready for staging autonomy;
-- the next intelligence work should deepen catalog matcher scoring and expand the learning writer beyond quality-gate errors, not add more manual review volume.
+- the next intelligence work should deepen catalog matcher scoring and evaluate worker-learning outcomes, not add more manual review volume.
 
 ## Dev Training Import
 

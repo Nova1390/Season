@@ -1,6 +1,6 @@
 # Catalog Agent and Autopilot Alignment Plan
 
-Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 4 first ledger, Phase 4.5 batch-level multi-pass reasoning, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode remains intentionally gated for scheduling, but one reviewed low-risk proposal has passed validator + governed apply as a dev smoke. Canonical creation now has an agent-routed worker path, still behind ready-draft validation and a dedicated backend enable flag.
+Status: Phase 1 complete; Phase 2, Phase 3 worker routing, Phase 3.5 worker learning, Phase 4 first ledger, Phase 4.5 batch-level multi-pass reasoning, and Phase 5 safety foundation implemented on dev. Low-risk apply real mode remains intentionally gated for scheduling, but one reviewed low-risk proposal has passed validator + governed apply as a dev smoke. Canonical creation now has an agent-routed worker path, still behind ready-draft validation and a dedicated backend enable flag.
 
 This plan aligns Season catalog automation around one operating principle:
 
@@ -219,6 +219,30 @@ Exit criteria:
 - the agent can request enrichment without calling the worker ad hoc;
 - Autopilot does not self-schedule outside policy;
 - failed worker jobs create learning/audit events.
+
+### Phase 3.5: Worker Learning Writer
+
+Status: implemented in `supabase/migrations/20260514153000_catalog_agent_worker_learning_writer.sql`.
+
+Purpose:
+
+- worker failures must not stay as isolated operational logs;
+- a manager agent should learn when a delegated worker needs smaller batches, better preflight checks, or human review;
+- Autopilot remains execution-only, while the Catalog Governance Agent owns the interpretation of worker failures.
+
+Implemented behavior:
+
+- `complete_catalog_agent_worker_job(...)` records a `worker_job_completed` event;
+- if the completion summary contains failed items, it records `worker_job_completed_with_failures`;
+- `fail_catalog_agent_worker_job(...)` records `worker_job_failed`;
+- failed worker outcomes create `catalog_agent_learnings` rows with status `needs_review`;
+- learning insert errors do not prevent the worker job from closing.
+
+Exit criteria:
+
+- console/ops can inspect terminal worker events;
+- repeated worker failures become visible learning candidates;
+- future autonomy decisions can pause or reduce delegation based on worker history.
 
 ### Phase 4: Cost Governor
 

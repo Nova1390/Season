@@ -41,6 +41,15 @@ JSON output for automation:
 python3 scripts/smart_import_learning_cases/run_learning_context.py --json
 ```
 
+Write a persistent coverage report:
+
+```bash
+python3 scripts/smart_import_learning_cases/run_learning_context.py \
+  --write-report docs/smart-import-learning-context-latest.json
+```
+
+The report includes fixture pass/fail results, term-memory coverage, missing learning terms, and Supabase context metadata. It is useful when checking that Smart Import is actually receiving Catalog Governance lessons before spending LLM budget.
+
 Edge Function contract check:
 
 ```bash
@@ -259,6 +268,7 @@ Latest dev probe notes:
 - `2026-05-14`: implemented the first Level 7 self-repair loop for Catalog Agent. When the quality gate blocks proposals, the agent can make one bounded repair pass over only the failed work items; the repaired proposals are validated, merged, and quality-gated again before persistence or dry-run response.
 - `2026-05-14`: self-repair smoke run `98` exposed a guardrail weakness: generated rationale/evidence could make a generic aggregate term look like a concrete blend. Generic-aggregate and recipe-process guardrails now trust only source/work-item evidence, not model-generated justification.
 - `2026-05-14`: repeat smoke run `99` confirmed the prompt + source-only guardrail improved upstream behavior: `spezie` returned as `needs_human_review` with no quality-gate block and no catalog mutation. Self-repair remained available but was not needed for this case.
+- `2026-05-14`: the no-LLM learning-context runner now supports `--write-report`, so Smart Import/Catalog Governance alignment can be tracked as a reusable JSON coverage artifact.
 
 ## Boundaries
 

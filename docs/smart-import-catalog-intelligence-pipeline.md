@@ -129,6 +129,7 @@ Validation:
 - The fixture lives in `scripts/smart_import_learning_cases/learning_cases.json`.
 - Operational notes live in `docs/smart-import-learning-cases.md`.
 - These checks verify that lessons such as `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena` are available before targeted LLM reasoning.
+- The runner can write `docs/smart-import-learning-context-latest.json` with fixture pass/fail results and term-memory coverage.
 - They intentionally do not create catalog rows, approve aliases, run OpenAI, or judge final recipe quality.
 - `scripts/smart_import_learning_cases/run_edge_contract.py` can additionally call `parse-recipe-caption` with exact candidates to verify that `smartImportAgent.passes` includes `learning_memory_context` while `meta.usedServerLLM=false`.
 - `consume_recipe_import_quota(...)` must allow the first request for a new daily usage row; cooldown applies only after a request has been consumed.
@@ -155,6 +156,20 @@ This preserves the separation of responsibilities:
 - Smart Import learns to draft recipes from messy creator captions.
 - Catalog Governance learns which ingredient identities, aliases, variants, and state-vs-identity decisions recur in real use.
 - Neither raw social text nor a single LLM run becomes source-of-truth catalog data.
+
+### Shared Agent Closeout Contract
+
+For the current dev cycle, the two agents are considered aligned when all of the following are true:
+
+- Smart Import can parse creator captions and return a useful draft without mutating catalog truth.
+- Smart Import can read compact Catalog Governance learning context for unresolved ingredient terms.
+- Catalog Governance can see unresolved/custom ingredient observations from Smart Import-originated recipes.
+- Catalog Governance can propose, validate, delegate, or escalate catalog work without staging access.
+- Delegated workers record their lifecycle in `catalog_agent_worker_jobs`.
+- Worker failures and completed-with-failures create learning-memory candidates for future delegation policy.
+- No worker, Smart Import prompt, or offline training signal can directly create catalog source-of-truth data without governed backend writers and validators.
+
+This is the boundary that keeps the creator experience fast while letting the catalog system become progressively more autonomous.
 
 Backend bridge:
 

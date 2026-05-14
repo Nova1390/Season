@@ -7,7 +7,7 @@ Scope:
 - environment: `Season-dev`;
 - staging: intentionally untouched;
 - release branch: not part of this audit;
-- database mutations: none introduced by this audit;
+- database mutations: dev-only governance migrations, not staging data changes;
 - cleanup: local generated caches only.
 
 ## Executive Summary
@@ -32,6 +32,8 @@ The strongest current achievement is not that the model is "smarter". It is that
 - The latest runtime can run one bounded self-repair pass over quality-gate-blocked proposals.
 - The runtime now attaches `catalog_matcher_v1` hints before LLM calls so the model sees safe targets, candidate targets, blockers, and catalog-gap signals.
 - The runtime now creates bounded learning-writer suggestions from quality-gate errors; persistence into learning memory stays off unless explicitly enabled.
+- Worker terminal outcomes now feed learning memory: failed worker jobs and completed-with-failures jobs create manager-level learning candidates.
+- Smart Import learning-context checks now emit coverage reports so the creator-facing agent can prove it is receiving catalog lessons without mutating catalog data.
 
 ## Evidence Kept In Repo
 
@@ -57,6 +59,8 @@ Recent important dev evidence:
 - source-grounded guardrails were tightened so model-generated rationale cannot justify its own broad aggregate;
 - run `#99` confirmed `spezie` became `needs_human_review` with no catalog mutation.
 - run `#100` confirmed `catalog_matcher_v1` and `learning_writer` appear in the deployed dev runtime summary with `dry_run=true`, `0` persisted proposals, and the agent disabled again afterwards.
+- migration `20260514153000_catalog_agent_worker_learning_writer.sql` closes the worker-learning loop for failed delegated jobs.
+- transactional dev smoke checks verified both terminal worker paths with rollback: `complete_catalog_agent_worker_job(... failed=1)` creates a `manual_apply_failure` learning candidate, and `fail_catalog_agent_worker_job(...)` for `ingredient_creation_batch` creates a `catalog_gap` learning candidate.
 
 ## Cleanup Performed
 
@@ -72,7 +76,7 @@ Recent important dev evidence:
 - `deno check supabase/functions/run-catalog-agent-triage/index.ts` still reports pre-existing Supabase generic typing noise; `llm_contract.ts` checks cleanly, but the main runtime type-check signal is not yet useful enough.
 - Level `7.0` is a foundation, not complete canonical creation autonomy.
 - Catalog matcher logic now has a first deterministic wrapper, but parent/child scoring, redirects, and multilingual false-friend handling still need deeper treatment.
-- Learning writer automation now covers quality-gate suggestions, but failed/rejected/overridden proposal outcomes and worker surprises still need automatic coverage.
+- Learning writer automation now covers quality-gate suggestions and worker terminal surprises; rejected/overridden proposal outcomes still need deeper review classification.
 - Staging has not been validated for this agent workflow.
 - PAT/token rotation is still recommended before any staging promotion or sensitive deploy window.
 - Multi-pass reasoning and self-repair can increase token use, so run size and daily limits must stay conservative.
@@ -81,7 +85,7 @@ Recent important dev evidence:
 
 1. Freeze the current dev default state after each smoke: agent disabled, proposal persistence disabled, scheduler window closed.
 2. Deepen the catalog matcher layer before increasing LLM volume again.
-3. Expand learning-writer automation for rejected, failed, overridden proposals, and worker-surprise outcomes.
+3. Expand learning-writer automation for rejected and overridden proposal outcomes, then evaluate the worker-learning artifacts from real dev worker runs.
 4. Improve the TypeScript/Supabase type boundary so `deno check index.ts` becomes a reliable release gate.
 5. Keep staging out of scope until there is a separate staging promotion checklist.
 6. Rotate the Supabase PAT before staging or external-tester operations resume.
