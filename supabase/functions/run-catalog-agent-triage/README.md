@@ -89,6 +89,7 @@ The gate blocks proposals when, for example:
 - alias/localization confidence is below the configured runtime threshold;
 - a target slug/id is not grounded in the work packet context;
 - `create_canonical` lacks safe slug, localized name, language, semantic family/category, or enough confidence;
+- `create_canonical` is proposed for a broad aggregate/category term without evidence of a concrete blend, mix, product, or identity-bearing aggregate;
 - `needs_human_review` does not include a concrete blocking/open question;
 - unknown or critical risk is attached to an actionable proposal.
 
@@ -133,6 +134,8 @@ When a term is clearly a real ingredient identity and no safe catalog target exi
 `needs_human_review` is reserved for cases where the identity boundary, variant policy, language meaning, product/package interpretation, or safety implications are unresolved. In other words: missing catalog item means "propose creation"; unclear ingredient identity means "ask for review".
 
 Implemented learning memory can make this stronger. If accepted/implemented learning says a family variant must not be compressed into a base ingredient, the agent should create a child/specialized `create_canonical` draft when the identity is clear and the child target is missing.
+
+The opposite guardrail also applies: broad category words such as generic spices, herbs, seasonings, vegetables, fruit, seafood, or cheese are not enough on their own. If the recipe does not identify a concrete product/blend/mix or identity-bearing aggregate, the expected outcome is `needs_human_review`, and a mistaken `create_canonical` draft is blocked by `generic_aggregate_requires_specific_identity`.
 
 ## Required Secrets
 

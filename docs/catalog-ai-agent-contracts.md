@@ -175,6 +175,8 @@ Training-signal bridge:
 - Training signals must not be treated as catalog truth and must not authorize direct catalog mutation.
 - `catalog_alias_candidate` means "common real-caption text likely needs target matching", not "create a new canonical". If no safe target is provided, the agent should ask for review or matching evidence instead of inventing a duplicate canonical.
 - Runtime quality gate enforces that rule: `create_canonical` is blocked when a work item has `catalog_alias_candidate` training signals and no safe target from canonical matches, alias matches, or coverage blocker context.
+- Broad aggregate/category terms, for example generic spices, herbs, seasonings, vegetables, fruit, seafood, or cheese, are not enough by themselves to create a canonical ingredient. The agent may draft a canonical only when recipe context identifies a concrete blend, mix, product, or identity-bearing aggregate; otherwise it must ask for specificity.
+- Runtime quality gate enforces that rule with `generic_aggregate_requires_specific_identity`, so a bad LLM draft is blocked before persistence.
 - Durable behavior requires a governed promotion into policy, prompt, validator, evaluation fixture, or `catalog_agent_learnings`.
 - The runtime context helper uses invoker privileges, so dashboard/authenticated reads remain gated by catalog-admin RLS while service-role worker execution can still read the signal packet.
 - The runtime context helper also performs punctuation-tolerant matching for corpus evidence; this is only a lookup expansion and does not approve aliases.
@@ -229,6 +231,7 @@ Required by proposal type:
 Catalog gap rule:
 
 - If the term is clearly a real ingredient and no safe active catalog target exists, the agent should produce a `create_canonical` draft rather than a vague `needs_human_review`.
+- This does not apply to broad category words without enough specificity. A generic group term needs evidence of a concrete catalog identity before it can become a canonical draft.
 - `create_canonical` must never be auto-applied in the current autonomy level.
 - `create_canonical` may carry medium/high risk and still remain `draft`, because risk controls apply to worker/apply eligibility, not to whether a proposal can be validated and routed.
 - `needs_human_review` is for unresolved identity boundaries, meaningful variant policy gaps, cultural/language ambiguity, brand/package ambiguity, or safety-sensitive uncertainty.

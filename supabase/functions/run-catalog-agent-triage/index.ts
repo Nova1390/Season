@@ -55,7 +55,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4.5-quality-gate";
+const AGENT_VERSION = "proposal-only-v4.6-generic-aggregate-guard";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -80,6 +80,51 @@ const MAX_REASONING_CALLS_PER_RUN = boundedInteger(numberEnv("CATALOG_AGENT_MAX_
 const RISK_REVIEW_ENABLED = env("CATALOG_AGENT_RISK_REVIEW_ENABLED", "true").toLowerCase() !== "false";
 const INPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_INPUT_COST_PER_1M_USD");
 const OUTPUT_COST_PER_1M_USD = nonNegativeNumberEnv("CATALOG_AGENT_OUTPUT_COST_PER_1M_USD");
+
+const GENERIC_AGGREGATE_TERMS = new Set([
+  "aromi",
+  "aromas",
+  "cheese",
+  "cheeses",
+  "condimenti",
+  "erbe",
+  "formaggi",
+  "fruit",
+  "frutta",
+  "herbs",
+  "pesce",
+  "seafood",
+  "seasoning",
+  "seasonings",
+  "spezie",
+  "spices",
+  "verdura",
+  "verdure",
+  "vegetable",
+  "vegetables",
+]);
+
+const CONCRETE_AGGREGATE_QUALIFIERS = [
+  "blend",
+  "erbe di provenza",
+  "erbe mediterranee",
+  "fruit mix",
+  "misto",
+  "miscela",
+  "mix",
+  "per arrosto",
+  "per barbecue",
+  "per carne",
+  "per dolci",
+  "per grigliata",
+  "per pesce",
+  "per pizza",
+  "provenza",
+  "quattro formaggi",
+  "seasoning mix",
+  "spice blend",
+  "vegetable mix",
+];
 
 Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
@@ -1472,6 +1517,13 @@ function proposalQualityIssues(
         "catalog_alias_candidate signals require safe target matching/review before create_canonical can be persisted.",
       );
     }
+    if (isGenericAggregateCanonicalCandidate(proposal, item)) {
+      addIssue(
+        "error",
+        "generic_aggregate_requires_specific_identity",
+        "Broad aggregate/category terms require evidence of a concrete product, blend, mix, or identity-bearing aggregate before create_canonical can be persisted.",
+      );
+    }
     if (proposalConfidence === null || proposalConfidence < 0.75) {
       addIssue("error", "low_create_canonical_confidence", "create_canonical proposals require confidence_score >= 0.75.");
     }
@@ -1525,6 +1577,39 @@ function itemHasSafeTarget(item: WorkItem | undefined): boolean {
     readNestedArray(context, ["existing_alias_matches"]).length > 0 ||
     normalizeText(coverageBlocker.canonical_candidate_ingredient_id).length > 0 ||
     normalizeText(coverageBlocker.canonical_candidate_slug).length > 0;
+}
+
+function isGenericAggregateCanonicalCandidate(
+  proposal: CatalogAgentProposalOutput,
+  item: WorkItem | undefined,
+): boolean {
+  const terms = new Set([
+    normalizeText(proposal.normalized_text),
+    normalizeText(proposal.proposed_slug).replaceAll("_", " "),
+    normalizeText(proposal.proposed_localized_name),
+    normalizeText(proposal.semantic_profile.product_family),
+    normalizeText(proposal.semantic_profile.semantic_category),
+  ].filter((text) => text.length > 0));
+
+  const hasGenericAggregateTerm = Array.from(terms).some((term) => GENERIC_AGGREGATE_TERMS.has(term));
+  if (!hasGenericAggregateTerm) return false;
+
+  const evidenceText = [
+    proposal.rationale,
+    ...(Array.isArray(proposal.evidence) ? proposal.evidence : []),
+    ...(Array.isArray(proposal.semantic_profile.evidence) ? proposal.semantic_profile.evidence : []),
+    item?.normalized_text,
+    ...readNestedArray(item, ["observation", "raw_examples"]),
+    readNestedRecord(item, ["observation"]).latest_example,
+    readNestedRecord(item, ["context", "recipe_context"]).title,
+    ...readNestedArray(item, ["context", "recipe_context", "nearby_ingredients"]),
+    ...readNestedArray(item, ["context", "recipe_context", "step_snippets"]),
+  ]
+    .map(normalizeText)
+    .filter((text) => text.length > 0)
+    .join(" ");
+
+  return !CONCRETE_AGGREGATE_QUALIFIERS.some((qualifier) => evidenceText.includes(qualifier));
 }
 
 function proposalInsertedId(

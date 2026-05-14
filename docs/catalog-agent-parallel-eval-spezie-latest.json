@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-05-14T11:16:25.179829+00:00",
+  "mode": "dry_run_parallel_eval",
+  "mutation_policy": "non_mutating",
+  "input": {
+    "sources": [
+      "smart_import_training_captions"
+    ],
+    "limit": 5,
+    "concurrency": 1,
+    "include_non_new": true
+  },
+  "aggregate": {
+    "sources": 1,
+    "sources_ok": 1,
+    "sources_failed": 0,
+    "runs": [
+      94
+    ],
+    "items_sent_to_llm": 1,
+    "proposals_returned": 1,
+    "proposals_persistable": 0,
+    "proposals_blocked_by_quality_gate": 1,
+    "proposals_created": 0,
+    "total_tokens": 7632,
+    "input_tokens": 6491,
+    "output_tokens": 1141,
+    "proposal_type_counts": {
+      "create_canonical": 1
+    },
+    "quality_gate_issue_counts": {
+      "generic_aggregate_requires_specific_identity": 1
+    }
+  },
+  "results": [
+    {
+      "source_domain": "smart_import_training_captions",
+      "ok": true,
+      "error": null,
+      "duration_ms": 13951,
+      "run_id": 94,
+      "summary": {
+        "items_in_snapshot": 18,
+        "items_sent_to_llm": 1,
+        "proposals_returned": 1,
+        "proposals_persistable": 0,
+        "proposals_blocked_by_quality_gate": 1,
+        "proposals_created": 0,
+        "skipped_recent_proposal": 17,
+        "dry_run": true,
+        "usage": {
+          "inputTokens": 6491,
+          "outputTokens": 1141,
+          "totalTokens": 7632
+        },
+        "training_signals": {
+          "source": "catalog_agent_training_signal_context_v2_broadened_lookup",
+          "terms_requested": 32,
+          "terms_with_training_signals": 3,
+          "training_signal_count": 3
+        },
+        "learning_memory": {
+          "source": "catalog_agent_learning_context_v1",
+          "terms_requested": 18,
+          "terms_with_learning": 1,
+          "global_learning_count": 0,
+          "term_learning_count": 1
+        },
+        "reasoning_mode": "multi_pass",
+        "quality_gate_issues": [
+          {
+            "proposal_index": 0,
+            "normalized_text": "spezie",
+            "code": "generic_aggregate_requires_specific_identity",
+            "level": "error",
+            "message": "Broad aggregate/category terms require evidence of a concrete product, blend, mix, or identity-bearing aggregate before create_canonical can be persisted."
+          }
+        ],
+        "quality_gate_error_count": 1,
+        "quality_gate_warning_count": 0
+      },
+      "proposals": [
+        {
+          "proposal_type": "create_canonical",
+          "normalized_text": "spezie",
+          "risk_level": "medium",
+          "status": "draft",
+          "quality_gate_status": "blocked"
+        }
+      ]
+    }
+  ]
+}

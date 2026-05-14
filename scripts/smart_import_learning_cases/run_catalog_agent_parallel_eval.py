@@ -19,7 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from run_edge_contract import DEFAULT_SUPABASE_URL, post_json
+import run_edge_contract as edge_contract
+from run_edge_contract import DEFAULT_SUPABASE_URL
 
 
 DEFAULT_SOURCES = [
@@ -49,7 +50,7 @@ def invoke_agent(
         "include_non_new": include_non_new,
     }
     try:
-        response = post_json(
+        response = edge_contract.post_json(
             f"{supabase_url.rstrip('/')}/functions/v1/run-catalog-agent-triage",
             {
                 "apikey": anon_key,
@@ -198,6 +199,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--include-non-new", action="store_true", default=True)
     parser.add_argument("--new-only", action="store_true", help="Only include new observations.")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=int(os.environ.get("CATALOG_AGENT_EVAL_TIMEOUT_SECONDS", "75")),
+        help="HTTP read timeout for each Edge Function call.",
+    )
     parser.add_argument("--json", action="store_true", dest="json_output")
     args = parser.parse_args(argv)
 
@@ -212,6 +219,10 @@ def main(argv: list[str]) -> int:
         raise RuntimeError("SUPABASE_ANON_KEY or --anon-key is required.")
     if not args.operator_token:
         raise RuntimeError("CATALOG_AGENT_OPERATOR_TOKEN or --operator-token is required.")
+    if args.timeout_seconds < 5 or args.timeout_seconds > 180:
+        raise RuntimeError("--timeout-seconds must be between 5 and 180.")
+
+    edge_contract.REQUEST_TIMEOUT_SECONDS = args.timeout_seconds
 
     include_non_new = not args.new_only
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(args.concurrency, len(sources))) as executor:
