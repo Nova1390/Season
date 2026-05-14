@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `6.0 scheduled dev autonomy foundation` on `Season-dev`. Level `5.0` low-risk apply has a first successful real dev apply plus rollback proof, but still needs more volume before promotion beyond dev.
+Status: strategic implementation roadmap. Current level is `7.0 dev autonomy foundation` on `Season-dev`. Level `6.0` scheduled dev autonomy has a safe dry-run scheduler foundation, and Level `7.0` now has proposal self-repair plus stronger source-grounded quality gates. This is still dev-only and does not authorize staging autonomy.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -377,6 +377,26 @@ Required implementation:
 - nutrition/seasonality enrichment quality gates;
 - rollback/deprecation plan for mistaken creations.
 
+Implementation status:
+
+- started on `2026-05-14` on `Season-dev` only;
+- `run-catalog-agent-triage` now includes a bounded quality-gate self-repair pass behind `CATALOG_AGENT_SELF_REPAIR_ENABLED`;
+- self-repair only revisits blocked LLM proposals from the same run, is capped by `CATALOG_AGENT_MAX_SELF_REPAIR_ITEMS`, and never expands into recursive worker chains;
+- duplicate proposals for the same normalized work item are blocked by the runtime quality gate;
+- broad generic aggregate terms such as spice/herb/seasoning families are blocked using only source/work-item evidence, not model-generated self-justification;
+- recipe-process byproducts are guarded from accidental canonical creation unless source evidence clearly supports a catalog identity;
+- dev smoke run `#99` confirmed the corrected behavior for `spezie`: the agent returned `needs_human_review`, created no catalog mutation, and left dev disabled afterwards;
+- the latest self-repair evidence is stored in `docs/catalog-agent-self-repair-eval-latest.json`;
+- staging remains untouched, and autonomous canonical creation is still not promoted beyond governed proposal/draft preparation.
+
+Remaining before Level `7.0` is complete:
+
+- split catalog matching into a first-class deterministic or LLM-assisted matcher role;
+- promote useful reasoning traces into a cleaner persisted read model for review;
+- implement the learning writer so failed, rejected, and overridden proposals automatically become reusable advisory memory;
+- collect more dev volume across real recipe/caption sources before allowing any autonomous ingredient creation window;
+- prove that ready-draft creation workers reject duplicates and incomplete metadata with readable audit notes.
+
 Exit gates:
 
 - at least `20` create-canonical proposals reviewed on dev;
@@ -539,16 +559,13 @@ No level may be promoted unless all of these are true:
 
 ## Immediate Next Step
 
-The next target is observing the real `6.0` dev micro-scheduler while the kill switch remains on, then deciding when to open a tiny dry-run-only scheduled window.
+The next target is closing the current Level `7.0` dev foundation cleanly, then moving into Level `7.1` work: catalog matcher separation, learning-writer automation, and more no-apply evaluation volume. Staging stays untouched until Level `6.5/8.0` promotion is explicitly chosen.
 
 Recommended implementation order:
 
-1. Keep the dev schedule disabled by default while using manual dry-shift smokes.
-2. Add a small shift history panel so the console explains recent scheduled attempts without raw JSON. Completed with cache version `20260513-3`.
-3. Add an explicit scheduler enable/disable runbook with rollback and token-rotation steps. Completed in `docs/catalog-agent-dev-scheduler-runbook.md`.
-4. Install real dev micro-scheduler with kill-switch guard and Vault-backed credentials. Completed with `dev_catalog_agent_shift_dryrun_q2h`.
-5. Add mandatory expiry for any enabled scheduler window. Completed with `enabled_until` guard.
-6. Observe at least a few scheduled skipped ticks with `0` failed shifts. Completed with shifts `#4` and `#5`.
-7. Open one short dry-run-only scheduled window with explicit expiry. Completed and repeated with shifts `#10` and `#11`.
-8. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
-9. Keep staging untouched until Level `6.5`.
+1. Keep the dev schedule and agent persistence disabled by default after every smoke run.
+2. Keep the latest evaluation JSON files as audit artifacts, not runtime inputs.
+3. Add a catalog matcher layer before increasing LLM volume again.
+4. Add learning-writer automation so corrections become reusable memory without founder micromanagement.
+5. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
+6. Keep staging untouched until the promotion checklist explicitly moves this work beyond dev.

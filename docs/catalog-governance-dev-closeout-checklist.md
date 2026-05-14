@@ -12,6 +12,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - Staging backend: intentionally untouched for this agent-console cycle
 - Real low-risk apply: disabled by default
 - Console low-risk apply: dry-run only
+- Current autonomy level: `7.0 dev foundation`, not staging-ready autonomy
+- Agent persistence and scheduler windows: disabled by default after smoke runs
 - TestFlight handoff: `docs/testflight-bugfix-handoff-2026-05-12.md`
 
 ## Completed
@@ -45,6 +47,23 @@ This checklist is for the current branch and dev environment only. It does not a
 - The autonomy path from `4.0` through `8.0+` is documented in `docs/catalog-agent-autonomy-roadmap.md`.
 - The first `4.5` persistence guard is deployed to `Season-dev`: `dry_run=false` fails closed unless `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true`.
 - `catalog.seasonapp.it` was restored after the remote subdomain folder was missing; the deployed console now returns HTTP `200`.
+- Level `6.0` dev scheduler foundation is implemented with a disabled-by-default kill switch, scheduled-shift ledger, readable console shift history, mandatory expiry windows, and two successful autonomous dry-run cron windows (`#10/#11`).
+- Level `7.0` quality-gate foundation is implemented: duplicate proposal blocking, source-grounded generic aggregate guards, recipe-process byproduct guards, and bounded self-repair for blocked LLM output.
+- Dev self-repair smoke run `#99` confirmed `spezie` now escalates to `needs_human_review` instead of creating an unsafe broad canonical draft.
+- Latest evaluation JSON reports are kept intentionally as compact audit evidence, not as runtime configuration.
+- Local generated Python cache folders were removed during closeout cleanup; no tracked `__pycache__` artifacts remain.
+
+## Current Closeout Audit
+
+Audit file:
+
+- `docs/catalog-agent-closeout-audit-2026-05-14.md`
+
+Closeout decision:
+
+- the branch is safe to keep developing in dev;
+- it is not yet ready for staging autonomy;
+- the next intelligence work should focus on catalog matcher separation and learning-writer automation, not more manual review volume.
 
 ## Dev Training Import
 
@@ -289,9 +308,9 @@ target: 6/10 passed
 effective_target: 10/10 passed
 ```
 
-Autonomy assessment:
+Historical autonomy assessment at this checkpoint:
 
-- Current maturity is `3.5 dev-gated`.
+- Maturity at the time was `3.5 dev-gated`.
 - The agent can produce actionable low-risk work, pass deterministic validation, and apply through governed RPCs on dev.
 - The agent can route missing-canonical work into Autopilot's enrichment-draft lane instead of creating catalog identity directly.
 - Scheduled real apply, broad batch apply, and staging promotion remain disabled until `target` improves beyond the historical latest-proposal failures.

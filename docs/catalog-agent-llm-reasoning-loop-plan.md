@@ -1,6 +1,6 @@
 # Catalog Agent LLM Reasoning Loop Plan
 
-Status: implementation contract. Step 1 prompt-contract expansion and Step 3 batch-level multi-pass orchestration are implemented in `run-catalog-agent-triage` v4. Per-term adaptive loops, catalog matcher split-out, learning writer, and full budget governor remain planned.
+Status: implementation contract. Step 1 prompt-contract expansion, Step 3 batch-level multi-pass orchestration, and a bounded Level `7.0` quality-gate self-repair pass are implemented in `run-catalog-agent-triage`. Per-term adaptive loops, catalog matcher split-out, learning writer, and full budget governor remain planned.
 
 This document defines how the Season Catalog Governance Agent should use LLMs as controlled reasoning tools, not as a single-shot autopilot wrapper.
 
@@ -60,6 +60,13 @@ Still planned:
 - separate catalog matcher role or deterministic matcher wrapper;
 - learning writer for failed/rejected/overridden outcomes;
 - stronger pre-call budget stop checks.
+
+Implemented after the original 4.0 checkpoint:
+
+- duplicate proposal blocking for the same normalized work item;
+- source-grounded generic aggregate and recipe-process byproduct guardrails;
+- one bounded self-repair pass for quality-gate-blocked proposals;
+- fallback to `needs_human_review` when a repair remains unsafe or incomplete.
 
 ## 3. Target Loop
 
@@ -495,6 +502,8 @@ The loop is working when:
 
 ## 12. 4.0 Supervised Autonomy Checkpoint
 
+This section is a historical checkpoint. The current implementation has moved beyond it to the Level `7.0` dev autonomy foundation described in `docs/catalog-agent-autonomy-roadmap.md`.
+
 Status: reached in `Season-dev` on 2026-05-12.
 
 Evidence:
@@ -506,7 +515,7 @@ Evidence:
 - Dry-run mode returned a `create_canonical` draft for `pasta corta` but persisted `0` proposals.
 - The temporary operator token was removed after the smoke test and `CATALOG_AGENT_ENABLED=false` was restored.
 
-Current autonomy rating:
+Checkpoint autonomy rating:
 
 ```text
 4.0 supervised autonomy
