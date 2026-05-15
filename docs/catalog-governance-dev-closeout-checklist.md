@@ -1246,3 +1246,19 @@ Verification run `#104`:
 - Superseded stale proposals: `#42`, `#43`, `#44`.
 - Open queue after refresh: `1` approve-alias draft, `8` create-canonical drafts, `9` needs-human-review proposals.
 - Dev flags were disabled and the temporary operator token was removed immediately after verification.
+
+Validation and worker dry-run:
+
+- `review_catalog_agent_proposal(51, 'queue_for_validation', ...)` moved `pepe` to `queued_for_validation`.
+- `validate_catalog_agent_proposal(51)` returned `ok=true`.
+- Proposal `#51` final validation state: `validated`.
+- Validation errors: `[]`.
+- Orchestrator run: `#105`.
+- Worker job: `#33`.
+- Worker: `low_risk_apply_batch`.
+- Mode: dry-run only.
+- Eligible preview: `#51 pepe -> black_pepper`, `approve_alias`, confidence `0.97`.
+- Applied: `0`.
+- Failed: `0`.
+- Orchestrator and temporary operator token were disabled/removed after verification.
+- Temporary local key/output files were removed from `/tmp`.
