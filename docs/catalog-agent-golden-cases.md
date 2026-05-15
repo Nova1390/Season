@@ -308,3 +308,43 @@ Interpretation:
 - This moves the agent closer to `4.0 supervised autonomy` because it can now prove whether the input context is good before paying for LLM reasoning.
 - If future target runs fail while `context_target` passes, the problem is likely prompt/reasoning.
 - If `context_target` fails, fix snapshot/catalog context first and do not spend more model budget.
+
+## 2026-05-15 Common Generics + Validator Batch
+
+Dev-only controlled runs moved the agent from noisy review proposals toward governed, validator-ready outcomes.
+
+Fresh targeted triage:
+
+- Run `#114`: created proposals for `olive`, `fiocchi d avena`, `acqua di cottura`, `carne macinata`, and `frutti di bosco`.
+- Run `#115`: created proposals for `pollo`, `stracchino`, and `tacchino`.
+- `pollo` and `tacchino` now propose `approve_alias` against existing catalog targets instead of generic human review.
+- `acqua di cottura` is classified as `ignore_noise`.
+- `carne macinata`, `fiocchi d avena`, `frutti di bosco`, `olive`, and `stracchino` are catalog-gap style proposals, not direct catalog mutations.
+
+Deterministic validation:
+
+```text
+queued_for_validation: 13
+validated: 13
+failed_validation: 0
+post-cleanup validated open proposals: 12
+post-cleanup needs_human_review open proposals: 3
+```
+
+Validated open proposals:
+
+- `approve_alias`: `pollo -> chicken`, `tacchino -> turkey`.
+- `create_canonical`: `pasta senza glutine`, `pinoli`, `riso basmati`, `robiola`, `lenticchie rosse`, `olive`, `fiocchi d avena`, `carne macinata`, `frutti di bosco`, `stracchino`.
+
+Remaining human-review proposals:
+
+- `lievito per dolci`
+- `pecorino romano`
+- `piadina`
+
+Interpretation:
+
+- The review inbox is no longer dominated by duplicate `needs_human_review` items.
+- The validator confirms the new proposals are structurally safe to route into governed apply/enrichment flows.
+- No validated proposal mutated catalog truth during this step.
+- Medium/high-risk proposals remain non-auto-apply by design.

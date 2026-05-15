@@ -1346,3 +1346,37 @@ Implementation status: deployed to `Season-dev`.
 - `supabase db lint --linked` returned `No schema errors found`.
 - Read-only RPC smoke for `pepe` and `fiocchi d avena` returned `catalog_agent_external_evidence_context_v1` with `0` evidence rows, as expected before ingestion.
 - No staging changes were made.
+
+### Common Generic Triage + Validator Closeout
+
+Implementation status: deployed to `Season-dev`.
+
+- Added governed lexical learning for common creator generics and food-state terms.
+- Confirmed targeted triage can rerun selected normalized terms without reopening the entire queue.
+- Run `#114` created fresh proposals for `olive`, `fiocchi d avena`, `acqua di cottura`, `carne macinata`, and `frutti di bosco`.
+- Run `#115` created fresh proposals for `pollo`, `stracchino`, and `tacchino`.
+- Cleanup reduced duplicated/open review noise and left only the genuinely unresolved human-review items.
+
+Validator batch:
+
+- Queued `13` draft proposals through `review_catalog_agent_proposal(..., 'queue_for_validation', ...)`.
+- Ran `validate_catalog_agent_proposal_batch(25)`.
+- Processed: `13`.
+- Validated: `13`.
+- Failed validation: `0`.
+- Catalog mutations: `0`.
+- Post-validation cleanup superseded the validated `ignore_noise` proposal for `acqua di cottura`.
+
+Current open operational queue:
+
+- `12` validated proposals ready for later governed apply/enrichment routing.
+- `3` `needs_human_review` proposals: `lievito per dolci`, `pecorino romano`, `piadina`.
+- `0` draft proposals.
+- `0` queued-for-validation proposals.
+- `0` failed-validation proposals.
+
+Guardrails:
+
+- Medium/high-risk proposals have `auto_apply_eligible=false`.
+- Validated proposals are not catalog truth until a dedicated governed apply/enrichment worker mutates through the approved RPC path.
+- No staging changes were made.
