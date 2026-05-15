@@ -419,3 +419,40 @@ Interpretation:
 - The manager-worker handoff works for validated catalog-gap proposals.
 - Autopilot can enrich and validate drafts without creating catalog ingredients.
 - The cost ledger needs one follow-up improvement: enrichment usage events should populate `estimated_cost_usd` when pricing env vars are configured.
+
+### 2026-05-15 Enrichment Cost Ledger Smoke
+
+Configured dev enrichment pricing secrets for `gpt-5.4-mini`:
+
+```text
+CATALOG_ENRICHMENT_INPUT_COST_PER_1M_USD=0.75
+CATALOG_ENRICHMENT_OUTPUT_COST_PER_1M_USD=4.50
+```
+
+Validation smoke:
+
+```text
+agent_run_id: 117
+worker_job_id: 36
+worker: enrichment_draft_batch
+limit: 1
+processed: 1
+succeeded: 1
+ready: 0
+pending: 1
+```
+
+Usage ledger result:
+
+- Term: `pinoli`.
+- Model: `gpt-5.4-mini`.
+- Input tokens: `548`.
+- Output tokens: `218`.
+- Total tokens: `766`.
+- Estimated cost: `$0.001392`.
+
+Interpretation:
+
+- Enrichment usage rows now populate `estimated_cost_usd`.
+- Daily cost guards can include enrichment worker LLM calls.
+- The batch still created no catalog ingredients and applied no aliases.

@@ -1458,3 +1458,39 @@ Guardrails:
 - No alias/localization mutation was applied.
 - The operator token was temporary and has been neutralized.
 - Staging remains untouched.
+
+### Enrichment Cost Observability
+
+Implementation status: configured and smoke-tested on `Season-dev`.
+
+- Confirmed `catalog-enrichment-proposal` already records `estimatedCostUsd` when pricing env vars are present.
+- Added dev secrets:
+  - `CATALOG_ENRICHMENT_INPUT_COST_PER_1M_USD=0.75`
+  - `CATALOG_ENRICHMENT_OUTPUT_COST_PER_1M_USD=4.50`
+- Temporarily enabled the orchestrator for one `limit=1` enrichment run.
+- Disabled the orchestrator and neutralized the temporary operator token immediately after the smoke.
+
+Smoke result:
+
+- Agent run: `#117`.
+- Worker job: `#36`.
+- Processed: `1`.
+- Succeeded: `1`.
+- Failed: `0`.
+- Draft outcome: `pinoli` remained `pending` because manual review is still required.
+- Catalog ingredient creation: `0`.
+- Alias/localization mutation: `0`.
+
+Usage ledger result:
+
+- Usage row: `catalog_ai_usage_events.id=208`.
+- Input tokens: `548`.
+- Output tokens: `218`.
+- Total tokens: `766`.
+- Estimated cost: `$0.001392`.
+
+Interpretation:
+
+- Enrichment LLM calls now contribute to cost-aware daily guards.
+- Wider enrichment batches can be reasoned about with real cost telemetry instead of only token counts.
+- Staging remains untouched.
