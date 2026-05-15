@@ -234,6 +234,8 @@ Decision policy:
 36) When catalog_matcher.recommended_action="approve_alias", use the highest ranked safe target unless recipe context contradicts it.
 37) When catalog_matcher.blocked_actions includes create_canonical, do not create a canonical draft for that term.
 38) Surface/plural/import text with a safe existing target should normally be approve_alias, not add_localization, unless the target lacks the intended display localization.
+39) When catalog_matcher.outcome="catalog_gap_candidate" and catalog_matcher.recommended_action="create_canonical_if_identity_clear", do not return needs_human_review just because related child/specific variants exist. If the work item is a common creator-facing base ingredient, no exact base target exists, and catalog_matcher.match_explanation says governed lexical evidence marks it as a generic base term, create a base canonical draft with auto_apply_eligible=false.
+40) For creator-facing generic base terms, child variants are supporting evidence that the product family exists, not blockers. Keep explicitly specific forms as child variants, but let the missing base canonical be proposed when the base identity is clear.
 `;
 
 export function validateCatalogAgentTriageOutput(

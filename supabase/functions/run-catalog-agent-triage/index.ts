@@ -393,6 +393,17 @@ Deno.serve(async (request) => {
     }
 
     let proposals = normalizeProposalStatuses(validation.value.proposals);
+    const genericBaseRepair = repairGovernedGenericBaseReviews(proposals, providerEligibleItems);
+    if (genericBaseRepair.repairs.length > 0) {
+      proposals = genericBaseRepair.proposals;
+      providerResult.reasoningTrace = {
+        ...providerResult.reasoningTrace,
+        governed_generic_base_repairs: genericBaseRepair.repairs,
+      };
+      await insertRunEvent(adminClient, runId, "governed_generic_base_repaired", {
+        repairs: genericBaseRepair.repairs,
+      }, auth.userId);
+    }
     let qualityGate = evaluateProposalQuality(proposals, providerEligibleItems, dryRun);
     await insertRunEvent(adminClient, runId, "proposal_quality_gate_evaluated", qualityGate.summary, auth.userId);
 
@@ -1186,7 +1197,7 @@ async function invokeMultiPassProvider(
             mode: "multi_pass",
             max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
             risk_review_performed: riskReviews.length > 0,
-            instruction: "Semantic profiles and catalog_matcher hints are analysis evidence. Final proposals must still obey the triage contract. Use catalog_matcher.recommended_action, ranked_targets, blocked_actions, and safe_targets before writing final proposals. For safe_existing_target, prefer approve_alias over add_localization when the term is a plural/surface/search form and the target already has a display name. If catalog_matcher.outcome is catalog_gap_candidate and semantic identity is clear, create a canonical draft instead of vague review. If catalog_matcher shows ambiguous targets, ask a precise blocking question.",
+            instruction: "Semantic profiles and catalog_matcher hints are analysis evidence. Final proposals must still obey the triage contract. Use catalog_matcher.recommended_action, ranked_targets, blocked_actions, and safe_targets before writing final proposals. For safe_existing_target, prefer approve_alias over add_localization when the term is a plural/surface/search form and the target already has a display name. If catalog_matcher.outcome is catalog_gap_candidate and semantic identity is clear, create a canonical draft instead of vague review. If catalog_matcher.recommended_action is create_canonical_if_identity_clear and match_explanation says governed lexical evidence marks a creator-facing generic base term, do not block only because child/specific variants exist; propose the missing base canonical with auto_apply_eligible=false. If catalog_matcher shows ambiguous targets, ask a precise blocking question.",
           },
         },
       }),
@@ -1983,7 +1994,7 @@ function proposalQualityIssues(
         "A safe existing catalog target is grounded by the catalog matcher; create_canonical would risk a duplicate identity.",
       );
     }
-    if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item)) {
+    if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item) && !hasGovernedGenericBaseLookup(item)) {
       addIssue(
         "error",
         "alias_candidate_requires_target_before_canonical_creation",
@@ -2465,6 +2476,7 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
   ]);
   const blockers = matcherBlockers(item, safeTargets, candidateTargets);
   const rankedTargets = rankMatcherTargets(item, safeTargets, candidateTargets);
+  const hasGenericBaseLookup = hasGovernedGenericBaseLookup(item);
   const hasAliasCandidateSignal = trainingSignals.some((signal) =>
     normalizeText(signal.training_signal) === "catalog_alias_candidate"
   );
@@ -2478,6 +2490,10 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     outcome = "safe_existing_target";
     confidence = 0.9;
     rationale = "Exactly one active exact target is grounded in aliases, canonical matches, or coverage blocker context.";
+  } else if (hasGenericBaseLookup && safeTargets.length === 0 && likelyIngredient) {
+    outcome = "catalog_gap_candidate";
+    confidence = 0.72;
+    rationale = "Governed lexical evidence marks this as a creator-facing generic base term. Existing specific child variants are supporting context, not blockers for a missing base identity.";
   } else if (safeTargets.length > 1 || candidateTargets.length > 1) {
     outcome = "ambiguous_existing_targets";
     confidence = 0.7;
@@ -2501,6 +2517,7 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     blockers,
     rankedTargets,
     hasAliasCandidateSignal,
+    hasGenericBaseLookup,
     likelyIngredient,
   });
 
@@ -2521,6 +2538,16 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     training_signal_count: trainingSignals.length,
     lexical_candidate_terms: readNestedArray(item, ["context", "lexical_candidate_terms"]).slice(0, 8),
   };
+}
+
+function hasGovernedGenericBaseLookup(item: WorkItem | undefined): boolean {
+  if (!item) return false;
+  return readNestedArray(item, ["context", "lexical_candidate_terms"])
+    .filter(isRecord)
+    .some((term) =>
+      normalizeText(term.expansion_source) === "governed_generic_base_lookup" ||
+      normalizeText(term.source) === "governed_generic_base_lookup"
+    );
 }
 
 function isExactCanonicalMatch(match: Record<string, unknown>): boolean {
@@ -2658,6 +2685,7 @@ function matcherActionAdvice(input: {
   blockers: string[];
   rankedTargets: Record<string, unknown>[];
   hasAliasCandidateSignal: boolean;
+  hasGenericBaseLookup: boolean;
   likelyIngredient: boolean;
 }): { recommended_action: string; blocked_actions: string[]; match_explanation: string } {
   const blockedActions = new Set<string>();
@@ -2684,10 +2712,14 @@ function matcherActionAdvice(input: {
   if (input.outcome === "catalog_gap_candidate" && input.likelyIngredient) {
     if (input.hasAliasCandidateSignal) blockedActions.add("create_canonical_without_target_review");
     return {
-      recommended_action: input.hasAliasCandidateSignal ? "needs_human_review" : "create_canonical_if_identity_clear",
+      recommended_action: input.hasAliasCandidateSignal && !input.hasGenericBaseLookup
+        ? "needs_human_review"
+        : "create_canonical_if_identity_clear",
       blocked_actions: Array.from(blockedActions),
-      match_explanation: input.hasAliasCandidateSignal
+      match_explanation: input.hasAliasCandidateSignal && !input.hasGenericBaseLookup
         ? "Corpus evidence suggests alias-like text, but no safe target is grounded; request matching evidence before canonical creation."
+        : input.hasGenericBaseLookup
+        ? "Governed lexical evidence marks this as a creator-facing generic base term; create a base canonical draft if no exact base target exists, while keeping specific forms as variants."
         : "No safe target is grounded and the term looks ingredient-like; canonical creation is acceptable only if semantic identity is clear.",
     };
   }
@@ -2722,7 +2754,7 @@ function matcherBlockers(
   }
   if (safeTargets.length > 1) {
     blockers.push("multiple_safe_targets");
-  } else if (safeTargets.length === 0 && candidateTargets.length > 1) {
+  } else if (safeTargets.length === 0 && candidateTargets.length > 1 && !hasGovernedGenericBaseLookup(item)) {
     blockers.push("multiple_candidate_targets");
   }
   return blockers;
@@ -2886,6 +2918,127 @@ function normalizeProposalStatuses(proposals: CatalogAgentProposalOutput[]): Cat
       status: proposal.proposal_type === "needs_human_review" ? "needs_human_review" : "draft",
     };
   });
+}
+
+function repairGovernedGenericBaseReviews(
+  proposals: CatalogAgentProposalOutput[],
+  eligibleItems: WorkItem[],
+): { proposals: CatalogAgentProposalOutput[]; repairs: Record<string, unknown>[] } {
+  const itemByText = new Map(eligibleItems.map((item) => [normalizeText(item.normalized_text), item]));
+  const repairs: Record<string, unknown>[] = [];
+
+  const repairedProposals = proposals.map((proposal) => {
+    const item = itemByText.get(normalizeText(proposal.normalized_text));
+    if (!shouldRepairGovernedGenericBaseReview(proposal, item)) return proposal;
+
+    const proposedSlug = governedGenericBaseSlug(item) ?? safeSlugFromText(proposal.normalized_text);
+    if (!proposedSlug) return proposal;
+
+    repairs.push({
+      normalized_text: normalizeText(proposal.normalized_text),
+      original_proposal_type: proposal.proposal_type,
+      repair: "needs_human_review_to_create_canonical",
+      reason: "governed_generic_base_lookup",
+      proposed_slug: proposedSlug,
+    });
+
+    const semanticProfile: CatalogAgentSemanticProfileOutput = {
+      ...proposal.semantic_profile,
+      product_family: proposal.semantic_profile.product_family ?? proposedSlug.replaceAll("_", " "),
+      semantic_category: proposal.semantic_profile.semantic_category ?? "ingredient",
+      parent_candidate_slug: null,
+      substitutability_with_parent: proposal.semantic_profile.substitutability_with_parent === "unknown"
+        ? "partial"
+        : proposal.semantic_profile.substitutability_with_parent,
+      confidence_score: Math.max(proposal.semantic_profile.confidence_score ?? 0, 0.72),
+      evidence: [
+        ...proposal.semantic_profile.evidence,
+        "Governed lexical evidence marks this as a creator-facing generic base term; child variants support the product family but do not block a missing base canonical draft.",
+      ],
+      open_questions: proposal.semantic_profile.open_questions.filter((question) =>
+        !normalizeText(question).includes("which specific")
+      ),
+    };
+
+    return normalizeProposalStatuses([{
+      ...proposal,
+      proposal_type: "create_canonical",
+      target_ingredient_id: null,
+      target_slug: null,
+      proposed_slug: proposedSlug,
+      proposed_alias_text: null,
+      proposed_localized_name: localizedNameForGenericBase(proposal.normalized_text),
+      proposed_language_code: "it",
+      confidence_score: Math.max(proposal.confidence_score ?? 0, 0.78),
+      risk_level: proposal.risk_level === "critical" || proposal.risk_level === "unknown" ? "medium" : proposal.risk_level,
+      auto_apply_eligible: false,
+      status: "draft",
+      semantic_profile: semanticProfile,
+      rationale: [
+        proposal.rationale,
+        "Deterministic governed-generic-base repair: the matcher identified a missing creator-facing base ingredient, so this should become a canonical draft instead of a vague human-review item.",
+      ].filter((text) => text.trim().length > 0).join(" "),
+      evidence: [
+        ...proposal.evidence,
+        {
+          type: "governed_generic_base_repair",
+          matcher_outcome: readNestedRecord(item, ["context", "catalog_matcher"]).outcome,
+          matcher_recommended_action: readNestedRecord(item, ["context", "catalog_matcher"]).recommended_action,
+          proposed_slug: proposedSlug,
+        },
+      ],
+      blocking_questions: [],
+    }])[0];
+  });
+
+  return { proposals: repairedProposals, repairs };
+}
+
+function shouldRepairGovernedGenericBaseReview(
+  proposal: CatalogAgentProposalOutput,
+  item: WorkItem | undefined,
+): boolean {
+  if (!item) return false;
+  if (proposal.proposal_type !== "needs_human_review") return false;
+  if (!hasGovernedGenericBaseLookup(item)) return false;
+
+  const matcher = readNestedRecord(item, ["context", "catalog_matcher"]);
+  return normalizeText(matcher.outcome) === "catalog_gap_candidate" &&
+    normalizeText(matcher.recommended_action) === "create_canonical_if_identity_clear" &&
+    readNestedArray(matcher, ["safe_targets"]).length === 0 &&
+    !readNestedArray(matcher, ["blocked_actions"]).map(normalizeText).includes("create_canonical");
+}
+
+function governedGenericBaseSlug(item: WorkItem | undefined): string | null {
+  if (!item) return null;
+  for (const term of readNestedArray(item, ["context", "lexical_candidate_terms"]).filter(isRecord)) {
+    const source = normalizeText(term.expansion_source) || normalizeText(term.source);
+    if (source !== "governed_generic_base_lookup") continue;
+    const slug = safeSlugFromText(term.term);
+    if (slug) return slug;
+  }
+  return null;
+}
+
+function safeSlugFromText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  return isSafeProposedSlug(slug) ? slug : null;
+}
+
+function localizedNameForGenericBase(value: string): string {
+  const normalized = normalizeText(value);
+  if (!normalized) return "Ingrediente";
+  return normalized
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function evidenceWithSemanticProfile(proposal: CatalogAgentProposalOutput): unknown[] {

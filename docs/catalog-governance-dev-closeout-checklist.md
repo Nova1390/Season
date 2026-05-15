@@ -76,6 +76,9 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 the first reviewed Italian external-evidence batch was drafted for `stracchino`, `fiocchi d avena`, `pecorino romano`, `pomodorini`, and `olive`; all rows remain `needs_review` advisory evidence.
 - 2026-05-15 the first reviewed Italian external-evidence batch was imported into `Season-dev`: 6 advisory rows, 0 failures, IDs `1`-`6`. Context RPC smoke confirmed external evidence coverage for `stracchino`, `fiocchi d avena`, and `olive`.
 - 2026-05-15 dry-run Catalog Agent smoke `#109` confirmed the imported Italian evidence reaches the LLM packet: 3 terms with external evidence, 3 proposals returned, 0 persisted, 0 quality-gate blocks. `olive` stayed high-risk review, `fiocchi d avena` became create-canonical, and `acqua di cottura` stayed ignore-noise. Report: `docs/catalog-agent-external-evidence-smoke-2026-05-15.md`.
+- 2026-05-15 follow-up policy correction: bare creator-facing `olive` should not remain perpetual human review. It now has a governed lexical base lookup to `olives`; specific forms such as green/black/taggiasche/brined olives remain variant identities.
+- 2026-05-15 runtime correction: `run-catalog-agent-triage` now reads governed lexical lookup rows from both `source` and `expansion_source`, so DB-governed overrides are visible to `catalog_matcher_v1`.
+- 2026-05-15 dry-run `#113` confirmed the correction: `olive` produced `catalog_gap_candidate`, recommended `create_canonical_if_identity_clear`, and final proposal `create_canonical` / `draft` / medium risk with a clean quality gate and `0` persisted mutations.
 
 ## Current Closeout Audit
 
@@ -124,7 +127,7 @@ Interpretation:
 
 - The agent did not create or apply catalog changes blindly.
 - `pomodori` and `pomodorini` show that the agent can infer likely tomato intent but needs a stronger actionable target context before approving aliases.
-- `olive` correctly remains high-risk because green/black/generic olive identity is ambiguous.
+- Historical note: this run predated the generic-base correction. Current policy is that bare creator-facing `olive` is a generic base catalog gap (`olives`) when no exact base exists; explicit green/black/taggiasche/brined forms remain child variants.
 - This is useful training data for improving context enrichment and deterministic alias validation, not a failure.
 
 Runtime fix discovered by this test:
@@ -187,7 +190,7 @@ Candidate expectations:
 | `pepe` | Prefer an existing pepper canonical only if the observed context supports it; avoid deprecated duplicate `pepe_nero`. | The agent must use active catalog identity and avoid resurrecting deprecated duplicates. |
 | `uovo` | Resolve toward existing canonical `eggs` as a singular/localized alias candidate. | Common singular/plural forms should become deterministic catalog coverage. |
 | `fiocchi d avena` | Treat as a likely distinct oat-flake product under `oats`, not as a blind alias of base oats. | This tests parent/child variant reasoning and nutrition/filter implications. |
-| `olive` | Keep as human review unless context identifies green, black, pitted, oil-preserved, etc. | Generic terms with meaningful product variants should not auto-collapse. |
+| `olive` | Treat bare creator-facing `olive` as a missing generic base `olives` draft when no exact base exists; keep explicit green, black, pitted, oil-preserved, taggiasche, etc. as variants. | Generic base terms are common in real captions; child variants should not force perpetual review when the base identity itself is clear. |
 | `pane raffermo` | Escalate or propose a contextual child only if policy supports stale bread as an ingredient identity. | Some recipe terms are preparation state/context, not always new catalog products. |
 
 Pass criteria:
@@ -275,14 +278,14 @@ Behavior added:
 - localized singular/plural forms can expose existing catalog targets, e.g. `pomodori` now gets `pomodoro` as a lookup hint and sees canonical `tomato`;
 - phrase modifiers that are preparation/freshness state can expose the base ingredient, e.g. `pane raffermo` can produce `pane` as a lookup hint;
 - multi-word product phrases such as `fiocchi d avena` no longer receive noisy fake morphology;
-- ambiguous families still show ambiguity rather than being auto-collapsed, e.g. `olive` exposes black/green/oil-related candidates and should remain review-only without stronger context.
+- ambiguous families still show ambiguity rather than being auto-collapsed; for `olive`, the governed base lookup now separates bare generic base identity from specific child variants.
 
 Dev verification:
 
 - `pomodori` snapshot includes lexical term `pomodoro` and canonical candidate `tomato` with match reason `it_name_lexical_variant`;
 - `fiocchi d avena` snapshot keeps only the original lexical term;
 - `pepe` snapshot keeps only the original lexical term;
-- `olive` snapshot exposes multiple plausible candidates, preserving ambiguity;
+- `olive` snapshot exposes child/oil-related candidates plus governed `olives` lookup; the matcher should recommend a base catalog-gap draft, not vague review;
 - `supabase db lint --linked` returned no schema errors.
 
 ### 2026-05-12 Post-Learning Agent Launch

@@ -213,31 +213,32 @@
       }
     },
     {
-      "id": "ambiguous-olive",
+      "id": "generic-olive-base",
       "normalized_text": "olive",
-      "why": "Generic olives can mean green, black, pitted, preserved, oil-packed, etc.; do not auto-collapse.",
+      "why": "Creators often use bare olive as a generic ingredient. Prefer a base olives identity/gap; keep green, black, taggiasche, pitted, brined, or oil-packed forms as variants.",
       "current": {
         "kind": "proposal",
-        "proposal_type": "needs_human_review",
-        "status_any_of": ["needs_human_review", "superseded"],
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "superseded"],
         "risk_any_of": ["medium", "high"]
       },
       "target": {
         "kind": "proposal",
-        "proposal_type": "needs_human_review",
-        "status_any_of": ["needs_human_review"],
+        "proposal_type": "create_canonical",
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
+        "proposed_slug_any_of": ["olives", "olive"],
         "risk_any_of": ["medium", "high"]
       },
       "effective_target": {
         "kind": "proposal",
-        "proposal_type": "needs_human_review",
-        "status_any_of": ["needs_human_review", "superseded"],
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "queued_for_validation", "validated", "needs_human_review", "superseded"],
         "risk_any_of": ["medium", "high"]
       },
       "context_target": {
-        "kind": "ambiguous_target_set",
-        "candidate_slug_any_of": ["black_olives", "green_olives"],
-        "min_candidate_count": 2
+        "kind": "catalog_gap",
+        "required_lexical_term_any_of": ["olives"],
+        "candidate_slug_any_of": ["black_olives", "green_olives"]
       }
     },
     {
@@ -304,7 +305,7 @@
       "current": {
         "kind": "proposal",
         "proposal_type_any_of": ["approve_alias", "needs_human_review"],
-        "status_any_of": ["draft", "needs_human_review", "superseded"],
+        "status_any_of": ["draft", "needs_human_review", "superseded", "auto_applied"],
         "risk_any_of": ["low", "medium", "high"]
       },
       "target": {
@@ -316,7 +317,7 @@
       "effective_target": {
         "kind": "proposal",
         "proposal_type_any_of": ["approve_alias", "needs_human_review"],
-        "status_any_of": ["draft", "needs_human_review", "superseded"],
+        "status_any_of": ["draft", "needs_human_review", "superseded", "auto_applied"],
         "risk_any_of": ["low", "medium", "high"]
       },
       "context_target": {

@@ -47,12 +47,35 @@ The first set covers the behaviors that define the jump from "proposal bot" to "
 - `pomodori -> tomato`: base plural should resolve to existing tomato.
 - `pomodorini`: meaningful small-tomato variant must not collapse into base tomato.
 - `lenticchie rosse`: meaningful missing lentil variant should become a create-canonical draft when missing.
-- `olive`: ambiguous generic family should remain review-only.
+- `olive`: creator-facing generic base should become a base `olives` catalog gap when no exact base exists; specific olive forms stay variants.
 - `pepe`: ambiguous spice family should remain conservative unless source evidence selects black pepper or another specific target.
 - `lievito per dolci`: likely specific leavening product, but policy needs explicit target before automation.
 - `fiocchi d avena`: likely oat-flake catalog gap or specific alias, not vague review once context is sufficient.
 - `riso basmati`: meaningful rice variant should target an existing child or create a child canonical, not collapse into generic rice.
 - `patate dolci`: meaningful potato variant should target the sweet-potato child when present, not collapse into generic potatoes.
+
+## 2026-05-15 Generic Olive Correction
+
+The real-world creator pattern is that many captions say bare `olive` without
+specifying green/black/taggiasche/brined form. That should not create a loop of
+permanent human-review proposals.
+
+Current governed policy:
+
+- bare `olive` / `oliva` can surface a missing generic base `olives` identity;
+- explicit forms such as `olive verdi`, `olive nere`, `taggiasche`, brined,
+  pitted, or oil-preserved olives remain child/specific variants;
+- the proposal is only a `create_canonical` draft and is never auto-applied.
+
+Verification:
+
+- `context_target: 13/13 passed` after applying
+  `20260515120000_catalog_agent_generic_olive_base_policy.sql`;
+- dry-run `#112` confirmed matcher output
+  `catalog_gap_candidate` + `create_canonical_if_identity_clear`;
+- dry-run `#113` confirmed final proposal output
+  `olive -> create_canonical`, `draft`, medium risk, quality-gate clean, with
+  no persisted catalog mutation because the run was dry-run.
 
 ## Run Locally
 
@@ -135,7 +158,7 @@ Interpretation:
 Current target passes:
 
 - `lenticchie rosse`: correct `create_canonical` draft behavior.
-- `olive`: correct conservative human-review behavior.
+- `olive`: previous conservative behavior was too strict for real creator captions; bare `olive` should now surface a generic base identity/gap while specific forms remain variants.
 - `lievito per dolci`: acceptable conservative behavior until target policy is explicit.
 
 Main target gaps:
