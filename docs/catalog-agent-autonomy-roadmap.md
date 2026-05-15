@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `7.5 dev matcher/learning foundation` on `Season-dev`. Level `6.0` scheduled dev autonomy has a safe dry-run scheduler foundation, Level `7.0` has proposal self-repair plus stronger source-grounded quality gates, and the current `7.5` work adds ranked deterministic matching plus governed learning taxonomy. This is still dev-only and does not authorize staging autonomy.
+Status: strategic implementation roadmap. Current operational checkpoint is `8.0 dev governed creation` on `Season-dev`. This is a dev-only autonomy score, not Level `8.0` staging autonomy. Level `6.0` scheduled dev autonomy has a safe dry-run scheduler foundation, Level `7.0` has proposal self-repair plus stronger source-grounded quality gates, Level `7.5` adds ranked deterministic matching plus governed learning taxonomy, and the current checkpoint proves bounded ready-draft creation through audited workers. This does not authorize staging autonomy.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -450,12 +450,15 @@ Implementation status:
 - meaningful variants such as small tomatoes, sweet potatoes, oat flakes, and basmati rice stay separated from generic parents unless a safe child target exists;
 - learning memory accepts richer policy types so quality-gate errors, review outcomes, and worker failures can become reusable advisory memory;
 - admin console learning memory now renders readable learning cards before raw JSON.
+- dev governed creation checkpoint reached on `2026-05-15`: worker runs `#123`-`#127` created `stracchino`, `fiocchi_d_avena`, `lenticchie_rosse`, `riso_basmati`, and `pasta_senza_glutine` from ready drafts with `limit=1`, audit ledger entries, approved aliases, and kill switches disabled afterwards;
+- post-checkpoint enrichment state: actionable ready queue reduced to legacy `cicoria`; remaining pending drafts are manual-review gated, not autonomous worker loops.
+- proposal lifecycle cleanup now marks completed `create_canonical` proposals as `applied` after the matching enrichment draft has already produced an active catalog ingredient, reducing dashboard noise without treating proposal state as catalog truth.
 
 Remaining before Level `7.5` is complete:
 
-- run remote dev golden/eval probes after deploying the updated function and migration;
-- collect enough real-caption and recipe-source volume to prove ranked targets reduce generic human-review proposals;
-- expand multilingual fixtures beyond Italian/English before claiming cross-language stewardship.
+- collect more real-caption and recipe-source volume to prove ranked targets reduce generic human-review proposals over time;
+- expand multilingual fixtures beyond Italian/English before claiming cross-language stewardship;
+- add a cleaner operator summary that separates actionable ready work from manual-review policy decisions.
 
 Exit gates:
 
@@ -475,6 +478,12 @@ The agent can work across languages without pretending every translation is simp
 Goal:
 
 The agent can run safely on staging with limited real low-risk apply and strong observability.
+
+Important distinction:
+
+- The current `8.0 dev governed creation` checkpoint does not mean this staging level is complete.
+- Staging remains out of scope until the promotion checklist explicitly enables a staging pilot.
+- Dev evidence can justify staging readiness later, but it is not itself staging permission.
 
 Allowed actions:
 
@@ -577,13 +586,13 @@ No level may be promoted unless all of these are true:
 
 ## Immediate Next Step
 
-The next target is closing the current Level `7.0` dev foundation cleanly, then moving into Level `7.1` work: catalog matcher separation, learning-writer automation, and more no-apply evaluation volume. Staging stays untouched until Level `6.5/8.0` promotion is explicitly chosen.
+The next target is reducing true manual-review volume without weakening safety: better evidence for common creator-facing generic terms, clearer policy for product families, and a console view that separates actionable work from advisory/manual-review residue. Staging stays untouched until Level `6.5/8.0` promotion is explicitly chosen.
 
 Recommended implementation order:
 
 1. Keep the dev schedule and agent persistence disabled by default after every smoke run.
 2. Keep the latest evaluation JSON files as audit artifacts, not runtime inputs.
-3. Add a catalog matcher layer before increasing LLM volume again.
-4. Add learning-writer automation so corrections become reusable memory without founder micromanagement.
-5. Continue Level `5.0` low-risk volume in separate controlled windows, not through the scheduler.
+3. Keep improving catalog matcher and evidence packets before increasing LLM volume again.
+4. Promote accepted learning into reusable policy only through governed rows, not hidden hardcoding.
+5. Continue low-risk and ready-draft worker volume in separate controlled windows, not through the scheduler.
 6. Keep staging untouched until the promotion checklist explicitly moves this work beyond dev.

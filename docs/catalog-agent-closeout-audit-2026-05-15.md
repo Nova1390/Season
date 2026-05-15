@@ -2,7 +2,7 @@
 
 Status: current branch audit for `agent/catalog-governance`.
 
-Latest implementation checkpoint: Catalog Agent `7.5` matcher/learning foundation plus Smart Import Agent `8.0` creator-caption contract are being closed on `Season-dev` only.
+Latest implementation checkpoint: Catalog Agent `8.0` dev governed creation plus Smart Import Agent `8.0` creator-caption contract are being closed on `Season-dev` only.
 
 Scope:
 
@@ -20,7 +20,7 @@ The important cleanup in this audit is not a new autonomy feature. It is branch 
 
 Current autonomy posture:
 
-- Catalog Governance Agent remains dev-only and not staging-ready.
+- Catalog Governance Agent reached the dev `8.0` governed-creation checkpoint, but remains not staging-ready.
 - Smart Import Agent is creator-facing and may use learning context, but it does not mutate catalog truth.
 - Autopilot and batch functions remain bounded workers under agent/governance control.
 - Real catalog mutation paths remain gated by backend feature flags, validators, and audit tables.
@@ -32,6 +32,7 @@ Latest checkpoint posture:
 - Learning memory supports richer advisory types for alias policy, variant policy, catalog gaps, state-vs-identity, ambiguity, worker failure, and prompt improvement.
 - Smart Import returns internal quality metrics for duplicate names, quantity coverage, caption category, and unresolved ingredient count.
 - Smart Import reports now expose catalog-training evidence, but training signals remain non-mutating.
+- Governed ready-draft creation has now been proven beyond a single smoke item: five dev ingredients were created through bounded worker runs, with aliases approved and kill switches disabled afterwards.
 
 ## Code Audit
 
@@ -93,6 +94,17 @@ Remote dev validation:
 - `scripts/smart_import_learning_cases/run_exact_caption_probe.py --use-temp-user --json`: passed with `usedServerLLM=false`, no duplicate ingredient keys, and preserved `riso 180g`, `funghi 250g`, `burro 20g`, and `parmigiano 30g`.
 - `https://catalog.seasonapp.it/`, `app.js`, and `styles.css` returned HTTP `200` after admin-console static deploy.
 
+Governed creation validation:
+
+- `run-catalog-agent-orchestrator` worker jobs `#43`-`#46` completed successfully through `ingredient_creation_batch`.
+- Created active catalog ingredients: `fiocchi_d_avena`, `lenticchie_rosse`, `riso_basmati`, and `pasta_senza_glutine`.
+- Each created term has an approved active alias matching the source term.
+- Previous governed creation run `#123` had already created `stracchino`.
+- Post-run draft state shows those five terms as `applied`; the only remaining `ready` draft is legacy `cicoria`.
+- The remaining pending enrichment set is manual-review gated, so it should inform policy/evidence work rather than be treated as failed autonomy.
+- After the checkpoint, `CATALOG_AGENT_ORCHESTRATOR_ENABLED` and `CATALOG_AGENT_INGREDIENT_CREATION_ENABLED` were restored to disabled values.
+- Migration `20260515220000_close_applied_canonical_agent_proposals.sql` closed completed `create_canonical` proposal lifecycle rows after their governed drafts had already produced active ingredients. This changed proposal status only; it did not create or edit catalog ingredients.
+
 ## Documentation Audit
 
 Updated docs:
@@ -123,7 +135,7 @@ No tracked generated cache artifacts remain.
 
 ## Remaining Risks
 
-- Catalog Governance Agent is still not approved for staging autonomy.
+- Catalog Governance Agent is still not approved for staging autonomy despite the dev `8.0` checkpoint.
 - Smart Import real-caption quality is good enough for continued dev testing, but broader creator-language coverage still needs more E2E volume before release promotion.
 - Edge Function deploy to dev should be performed after code review if this branch is the dev runtime source.
 - The Supabase PAT used during development should still be rotated before staging promotion or any sensitive deploy window.

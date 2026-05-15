@@ -12,7 +12,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Staging backend: intentionally untouched for this agent-console cycle
 - Real low-risk apply: disabled by default
 - Console low-risk apply: dry-run only
-- Current autonomy level: `7.5 dev matcher/learning foundation`, not staging-ready autonomy
+- Current autonomy level: `8.0 dev governed creation checkpoint`, not staging-ready autonomy
 - Agent persistence and scheduler windows: disabled by default after smoke runs
 - TestFlight handoff: `docs/testflight-bugfix-handoff-2026-05-12.md`
 - Current branch audit: `docs/catalog-agent-closeout-audit-2026-05-15.md`
@@ -84,6 +84,9 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 enrichment recovery loop: `run-catalog-enrichment-draft-batch` now avoids reselecting manual-review pending rows while actionable pending rows exist, and `catalog-enrichment-proposal` receives advisory Italian external evidence with telemetry (`external_evidence_count`, `external_parent_hint_count`, validator errors).
 - 2026-05-15 dev smoke `#122` proved evidence recovery: `stracchino` moved from deterministic fallback/manual-review pending to `ready` with parent `formaggio`, `variant_kind=product_type`, confidence `0.93`, and LLM cost around `$0.00175`.
 - 2026-05-15 governed creation smoke `#123` created exactly one ready draft: `stracchino` became an active catalog ingredient, linked to `formaggio`, and the enrichment draft moved to `applied`. The creation/orchestrator kill switches were disabled immediately after the run.
+- 2026-05-15 governed creation checkpoint runs `#124`-`#127` created exactly four additional ready drafts with `limit=1` per worker: `fiocchi_d_avena`, `lenticchie_rosse`, `riso_basmati`, and `pasta_senza_glutine`. Each new catalog item was created through `ingredient_creation_batch`, linked to its parent where available, received an approved active alias, and moved its enrichment draft to `applied`.
+- 2026-05-15 post-run verification confirmed the remaining ready enrichment queue is only legacy `cicoria`, while the visible pending set is manual-review gated rather than an autonomous loop blocker. Creation and orchestrator kill switches were disabled immediately after the checkpoint.
+- 2026-05-15 proposal lifecycle cleanup closes completed `create_canonical` proposals once their governed enrichment draft is already `applied`. This reduced open `validated` proposals from `12` to `7` without changing catalog truth, and keeps the console focused on work that still needs a decision.
 - 2026-05-15 Smart Import real-caption E2E used 30 stratified creator captions: `30/30` Edge responses OK, `24` publishable drafts, `6` correct `steps_missing` blockers, `0` duplicate ingredient-name drafts, and quantity coverage `204/282` (`0.723`).
 - 2026-05-15 Smart Import corpus training bridge rebuilt the Apify-derived corpus (`2035` raw captions, `734` recipe-like captions) and imported `60` non-mutating `catalog_agent_training_signals`. Macro/promo noise such as `calorie kcal`, `kcal f c p`, `bio`, and serving phrase `per porzioni` was marked `rejected`.
 
@@ -97,7 +100,7 @@ Closeout decision:
 
 - the branch is safe to keep developing in dev;
 - it is not yet ready for staging autonomy;
-- the next intelligence work should validate the new 7.5 matcher/8.0 Smart Import contracts on dev, then evaluate worker-learning outcomes, not add more manual review volume.
+- the next intelligence work should focus on reducing genuine manual-review ambiguity through better evidence and policy, not by loosening validators or adding unreviewed staging automation.
 
 ## Dev Training Import
 
