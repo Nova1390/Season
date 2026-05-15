@@ -54,6 +54,10 @@ Supported source keys:
 - `foodon`: ontology/taxonomy support.
 - `open_food_facts`: branded/packaged product evidence; use cautiously because ODbL obligations matter.
 - `manual_open_source_review`: operator-reviewed external evidence summary.
+- `crea_alimenti_nutrizione`: Italian food-composition and nutrition grounding for common Italian culinary terms.
+- `ieo_bda`: Italian food-composition reference grounding; use compact reviewed summaries until redistribution obligations are confirmed.
+- `masaf_pat`: Italian traditional agri-food product grounding for regional/traditional identity boundaries.
+- `regional_pat`: regional Italian traditional-product grounding for local product names and regional identity.
 
 Supported evidence types:
 
@@ -96,9 +100,25 @@ Initial preferred order:
 2. Wikidata for CC0 multilingual and taxonomy hints.
 3. FoodOn for ontology/family evidence.
 4. Open Food Facts only for packaged/branded product evidence after license-aware review.
+5. CREA Alimenti e Nutrizione for Italian generic ingredients and nutrition composition.
+6. IEO BDA for Italian composition checks, only as reviewed compact summaries until license/redistribution is confirmed.
+7. MASAF PAT and regional PAT sources for traditional Italian products and local identity boundaries.
 
 Open Food Facts can be very useful, but its ODbL license means we should not
 blindly copy large chunks into Season without attribution/share-alike analysis.
+
+Italian sources matter because the first public audience is Italian. They should
+help the agent understand terms such as `stracchino`, `pecorino romano`,
+`pane raffermo`, `fiocchi d avena`, or regional products without forcing those
+terms through US-centric food datasets.
+
+The ingestion rule stays conservative:
+
+- store source IDs, URLs, licenses, compact summaries, and small structured hints;
+- do not bulk-copy external database payloads into Season;
+- do not treat a source row as proof that an alias or canonical ingredient is safe;
+- prefer `needs_review` evidence until the source/license has been reviewed;
+- promote evidence to `accepted` or `implemented` only through the catalog admin workflow.
 
 ## Safety
 

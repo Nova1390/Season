@@ -34,6 +34,12 @@ variant, taxonomy, synonym, branded-product, or nutrition reasoning, but it is
 not Season catalog truth and cannot bypass catalog matcher grounding,
 deterministic validators, proposal persistence gates, or apply workers.
 
+The external evidence layer supports both global and Italian source slots. The
+Italian slots (`crea_alimenti_nutrizione`, `ieo_bda`, `masaf_pat`,
+`regional_pat`) are intended to ground Italian-first public usage: common
+Italian ingredient labels, nutrition composition, regional/traditional product
+identity, and local naming. They are still advisory evidence, not catalog truth.
+
 Recent proposal dedupe happens after learning memory is attached. This prevents repeated LLM calls for unchanged work, but still lets an operator note or review outcome reopen a term when the new lesson was created after the last live proposal.
 
 ## Multi-Pass Reasoning
