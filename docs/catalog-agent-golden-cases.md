@@ -112,6 +112,20 @@ Current governed policy:
 This is still governance data, not hidden hardcoding: the behavior is encoded in
 lexical overrides, structured learning rows, golden cases, and inbox cleanup.
 
+Controlled runs after this correction:
+
+- run `#114`, limit `5`, proposal persistence enabled temporarily:
+  `olive -> create_canonical`, `carne macinata -> create_canonical`,
+  `fiocchi d avena -> create_canonical`, `frutti di bosco -> create_canonical`,
+  `acqua di cottura -> ignore_noise`; quality gate blocked `0`; superseded `4`
+  older open proposals.
+- run `#115`, targeted `normalized_texts=["pollo","tacchino","stracchino"]`:
+  `pollo -> approve_alias(chicken)`, `tacchino -> approve_alias(turkey)`,
+  `stracchino -> create_canonical`; quality gate blocked `0`; superseded `3`
+  older review proposals.
+- after the runs, open `needs_human_review` items dropped to `3`:
+  `piadina`, `pecorino romano`, and `lievito per dolci`.
+
 ## Run Locally
 
 Schema-only check, no network:

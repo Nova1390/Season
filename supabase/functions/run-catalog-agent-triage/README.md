@@ -15,6 +15,26 @@ This Edge Function is the first runtime surface for the autonomous catalog agent
 - records provider token usage in `catalog_ai_usage_events`;
 - never mutates catalog identity, aliases, localizations, recipes, or reconciliation state.
 
+## Targeted Dev Runs
+
+The request body may include `normalized_texts` for controlled dev/eval runs:
+
+```json
+{
+  "limit": 3,
+  "include_non_new": true,
+  "dry_run": false,
+  "normalized_texts": ["pollo", "tacchino", "stracchino"]
+}
+```
+
+This is an internal cost-control feature. It lets operators rerun a handful of
+known terms after matcher/learning changes without sending the whole backlog to
+the LLM. The filter is applied after the bounded snapshot is read and before
+learning/training/evidence context is attached. It does not bypass auth, budget
+limits, recent-proposal policy, quality gates, validation, or proposal-only
+safety.
+
 ## Learning Memory
 
 Before the provider call, the function asks `public.get_catalog_agent_learning_context(...)` for term-specific and global lessons.

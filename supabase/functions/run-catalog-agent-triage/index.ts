@@ -25,6 +25,7 @@ import {
 interface AgentRunRequest {
   limit?: number;
   source_domain?: string | null;
+  normalized_texts?: string[];
   include_non_new?: boolean;
   dry_run?: boolean;
 }
@@ -202,6 +203,7 @@ Deno.serve(async (request) => {
 
     const limit = boundedInteger(Number(payload.limit ?? MAX_ITEMS_PER_RUN), 1, MAX_ITEMS_PER_RUN);
     const sourceDomain = normalizeNullableText(payload.source_domain);
+    const normalizedTextFilter = normalizeTextFilter(payload.normalized_texts);
     const includeNonNew = payload.include_non_new === true;
     const dryRun = payload.dry_run === true;
 
@@ -223,6 +225,7 @@ Deno.serve(async (request) => {
           request_id: requestId,
           limit,
           source_domain: sourceDomain,
+          normalized_texts: Array.from(normalizedTextFilter),
           include_non_new: includeNonNew,
           dry_run: dryRun,
           budget: budgetSummary(),
@@ -256,6 +259,7 @@ Deno.serve(async (request) => {
         request_id: requestId,
         limit,
         source_domain: sourceDomain,
+        normalized_texts: Array.from(normalizedTextFilter),
         include_non_new: includeNonNew,
         dry_run: dryRun,
         budget: budgetSummary(),
@@ -298,9 +302,9 @@ Deno.serve(async (request) => {
 
     // Fetch beyond the requested LLM limit because recent-proposal dedupe can
     // remove high-priority rows before provider selection.
-    const snapshotLimit = Math.min(100, Math.max(limit, limit * 4));
+    const snapshotLimit = normalizedTextFilter.size > 0 ? 100 : Math.min(100, Math.max(limit, limit * 4));
     const snapshot = await fetchSnapshot(adminClient, snapshotLimit, sourceDomain, includeNonNew);
-    const workItems = readWorkItems(snapshot);
+    const workItems = filterWorkItemsByText(readWorkItems(snapshot), normalizedTextFilter);
     const learningContext = await fetchLearningContext(adminClient, workItems);
     const trainingSignalContext = await fetchTrainingSignalContext(adminClient, workItems);
     const externalEvidenceContext = await fetchExternalEvidenceContext(adminClient, workItems);
@@ -3261,6 +3265,19 @@ function normalizeNullableText(value: unknown): string | null {
 
 function normalizeText(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function normalizeTextFilter(input: unknown): Set<string> {
+  if (!Array.isArray(input)) return new Set();
+  const values = input
+    .map((value) => normalizeText(value))
+    .filter((value) => value.length > 0);
+  return new Set(values.slice(0, MAX_ITEMS_PER_RUN));
+}
+
+function filterWorkItemsByText(items: WorkItem[], filter: Set<string>): WorkItem[] {
+  if (filter.size === 0) return items;
+  return items.filter((item) => filter.has(normalizeText(item.normalized_text)));
 }
 
 function simplifyCatalogSignalText(value: unknown): string {
