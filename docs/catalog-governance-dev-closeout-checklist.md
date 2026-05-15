@@ -72,6 +72,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 review inbox hygiene superseded stale duplicate open proposals without mutating catalog truth. Open `needs_human_review` count dropped from `19` to `10`, open duplicate proposal groups dropped to `0`, and `acqua di cottura` was recorded as implemented `state_vs_identity` learning.
 - 2026-05-15 admin console gained a default `Latest per term` view so historical duplicates stay available in the database but do not crowd the operator list.
 - 2026-05-15 external evidence grounding was extended with Italian source slots (`crea_alimenti_nutrizione`, `ieo_bda`, `masaf_pat`, `regional_pat`) so the agent can reason from Italian-first food references without importing catalog truth.
+- 2026-05-15 a guarded external-evidence importer was added for reviewed CSV/JSON files. It supports dry-run, validates source/license/type/status fields locally, and writes only advisory rows through `upsert_catalog_agent_external_evidence(...)`.
 
 ## Current Closeout Audit
 

@@ -92,6 +92,27 @@ The prompt policy says:
 - `needs_review` evidence is weak support;
 - accepted/implemented evidence is stronger, but still not catalog truth.
 
+## Ingestion
+
+Reviewed evidence can be imported with:
+
+```bash
+python3 scripts/catalog_external_evidence/import_external_evidence.py \
+  docs/catalog-agent-italian-evidence-reviewed.csv \
+  --only-italian-sources \
+  --dry-run \
+  --json
+```
+
+The importer validates the file locally before writing. Live imports require
+`SUPABASE_SERVICE_ROLE_KEY` and call only
+`public.upsert_catalog_agent_external_evidence(...)`.
+
+Operational runbook:
+
+- `docs/catalog-agent-italian-external-evidence-ingestion.md`
+- `docs/catalog-agent-italian-evidence-reviewed.example.csv`
+
 ## Source Policy
 
 Initial preferred order:
