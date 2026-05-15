@@ -12,6 +12,8 @@ Before validation, parent candidates from the LLM are resolved against active ca
 5. If validation has no errors, attempts `status='ready'` upsert.
 6. Returns per-item summary (`succeeded/failed/skipped`) without creating ingredients.
 
+The worker also deprioritizes pending drafts that are already `validated_ready=true` but still require manual review. This prevents repeat LLM spend on the same manual-review blocker while more actionable pending rows are available.
+
 When invoked by `run-catalog-agent-orchestrator`, the request includes `agent_run_id` and `agent_worker_job_id`. The batch then:
 
 - marks the worker job `running`;

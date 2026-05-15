@@ -278,6 +278,10 @@ Latest dev probe notes:
 - `2026-05-14`: live no-LLM learning-context report passed `4/4` cases with `100%` term-memory coverage for `pomodorini`, `pane raffermo`, `uovo`, and `fiocchi d avena`; report stored in `docs/smart-import-learning-context-latest.json`.
 - `2026-05-14`: Smart Import responses now include `smartImportAgent.operationalSignals`, a machine-readable learning/eval layer for recurring caption patterns such as `ingredients_only_caption`, `method_without_amounts`, `missing_servings_metadata`, and `missing_timing_metadata`.
 - `2026-05-14`: smoke test confirmed the new operational signals in dev. The official 40-caption stratified report was regenerated with 40/40 successful responses and signal counts: `ingredients_only_caption=11`, `method_without_amounts=1`, `low_signal_caption=1`, `missing_servings_metadata=29`, `missing_timing_metadata=31`.
+- `2026-05-15`: exact-caption probe for `Risotto ai funghi per 2` passed with `usedServerLLM=false`; duplicate preparsed candidates collapsed and measured quantities survived (`riso 180g`, `funghi 250g`, `burro 20g`, `parmigiano 30g`).
+- `2026-05-15`: 30-caption stratified real-caption E2E passed `30/30` Edge responses. Results: `24` publishable drafts, `6` correct `steps_missing` blockers, `0` duplicate ingredient-name drafts, and quantity coverage `204/282` (`0.723`).
+- `2026-05-15`: `run_real_caption_e2e.py` report rendering now handles object-shaped `appliedAutoFixes`, so long runs do not lose results if future autofix payloads include structured metadata.
+- `2026-05-15`: rebuilt the Apify corpus after hygiene hardening and imported `60` advisory training signals into dev. Macro/promo/serving noise (`calorie kcal`, `kcal f c p`, `bio`, `per porzioni`) was marked `rejected`; meaningful product terms such as `proteine in polvere` remain reviewable training signals.
 
 ## Boundaries
 

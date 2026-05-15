@@ -161,10 +161,12 @@ Validation:
 - The first high-signal real-caption E2E used 7 creator captions and produced 7/7 publish-ready drafts with no blocking issues.
 - The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
 - The May 15 stratified stress cycle used 50 real creator captions first, then a 40-caption instrumentation run that exposed full-LLM duplicate ingredients and one cooldown-only false failure. After applying server-side full-LLM dedupe and runner cooldown retry, the confirmation run used 25 real captions and produced 25/25 successful Edge responses, 19 publishable drafts, 6 correct `steps_missing` blockers, 178/247 ingredients with explicit quantities, and 0 duplicate ingredient names.
+- The follow-up May 15 stratified stress run used 30 real creator captions after reporter hardening. It produced 30/30 successful Edge responses, 24 publishable drafts, 6 correct `steps_missing` blockers, 204/282 ingredients with explicit quantities, and 0 duplicate ingredient-name drafts.
 - Smart Import now returns `smartImportAgent.operationalSignals` so stress results become structured learning/eval data rather than free-text notes. Current signals include `ingredients_only_caption`, `low_signal_caption`, `method_without_amounts`, `missing_servings_metadata`, `missing_timing_metadata`, `catalog_identity_review_needed`, and `low_confidence_parse`.
 - Smart Import also returns `smartImportAgent.qualityMetrics` so real-caption reports can track duplicate rate, quantity coverage, unresolved terms, repeated terms, and caption-category mix.
 - Quantity preservation now has three defensive layers: Swift scans comma/semicolon/slash fragments when recovering explicit quantities from single-line captions, the Edge Function dedupes preparsed candidates by normalized ingredient while preferring entries with explicit quantity/unit, and full-LLM parse output is deduped before the Smart Import Agent scorecard.
 - Long live stress runs must rotate temporary users in dev with `--requests-per-temp-user`, otherwise the per-user daily quota correctly interrupts the batch and makes quality metrics noisy.
+- Corpus extraction filters macro/promo/serving-count noise before import. When noise is discovered after import, mark it `rejected` in `catalog_agent_training_signals` rather than deleting audit history.
 
 ### Real-Caption Operational Training Loop
 
@@ -178,6 +180,13 @@ Loop:
 4. Smart Import outcomes become regression fixtures, prompt improvements, scorecard rules, or reviewed learning candidates.
 5. Unresolved/custom ingredient patterns flow to Catalog Governance for alias/canonical review.
 6. Only governed Catalog Agent paths may promote a lesson into `catalog_agent_learnings` or mutate catalog identity.
+
+Current dev bridge status:
+
+- latest corpus build: `2035` raw captions, `734` recipe-like captions, `80` top terms;
+- latest training import: `60` advisory signals, `0` failures;
+- rejected hygiene signals: `calorie kcal`, `kcal f c p`, `bio`, `per porzioni`;
+- retained meaningful fitness/product terms include `proteine in polvere`, which remains a `compound_identity_candidate`.
 
 This preserves the separation of responsibilities:
 

@@ -107,6 +107,8 @@ interface PendingDraftRow {
   ingredient_type: string | null;
   confidence_score: number | null;
   reasoning_summary: string | null;
+  validated_ready: boolean;
+  needs_manual_review: boolean;
   intake_placeholder: boolean;
 }
 
@@ -778,7 +780,7 @@ async function fetchPendingDrafts(
 
   const { data: placeholderDataRaw, error: placeholderError } = await client
     .from("catalog_ingredient_enrichment_drafts")
-    .select("normalized_text,status,updated_at,suggested_slug,ingredient_type,confidence_score,reasoning_summary,custom_ingredient_observations(occurrence_count)")
+    .select("normalized_text,status,updated_at,suggested_slug,ingredient_type,confidence_score,reasoning_summary,validated_ready,needs_manual_review,custom_ingredient_observations(occurrence_count)")
     .eq("status", "pending")
     .eq("ingredient_type", "unknown")
     .is("confidence_score", null)
@@ -791,7 +793,7 @@ async function fetchPendingDrafts(
 
   const { data, error } = await client
     .from("catalog_ingredient_enrichment_drafts")
-    .select("normalized_text,status,updated_at,suggested_slug,ingredient_type,confidence_score,reasoning_summary,custom_ingredient_observations(occurrence_count)")
+    .select("normalized_text,status,updated_at,suggested_slug,ingredient_type,confidence_score,reasoning_summary,validated_ready,needs_manual_review,custom_ingredient_observations(occurrence_count)")
     .eq("status", "pending")
     .order("updated_at", { ascending: false })
     .limit(Math.max(limit * 6, limit));
@@ -867,7 +869,7 @@ async function fetchPendingDrafts(
       ...regularRows.filter((row) => !row.intake_placeholder && !!row.suggested_slug),
       ...regularRows.filter((row) => !row.intake_placeholder && !row.suggested_slug),
     ]
-    : regularRows;
+    : prioritizeActionablePendingRows(regularRows);
   for (const row of regularRowsForSelection) {
     if (!row.normalized_text) continue;
     if (selectedByKey.has(row.normalized_text)) continue;
@@ -901,7 +903,7 @@ async function fetchPendingDrafts(
   if (debugRunId) {
     const { data: trackedPendingRows, error: trackedPendingError } = await client
       .from("catalog_ingredient_enrichment_drafts")
-      .select("normalized_text,ingredient_type,confidence_score,reasoning_summary,status")
+      .select("normalized_text,ingredient_type,confidence_score,reasoning_summary,status,validated_ready,needs_manual_review")
       .eq("status", "pending")
       .in("normalized_text", trackedTerms);
     if (trackedPendingError) {
@@ -1680,8 +1682,20 @@ function toPendingDraftRow(row: Record<string, unknown>): PendingDraftRow {
     ingredient_type: normalizeText(row.ingredient_type),
     confidence_score: parseOptionalConfidence(row.confidence_score),
     reasoning_summary: typeof row.reasoning_summary === "string" ? row.reasoning_summary : null,
+    validated_ready: row.validated_ready === true,
+    needs_manual_review: row.needs_manual_review === true,
     intake_placeholder: isIntakePlaceholderRow(row),
   };
+}
+
+function prioritizeActionablePendingRows(rows: PendingDraftRow[]): PendingDraftRow[] {
+  const actionable = rows.filter((row) => !isManualReviewPending(row));
+  const manualReviewBlocked = rows.filter((row) => isManualReviewPending(row));
+  return [...actionable, ...manualReviewBlocked];
+}
+
+function isManualReviewPending(row: PendingDraftRow): boolean {
+  return row.status === "pending" && row.validated_ready && row.needs_manual_review;
 }
 
 function parseOptionalConfidence(value: unknown): number | null {

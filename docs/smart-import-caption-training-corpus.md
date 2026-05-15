@@ -1,6 +1,6 @@
 # Smart Import caption training corpus
 
-Updated: 2026-05-15T06:59:23+00:00
+Updated: 2026-05-15T18:33:42+00:00
 
 This is a non-mutating corpus built from Apify Instagram caption exports. It is used to train Season operationally: regression cases, Smart Import prompt gaps, and Catalog Agent learning candidates.
 
@@ -11,7 +11,7 @@ Full captions are not stored here. The report keeps compact term counts, short e
 - Raw captions discovered: 2035
 - Recipe-like captions: 734
 - Caption categories: `{"complete_recipe": 261, "ingredient_rich": 39, "messy_recipe_like": 40, "method_rich": 93, "weak_recipe_signal": 301}`
-- Training signal counts: `{"catalog_alias_candidate": 1425, "compound_identity_candidate": 1043, "condition_or_state_check": 88, "egg_family_candidate": 71, "meaningful_variant_candidate": 14, "product_form_candidate": 285}`
+- Training signal counts: `{"catalog_alias_candidate": 1402, "compound_identity_candidate": 1021, "condition_or_state_check": 88, "egg_family_candidate": 71, "meaningful_variant_candidate": 14, "product_form_candidate": 285}`
 
 ## Top Ingredient-Like Terms
 

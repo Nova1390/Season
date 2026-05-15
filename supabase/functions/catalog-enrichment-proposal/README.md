@@ -6,6 +6,7 @@ Dedicated Supabase Edge Function for Catalog Intelligence ingredient enrichment 
 - Decouples enrichment from `parse-recipe-caption`.
 - Provides a strict JSON proposal contract for unresolved ingredient candidates.
 - Uses server-side OpenAI with deterministic validation and fallback.
+- Reads advisory external catalog evidence when available so Italian-first reviewed sources can improve category/parent hints without becoming catalog truth.
 
 ## Request
 `POST /functions/v1/catalog-enrichment-proposal`
@@ -57,6 +58,17 @@ Optional:
 - `CATALOG_ENRICHMENT_OUTPUT_COST_PER_1M_USD`
 
 When `agent_run_id` or `agent_worker_job_id` is provided, the function records token usage in `catalog_ai_usage_events` so Autopilot worker cost rolls up to the manager-level Catalog Agent run.
+
+Usage metadata includes `external_evidence_count` and `external_parent_hint_count`. Validator failures also include compact `validation_errors`, which is useful when the LLM produced a plausible proposal that failed the strict contract.
+
+## Evidence Grounding
+
+Before calling the provider, the function calls `get_catalog_agent_external_evidence_context(...)` for the cleaned unresolved term.
+
+- Evidence is grounding-only and advisory.
+- Evidence can support identity, semantic category, and parent-family hints.
+- Evidence never bypasses the enrichment validator or the governed ingredient creation worker.
+- Parent hints must still satisfy the strict contract: if `parent_candidate_slug` is set, `variant_kind` and `specificity_rank_suggestion >= 1` are required.
 
 ## Deploy
 ```bash

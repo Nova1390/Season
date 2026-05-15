@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-15T06:59:23+00:00",
+  "updated_at": "2026-05-15T18:33:42+00:00",
   "raw_captions_discovered": 2035,
   "recipe_like_captions": 734,
   "category_counts": {
@@ -29,8 +29,8 @@
   "training_signal_counts": {
     "egg_family_candidate": 71,
     "product_form_candidate": 285,
-    "catalog_alias_candidate": 1425,
-    "compound_identity_candidate": 1043,
+    "catalog_alias_candidate": 1402,
+    "compound_identity_candidate": 1021,
     "condition_or_state_check": 88,
     "meaningful_variant_candidate": 14
   },
@@ -1493,37 +1493,6 @@
       ]
     },
     {
-      "term": "calorie kcal",
-      "count": 7,
-      "training_signal": "catalog_alias_candidate",
-      "examples": [
-        {
-          "source_file": "profile_ricette_facili.json",
-          "url": "https://www.instagram.com/p/DXuLQgkCytc/",
-          "owner": "ajoycebolla.alessandra",
-          "caption_category": "complete_recipe",
-          "caption_score": 28,
-          "excerpt": "EP.2 — GELATI PROTEICI FATTI IN CASA 🍦🍪 Gusto COOKIES: 3 ingredienti, ~30g di proteine, 2 minuti Secondo"
-        },
-        {
-          "source_file": "profile_ricette_facili.json",
-          "url": "https://www.instagram.com/p/DXuLQgkCytc/",
-          "owner": "ajoycebolla.alessandra",
-          "caption_category": "complete_recipe",
-          "caption_score": 28,
-          "excerpt": "EP.2 — GELATI PROTEICI FATTI IN CASA 🍦🍪 Gusto COOKIES: 3 ingredienti, ~30g di proteine, 2 minuti Secondo"
-        },
-        {
-          "source_file": "profile_ricette_facili.json",
-          "url": "https://www.instagram.com/p/DXzU2QSiXAo/",
-          "owner": "ajoycebolla.alessandra",
-          "caption_category": "complete_recipe",
-          "caption_score": 27,
-          "excerpt": "Gelato Proteico ai MIRTILLI: ~33g di Proteine e Antiossidanti | Episodio 3 della serie GELATI PROTEICI FATI IN"
-        }
-      ]
-    },
-    {
       "term": "mozzarella",
       "count": 7,
       "training_signal": "catalog_alias_candidate",
@@ -1648,37 +1617,6 @@
       ]
     },
     {
-      "term": "kcal f c p",
-      "count": 7,
-      "training_signal": "compound_identity_candidate",
-      "examples": [
-        {
-          "source_file": "profile_ricette_veloci.json",
-          "url": "https://www.instagram.com/p/CwNHzWxs1rG/",
-          "owner": "martyfoodnfit",
-          "caption_category": "complete_recipe",
-          "caption_score": 25,
-          "excerpt": "TIRAMISÙ PROTEICO low carb by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto"
-        },
-        {
-          "source_file": "profile_ricette_veloci.json",
-          "url": "https://www.instagram.com/p/CwAMxxfoaFL/",
-          "owner": "martyfoodnfit",
-          "caption_category": "complete_recipe",
-          "caption_score": 24,
-          "excerpt": "FLUFFY PANCAKES PROTEICI by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto e"
-        },
-        {
-          "source_file": "profile_ricette_veloci.json",
-          "url": "https://www.instagram.com/p/CzCB0iJrWqA/",
-          "owner": "martyfoodnfit",
-          "caption_category": "complete_recipe",
-          "caption_score": 24,
-          "excerpt": "FRENCH TOASTS PROTEICI AL COCCO🥥 by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti"
-        }
-      ]
-    },
-    {
       "term": "farina di riso",
       "count": 7,
       "training_signal": "product_form_candidate",
@@ -1706,37 +1644,6 @@
           "caption_category": "complete_recipe",
           "caption_score": 22,
           "excerpt": "Un dolce sofficissimo e senza glutine, perfetto per colazione o merenda!!! Se ancora non hai preparato il dolce"
-        }
-      ]
-    },
-    {
-      "term": "bio",
-      "count": 7,
-      "training_signal": "catalog_alias_candidate",
-      "examples": [
-        {
-          "source_file": "profile_ricette_sane.json",
-          "url": "https://www.instagram.com/p/DXwuJlQsAM1/",
-          "owner": "iamfitandsweet",
-          "caption_category": "complete_recipe",
-          "caption_score": 22,
-          "excerpt": "🥧TORTA MAGICA ✨ RICOTTA E FRAGOLE 🍓 Senza farina ~ senza glutine e con soli 5 ingredienti! L’idea"
-        },
-        {
-          "source_file": "profile_ricette_sane.json",
-          "url": "https://www.instagram.com/p/DXZn8vajKzZ/",
-          "owner": "iamfitandsweet",
-          "caption_category": "complete_recipe",
-          "caption_score": 21,
-          "excerpt": "🥧TORTA BAKED PORRIDGE🥧 🍓 FRAGOLE&CIOCCOLATO 🍫 Senza glutine e farina ✨ L’idea perfetta per la tua prossima colazione"
-        },
-        {
-          "source_file": "profile_ricette_sane.json",
-          "url": "https://www.instagram.com/p/DXcQKzODNzT/",
-          "owner": "iamfitandsweet",
-          "caption_category": "complete_recipe",
-          "caption_score": 21,
-          "excerpt": "🥧 TORTA MAGICA 🥧 ☕️GUSTO TIRAMISÙ☕️ con 7 semplici ingredienti! ✨ il dolce perfetto a colazione, merenda o"
         }
       ]
     },
@@ -1954,37 +1861,6 @@
           "caption_category": "complete_recipe",
           "caption_score": 19,
           "excerpt": "Marmellata ai frutti rossi e semi di chia, facile e veloce da preparare, ottima con lo yogurt, su"
-        }
-      ]
-    },
-    {
-      "term": "per porzioni",
-      "count": 6,
-      "training_signal": "catalog_alias_candidate",
-      "examples": [
-        {
-          "source_file": "profile_dietista_ricette.json",
-          "url": "https://www.instagram.com/p/DYMcFFVinMR/",
-          "owner": "dietista.paolastavolone",
-          "caption_category": "complete_recipe",
-          "caption_score": 25,
-          "excerpt": "SFORMATO DI ZUCCHINE FILANTE ✨ Una di quelle ricette facilissime che ti salva la cena quando vuoi qualcosa"
-        },
-        {
-          "source_file": "profile_dietista_ricette.json",
-          "url": "https://www.instagram.com/p/DXtkYEhjWBi/",
-          "owner": "dietista.paolastavolone",
-          "caption_category": "complete_recipe",
-          "caption_score": 22,
-          "excerpt": "CHEESECAKE PROTEICA AI MIRTILLI 🫐✨ Una ricetta super semplice, cremosa e leggera, perfetta per una merenda diversa dal"
-        },
-        {
-          "source_file": "profile_ricette_sane.json",
-          "url": "https://www.instagram.com/p/DT7f-OqDHtM/",
-          "owner": "ricette_sane_libri_viaggi",
-          "caption_category": "ingredient_rich",
-          "caption_score": 21,
-          "excerpt": "Hai comprato dei fogli di riso perché li utilizzavano tutti e ora sono lì in dispensa a guardarti"
         }
       ]
     },
@@ -2512,6 +2388,130 @@
           "caption_category": "complete_recipe",
           "caption_score": 27,
           "excerpt": "EP.4 — GELATI PROTEICI FATTI IN CASA 🍦Gusto FRUTTI DI BOSCO: ~33g di proteine, il mix definitivo Quarto"
+        }
+      ]
+    },
+    {
+      "term": "concentrato di pomodoro",
+      "count": 5,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYHhLuMIvhT/",
+          "owner": "chiara_healthytales",
+          "caption_category": "complete_recipe",
+          "caption_score": 27,
+          "excerpt": "GNOCCHI AL RAGÙ DI SOIA 👉 🌱 Ricetta vegan 📌 Salva questo reel perché questi gnocchi sono una"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYMbObhA3O0/",
+          "owner": "antonella_cascione_",
+          "caption_category": "complete_recipe",
+          "caption_score": 21,
+          "excerpt": "Filoncini di pane al gusto Focaccia 🍕 Filoncini di pane semplici ma gli ho dato il gusto Focaccia"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/DBZKN6VAgSx/",
+          "owner": "ricettegram_fit",
+          "caption_category": "complete_recipe",
+          "caption_score": 20,
+          "excerpt": "Risotto ai gamberoni INGREDIENTI: 300gr riso carnaroli 500gr Gamberoni 20 pomodorini ciliegina 80 gr di concentrato di pomodoro"
+        }
+      ]
+    },
+    {
+      "term": "carota",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYANCeXs4Lw/",
+          "owner": "gioiatraifornelli",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Se sei romano lo sai: quando dici zucchine ripiene, si parla di queste: delle romanesche. La ricetta è"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DHs-9OFN5zI/",
+          "owner": "ricette_sane_per_i_bambini",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "👶🏻 Salsiccette di pollo. Ingredienti - 200 gr pollo - 1 zucchina - 1 carota - aglio in"
+        },
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DYMmoJNoa5p/",
+          "owner": "millegrammi_blog",
+          "caption_category": "complete_recipe",
+          "caption_score": 18,
+          "excerpt": "Risotto agli asparagi. Se non lo hai mai provato, devi farlo adesso😊 ➡️Ingredienti: 1 kg asparagi 1 cipolla"
+        }
+      ]
+    },
+    {
+      "term": "formaggio spalmabile light",
+      "count": 5,
+      "training_signal": "compound_identity_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DYFcZCYt30W/",
+          "owner": "elisatiffanybalance",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "La cheesecake che sembra “sgarro” ma ti salva la voglia di dolce 👀🍰 Cremosa, super saziante e con"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CwNHzWxs1rG/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 25,
+          "excerpt": "TIRAMISÙ PROTEICO low carb by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto"
+        },
+        {
+          "source_file": "profile_ricette_veloci.json",
+          "url": "https://www.instagram.com/p/CyBjrs5oOlJ/",
+          "owner": "martyfoodnfit",
+          "caption_category": "complete_recipe",
+          "caption_score": 23,
+          "excerpt": "SACCOTTINO PROTEICO in friggi by @martyfoodnfit MACROS ⤵️ Metti like o commenta se ti piace, mi supporteresti tanto"
+        }
+      ]
+    },
+    {
+      "term": "cioccolato",
+      "count": 5,
+      "training_signal": "catalog_alias_candidate",
+      "examples": [
+        {
+          "source_file": "profile_ricette_facili.json",
+          "url": "https://www.instagram.com/p/DXt11zSjHVa/",
+          "owner": "cucinamammaela",
+          "caption_category": "complete_recipe",
+          "caption_score": 26,
+          "excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DXyrJI4IE3-/",
+          "owner": "little_fitness_page_",
+          "caption_category": "complete_recipe",
+          "caption_score": 24,
+          "excerpt": "✨TORTA ALLA RICOTTA (senza farina) ✨ cremosa, veloce e perfetta per colazione o merenda 🤍🍰 📝 Ingredienti •"
+        },
+        {
+          "source_file": "profile_ricette_sane.json",
+          "url": "https://www.instagram.com/p/DPDYTKJAkiN/",
+          "owner": "ricette_mmmeat",
+          "caption_category": "method_rich",
+          "caption_score": 22,
+          "excerpt": "Biscotti stile Snickers 🍫🥜 • 110 g di fiocchi d'avena • 90 g di farina di farro •"
         }
       ]
     }

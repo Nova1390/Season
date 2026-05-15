@@ -39,6 +39,11 @@ interface ProviderInvocationResult {
   usage: TokenUsage;
 }
 
+interface ExternalEvidencePromptContext {
+  evidenceLines: string[];
+  parentHints: string[];
+}
+
 class ProviderInvocationError extends Error {
   readonly durationMs: number;
 
@@ -118,6 +123,8 @@ Deno.serve(async (request) => {
       `[SEASON_CATALOG_ENRICHMENT] phase=identity_input request_id=${requestId} original_length=${originalText.length} cleaned_length=${cleanedText.length} removed_qualifier_count=${removedQualifiers.length}`,
     );
 
+    const externalEvidence = await fetchExternalEvidencePromptContext(cleanedText);
+
     if (!OPENAI_API_KEY) {
       console.log("[SEASON_CATALOG_ENRICHMENT] phase=provider_not_configured fallback=true");
       logLLMUsage("SEASON_CATALOG_ENRICHMENT", {
@@ -138,14 +145,14 @@ Deno.serve(async (request) => {
         model: OPENAI_MODEL,
         status: "fallback",
         reason: "provider_not_configured",
-        metadata: { normalized_text: cleanedText },
+        metadata: usageMetadata(cleanedText, externalEvidence),
       });
       return json(buildFallbackProposal(cleanedText));
     }
 
     try {
       console.log("[SEASON_CATALOG_ENRICHMENT] phase=provider_call_start");
-      const providerResult = await invokeProvider(cleanedText, originalText);
+      const providerResult = await invokeProvider(cleanedText, originalText, externalEvidence);
       const validation = validateCatalogEnrichmentProposal(providerResult.parsed);
 
       if (!validation.ok || !validation.value) {
@@ -176,7 +183,7 @@ Deno.serve(async (request) => {
           usage: providerResult.usage,
           estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
           reason: "validator_failed",
-          metadata: { normalized_text: cleanedText },
+          metadata: usageMetadata(cleanedText, externalEvidence, { validation_errors: validation.errors }),
         });
         return json(buildFallbackProposal(cleanedText));
       }
@@ -216,7 +223,7 @@ Deno.serve(async (request) => {
           usage: providerResult.usage,
           estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
           reason: "low_confidence_or_unknown_provider_output",
-          metadata: { normalized_text: cleanedText },
+          metadata: usageMetadata(cleanedText, externalEvidence),
         });
         return json(deterministicFallback);
       }
@@ -242,7 +249,7 @@ Deno.serve(async (request) => {
         providerDurationMs: providerResult.durationMs,
         usage: providerResult.usage,
         estimatedCostUsd: estimateUsageCost(providerResult.usage, INPUT_COST_PER_1M_USD, OUTPUT_COST_PER_1M_USD),
-        metadata: { normalized_text: cleanedText },
+        metadata: usageMetadata(cleanedText, externalEvidence),
       });
       return json(proposal);
     } catch (error) {
@@ -267,7 +274,7 @@ Deno.serve(async (request) => {
         status: "error",
         providerDurationMs,
         reason: "provider_failed",
-        metadata: { normalized_text: cleanedText },
+        metadata: usageMetadata(cleanedText, externalEvidence),
       });
       return json(buildFallbackProposal(cleanedText));
     }
@@ -298,12 +305,17 @@ function positiveIntegerOrNull(value: unknown): number | null {
   return parsed;
 }
 
-async function invokeProvider(cleanedText: string, originalText: string): Promise<ProviderInvocationResult> {
+async function invokeProvider(
+  cleanedText: string,
+  originalText: string,
+  externalEvidence: ExternalEvidencePromptContext,
+): Promise<ProviderInvocationResult> {
   const userPrompt = [
     "Generate a catalog enrichment proposal for this unresolved ingredient candidate.",
     "Return strict JSON only.",
     `normalized_text: ${cleanedText}`,
     `original_text: ${originalText}`,
+    ...formatExternalEvidencePromptLines(externalEvidence),
   ].join("\n");
 
   const payload = {
@@ -373,6 +385,98 @@ async function invokeProvider(cleanedText: string, originalText: string): Promis
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchExternalEvidencePromptContext(cleanedText: string): Promise<ExternalEvidencePromptContext> {
+  const fallback: ExternalEvidencePromptContext = { evidenceLines: [], parentHints: [] };
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return fallback;
+
+  const client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await client.rpc("get_catalog_agent_external_evidence_context", {
+    p_normalized_texts: [cleanedText],
+    p_limit_per_term: 3,
+  });
+
+  if (error) {
+    console.log(`[SEASON_CATALOG_ENRICHMENT] phase=external_evidence_lookup_failed term=${cleanedText} error=${error.message}`);
+    return fallback;
+  }
+
+  const context = isRecord(data) ? data : {};
+  const termEvidence = isRecord(context.term_external_evidence)
+    ? context.term_external_evidence[cleanedText]
+    : null;
+  if (!Array.isArray(termEvidence)) return fallback;
+
+  const evidenceLines = termEvidence
+    .filter((entry) => isRecord(entry))
+    .slice(0, 3)
+    .map((entry) => formatEvidenceLine(entry as Record<string, unknown>))
+    .filter((line) => line.length > 0);
+
+  return {
+    evidenceLines,
+    parentHints: deriveParentHints(termEvidence.filter((entry) => isRecord(entry)) as Record<string, unknown>[]),
+  };
+}
+
+function formatEvidenceLine(entry: Record<string, unknown>): string {
+  const status = normalizeText(entry.status) ?? "unknown";
+  const trust = normalizeText(entry.trust_level) ?? "unknown";
+  const evidenceType = normalizeText(entry.evidence_type) ?? "unknown";
+  const label = normalizeText(entry.canonical_label) ?? "unknown label";
+  const summary = String(entry.evidence_summary ?? "").replace(/\s+/g, " ").trim();
+  const confidence = entry.confidence_score === null || entry.confidence_score === undefined
+    ? "unknown"
+    : String(entry.confidence_score);
+  return [
+    `status=${status}`,
+    `trust=${trust}`,
+    `type=${evidenceType}`,
+    `confidence=${confidence}`,
+    `label=${label}`,
+    summary ? `summary=${summary.slice(0, 420)}` : null,
+  ].filter(Boolean).join("; ");
+}
+
+function deriveParentHints(entries: Record<string, unknown>[]): string[] {
+  const hints = new Set<string>();
+  for (const entry of entries) {
+    const metadata = isRecord(entry.metadata) ? entry.metadata : {};
+    const sourceCategory = normalizeText(metadata.source_category);
+    if (sourceCategory === "formaggi_e_latticini") {
+      hints.add("Italian cheese/dairy evidence can support semantic_category=cheese and parent_candidate_slug=formaggio when the ingredient is a named cheese; if setting that parent, also set variant_kind=product_type and specificity_rank_suggestion>=1.");
+    }
+    if (sourceCategory === "cereali_e_derivati") {
+      hints.add("Italian cereal-derivative evidence can support semantic_category=cereal_product and a specific product-form identity rather than a generic grain collapse.");
+    }
+  }
+  return Array.from(hints);
+}
+
+function formatExternalEvidencePromptLines(context: ExternalEvidencePromptContext): string[] {
+  if (context.evidenceLines.length === 0 && context.parentHints.length === 0) return [];
+  return [
+    "external_catalog_evidence_policy: grounding-only; useful for identity/category/parent hints, never catalog truth by itself.",
+    ...context.parentHints.map((hint) => `external_parent_hint: ${hint}`),
+    ...context.evidenceLines.map((line, index) => `external_evidence_${index + 1}: ${line}`),
+  ];
+}
+
+function usageMetadata(
+  cleanedText: string,
+  context: ExternalEvidencePromptContext,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    normalized_text: cleanedText,
+    external_evidence_count: context.evidenceLines.length,
+    external_parent_hint_count: context.parentHints.length,
+    ...extra,
+  };
 }
 
 function withSafeDefaults(

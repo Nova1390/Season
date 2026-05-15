@@ -75,6 +75,14 @@ NOISE_TERMS = {
     "uno",
     "due",
     "tre",
+    "bio",
+    "caloria",
+    "calorie",
+    "calorie kcal",
+    "kcal f c p",
+    "kcal",
+    "f c p",
+    "per porzioni",
 }
 
 
@@ -139,6 +147,10 @@ def extract_terms(caption: str) -> list[str]:
         for chunk in re.split(r"\s+[+;,]\s+|\s{2,}", line):
             term = normalize_term(chunk)
             if len(term) < 3 or term in NOISE_TERMS:
+                continue
+            if re.search(r"\b(?:kcal|calorie|macro|carboidrati|grassi)\b", term):
+                continue
+            if term == "proteine":
                 continue
             if len(term.split()) > 6:
                 continue

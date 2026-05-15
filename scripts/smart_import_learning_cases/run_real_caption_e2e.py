@@ -486,6 +486,31 @@ def error_code(summary: dict[str, Any]) -> str:
     return "unknown"
 
 
+def compact_list(value: Any, *, max_items: int = 8) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    labels: list[str] = []
+    for item in value[:max_items]:
+        if isinstance(item, str):
+            label = item
+        elif isinstance(item, dict):
+            label = str(
+                item.get("name")
+                or item.get("type")
+                or item.get("reason")
+                or item.get("action")
+                or json.dumps(item, ensure_ascii=False, sort_keys=True)
+            )
+        else:
+            label = str(item)
+        label = re.sub(r"\s+", " ", label).strip()
+        if label:
+            labels.append(label)
+    if len(value) > max_items:
+        labels.append(f"+{len(value) - max_items} more")
+    return ", ".join(labels) if labels else "none"
+
+
 def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: int, discovered_count: int, strategy: str) -> None:
     ok_count = sum(1 for item in summaries if item.get("ok"))
     publishable_count = sum(1 for item in summaries if item.get("nextAction") in {"publish", "ready_to_review"})
@@ -548,13 +573,13 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
             f"- Caption signal: {summary.get('caption_category')} score={summary.get('caption_score')}",
             f"- Result: ok={summary.get('ok')} usedLLM={summary.get('usedServerLLM')} duration_ms={summary.get('duration_ms')}",
             f"- Draft: ingredients={summary.get('ingredient_count')} steps={summary.get('step_count')} confidence={summary.get('confidence')}",
-            f"- Quantity coverage: measured={summary.get('measuredIngredientCount')} missing={summary.get('missingQuantityCount')} duplicate_names={', '.join(summary.get('duplicateIngredientNames') or []) or 'none'}",
-            f"- Catalog training candidates: unresolved={', '.join(summary.get('unresolvedIngredients') or []) or 'none'} quantity_coverage={summary.get('quantityCoverage')}",
+            f"- Quantity coverage: measured={summary.get('measuredIngredientCount')} missing={summary.get('missingQuantityCount')} duplicate_names={compact_list(summary.get('duplicateIngredientNames'))}",
+            f"- Catalog training candidates: unresolved={compact_list(summary.get('unresolvedIngredients'))} quantity_coverage={summary.get('quantityCoverage')}",
             f"- Agent: quality={summary.get('draftQuality')} next={summary.get('nextAction')}",
-            f"- Blocking issues: {', '.join(summary.get('blockingIssues') or []) or 'none'}",
-            f"- Nice to fix: {', '.join(summary.get('niceToFix') or []) or 'none'}",
-            f"- Operational signals: {', '.join(summary.get('operationalSignals') or []) or 'none'}",
-            f"- Applied autofixes: {', '.join(summary.get('appliedAutoFixes') or []) or 'none'}",
+            f"- Blocking issues: {compact_list(summary.get('blockingIssues'))}",
+            f"- Nice to fix: {compact_list(summary.get('niceToFix'))}",
+            f"- Operational signals: {compact_list(summary.get('operationalSignals'))}",
+            f"- Applied autofixes: {compact_list(summary.get('appliedAutoFixes'))}",
             "",
         ])
 

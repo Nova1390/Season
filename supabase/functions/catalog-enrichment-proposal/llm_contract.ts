@@ -75,8 +75,8 @@ Rules:
 13) Seafood/shellfish terms (for example vongole, cozze, calamari, scampi, seppie) are not produce: classify them as basic unless genuinely unknown.
 14) semantic_category should be a compact domain hint if clear (for example pasta, cheese, vegetable), otherwise null.
 15) parent_candidate_slug should be set only when a plausible parent family is clear.
-16) specificity_rank_suggestion should be non-negative integer when parent_candidate_slug is set; otherwise null.
-17) variant_kind should be set when proposing a child variant (for example shape, variety, designation); otherwise null.
+16) If parent_candidate_slug is set, variant_kind MUST be a non-empty string and specificity_rank_suggestion MUST be an integer >= 1.
+17) If parent_candidate_slug is null, variant_kind and specificity_rank_suggestion MUST both be null.
 `;
 
 export function validateCatalogEnrichmentProposal(payload: unknown): {
