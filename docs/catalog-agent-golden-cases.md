@@ -48,8 +48,11 @@ The first set covers the behaviors that define the jump from "proposal bot" to "
 - `pomodorini`: meaningful small-tomato variant must not collapse into base tomato.
 - `lenticchie rosse`: meaningful missing lentil variant should become a create-canonical draft when missing.
 - `olive`: ambiguous generic family should remain review-only.
+- `pepe`: ambiguous spice family should remain conservative unless source evidence selects black pepper or another specific target.
 - `lievito per dolci`: likely specific leavening product, but policy needs explicit target before automation.
 - `fiocchi d avena`: likely oat-flake catalog gap or specific alias, not vague review once context is sufficient.
+- `riso basmati`: meaningful rice variant should target an existing child or create a child canonical, not collapse into generic rice.
+- `patate dolci`: meaningful potato variant should target the sweet-potato child when present, not collapse into generic potatoes.
 
 ## Run Locally
 

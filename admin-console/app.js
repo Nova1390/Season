@@ -1239,7 +1239,11 @@ async function loadLearningMemory(options = {}) {
     panel.innerHTML = `
       <h3>Learning memory</h3>
       ${learningMemorySummary(data)}
-      ${jsonBlock(data)}
+      ${learningMemoryCards(data)}
+      <details class="details-block">
+        <summary>Raw learning payload</summary>
+        ${jsonBlock(data)}
+      </details>
     `;
     if (!options.silent) {
       panel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1475,6 +1479,52 @@ function learningMemorySummary(value) {
     <p class="learning-summary">
       ${escapeHTML(totalTermLearnings)} term lessons, ${escapeHTML(metadata.terms_with_learning ?? 0)} terms with learning.
     </p>
+  `;
+}
+
+function learningMemoryCards(value) {
+  const termLearnings = value?.term_learnings ?? {};
+  const cards = Object.entries(termLearnings)
+    .flatMap(([term, items]) => Array.isArray(items)
+      ? items.map((item) => learningMemoryCard(term, item))
+      : [])
+    .join("");
+
+  if (!cards) {
+    return `<p>No learning memory for this term yet.</p>`;
+  }
+
+  return `<div class="learning-card-list">${cards}</div>`;
+}
+
+function learningMemoryCard(term, item) {
+  const type = item.learning_type ?? "learning";
+  const status = item.status ?? "unknown";
+  const severity = item.severity ?? "medium";
+  const problem = item.observed_problem ?? "No observed problem recorded.";
+  const decision = item.corrected_decision ?? "No corrected decision recorded yet.";
+  const policy = item.policy_implication ?? "No policy implication recorded yet.";
+  return `
+    <article class="learning-card">
+      <header>
+        <strong>${escapeHTML(term)}</strong>
+        <span>${escapeHTML(type)} · ${escapeHTML(status)} · ${escapeHTML(severity)}</span>
+      </header>
+      <dl>
+        <div>
+          <dt>Observed</dt>
+          <dd>${escapeHTML(problem)}</dd>
+        </div>
+        <div>
+          <dt>Correct decision</dt>
+          <dd>${escapeHTML(decision)}</dd>
+        </div>
+        <div>
+          <dt>Policy</dt>
+          <dd>${escapeHTML(policy)}</dd>
+        </div>
+      </dl>
+    </article>
   `;
 }
 

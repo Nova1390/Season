@@ -86,6 +86,28 @@ The UI must not expose catalog-governance jargon here. The purpose is to help cr
 
 When a published recipe still contains unresolved custom ingredients from a Smart Import draft, the app sends `custom_ingredient_observations.source = smart_import`. This keeps the existing Catalog Governance ingestion path, while making Smart Import-originated catalog work separable from manual or legacy import observations.
 
+### Smart Import Agent 8.0 Runtime Contract
+
+The 8.0 creator-facing contract adds measurable parsing behavior without changing the public app API.
+
+Parsing guarantees:
+
+- Linear captions such as `Risotto ai funghi per 2: riso 180g, funghi 250g...` should preserve explicit quantities and units.
+- Servings are recovered deterministically from forms such as `per 2`, `x2`, `2 persone`, and `dose per`.
+- Ingredient dedupe prefers, in order, catalog id, normalized name, explicit quantity/unit, higher confidence, and better match status.
+- `steps_missing` blocks publishing when method steps are absent, but it does not invalidate ingredient or quantity extraction.
+- `quantities_missing` is a targeted warning, not a global failure, when only some ingredients lack quantities.
+- unresolved ingredients are reported separately from catalog-review-later signals so creator UX does not confuse recipe completeness with governance backlog.
+
+Internal metrics:
+
+- `smartImportAgent.qualityMetrics.duplicateIngredientNames` lists duplicate normalized names after server dedupe.
+- `smartImportAgent.qualityMetrics.quantityCoverage` tracks ingredients with explicit quantity over total ingredients.
+- `smartImportAgent.qualityMetrics.captionCategory` separates complete captions, ingredients-only captions, method-only captions, low-signal captions, and mixed captions.
+- `smartImportAgent.qualityMetrics.unresolvedIngredientCount` records draft terms that still need catalog review.
+
+These metrics are for regression testing, logs, and agent learning. They are not shown directly to creators.
+
 ### Smart Import Cost Governor
 
 The function has two server-side cost controls in addition to per-user quota:
@@ -140,6 +162,7 @@ Validation:
 - The first stratified E2E used 20 creator captions across complete, ingredient-rich, method-rich, messy, and weak-signal categories. It produced 20/20 successful Edge responses, 15 publish-ready drafts, and 5 correct `steps_missing` blockers where captions lacked method steps.
 - The May 15 stratified stress cycle used 50 real creator captions first, then a 40-caption instrumentation run that exposed full-LLM duplicate ingredients and one cooldown-only false failure. After applying server-side full-LLM dedupe and runner cooldown retry, the confirmation run used 25 real captions and produced 25/25 successful Edge responses, 19 publishable drafts, 6 correct `steps_missing` blockers, 178/247 ingredients with explicit quantities, and 0 duplicate ingredient names.
 - Smart Import now returns `smartImportAgent.operationalSignals` so stress results become structured learning/eval data rather than free-text notes. Current signals include `ingredients_only_caption`, `low_signal_caption`, `method_without_amounts`, `missing_servings_metadata`, `missing_timing_metadata`, `catalog_identity_review_needed`, and `low_confidence_parse`.
+- Smart Import also returns `smartImportAgent.qualityMetrics` so real-caption reports can track duplicate rate, quantity coverage, unresolved terms, repeated terms, and caption-category mix.
 - Quantity preservation now has three defensive layers: Swift scans comma/semicolon/slash fragments when recovering explicit quantities from single-line captions, the Edge Function dedupes preparsed candidates by normalized ingredient while preferring entries with explicit quantity/unit, and full-LLM parse output is deduped before the Smart Import Agent scorecard.
 - Long live stress runs must rotate temporary users in dev with `--requests-per-temp-user`, otherwise the per-user daily quota correctly interrupts the batch and makes quality metrics noisy.
 
@@ -182,6 +205,7 @@ Backend bridge:
 - `public.upsert_catalog_agent_training_signal(...)` imports reviewed terms from the offline corpus.
 - `public.get_catalog_agent_training_signal_context(...)` exposes compact term-specific context to the Catalog Agent, runs with invoker privileges so authenticated calls still respect catalog-admin RLS, and matches punctuation/apostrophe variants such as `fiocchi d avena` vs `fiocchi d'avena`.
 - `run-catalog-agent-triage` attaches matching `training_signals` to each work item and passes a `training_signal_policy` to the LLM packet.
+- `run_real_caption_e2e.py` now reports unresolved terms, repeated ingredient terms, duplicate rate, quantity coverage, and per-case catalog-training candidates so Smart Import test batches can become future Catalog Agent regression evidence after review.
 - The current real-caption corpus contains 2,035 raw captions, 734 recipe-like captions, and 80 top ingredient-like terms. The latest dev import added 46 high-frequency terms with `min_count >= 8` as advisory training signals only.
 
 Training signals are intentionally weaker than learning memory:

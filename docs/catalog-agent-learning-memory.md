@@ -26,6 +26,7 @@ Implemented by:
 - `supabase/migrations/20260511120000_catalog_agent_structured_learning.sql`
 - `supabase/migrations/20260511123000_catalog_agent_learning_context.sql`
 - `supabase/migrations/20260514153000_catalog_agent_worker_learning_writer.sql`
+- `supabase/migrations/20260515100000_catalog_agent_75_matcher_learning_contract.sql`
 
 Table:
 
@@ -50,7 +51,24 @@ Supported types:
 - `duplicate_identity_risk`
 - `prompt_improvement`
 - `catalog_gap`
+- `alias_policy`
+- `variant_policy`
+- `state_vs_identity`
+- `ambiguous_term`
+- `worker_failure`
 - `other`
+
+Current semantic taxonomy:
+
+- `alias_policy`: a surface form, plural, import text, or localization-like phrase should map to an existing safe target through alias governance.
+- `variant_policy`: the term is an identity-bearing variant and must not collapse into a generic parent unless explicit policy says so.
+- `catalog_gap`: the ingredient identity appears clear, but the catalog lacks the canonical child/product.
+- `state_vs_identity`: the observed text is a preparation, freshness, leftovers, or cooking state that should usually stay in recipe text rather than become catalog identity.
+- `ambiguous_term`: the text can point to multiple culinary identities and needs more evidence before action.
+- `worker_failure`: a delegated worker failed, returned failed items, or produced a surprising terminal result.
+- `prompt_improvement`: the model or prompt missed a reusable rule that should become eval/prompt guidance.
+
+Legacy types remain supported for backwards compatibility with existing learning rows and review events.
 
 ## Lifecycle
 
@@ -72,9 +90,12 @@ The migration also updates existing RPCs so learning artifacts are created autom
 - a reviewer rejects a proposal;
 - a reviewer requests more evidence;
 - deterministic validation fails;
-- manual apply fails.
+- a quality gate downgrades or blocks a proposal and the learning writer is enabled;
+- manual apply fails;
 - a delegated worker job fails;
 - a delegated worker job completes with failed items.
+
+Human rejection, more-evidence, failed validation, quality-gate downgrade, and worker failure are all treated as learning opportunities. `needs_review` rows are advisory only; they should help the next run ask better questions, but they must not override validators. `accepted` and `implemented` rows can influence matcher/prompt behavior more strongly, but still do not become catalog truth by themselves.
 
 Worker learning is intentionally manager-level. A worker failure does not prove a catalog policy by itself, but it is evidence that future delegation should become smaller, safer, or better preflighted. The worker lifecycle RPCs now record proposal events such as `worker_job_failed` and `worker_job_completed_with_failures`, then create `catalog_agent_learnings` rows with status `needs_review`.
 
@@ -94,6 +115,8 @@ It does not:
 
 Accepted learnings must still be translated into explicit prompt, validator, policy, or evaluation-set changes.
 
+No learning row becomes source-of-truth catalog data without passing through a governed validator/RPC path. In practice this means the agent may remember that `pane raffermo` is usually bread with a recipe-state modifier, but it still cannot silently mutate `ingredients`, aliases, localizations, or recipe ingredient rows from memory alone.
+
 ## Runtime Context
 
 The proposal-only Edge Function now reads learning memory before calling the LLM.
@@ -101,8 +124,10 @@ The proposal-only Edge Function now reads learning memory before calling the LLM
 Runtime flow:
 
 - fetch bounded triage snapshot;
+- expand lexical candidates with singular/plural, compact text, aliases, localizations, preparation-state, and governed override terms;
 - fetch compact learning context for the candidate normalized texts;
 - attach term-specific lessons to each work item as `context.relevant_learning_memory`;
+- attach weak `training_signals` from real Smart Import captions when available;
 - skip recent unchanged proposals only after learning memory is attached;
 - attach global lessons as `global_learning_memory`;
 - include `learning_memory_policy` so the model understands status semantics.

@@ -1146,7 +1146,7 @@ async function invokeMultiPassProvider(
             mode: "multi_pass",
             max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
             risk_review_performed: riskReviews.length > 0,
-            instruction: "Semantic profiles and catalog_matcher hints are analysis evidence. Final proposals must still obey the triage contract. Use catalog_matcher.safe_targets for grounded existing-target proposals. If catalog_matcher.outcome is catalog_gap_candidate and semantic identity is clear, create a canonical draft instead of vague review. If catalog_matcher shows ambiguous targets, ask a precise blocking question.",
+            instruction: "Semantic profiles and catalog_matcher hints are analysis evidence. Final proposals must still obey the triage contract. Use catalog_matcher.recommended_action, ranked_targets, blocked_actions, and safe_targets before writing final proposals. For safe_existing_target, prefer approve_alias over add_localization when the term is a plural/surface/search form and the target already has a display name. If catalog_matcher.outcome is catalog_gap_candidate and semantic identity is clear, create a canonical draft instead of vague review. If catalog_matcher shows ambiguous targets, ask a precise blocking question.",
           },
         },
       }),
@@ -1688,7 +1688,10 @@ function learningSuggestionForQualityIssue(
 
 function learningTypeForQualityIssue(code: string): string {
   if (code.includes("duplicate") || code.includes("safe_existing_target")) return "duplicate_identity_risk";
-  if (code.includes("generic_aggregate") || code.includes("recipe_process") || code.includes("alias_candidate")) return "policy_gap";
+  if (code.includes("meaningful_variant")) return "variant_policy";
+  if (code.includes("generic_aggregate") || code.includes("recipe_process")) return "state_vs_identity";
+  if (code.includes("alias_candidate")) return "alias_policy";
+  if (code.includes("canonical")) return "catalog_gap";
   if (code.includes("target") || code.includes("confidence") || code.includes("evidence")) return "prompt_improvement";
   return "other";
 }
@@ -2339,6 +2342,7 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     ...(coverageTarget ? [coverageTarget] : []),
   ]);
   const blockers = matcherBlockers(item, safeTargets, candidateTargets);
+  const rankedTargets = rankMatcherTargets(item, safeTargets, candidateTargets);
   const hasAliasCandidateSignal = trainingSignals.some((signal) =>
     normalizeText(signal.training_signal) === "catalog_alias_candidate"
   );
@@ -2370,15 +2374,28 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     rationale = "The term looks like a recipe ingredient and no safe target is grounded, so create_canonical may be appropriate if semantic identity is clear.";
   }
 
+  const actionAdvice = matcherActionAdvice({
+    outcome,
+    blockers,
+    rankedTargets,
+    hasAliasCandidateSignal,
+    likelyIngredient,
+  });
+
   return {
     version: "catalog_matcher_v1",
     normalized_text: normalizedText,
     outcome,
     confidence_score: confidence,
+    matcher_confidence: confidence,
     safe_targets: safeTargets.slice(0, 5),
     candidate_targets: candidateTargets.slice(0, 8),
+    ranked_targets: rankedTargets.slice(0, 8),
     blockers,
+    blocked_actions: actionAdvice.blocked_actions,
+    recommended_action: actionAdvice.recommended_action,
     rationale,
+    match_explanation: actionAdvice.match_explanation,
     training_signal_count: trainingSignals.length,
     lexical_candidate_terms: readNestedArray(item, ["context", "lexical_candidate_terms"]).slice(0, 8),
   };
@@ -2405,6 +2422,9 @@ function matcherTargetFromCanonical(match: Record<string, unknown>): Record<stri
     match_reason: stringOrNull(match.match_reason),
     quality_status: stringOrNull(match.quality_status),
     specificity_rank: numberOrNull(match.specificity_rank),
+    variant_kind: stringOrNull(match.variant_kind),
+    it_name: stringOrNull(match.it_name),
+    en_name: stringOrNull(match.en_name),
   };
 }
 
@@ -2449,6 +2469,120 @@ function uniqueMatcherTargets(targets: Record<string, unknown>[]): Record<string
     unique.push(target);
   }
   return unique;
+}
+
+function rankMatcherTargets(
+  item: WorkItem,
+  safeTargets: Record<string, unknown>[],
+  candidateTargets: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const safeKeys = new Set(safeTargets.map(matcherTargetKey));
+  return uniqueMatcherTargets([...safeTargets, ...candidateTargets])
+    .map((target) => {
+      const score = matcherTargetScore(item, target, safeKeys.has(matcherTargetKey(target)));
+      return {
+        ...target,
+        score,
+        explanation: matcherTargetExplanation(target, score),
+      };
+    })
+    .sort((a, b) => (numberOrNull(b.score) ?? 0) - (numberOrNull(a.score) ?? 0));
+}
+
+function matcherTargetKey(target: Record<string, unknown>): string {
+  return [
+    normalizeText(target.ingredient_id),
+    normalizeText(target.slug),
+  ].join("|");
+}
+
+function matcherTargetScore(
+  item: WorkItem,
+  target: Record<string, unknown>,
+  isSafeTarget: boolean,
+): number {
+  const normalizedText = normalizeText(item.normalized_text);
+  const source = normalizeText(target.source);
+  const matchReason = normalizeText(target.match_reason);
+  let score = isSafeTarget ? 80 : 40;
+
+  if (source === "existing_alias_matches") score += 18;
+  if (source === "coverage_blocker") score += 14;
+  if (source === "possible_canonical_matches") score += 10;
+  if (matchReason.includes("exact")) score += 20;
+  if (matchReason.includes("lexical")) score += 12;
+  if (matchReason.includes("compact")) score += 8;
+  if (normalizeText(target.slug) === normalizedText) score += 8;
+  if (normalizeText(target.normalized_alias_text) === normalizedText) score += 10;
+  if (normalizeText(target.quality_status) === "active") score += 8;
+  if (target.is_active === true) score += 8;
+  score += Math.round((numberOrNull(target.confidence_score) ?? 0) * 10);
+
+  const rank = numberOrNull(target.specificity_rank);
+  if (rank !== null) score += Math.max(0, 8 - Math.min(rank, 8));
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function matcherTargetExplanation(target: Record<string, unknown>, score: number): string {
+  const source = stringOrNull(target.source) ?? "unknown_source";
+  const reason = stringOrNull(target.match_reason) ?? stringOrNull(target.likely_fix_type) ?? "context_match";
+  const slug = stringOrNull(target.slug) ?? "unknown_target";
+  return `${slug} ranked ${score}/100 from ${source} via ${reason}.`;
+}
+
+function matcherActionAdvice(input: {
+  outcome: string;
+  blockers: string[];
+  rankedTargets: Record<string, unknown>[];
+  hasAliasCandidateSignal: boolean;
+  likelyIngredient: boolean;
+}): { recommended_action: string; blocked_actions: string[]; match_explanation: string } {
+  const blockedActions = new Set<string>();
+  for (const blocker of input.blockers) {
+    if (blocker.includes("generic_aggregate") || blocker.includes("recipe_process")) {
+      blockedActions.add("create_canonical");
+    }
+    if (blocker.includes("multiple")) {
+      blockedActions.add("approve_alias");
+      blockedActions.add("add_localization");
+    }
+  }
+
+  if (input.outcome === "safe_existing_target" && input.rankedTargets.length > 0) {
+    blockedActions.add("create_canonical");
+    blockedActions.add("add_localization_when_display_name_already_exists");
+    return {
+      recommended_action: "approve_alias",
+      blocked_actions: Array.from(blockedActions),
+      match_explanation: "A single grounded existing target is available; treat the observed text as an alias/search surface unless the display localization is actually missing.",
+    };
+  }
+
+  if (input.outcome === "catalog_gap_candidate" && input.likelyIngredient) {
+    if (input.hasAliasCandidateSignal) blockedActions.add("create_canonical_without_target_review");
+    return {
+      recommended_action: input.hasAliasCandidateSignal ? "needs_human_review" : "create_canonical_if_identity_clear",
+      blocked_actions: Array.from(blockedActions),
+      match_explanation: input.hasAliasCandidateSignal
+        ? "Corpus evidence suggests alias-like text, but no safe target is grounded; request matching evidence before canonical creation."
+        : "No safe target is grounded and the term looks ingredient-like; canonical creation is acceptable only if semantic identity is clear.",
+    };
+  }
+
+  if (input.outcome === "candidate_target_requires_semantic_check") {
+    return {
+      recommended_action: "needs_human_review_or_approve_alias_after_semantic_check",
+      blocked_actions: Array.from(blockedActions),
+      match_explanation: "One candidate exists but is not a deterministic exact target; require semantic evidence before action.",
+    };
+  }
+
+  return {
+    recommended_action: "needs_human_review",
+    blocked_actions: Array.from(blockedActions),
+    match_explanation: "Matcher evidence is insufficient or ambiguous; ask a concrete blocking question.",
+  };
 }
 
 function matcherBlockers(
@@ -2571,6 +2705,11 @@ function summarizeCatalogMatcher(items: WorkItem[]): Record<string, unknown> {
     outcome_counts: Object.fromEntries(counts.entries()),
     safe_target_count: safeTargetCount,
     blocker_count: blockerCount,
+    recommended_actions: items.reduce((accumulator: Record<string, number>, item) => {
+      const action = normalizeText(readNestedRecord(item, ["context", "catalog_matcher"]).recommended_action) || "missing";
+      accumulator[action] = (accumulator[action] ?? 0) + 1;
+      return accumulator;
+    }, {}),
   };
 }
 

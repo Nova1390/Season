@@ -69,6 +69,15 @@ interface SmartImportQualityScorecard {
   autoFixable: string[];
 }
 
+interface SmartImportQualityMetrics {
+  ingredientCount: number;
+  ingredientsWithQuantity: number;
+  quantityCoverage: number;
+  duplicateIngredientNames: string[];
+  stepsCount: number;
+  hasServings: boolean;
+}
+
 interface SmartImportAutoFixPlanItem {
   issue: string;
   action: string;
@@ -100,6 +109,7 @@ interface SmartImportAgentSummary {
   nextAction: SmartImportNextAction;
   actionReason: string;
   operationalSignals: string[];
+  qualityMetrics: SmartImportQualityMetrics;
   scorecard: SmartImportQualityScorecard;
   autoFixPlan: SmartImportAutoFixPlan;
   appliedAutoFixes: SmartImportAutoFixPlanItem[];
@@ -914,6 +924,21 @@ function applySmartImportSafeAutoFixes(
     }
   }
 
+  if (fixedResult.servings === null) {
+    const inferredServings = inferDeterministicServings(context.caption);
+    if (inferredServings !== null) {
+      fixedResult = {
+        ...fixedResult,
+        servings: inferredServings,
+      };
+      appliedFixes.push({
+        issue: "servings_missing",
+        action: "use_explicit_caption_servings",
+        reason: "The server recovered servings from explicit caption text such as per 2, x2, or 2 persone without guessing.",
+      });
+    }
+  }
+
   return {
     result: fixedResult,
     appliedFixes,
@@ -929,6 +954,7 @@ function buildSmartImportAgentSummary(
     mode: "candidate_resolution" | "full_recipe_parse";
     learningSummary?: SmartImportLearningSummary;
     appliedAutoFixes?: SmartImportAutoFixPlanItem[];
+    caption?: string;
   },
 ): SmartImportAgentSummary {
   const reviewHints = smartImportReviewHints(result, input.outputAudit);
@@ -940,7 +966,8 @@ function buildSmartImportAgentSummary(
   const scorecard = smartImportQualityScorecard(result, input.outputAudit, reviewHints);
   const autoFixPlan = smartImportAutoFixPlan(result, scorecard);
   const nextAction = smartImportNextAction(result, input.outputAudit, reviewHints);
-  const operationalSignals = smartImportOperationalSignals(result, input.outputAudit, reviewHints, scorecard);
+  const qualityMetrics = smartImportQualityMetrics(result);
+  const operationalSignals = smartImportOperationalSignals(result, input.outputAudit, reviewHints, scorecard, input.caption ?? "");
 
   let draftQuality: SmartImportDraftQuality = "publishable";
   if (result.ingredients.length === 0 || result.steps.length === 0) {
@@ -1005,6 +1032,7 @@ function buildSmartImportAgentSummary(
     nextAction: nextAction.name,
     actionReason: nextAction.reason,
     operationalSignals,
+    qualityMetrics,
     scorecard,
     autoFixPlan,
     appliedAutoFixes: input.appliedAutoFixes ?? [],
@@ -1019,6 +1047,7 @@ function smartImportOperationalSignals(
   outputAudit: SmartImportOutputAudit,
   reviewHints: string[],
   scorecard: SmartImportQualityScorecard,
+  caption: string,
 ): string[] {
   const signals: string[] = [];
 
@@ -1043,8 +1072,59 @@ function smartImportOperationalSignals(
   if (result.confidence === "low") {
     signals.push("low_confidence_parse");
   }
+  signals.push(smartImportCaptionCategory(caption, result, reviewHints));
+  if (result.ingredients.some((ingredient) => ingredient.quantity !== null) && reviewHints.includes("quantities_missing")) {
+    signals.push("partial_quantity_caption");
+  }
+  if (smartImportQualityMetrics(result).duplicateIngredientNames.length > 0) {
+    signals.push("duplicate_ingredients_detected");
+  }
 
   return uniqueStrings(signals);
+}
+
+function smartImportQualityMetrics(result: ParseRecipeCaptionResult): SmartImportQualityMetrics {
+  const duplicateIngredientNames = duplicateParsedIngredientNames(result.ingredients);
+  const ingredientsWithQuantity = result.ingredients.filter((ingredient) => ingredient.quantity !== null).length;
+  const ingredientCount = result.ingredients.length;
+  return {
+    ingredientCount,
+    ingredientsWithQuantity,
+    quantityCoverage: ingredientCount === 0 ? 0 : Number((ingredientsWithQuantity / ingredientCount).toFixed(3)),
+    duplicateIngredientNames,
+    stepsCount: result.steps.length,
+    hasServings: result.servings !== null,
+  };
+}
+
+function duplicateParsedIngredientNames(ingredients: ParsedIngredient[]): string[] {
+  const counts = new Map<string, number>();
+  for (const ingredient of ingredients) {
+    const key = normalizeIngredientCandidateText(ingredient.name);
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([name]) => name);
+}
+
+function smartImportCaptionCategory(
+  caption: string,
+  result: ParseRecipeCaptionResult,
+  reviewHints: string[],
+): string {
+  const normalized = normalizeText(caption);
+  const hasIngredientHeader = /\bingredienti\b|\bdosi\b|\boccorrente\b|\bcosa serve\b/i.test(normalized);
+  const hasMethodMarker = /\bprocedimento\b|\bpreparazione\b|\bcuoci\b|\bmescola\b|\baggiungi\b|\binforna\b|\bfrulla\b|\bversa\b/i.test(normalized);
+  const quantityMentions = (caption.match(/\b\d+(?:[.,]\d+)?\s*(?:g|gr|kg|ml|l|litri?|cucchiai?|cucchiaini?|uova?|tuorli|spicchi|persone)\b|q\.?\s*b\.?/gi) ?? []).length;
+
+  if (result.ingredients.length === 0 && result.steps.length === 0) return "low_signal_caption";
+  if (result.ingredients.length > 0 && result.steps.length === 0) return "ingredients_only_caption";
+  if (hasIngredientHeader && hasMethodMarker && quantityMentions >= 2) return "complete_recipe_caption";
+  if (hasMethodMarker && reviewHints.includes("quantities_missing")) return "method_without_amounts";
+  if (quantityMentions >= 2 && result.steps.length > 0) return "messy_recipe_like_caption";
+  return "creator_caption";
 }
 
 function smartImportQualityScorecard(
@@ -1279,7 +1359,7 @@ function buildSmartImportResult(input: {
     steps: extractDeterministicSteps(input.caption),
     prepTimeMinutes: null,
     cookTimeMinutes: null,
-    servings: null,
+    servings: inferDeterministicServings(input.caption),
     confidence: confidenceFromIngredients(dedupedIngredients),
     inferredDish: null,
   };
@@ -1307,7 +1387,6 @@ function parsedIngredientDuplicateIndex(
   existingIngredients: ParsedIngredient[],
 ): number {
   const normalizedName = normalizeIngredientCandidateText(ingredient.name);
-  const hasQuantity = ingredient.quantity !== null;
 
   return existingIngredients.findIndex((existing) => {
     const existingName = normalizeIngredientCandidateText(existing.name);
@@ -1322,8 +1401,7 @@ function parsedIngredientDuplicateIndex(
       return false;
     }
 
-    const existingHasQuantity = existing.quantity !== null;
-    return !hasQuantity || !existingHasQuantity;
+    return true;
   });
 }
 
@@ -1669,11 +1747,37 @@ function normalizedAllowedUnit(value: unknown): string | null {
   const unit = normalizeText(value).toLowerCase();
   switch (unit) {
     case "g":
+    case "gr":
+    case "grammi":
+      return "g";
     case "ml":
+      return "ml";
+    case "kg":
+      return "g";
+    case "l":
+    case "lt":
+    case "litro":
+    case "litri":
+      return "ml";
     case "piece":
+    case "pieces":
+    case "pezzo":
+    case "pezzi":
+    case "spicchio":
+    case "spicchi":
+    case "uovo":
+    case "uova":
+    case "tuorlo":
+    case "tuorli":
+      return "piece";
     case "tbsp":
+    case "cucchiaio":
+    case "cucchiai":
+      return "tbsp";
     case "tsp":
-      return unit;
+    case "cucchiaino":
+    case "cucchiaini":
+      return "tsp";
     default:
       return null;
   }
@@ -1747,6 +1851,27 @@ function inferTitleFromURL(url: string): string | null {
   }
 }
 
+function inferDeterministicServings(caption: string): number | null {
+  const normalized = normalizeText(caption);
+  const patterns = [
+    /\bper\s+(\d{1,2})\s*(?:persone|persona|porzioni|porzione)?\b/i,
+    /\b(?:dose|dosi)\s+per\s+(\d{1,2})\b/i,
+    /\b(\d{1,2})\s*(?:persone|persona|porzioni|porzione)\b/i,
+    /\bx\s*(\d{1,2})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+    const value = Number(match[1]);
+    if (Number.isInteger(value) && value >= 1 && value <= 20) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function extractDeterministicSteps(caption: string): string[] {
   const lines = nonEmptyCaptionLines(caption);
   const steps: string[] = [];
@@ -1816,7 +1941,7 @@ function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngred
   const rawName = item.name.trim();
   if (!rawName) return item;
 
-  const pattern = /^(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|piece|pieces)\s+(.+)$/i;
+  const pattern = /^(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|l|lt|litro|litri|piece|pieces|pezzo|pezzi|spicchio|spicchi|uovo|uova|tuorlo|tuorli|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini)\s+(.+)$/i;
   const match = rawName.match(pattern);
   if (!match) return item;
 
@@ -1844,6 +1969,7 @@ function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngred
   let recoveredUnit: string | null = null;
   switch (unitToken) {
     case "g":
+    case "gr":
       recoveredUnit = "g";
       break;
     case "kg":
@@ -1854,12 +1980,33 @@ function recoverExplicitMeasuredIngredient(item: ParsedIngredient): ParsedIngred
       recoveredUnit = "ml";
       break;
     case "l":
+    case "lt":
+    case "litro":
+    case "litri":
       recoveredUnit = "ml";
       recoveredQuantity = parsedQuantity * 1000;
       break;
     case "piece":
     case "pieces":
+    case "pezzo":
+    case "pezzi":
+    case "spicchio":
+    case "spicchi":
+    case "uovo":
+    case "uova":
+    case "tuorlo":
+    case "tuorli":
       recoveredUnit = "piece";
+      break;
+    case "tbsp":
+    case "cucchiaio":
+    case "cucchiai":
+      recoveredUnit = "tbsp";
+      break;
+    case "tsp":
+    case "cucchiaino":
+    case "cucchiaini":
+      recoveredUnit = "tsp";
       break;
     default:
       recoveredUnit = null;

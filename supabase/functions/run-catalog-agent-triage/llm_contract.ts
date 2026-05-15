@@ -228,6 +228,10 @@ Decision policy:
 33d) Clear dietary/product variants such as gluten-free pasta are identity-bearing catalog gaps. Do not approve them as aliases to the base product. If the target is absent and the text is exact, create a canonical draft with high risk when needed, not critical risk, unless the evidence itself is contradictory or unsafe.
 33e) Protected-designation or region/product-origin cheese terms are identity-bearing. If a safe matching protected target exists in context, prefer approve_alias/add_localization to that target; if absent and the identity is clear, create a canonical draft rather than asking for generic review.
 34) Include concrete semantic_profile.evidence and proposal evidence that reference recipe context, catalog candidates, learning memory, catalog gaps, or missing evidence.
+35) Read catalog_matcher.recommended_action, ranked_targets, blocked_actions, matcher_confidence, and match_explanation before choosing proposal_type.
+36) When catalog_matcher.recommended_action="approve_alias", use the highest ranked safe target unless recipe context contradicts it.
+37) When catalog_matcher.blocked_actions includes create_canonical, do not create a canonical draft for that term.
+38) Surface/plural/import text with a safe existing target should normally be approve_alias, not add_localization, unless the target lacks the intended display localization.
 `;
 
 export function validateCatalogAgentTriageOutput(

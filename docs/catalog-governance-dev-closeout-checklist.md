@@ -12,7 +12,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Staging backend: intentionally untouched for this agent-console cycle
 - Real low-risk apply: disabled by default
 - Console low-risk apply: dry-run only
-- Current autonomy level: `7.0 dev foundation`, not staging-ready autonomy
+- Current autonomy level: `7.5 dev matcher/learning foundation`, not staging-ready autonomy
 - Agent persistence and scheduler windows: disabled by default after smoke runs
 - TestFlight handoff: `docs/testflight-bugfix-handoff-2026-05-12.md`
 - Current branch audit: `docs/catalog-agent-closeout-audit-2026-05-15.md`
@@ -51,6 +51,10 @@ This checklist is for the current branch and dev environment only. It does not a
 - Level `6.0` dev scheduler foundation is implemented with a disabled-by-default kill switch, scheduled-shift ledger, readable console shift history, mandatory expiry windows, and two successful autonomous dry-run cron windows (`#10/#11`).
 - Level `7.0` quality-gate foundation is implemented: duplicate proposal blocking, source-grounded generic aggregate guards, recipe-process byproduct guards, and bounded self-repair for blocked LLM output.
 - Level `7.1` foundation started: `catalog_matcher_v1` now gives the LLM and quality gate deterministic target/gap/ambiguity hints, and quality-gate errors now produce learning-writer suggestions.
+- Level `7.5` matcher contract is implemented locally: `catalog_matcher_v1` now returns ranked targets, recommended action, blocked actions, matcher confidence, and explanation; lexical expansion includes governed overrides for surface forms such as `uovo`, `pane raffermo`, and `fiocchi d avena`.
+- Smart Import Agent `8.0` creator-facing contract is implemented locally: caption categories, quantity coverage, unresolved-count metrics, deterministic servings recovery, and stronger server dedupe are returned as internal metrics while keeping the app API backward compatible.
+- Smart Import E2E reports now expose catalog-training evidence: unresolved terms, repeated terms, duplicate rate, and quantity coverage can be reviewed before becoming golden cases or training signals.
+- Learning memory now supports the richer taxonomy `alias_policy`, `variant_policy`, `catalog_gap`, `state_vs_identity`, `ambiguous_term`, `worker_failure`, and `prompt_improvement` while preserving legacy rows.
 - Worker lifecycle learning is implemented: failed worker jobs and worker completions with failed items now record manager-level learning candidates.
 - Dev transactional smoke checks verified worker-learning behavior with rollback and no persistent test data.
 - Dev self-repair smoke run `#99` confirmed `spezie` now escalates to `needs_human_review` instead of creating an unsafe broad canonical draft.
@@ -61,6 +65,10 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 branch audit restored useful Deno type-check signal across the main Catalog Agent, Smart Import, enrichment, automation, import, and worker Edge Functions.
 - 2026-05-15 branch audit deployed the updated Catalog Agent worker/orchestrator/enrichment Edge Functions to `Season-dev`.
 - Documentation now marks `1.0.1 (4)` as release-line history and keeps `agent/catalog-governance` explicitly dev-only until promotion.
+- 2026-05-15 Catalog Agent `7.5` / Smart Import Agent `8.0` checkpoint pushed two dev-only migrations, deployed `run-catalog-agent-triage` and `parse-recipe-caption`, and kept staging untouched.
+- 2026-05-15 remote dev quality checks passed after the matcher update: `context_target 13/13`, `current golden 13/13`, and Supabase `db lint` reported no schema errors.
+- 2026-05-15 Smart Import exact-caption probe passed for `Risotto ai funghi per 2`: duplicate candidate rows collapsed and measured quantities survived without using server LLM.
+- 2026-05-15 admin console static files were redeployed to `https://catalog.seasonapp.it/`; `index`, `app.js`, and `styles.css` all returned HTTP `200`.
 
 ## Current Closeout Audit
 
@@ -72,7 +80,7 @@ Closeout decision:
 
 - the branch is safe to keep developing in dev;
 - it is not yet ready for staging autonomy;
-- the next intelligence work should deepen catalog matcher scoring and evaluate worker-learning outcomes, not add more manual review volume.
+- the next intelligence work should validate the new 7.5 matcher/8.0 Smart Import contracts on dev, then evaluate worker-learning outcomes, not add more manual review volume.
 
 ## Dev Training Import
 

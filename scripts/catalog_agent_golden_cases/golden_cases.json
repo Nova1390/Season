@@ -296,6 +296,91 @@
         "kind": "catalog_gap",
         "max_existing_target_count": 0
       }
+    },
+    {
+      "id": "ambiguous-pepe",
+      "normalized_text": "pepe",
+      "why": "Bare pepper is a real ingredient term, but target may differ by black/white/peppercorn context.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "superseded"],
+        "risk_any_of": ["low", "medium", "high"]
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated"],
+        "min_confidence": 0.65
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "superseded"],
+        "risk_any_of": ["low", "medium", "high"]
+      },
+      "context_target": {
+        "kind": "ambiguous_target_set",
+        "candidate_slug_any_of": ["black_pepper", "pepper"],
+        "min_candidate_count": 1
+      }
+    },
+    {
+      "id": "meaningful-variant-riso-basmati",
+      "normalized_text": "riso basmati",
+      "why": "Basmati rice is a rice variety; it should not collapse into generic rice when variant identity matters.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "approve_alias"],
+        "proposed_slug_any_of": ["basmati_rice", "riso_basmati"],
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.75
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "approve_alias"],
+        "proposed_slug_any_of": ["basmati_rice", "riso_basmati"],
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.75
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "approve_alias"],
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.75
+      },
+      "context_target": {
+        "kind": "catalog_gap",
+        "max_existing_target_count": 1
+      }
+    },
+    {
+      "id": "meaningful-variant-patate-dolci",
+      "normalized_text": "patate dolci",
+      "why": "Sweet potatoes are not a surface form of potatoes; they need a child/specialized target or governed catalog gap.",
+      "current": {
+        "kind": "canonical",
+        "slug": "sweet_potato",
+        "status": "active"
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "create_canonical"],
+        "target_slug_any_of": ["sweet_potato"],
+        "proposed_slug_any_of": ["sweet_potato", "patate_dolci"],
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.75
+      },
+      "effective_target": {
+        "kind": "canonical",
+        "slug": "sweet_potato",
+        "status": "active"
+      },
+      "context_target": {
+        "kind": "meaningful_variant_target",
+        "target_slug_any_of": ["sweet_potato"],
+        "source_any_of": ["alias", "canonical"]
+      }
     }
   ]
 }

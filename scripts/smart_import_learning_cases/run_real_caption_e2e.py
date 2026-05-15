@@ -363,6 +363,7 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
     agent = result.get("smartImportAgent") if isinstance(result.get("smartImportAgent"), dict) else {}
     scorecard = agent.get("scorecard") if isinstance(agent.get("scorecard"), dict) else {}
     auto_fix_plan = agent.get("autoFixPlan") if isinstance(agent.get("autoFixPlan"), dict) else {}
+    quality_metrics = agent.get("qualityMetrics") if isinstance(agent.get("qualityMetrics"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
     details = ingredient_details(result)
     duplicates = duplicate_ingredient_names(details)
@@ -385,6 +386,8 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
         "missingQuantityCount": max(0, len(details) - measured_count),
         "duplicateIngredientNames": duplicates,
         "duplicateIngredientNameCount": len(duplicates),
+        "agentDuplicateIngredientNames": quality_metrics.get("duplicateIngredientNames") or [],
+        "quantityCoverage": quality_metrics.get("quantityCoverage"),
         "step_count": step_count(result),
         "servings": result.get("servings"),
         "prepTimeMinutes": result.get("prepTimeMinutes"),
@@ -397,6 +400,7 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
         "niceToFix": scorecard.get("niceToFix") or [],
         "autoFixable": scorecard.get("autoFixable") or [],
         "operationalSignals": agent.get("operationalSignals") or [],
+        "unresolvedIngredients": agent.get("unresolvedIngredients") or [],
         "safeFixes": auto_fix_plan.get("safeFixes") or [],
         "deferredFixes": auto_fix_plan.get("deferredFixes") or [],
         "appliedAutoFixes": agent.get("appliedAutoFixes") or [],
@@ -489,6 +493,13 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
     duplicate_draft_count = sum(1 for item in summaries if int(item.get("duplicateIngredientNameCount") or 0) > 0)
     measured_ingredient_total = sum(int(item.get("measuredIngredientCount") or 0) for item in summaries)
     ingredient_total = sum(int(item.get("ingredient_count") or 0) for item in summaries)
+    unresolved_terms = sorted({
+        str(term)
+        for item in summaries
+        for term in (item.get("unresolvedIngredients") or [])
+        if str(term).strip()
+    })
+    repeated_terms = grouped_list_counts(summaries, "ingredients")
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     lines = [
@@ -508,11 +519,14 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
         f"- Needs more input: {needs_more_input_count}",
         f"- Drafts with duplicate ingredient names: {duplicate_draft_count}",
         f"- Ingredients with explicit quantities: {measured_ingredient_total}/{ingredient_total}",
+        f"- Quantity coverage: {round(measured_ingredient_total / ingredient_total, 3) if ingredient_total else 0}",
+        f"- Unresolved ingredient terms: {len(unresolved_terms)}",
         f"- Caption categories: {json.dumps(grouped_counts(summaries, 'caption_category'), sort_keys=True)}",
         f"- Draft qualities: {json.dumps(grouped_counts(summaries, 'draftQuality'), sort_keys=True)}",
         f"- Agent next actions: {json.dumps(grouped_counts(summaries, 'nextAction'), sort_keys=True)}",
         f"- Error codes: {json.dumps(grouped_counts([{**item, 'errorCode': error_code(item)} for item in summaries], 'errorCode'), sort_keys=True)}",
         f"- Operational signals: {json.dumps(grouped_list_counts(summaries, 'operationalSignals'), sort_keys=True)}",
+        f"- Repeated ingredient terms: {json.dumps({k: v for k, v in repeated_terms.items() if v > 1}, sort_keys=True)[:1200]}",
         "",
         "## Findings",
         "",
@@ -535,6 +549,7 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
             f"- Result: ok={summary.get('ok')} usedLLM={summary.get('usedServerLLM')} duration_ms={summary.get('duration_ms')}",
             f"- Draft: ingredients={summary.get('ingredient_count')} steps={summary.get('step_count')} confidence={summary.get('confidence')}",
             f"- Quantity coverage: measured={summary.get('measuredIngredientCount')} missing={summary.get('missingQuantityCount')} duplicate_names={', '.join(summary.get('duplicateIngredientNames') or []) or 'none'}",
+            f"- Catalog training candidates: unresolved={', '.join(summary.get('unresolvedIngredients') or []) or 'none'} quantity_coverage={summary.get('quantityCoverage')}",
             f"- Agent: quality={summary.get('draftQuality')} next={summary.get('nextAction')}",
             f"- Blocking issues: {', '.join(summary.get('blockingIssues') or []) or 'none'}",
             f"- Nice to fix: {', '.join(summary.get('niceToFix') or []) or 'none'}",

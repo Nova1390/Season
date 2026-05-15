@@ -1,6 +1,6 @@
 # Catalog Agent Autonomy Roadmap
 
-Status: strategic implementation roadmap. Current level is `7.0 dev autonomy foundation` on `Season-dev`. Level `6.0` scheduled dev autonomy has a safe dry-run scheduler foundation, and Level `7.0` now has proposal self-repair plus stronger source-grounded quality gates. This is still dev-only and does not authorize staging autonomy.
+Status: strategic implementation roadmap. Current level is `7.5 dev matcher/learning foundation` on `Season-dev`. Level `6.0` scheduled dev autonomy has a safe dry-run scheduler foundation, Level `7.0` has proposal self-repair plus stronger source-grounded quality gates, and the current `7.5` work adds ranked deterministic matching plus governed learning taxonomy. This is still dev-only and does not authorize staging autonomy.
 
 This document defines how Season should grow the Catalog Governance Agent from a supervised reasoning assistant into a reliable autonomous catalog operator without bypassing Supabase guardrails, Autopilot workers, audit, or human policy ownership.
 
@@ -440,6 +440,22 @@ Required implementation:
 - cross-language duplicate detector;
 - locale-specific alias confidence thresholds;
 - admin console filters by language and source.
+
+Implementation status:
+
+- started on `2026-05-15` on `Season-dev` only;
+- `catalog_matcher_v1` now returns `ranked_targets`, `recommended_action`, `blocked_actions`, `matcher_confidence`, and `match_explanation`;
+- lexical candidate expansion now covers singular/plural, compact variants, aliases, localizations, preparation-state forms, and governed override terms through `catalog_agent_lexical_candidate_overrides`;
+- safe surface-form/plural/import-text matches are directed toward `approve_alias`, while `add_localization` remains reserved for missing or incorrect display names;
+- meaningful variants such as small tomatoes, sweet potatoes, oat flakes, and basmati rice stay separated from generic parents unless a safe child target exists;
+- learning memory accepts richer policy types so quality-gate errors, review outcomes, and worker failures can become reusable advisory memory;
+- admin console learning memory now renders readable learning cards before raw JSON.
+
+Remaining before Level `7.5` is complete:
+
+- run remote dev golden/eval probes after deploying the updated function and migration;
+- collect enough real-caption and recipe-source volume to prove ranked targets reduce generic human-review proposals;
+- expand multilingual fixtures beyond Italian/English before claiming cross-language stewardship.
 
 Exit gates:
 

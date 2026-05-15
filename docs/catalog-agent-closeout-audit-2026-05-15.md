@@ -2,6 +2,8 @@
 
 Status: current branch audit for `agent/catalog-governance`.
 
+Latest implementation checkpoint: Catalog Agent `7.5` matcher/learning foundation plus Smart Import Agent `8.0` creator-caption contract are being closed on `Season-dev` only.
+
 Scope:
 
 - environment: `Season-dev`;
@@ -22,6 +24,14 @@ Current autonomy posture:
 - Smart Import Agent is creator-facing and may use learning context, but it does not mutate catalog truth.
 - Autopilot and batch functions remain bounded workers under agent/governance control.
 - Real catalog mutation paths remain gated by backend feature flags, validators, and audit tables.
+
+Latest checkpoint posture:
+
+- Catalog Matcher now emits ranked targets, action recommendation, blocked actions, confidence, and explanation for the LLM/validator packet.
+- Governed lexical overrides support documented surface-form expansion instead of hidden hardcoding.
+- Learning memory supports richer advisory types for alias policy, variant policy, catalog gaps, state-vs-identity, ambiguity, worker failure, and prompt improvement.
+- Smart Import returns internal quality metrics for duplicate names, quantity coverage, caption category, and unresolved ingredient count.
+- Smart Import reports now expose catalog-training evidence, but training signals remain non-mutating.
 
 ## Code Audit
 
@@ -60,17 +70,28 @@ Remote checks:
 
 - `supabase db push --linked --dry-run`: remote database is up to date.
 - `supabase db lint --linked`: no schema errors found.
+- `20260515100000_catalog_agent_75_matcher_learning_contract.sql` was applied to `Season-dev`.
+- `20260515101500_catalog_agent_75_variant_lexical_overrides.sql` was applied to `Season-dev`.
+- After applying both migrations, `supabase db lint --linked` still reported no schema errors.
 
 Interpretation:
 
-- No pending migrations need to be pushed to dev.
+- No pending migrations remain for dev after the 7.5 matcher/learning checkpoint.
 - The public schema lint is clean at this checkpoint.
 - Staging was not linked, linted, pushed, or modified by this audit.
 
 Edge Function deploy:
 
 - Deployed updated dev functions to `Season-dev`: `catalog-enrichment-proposal`, `catalog-low-risk-apply-batch`, `run-catalog-agent-dev-shift`, `run-catalog-agent-orchestrator`, `run-catalog-agent-triage`, `run-catalog-automation-cycle`, `run-catalog-enrichment-draft-batch`, and `run-catalog-ingredient-creation-batch`.
+- Deployed the 7.5/8.0 changed functions to `Season-dev`: `run-catalog-agent-triage` and `parse-recipe-caption`.
 - CLI reported Docker was not running, but remote deployment completed successfully for each function.
+
+Remote dev validation:
+
+- `scripts/catalog_agent_golden_cases/run_context_quality.py --json`: `13/13` passed.
+- `scripts/catalog_agent_golden_cases/run_golden_cases.py --profile current --json`: `13/13` passed.
+- `scripts/smart_import_learning_cases/run_exact_caption_probe.py --use-temp-user --json`: passed with `usedServerLLM=false`, no duplicate ingredient keys, and preserved `riso 180g`, `funghi 250g`, `burro 20g`, and `parmigiano 30g`.
+- `https://catalog.seasonapp.it/`, `app.js`, and `styles.css` returned HTTP `200` after admin-console static deploy.
 
 ## Documentation Audit
 

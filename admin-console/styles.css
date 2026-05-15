@@ -971,6 +971,51 @@ p {
   color: var(--ok);
 }
 
+.learning-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.learning-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface);
+}
+
+.learning-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.learning-card header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.learning-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.learning-card div {
+  display: grid;
+  gap: 2px;
+}
+
+.learning-card dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.learning-card dd {
+  margin: 0;
+}
+
 .action-row button:disabled {
   background: var(--surface-2);
   border-color: var(--line-strong);
