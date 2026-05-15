@@ -43,6 +43,7 @@ const elements = {
   refreshButton: document.querySelector("#refreshButton"),
   statusesInput: document.querySelector("#statusesInput"),
   limitInput: document.querySelector("#limitInput"),
+  latestOnlyInput: document.querySelector("#latestOnlyInput"),
   syncStatus: document.querySelector("#syncStatus"),
   totalCount: document.querySelector("#totalCount"),
   needsReviewCount: document.querySelector("#needsReviewCount"),
@@ -172,6 +173,10 @@ function bindEvents() {
 
   elements.refreshButton.addEventListener("click", loadInbox);
   elements.refreshOpsButton.addEventListener("click", loadOperations);
+  elements.latestOnlyInput?.addEventListener("change", () => {
+    state.learningMemory = null;
+    renderInbox();
+  });
   elements.workerNameInput.addEventListener("change", updateWorkerRunHint);
   elements.workerRunForm.addEventListener("submit", runAgentWorker);
   elements.applyAuditList.addEventListener("click", async (event) => {
@@ -479,14 +484,20 @@ async function loadInbox(options = {}) {
   }
 
   state.inbox = data;
-  const items = Array.isArray(data?.items) ? data.items : [];
+  const items = latestOpenItems(data);
   state.draftsByText = await fetchDraftsForItems(items);
   state.selected = items.find((item) => Number(item.proposal_id) === previousSelectionId) ?? items[0] ?? null;
   if (!state.selected || Number(state.selected.proposal_id) !== previousSelectionId) {
     state.learningMemory = null;
   }
   renderInbox();
-  setStatus(`Loaded ${data?.items?.length ?? 0} proposals.`);
+  const loadedItems = Array.isArray(data?.items) ? data.items.length : 0;
+  const hiddenDuplicates = Math.max(loadedItems - items.length, 0);
+  setStatus(
+    hiddenDuplicates > 0 && elements.latestOnlyInput?.checked
+      ? `Loaded ${items.length} proposals, hiding ${hiddenDuplicates} historical duplicates.`
+      : `Loaded ${loadedItems} proposals.`
+  );
   await loadOperations({ silent: true });
 }
 
@@ -983,17 +994,87 @@ async function rollbackApplyAudit(applyAuditId) {
 }
 
 function renderInbox() {
-  const items = Array.isArray(state.inbox?.items) ? state.inbox.items : [];
-  const counts = state.inbox?.metadata?.counts ?? {};
-  const byStatus = counts.by_status ?? {};
+  const rawItems = Array.isArray(state.inbox?.items) ? state.inbox.items : [];
+  const items = latestOpenItems(state.inbox);
+  const byStatus = countItemsByStatus(items);
+  const hiddenDuplicates = Math.max(rawItems.length - items.length, 0);
 
-  elements.totalCount.textContent = String(counts.total ?? items.length);
+  elements.totalCount.textContent = String(items.length);
   elements.needsReviewCount.textContent = String(byStatus.needs_human_review ?? 0);
   elements.validatedCount.textContent = String(byStatus.validated ?? 0);
   elements.failedCount.textContent = String(byStatus.failed_validation ?? 0);
 
+  if (state.selected && !items.some((item) => Number(item.proposal_id) === Number(state.selected?.proposal_id))) {
+    state.selected = items[0] ?? null;
+    state.learningMemory = null;
+  }
+
   elements.proposalList.replaceChildren(...items.map(renderProposalRow));
+  if (hiddenDuplicates > 0 && elements.latestOnlyInput?.checked) {
+    const note = document.createElement("div");
+    note.className = "proposal-list-note";
+    note.textContent = `${hiddenDuplicates} historical duplicates hidden. Disable "Latest per term" to inspect them.`;
+    elements.proposalList.prepend(note);
+  }
   renderSelectedProposal();
+}
+
+function latestOpenItems(inbox) {
+  const items = Array.isArray(inbox?.items) ? inbox.items : [];
+  if (!elements.latestOnlyInput?.checked) {
+    return items;
+  }
+
+  const bestByText = new Map();
+  for (const item of items) {
+    const key = normalizeKey(item?.proposal?.normalized_text);
+    if (!key) continue;
+    const current = bestByText.get(key);
+    if (!current || proposalSortScore(item) < proposalSortScore(current)) {
+      bestByText.set(key, item);
+    }
+  }
+
+  return Array.from(bestByText.values()).sort((left, right) => {
+    const leftScore = proposalSortScore(left);
+    const rightScore = proposalSortScore(right);
+    if (leftScore !== rightScore) return leftScore - rightScore;
+    return Number(right.proposal_id ?? 0) - Number(left.proposal_id ?? 0);
+  });
+}
+
+function proposalSortScore(item) {
+  const proposal = item?.proposal ?? {};
+  const statusRank = {
+    draft: 0,
+    queued_for_validation: 1,
+    validated: 2,
+    needs_human_review: 3,
+    failed_validation: 4
+  }[proposal.status] ?? 9;
+  const riskRank = {
+    critical: 0,
+    high: 1,
+    unknown: 2,
+    medium: 3,
+    low: 4
+  }[proposal.risk_level] ?? 9;
+  const typeRank = {
+    approve_alias: 0,
+    create_canonical: 1,
+    add_localization: 2,
+    needs_human_review: 3
+  }[proposal.proposal_type] ?? 9;
+  const createdAt = Date.parse(proposal.created_at ?? "") || 0;
+  return statusRank * 1_000_000_000_000 + riskRank * 10_000_000_000 + typeRank * 100_000_000 - createdAt / 1000;
+}
+
+function countItemsByStatus(items) {
+  return items.reduce((counts, item) => {
+    const status = item?.proposal?.status ?? "unknown";
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 function renderProposalRow(item) {

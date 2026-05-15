@@ -92,6 +92,9 @@ Operations worker controls are deliberately narrow:
 - the console now explains whether the dev scheduler window is `disabled`, `open`, `expired`, or missing an expiry;
 - verified `https://catalog.seasonapp.it/` returns `200`;
 - verified cache-busted `app.js?v=20260513-4` and `styles.css?v=20260513-4` return `200`.
+- deployed cache version `20260515-1` with the `Latest per term` inbox filter;
+- the default review list now hides historical duplicate proposals while leaving audit history in the database;
+- verified `https://catalog.seasonapp.it/`, `app.js?v=20260515-1`, and `styles.css?v=20260515-1` return `200`.
 
 ## Local Setup
 

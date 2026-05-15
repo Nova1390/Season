@@ -316,8 +316,26 @@ p {
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 120px;
+  grid-template-columns: minmax(260px, 1fr) 120px auto;
   gap: 14px;
+  align-items: end;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+}
+
+.checkbox-field input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--primary);
+}
+
+.checkbox-field span {
+  color: var(--text);
 }
 
 .summary {
@@ -758,6 +776,13 @@ p {
 
 .proposal-list {
   overflow: hidden;
+}
+
+.proposal-list-note {
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 10px 14px;
 }
 
 .proposal-row {

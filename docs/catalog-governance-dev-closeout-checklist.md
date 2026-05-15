@@ -69,6 +69,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 remote dev quality checks passed after the matcher update: `context_target 13/13`, `current golden 13/13`, and Supabase `db lint` reported no schema errors.
 - 2026-05-15 Smart Import exact-caption probe passed for `Risotto ai funghi per 2`: duplicate candidate rows collapsed and measured quantities survived without using server LLM.
 - 2026-05-15 admin console static files were redeployed to `https://catalog.seasonapp.it/`; `index`, `app.js`, and `styles.css` all returned HTTP `200`.
+- 2026-05-15 review inbox hygiene superseded stale duplicate open proposals without mutating catalog truth. Open `needs_human_review` count dropped from `19` to `10`, open duplicate proposal groups dropped to `0`, and `acqua di cottura` was recorded as implemented `state_vs_identity` learning.
+- 2026-05-15 admin console gained a default `Latest per term` view so historical duplicates stay available in the database but do not crowd the operator list.
 
 ## Current Closeout Audit
 
