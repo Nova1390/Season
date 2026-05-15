@@ -1282,3 +1282,35 @@ Low-risk real apply:
 - Real-apply and orchestrator flags were disabled immediately after verification.
 - Temporary operator token and local `/tmp` key/output files were removed.
 - No staging changes were made.
+
+### Level 7.5 Noise Decision Micro-Batch
+
+Run `#107`:
+
+- Mode: dry-run.
+- Recent proposal dedupe: `7` days.
+- Items in snapshot: `12`.
+- Items skipped as recent: `11`.
+- Items sent to LLM: `1`.
+- Proposal returned: `acqua di cottura`, `ignore_noise`, low risk.
+- Quality gate blocked: `0`.
+- Catalog mutations: `0`.
+
+Run `#108`:
+
+- Mode: proposal persistence only.
+- Proposal created: `#54`.
+- Proposal: `acqua di cottura`, `ignore_noise`, low risk.
+- Output repair disabled auto-apply because `ignore_noise` is not an apply mutation.
+- Quality gate blocked: `0`.
+
+Validation:
+
+- `review_catalog_agent_proposal(54, 'queue_for_validation', ...)` moved the proposal to validation.
+- `validate_catalog_agent_proposal(54)` returned `ok=true`.
+- Proposal `#54` status: `validated`.
+- Validation errors: `[]`.
+- Open queue after validation: `8` create-canonical drafts, `9` needs-human-review proposals, `1` validated ignore-noise proposal.
+- Dev flags were disabled and the temporary operator token was removed after the run.
+- Temporary local key/output files were removed from `/tmp`.
+- No staging changes were made.
