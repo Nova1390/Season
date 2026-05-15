@@ -26,6 +26,9 @@ It currently supports:
 - explicit catalog-admin authorization check before the workspace opens;
 - loading the catalog agent review inbox;
 - filtering by proposal status and limit;
+- defaulting the inbox to operational focus (`draft`, `failed_validation`,
+  `queued_for_validation`, `validated`) so the human-review backlog does not
+  hide actionable work;
 - queueing proposals for validation;
 - requesting more evidence;
 - rejecting proposals with a note;
@@ -46,6 +49,10 @@ It currently supports:
 - viewing recent dev-shift attempts as a readable timeline.
 
 The action buttons are state-aware. For example, a `needs_human_review` proposal is treated as a triage outcome, so validation/apply actions are disabled in the UI and still guarded by backend RPC policy.
+
+To inspect the human-review backlog, add `needs_human_review` back into the
+Statuses filter. The backend keeps those proposals; the default view simply
+avoids making them the first thing an operator sees.
 
 For `create_canonical`, the console does not create an ingredient directly. It exposes `Prepare draft`, which calls `prepare_catalog_agent_canonical_enrichment_draft(...)` and creates or refreshes a pending enrichment draft. Autopilot must enrich that draft and backend validators must pass before any ingredient creation flow can run.
 
@@ -135,6 +142,9 @@ Current dev deployment:
 - Hosting path: `/home/u280052083/domains/seasonapp.it/public_html/catalog`
 - Supabase environment: `Season-dev`
 - Config file on host: `config.local.js`
+- Current cache version: `20260515-2`
+- Latest deployment behavior: operational-focus default statuses and backend
+  duplicate-open-proposal cleanup at Catalog Agent run start.
 
 If the URL returns `404`, first verify that the Hostinger subdomain still points to the custom folder and that the folder exists. The expected folder is:
 

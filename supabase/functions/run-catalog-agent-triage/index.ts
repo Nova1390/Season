@@ -269,6 +269,9 @@ Deno.serve(async (request) => {
       dry_run: dryRun,
     }, auth.userId);
 
+    const inboxCleanup = await cleanupReviewInbox(adminClient, runId, "agent_start");
+    await insertRunEvent(adminClient, runId, "review_inbox_cleanup_completed", inboxCleanup, auth.userId);
+
     if (!OPENAI_API_KEY) {
       await failRun(adminClient, runId, "OPENAI_API_KEY is not configured.", {
         reason: "provider_not_configured",
@@ -626,6 +629,24 @@ async function insertRun(
   }
 
   return Number(data.id);
+}
+
+async function cleanupReviewInbox(
+  adminClient: ServiceSupabaseClient,
+  runId: number,
+  reason: string,
+): Promise<Record<string, unknown>> {
+  const { data, error } = await adminClient.rpc("cleanup_catalog_agent_review_inbox", {
+    p_run_id: runId,
+    p_reason: reason,
+    p_limit: 500,
+  });
+
+  if (error) {
+    throw new Error(`cleanup_review_inbox_failed:${error.message}`);
+  }
+
+  return isRecord(data) ? data : { ok: true, result: data };
 }
 
 async function completeRun(

@@ -99,7 +99,6 @@ async function init() {
   elements.appPanel.hidden = true;
   elements.signOutButton.hidden = true;
   elements.statusesInput.value = (config.defaultStatuses ?? [
-    "needs_human_review",
     "draft",
     "failed_validation",
     "queued_for_validation",
