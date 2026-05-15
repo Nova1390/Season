@@ -140,7 +140,8 @@ Error responses are JSON-only (`ok: false`) with `error.code` and `error.message
   - the targeted prompt explicitly distinguishes product family, meaningful variants, preparation/freshness state, product form, and ambiguity;
   - provider JSON is validated before returning to the app;
   - full recipe parse gets one schema-repair retry if the first provider JSON is valid JSON but fails the strict recipe contract;
-  - exact-candidate responses are deduped before the quality gate, so duplicate preparsed candidates such as `riso` + `riso 180g` preserve the measured candidate and do not create duplicate draft rows.
+  - exact-candidate responses are deduped before the quality gate, so duplicate preparsed candidates such as `riso` + `riso 180g` preserve the measured candidate and do not create duplicate draft rows;
+  - full recipe LLM parse output is also deduped before Smart Import Agent scoring, so repeated ingredient names across caption sections do not create duplicated app draft rows.
 
 The schema-repair retry is deliberately narrow: it only receives validation errors and the original caption context, then must return the same strict JSON shape. If the repair also fails, the function still returns `VALIDATION_FAILED` instead of inventing a partial response.
 

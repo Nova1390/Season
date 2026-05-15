@@ -1,6 +1,6 @@
 # Smart Import caption training corpus
 
-Updated: 2026-05-14T15:12:34+00:00
+Updated: 2026-05-15T06:59:23+00:00
 
 This is a non-mutating corpus built from Apify Instagram caption exports. It is used to train Season operationally: regression cases, Smart Import prompt gaps, and Catalog Agent learning candidates.
 

@@ -9,10 +9,10 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "👩‍🍳🧑‍🍳INGREDIENTI : 🍰PAN DI SPAGNA: •110g Uova (circa 2 medie) •30g Farina 00 •30g Fecola di patate •60g",
-      "duration_ms": 5502,
+      "duration_ms": 6490,
       "usedServerLLM": true,
       "title": "Zuppa inglese",
-      "ingredient_count": 16,
+      "ingredient_count": 14,
       "ingredients": [
         "uova",
         "farina 00",
@@ -24,30 +24,144 @@
         "panna fresca liquida",
         "tuorli",
         "amido di mais (maizena)",
-        "zucchero",
-        "baccello di vaniglia",
         "cacao amaro",
         "caffè",
         "Alchermes",
         "cacao amaro in polvere"
       ],
+      "ingredientDetails": [
+        {
+          "name": "uova",
+          "quantity": 110,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina 00",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "fecola di patate",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 60,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale fino",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "baccello di vaniglia",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte intero",
+          "quantity": 400,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "panna fresca liquida",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "tuorli",
+          "quantity": 72,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amido di mais (maizena)",
+          "quantity": 45,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao amaro",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "caffè",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Alchermes",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao amaro in polvere",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 9,
+      "missingQuantityCount": 5,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 18,
       "servings": null,
       "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
+      "cookTimeMinutes": 40,
       "confidence": "high",
       "draftQuality": "publishable",
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
       "niceToFix": [
-        "servings_missing",
-        "timings_missing"
+        "servings_missing"
       ],
       "autoFixable": [],
       "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
+        "missing_servings_metadata"
       ],
       "safeFixes": [],
       "deferredFixes": [
@@ -55,11 +169,6 @@
           "issue": "servings_missing",
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
         }
       ],
       "appliedAutoFixes": [],
@@ -76,10 +185,10 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Buon Festa del Papà a tutti i Papà del mondo ❤️ Zeppole di San Giuseppe al forno Ingredienti",
-      "duration_ms": 5374,
+      "duration_ms": 5417,
       "usedServerLLM": true,
       "title": "Zeppole di San Giuseppe al forno",
-      "ingredient_count": 15,
+      "ingredient_count": 13,
       "ingredients": [
         "acqua",
         "burro",
@@ -90,14 +199,122 @@
         "limone",
         "latte intero",
         "tuorli d'uovo",
-        "zucchero",
         "amido di mais",
-        "limone",
         "vanillina",
         "amarene sciroppate",
         "zucchero a velo"
       ],
-      "step_count": 14,
+      "ingredientDetails": [
+        {
+          "name": "acqua",
+          "quantity": 150,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina 00",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uova",
+          "quantity": 4,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 1,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "limone",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte intero",
+          "quantity": 500,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "tuorli d'uovo",
+          "quantity": 4,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amido di mais",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "vanillina",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amarene sciroppate",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero a velo",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 11,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 17,
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
@@ -142,7 +359,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "🍰Per la Festa della Mamma ho scelto la semplicità . Frolla classica, crema pasticcera e amarene. Quei sapori",
-      "duration_ms": 4859,
+      "duration_ms": 5106,
       "usedServerLLM": true,
       "title": "Per la Festa della Mamma ho scelto la semplicità",
       "ingredient_count": 17,
@@ -165,6 +382,148 @@
         "sprinkles",
         "glitter edibili"
       ],
+      "ingredientDetails": [
+        {
+          "name": "farina 00",
+          "quantity": 250,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro di centrifuga",
+          "quantity": 125,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "vaniglia",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "scorza di limone",
+          "quantity": 2,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": 2,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero a velo",
+          "quantity": 125,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte",
+          "quantity": 500,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amido di mais",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amido di riso",
+          "quantity": 20,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "scorza di limone grattugiato",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "tuorli",
+          "quantity": 4,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "estratto di vaniglia",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amarene",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sprinkles",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "glitter edibili",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 10,
+      "missingQuantityCount": 7,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 13,
       "servings": 4,
       "prepTimeMinutes": null,
@@ -203,10 +562,10 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "🍪Doveva essere un cookie. Poi è degenerata. E il problema è che funziona. Troppo. Crosticina fuori. Morbidissimo dentro.",
-      "duration_ms": 5271,
+      "duration_ms": 4915,
       "usedServerLLM": true,
       "title": "Doveva essere un cookie. Poi è degenerata.",
-      "ingredient_count": 16,
+      "ingredient_count": 13,
       "ingredients": [
         "uova",
         "zucchero",
@@ -216,15 +575,122 @@
         "burro",
         "cioccolato fondente",
         "burro fuso",
-        "farina 00",
         "uovo grande",
-        "zucchero di canna",
         "gocce di cioccolato fondente",
         "cubotti di cioccolato fondente da forno",
         "nocciole tostate sbriciolate",
-        "cacao amaro",
         "cacao extra dark"
       ],
+      "ingredientDetails": [
+        {
+          "name": "uova",
+          "quantity": 3,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 110,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero di canna",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina 00",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao amaro",
+          "quantity": 2,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro",
+          "quantity": 170,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cioccolato fondente",
+          "quantity": 230,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro fuso",
+          "quantity": 110,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uovo grande",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "gocce di cioccolato fondente",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cubotti di cioccolato fondente da forno",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "nocciole tostate sbriciolate",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao extra dark",
+          "quantity": 1,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 12,
+      "missingQuantityCount": 1,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 10,
       "servings": null,
       "prepTimeMinutes": null,
@@ -263,10 +729,10 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "Pastiera Napoletana: il dolce della tradizione perfetto per Pasqua! 🥧🤤 Ingredienti: Per la pasta frolla: - 250 gr",
-      "duration_ms": 4861,
+      "duration_ms": 4238,
       "usedServerLLM": true,
       "title": "Pastiera Napoletana",
-      "ingredient_count": 15,
+      "ingredient_count": 14,
       "ingredients": [
         "farina 00",
         "burro",
@@ -281,9 +747,126 @@
         "limone",
         "canditi",
         "Essenza di vaniglia",
-        "tuorlo",
-        "latte"
+        "tuorlo"
       ],
+      "ingredientDetails": [
+        {
+          "name": "farina 00",
+          "quantity": 250,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro",
+          "quantity": 125,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero semolato",
+          "quantity": 125,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uovo",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "grano cotto",
+          "quantity": 500,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte",
+          "quantity": 0.5,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "ricotta vaccina o di pecora",
+          "quantity": 500,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uova",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "limone",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "canditi",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Essenza di vaniglia",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "tuorlo",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 13,
+      "missingQuantityCount": 1,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 6,
       "servings": null,
       "prepTimeMinutes": null,
@@ -309,6 +892,276 @@
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
         },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_facili.json",
+      "source_url": "https://www.instagram.com/p/DXuO75PjH0P/",
+      "owner": "gioiatraifornelli",
+      "caption_category": "complete_recipe",
+      "caption_score": 28,
+      "caption_excerpt": "⏱️10 minuti 🫕Zero fornelli 🍽️Cena pronta ➡️ Pomodori ripieni = il nuovo salvacena estivo ☀️ 👉 Salvate e",
+      "duration_ms": 4618,
+      "usedServerLLM": true,
+      "title": "Pomodori ripieni",
+      "ingredient_count": 12,
+      "ingredients": [
+        "tonno sgocciolato",
+        "insalata",
+        "formaggio",
+        "pomodorini",
+        "olive denocciolate",
+        "taralli",
+        "pomodori maturi",
+        "basilico",
+        "sale",
+        "olio evo",
+        "foglie di basilico",
+        "limone"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "tonno sgocciolato",
+          "quantity": 160,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "insalata",
+          "quantity": 80,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "formaggio",
+          "quantity": 80,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pomodorini",
+          "quantity": 60,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olive denocciolate",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "taralli",
+          "quantity": 6,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pomodori maturi",
+          "quantity": 3,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "basilico",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio evo",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "foglie di basilico",
+          "quantity": 6,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "limone",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 10,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 8,
+      "servings": 2,
+      "prepTimeMinutes": 10,
+      "cookTimeMinutes": null,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [],
+      "autoFixable": [],
+      "operationalSignals": [],
+      "safeFixes": [],
+      "deferredFixes": [],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_facili.json",
+      "source_url": "https://www.instagram.com/p/DXG8vdWAh6Z/",
+      "owner": "valeairoldi",
+      "caption_category": "complete_recipe",
+      "caption_score": 28,
+      "caption_excerpt": "Porridge d’avena al cacao: la colazione più saziante di sempre! 😉 Quando so di non avere tempo per",
+      "duration_ms": 3666,
+      "usedServerLLM": true,
+      "title": "Porridge d’avena al cacao",
+      "ingredient_count": 8,
+      "ingredients": [
+        "fiocchi d’avena baby",
+        "acqua",
+        "latte di soia",
+        "proteine in polvere veg",
+        "yogurt greco veg",
+        "frutti di bosco",
+        "fragole",
+        "burro di mandorle"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "fiocchi d’avena baby",
+          "quantity": 40,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "acqua",
+          "quantity": 120,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte di soia",
+          "quantity": 100,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "proteine in polvere veg",
+          "quantity": 10,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "yogurt greco veg",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "frutti di bosco",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "fragole",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro di mandorle",
+          "quantity": 1,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 6,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 4,
+      "servings": 1,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": null,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [
+        "timings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
         {
           "issue": "timings_missing",
           "action": "ask_creator_for_timings",
@@ -329,7 +1182,7 @@
       "caption_category": "complete_recipe",
       "caption_score": 28,
       "caption_excerpt": "✨ LATTE FRITTO… versione tropicale 🥥🌴 Un grande classico della tradizione siciliana… ma con un twist inaspettato! Oggi",
-      "duration_ms": 4038,
+      "duration_ms": 3017,
       "usedServerLLM": true,
       "title": "LATTE FRITTO… versione tropicale",
       "ingredient_count": 9,
@@ -344,6 +1197,84 @@
         "pangrattato",
         "olio di arachidi"
       ],
+      "ingredientDetails": [
+        {
+          "name": "latte di cocco",
+          "quantity": 400,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "amido di mais",
+          "quantity": 55,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero semolato",
+          "quantity": 60,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "arancia",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cannella",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uova",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina 00",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pangrattato",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio di arachidi",
+          "quantity": 500,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 7,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 7,
       "servings": null,
       "prepTimeMinutes": null,
@@ -383,156 +1314,176 @@
     },
     {
       "ok": true,
-      "source_file": "profile_pane_pizza_lievitati.json",
-      "source_url": "https://www.instagram.com/p/DGL8oB3u8uI/",
-      "owner": "maxmilian.m",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "Ora che ho perso la vista ci vedo di più. !! Se cuocete in casa o in forni",
-      "duration_ms": 4681,
-      "usedServerLLM": true,
-      "title": "Ricetta Pizza al Piatto",
-      "ingredient_count": 4,
-      "ingredients": [
-        "farina",
-        "acqua",
-        "lievito di birra fresco",
-        "sale"
-      ],
-      "step_count": 12,
-      "servings": 4,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
       "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DYC_mnjKWNu/",
+      "source_url": "https://www.instagram.com/p/DX94QlaCuHZ/",
       "owner": "silvi.barbi",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I",
-      "duration_ms": 3302,
+      "caption_category": "ingredient_rich",
+      "caption_score": 23,
+      "caption_excerpt": "6 idee al TIRAMISÙ che devi assolutamente provare 1.Weetabix tiramisù 📍ti servirà : •2 formelle di weetabix (in",
+      "duration_ms": 4537,
       "usedServerLLM": true,
-      "title": "Sempre voglia di tiramisù? Ecco il secondo reel con un altra idea davvero A T O M I C A ma anche sana,leggera e saziante.",
+      "title": "6 idee al TIRAMISÙ che devi assolutamente provare",
       "ingredient_count": 15,
       "ingredients": [
-        "farina bianca 0",
-        "cacao",
-        "albume",
+        "Weetabix",
+        "yogurt greco",
+        "caffè lungo",
         "latte",
-        "Idrolitina",
         "cannella",
-        "miele",
+        "cacao",
+        "biscotti secchi",
+        "grano saraceno soffiato",
+        "sciroppo acero/agave",
+        "fiocchi avena baby",
+        "caffè",
+        "yogurt greco bianco",
         "sciroppo agave",
-        "sciroppo acero",
-        "caffè",
-        "ricotta",
-        "Philadelphia",
-        "caffè",
-        "cacao in polvere",
-        "crema di frutta secca"
+        "yogurt",
+        "cacao in polvere"
       ],
-      "step_count": 4,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "medium",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
+      "ingredientDetails": [
         {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+          "name": "Weetabix",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         },
         {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+          "name": "yogurt greco",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "caffè lungo",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "latte",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cannella",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "biscotti secchi",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "grano saraceno soffiato",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sciroppo acero/agave",
+          "quantity": 10,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "fiocchi avena baby",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "caffè",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "yogurt greco bianco",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sciroppo agave",
+          "quantity": 1,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "yogurt",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao in polvere",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         }
       ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_pane_pizza_lievitati.json",
-      "source_url": "https://www.instagram.com/p/DI7Hd4-MW0F/",
-      "owner": "maxmilian.m",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "Panini per hamburger avrebbe detto uno dei miei insegnanti. Questa è una variante di Giorilli appunto. Ho solo",
-      "duration_ms": 2792,
-      "usedServerLLM": true,
-      "title": "Panini per hamburger",
-      "ingredient_count": 9,
-      "ingredients": [
-        "farina Tipo 00",
-        "latte di riso",
-        "caffè",
-        "margarina non idrogenata",
-        "olio di arachidi",
-        "zucchero",
-        "lievito di birra fresco",
-        "sale",
-        "malto diastasico"
-      ],
+      "measuredIngredientCount": 11,
+      "missingQuantityCount": 4,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 9,
       "servings": null,
       "prepTimeMinutes": null,
-      "cookTimeMinutes": 18,
-      "confidence": "high",
+      "cookTimeMinutes": null,
+      "confidence": "medium",
       "draftQuality": "publishable",
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
       "niceToFix": [
-        "servings_missing"
+        "servings_missing",
+        "timings_missing"
       ],
       "autoFixable": [],
       "operationalSignals": [
-        "missing_servings_metadata"
+        "missing_servings_metadata",
+        "missing_timing_metadata"
       ],
       "safeFixes": [],
       "deferredFixes": [
@@ -540,6 +1491,11 @@
           "issue": "servings_missing",
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
         }
       ],
       "appliedAutoFixes": [],
@@ -551,28 +1507,105 @@
     {
       "ok": true,
       "source_file": "profile_ricette_veloci.json",
-      "source_url": "https://www.instagram.com/p/DXwpm9lMsKq/",
-      "owner": "pappa_e_champagne",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "La crostata che ha conquistato i miei bambini per merenda. Base friabile, cuore cremoso e tanta frutta fresca…",
-      "duration_ms": 4263,
+      "source_url": "https://www.instagram.com/p/C0PRuklrkDw/",
+      "owner": "martyfoodnfit",
+      "caption_category": "ingredient_rich",
+      "caption_score": 22,
+      "caption_excerpt": "TORTINO BOUNTY by @martyfoodnfit Metti like o commenta se ti piace, mi supporteresti tanto e mi spinge a",
+      "duration_ms": 2253,
       "usedServerLLM": true,
-      "title": "La crostata che ha conquistato i miei bambini per merenda",
-      "ingredient_count": 10,
+      "title": "TORTINO BOUNTY",
+      "ingredient_count": 9,
       "ingredients": [
-        "farina 00",
-        "zucchero a velo",
-        "mandorle macinate",
-        "burro",
         "uovo",
-        "ricotta fresca",
-        "panna fresca",
-        "zucchero a velo",
-        "marmellata di fragole",
-        "frutti di bosco"
+        "fiocchi o farina d’avena",
+        "cacao amaro",
+        "bevanda di soia senza zuccheri",
+        "yogurt greco",
+        "dolcificante",
+        "idrolitina",
+        "yogurt greco 0%",
+        "farina di cocco degrassata"
       ],
-      "step_count": 7,
+      "ingredientDetails": [
+        {
+          "name": "uovo",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "fiocchi o farina d’avena",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cacao amaro",
+          "quantity": 5,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "bevanda di soia senza zuccheri",
+          "quantity": 30,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "yogurt greco",
+          "quantity": 20,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "dolcificante",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "idrolitina",
+          "quantity": 2,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "yogurt greco 0%",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina di cocco degrassata",
+          "quantity": 3,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 8,
+      "missingQuantityCount": 1,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 1,
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
@@ -612,44 +1645,258 @@
     {
       "ok": true,
       "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DMgOy_8sW-V/",
-      "owner": "ricette_sane_ma_poco_tristi",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "🍜 ZARU SOBA: NOODLES FREDDI GIAPPONESI 🇯🇵 Il piatto estivo più amato in Giappone: semplice, fresco e super",
-      "duration_ms": 3100,
+      "source_url": "https://www.instagram.com/p/DT7f-OqDHtM/",
+      "owner": "ricette_sane_libri_viaggi",
+      "caption_category": "ingredient_rich",
+      "caption_score": 21,
+      "caption_excerpt": "Hai comprato dei fogli di riso perché li utilizzavano tutti e ora sono lì in dispensa a guardarti",
+      "duration_ms": 2874,
       "usedServerLLM": true,
-      "title": "ZARU SOBA: NOODLES FREDDI GIAPPONESI",
-      "ingredient_count": 9,
+      "title": "dolce alle mele e cannella",
+      "ingredient_count": 8,
       "ingredients": [
-        "soba",
-        "mirin",
-        "salsa di soia",
-        "sake",
-        "katsuobushi",
+        "mele",
+        "cannella",
         "acqua",
-        "uova",
-        "cipollotto",
-        "alga nori"
+        "fogli di riso",
+        "succo di limone",
+        "uova intere",
+        "miele",
+        "granella di nocciole"
       ],
-      "step_count": 5,
+      "ingredientDetails": [
+        {
+          "name": "mele",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cannella",
+          "quantity": 2,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "acqua",
+          "quantity": 2,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "fogli di riso",
+          "quantity": 6,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "succo di limone",
+          "quantity": 0.5,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uova intere",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "miele",
+          "quantity": 0.5,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "granella di nocciole",
+          "quantity": 0.5,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 8,
+      "missingQuantityCount": 0,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 0,
       "servings": 2,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
-      "confidence": "medium",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
+      "confidence": "high",
+      "draftQuality": "needs_more_input",
+      "nextAction": "add_method_steps",
+      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
+      "blockingIssues": [
+        "steps_missing"
+      ],
       "niceToFix": [
         "timings_missing"
       ],
       "autoFixable": [],
       "operationalSignals": [
+        "ingredients_only_caption",
         "missing_timing_metadata"
       ],
       "safeFixes": [],
       "deferredFixes": [
+        {
+          "issue": "steps_missing",
+          "action": "ask_creator_for_method_steps",
+          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
+        },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_facili.json",
+      "source_url": "https://www.instagram.com/p/DYMvtIHt5Pe/",
+      "owner": "cucinamammaela",
+      "caption_category": "ingredient_rich",
+      "caption_score": 20,
+      "caption_excerpt": "Questa pasta con tonno, zucchine e olive taggiasche è una di quelle ricette veloci che dopo la prima",
+      "duration_ms": 2103,
+      "usedServerLLM": true,
+      "title": "Questa pasta con tonno, zucchine e olive taggiasche",
+      "ingredient_count": 8,
+      "ingredients": [
+        "spaghetti",
+        "zucchine",
+        "tonno in olio buono",
+        "olive taggiasche",
+        "olio extravergine d’oliva",
+        "sale",
+        "pepe",
+        "acqua di cottura della pasta"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "spaghetti",
+          "quantity": 320,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchine",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "tonno in olio buono",
+          "quantity": 160,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olive taggiasche",
+          "quantity": 80,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio extravergine d’oliva",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pepe",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "acqua di cottura della pasta",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 4,
+      "missingQuantityCount": 4,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 0,
+      "servings": null,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": null,
+      "confidence": "high",
+      "draftQuality": "needs_more_input",
+      "nextAction": "add_method_steps",
+      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
+      "blockingIssues": [
+        "steps_missing"
+      ],
+      "niceToFix": [
+        "servings_missing",
+        "timings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_servings_metadata",
+        "missing_timing_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
+        {
+          "issue": "steps_missing",
+          "action": "ask_creator_for_method_steps",
+          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
+        },
+        {
+          "issue": "servings_missing",
+          "action": "ask_creator_for_servings",
+          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        },
         {
           "issue": "timings_missing",
           "action": "ask_creator_for_timings",
@@ -665,134 +1912,508 @@
     {
       "ok": true,
       "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DWtSbKTsrcZ/",
-      "owner": "monica.ragazzoli",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "𝗕𝗿𝗼𝘄𝗻𝗶𝗲𝘀 𝗽𝗿𝗼𝘁𝗲𝗶𝗰𝗶 𝘀𝗲𝗻𝘇𝗮 𝘇𝘂𝗰𝗰𝗵𝗲𝗿𝗶 𝗮𝗴𝗴𝗶𝘂𝗻𝘁𝗶 questi li rifaccio!! 😋 super semplici, pochi ingredienti e perfetti quando hai voglia",
-      "duration_ms": 2836,
+      "source_url": "https://www.instagram.com/p/DQ48nC7jI_L/",
+      "owner": "ricette_sane_ma_poco_tristi",
+      "caption_category": "ingredient_rich",
+      "caption_score": 19,
+      "caption_excerpt": "MELANZANE SALTATE CON CARNE 🍆 ~~~~~~ Oggi avevo voglia di tornare in Cina, prendendo ispirazione da un piatto",
+      "duration_ms": 4288,
       "usedServerLLM": true,
-      "title": "Brownies proteici senza zuccheri aggiunti",
+      "title": "MELANZANE SALTATE CON CARNE",
+      "ingredient_count": 9,
+      "ingredients": [
+        "melanzane perlina",
+        "trita di tacchino",
+        "riso",
+        "salsa di soia",
+        "aglio in polvere",
+        "peperoncino",
+        "pepe di Sichuan",
+        "sale",
+        "erba cipollina"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "melanzane perlina",
+          "quantity": 4,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "trita di tacchino",
+          "quantity": 270,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "riso",
+          "quantity": 75,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "salsa di soia",
+          "quantity": 2,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "aglio in polvere",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "peperoncino",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pepe di Sichuan",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "erba cipollina",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 4,
+      "missingQuantityCount": 5,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 0,
+      "servings": 2,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": null,
+      "confidence": "high",
+      "draftQuality": "needs_more_input",
+      "nextAction": "add_method_steps",
+      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
+      "blockingIssues": [
+        "steps_missing"
+      ],
+      "niceToFix": [
+        "timings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "ingredients_only_caption",
+        "missing_timing_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
+        {
+          "issue": "steps_missing",
+          "action": "ask_creator_for_method_steps",
+          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
+        },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_facili.json",
+      "source_url": "https://www.instagram.com/p/DR4QhVrDYsN/",
+      "owner": "starbeneofficial",
+      "caption_category": "method_rich",
+      "caption_score": 23,
+      "caption_excerpt": "Non sapete come cucinare il cavolfiore? Allora provate le pizzette della nostra @valeairoldi, preparate con il microonde Samsung",
+      "duration_ms": 2902,
+      "usedServerLLM": true,
+      "title": "Pizzette di cavolfiore",
       "ingredient_count": 10,
       "ingredients": [
-        "uova",
-        "albume",
-        "latte scremato",
-        "farina d’avena",
-        "proteine gusto cioccolato",
-        "Sahne Protein",
-        "cacao amaro",
-        "bicarbonato",
+        "cavolfiore",
+        "mozzarella",
+        "formaggio grattugiato",
+        "farina di mais bramata",
+        "olio evo",
+        "passata di pomodoro",
         "sale",
-        "gocce di cioccolato"
+        "pepe",
+        "origano secco",
+        "olive"
       ],
+      "ingredientDetails": [
+        {
+          "name": "cavolfiore",
+          "quantity": 300,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "mozzarella",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "formaggio grattugiato",
+          "quantity": 2,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "farina di mais bramata",
+          "quantity": 1,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio evo",
+          "quantity": 1,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "passata di pomodoro",
+          "quantity": 4,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "pepe",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "origano secco",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olive",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 6,
+      "missingQuantityCount": 4,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 3,
+      "servings": null,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": 7,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [
+        "servings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
+        {
+          "issue": "servings_missing",
+          "action": "ask_creator_for_servings",
+          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_sane.json",
+      "source_url": "https://www.instagram.com/p/DVtCEszjNVy/",
+      "owner": "ritas.recipes",
+      "caption_category": "method_rich",
+      "caption_score": 23,
+      "caption_excerpt": "TORTA DI SUSHI🍣 zero sbatti😱 Hai voglia di Sushi ma non di preparlo, nè di spendere soldi per",
+      "duration_ms": 3457,
+      "usedServerLLM": true,
+      "title": "TORTA DI SUSHI",
+      "ingredient_count": 9,
+      "ingredients": [
+        "riso per sushi",
+        "avocado",
+        "salmone affumicato",
+        "formaggio spalmabile",
+        "semi di sesamo",
+        "acqua",
+        "aceto di riso",
+        "sale",
+        "zucchero"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "riso per sushi",
+          "quantity": 250,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "avocado",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "salmone affumicato",
+          "quantity": 200,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "formaggio spalmabile",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "semi di sesamo",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "acqua",
+          "quantity": 350,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "aceto di riso",
+          "quantity": 40,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": 3,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero",
+          "quantity": 20,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 7,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 7,
+      "servings": null,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": 15,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [
+        "servings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
+        {
+          "issue": "servings_missing",
+          "action": "ask_creator_for_servings",
+          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_ricette_sane.json",
+      "source_url": "https://www.instagram.com/p/DTs_ytejJEt/",
+      "owner": "monica.ragazzoli",
+      "caption_category": "method_rich",
+      "caption_score": 23,
+      "caption_excerpt": "𝗣𝗮𝗻𝗲 𝗮𝗹𝗹'𝗮𝘃𝗲𝗻𝗮, 𝘀𝗽𝗲𝘇𝗶𝗲 & 𝗰𝗼𝘁𝘁𝗮𝗴𝗲 𝗰𝗵𝗲𝗲𝘀𝗲 Un esperimento riuscito alla grande: morbido dentro, compatto fuori 🍞 𝗜𝗻𝗴𝗿𝗲𝗱𝗶𝗲𝗻𝘁𝗶: 120",
+      "duration_ms": 2570,
+      "usedServerLLM": true,
+      "title": "Pane all'avena, spezie & cottage cheese",
+      "ingredient_count": 8,
+      "ingredients": [
+        "fiocchi d’avena",
+        "cottage cheese",
+        "uovo intero",
+        "albume",
+        "proteine in polvere",
+        "lievito",
+        "sale",
+        "curry"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "fiocchi d’avena",
+          "quantity": 120,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cottage cheese",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uovo intero",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "albume",
+          "quantity": 80,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "proteine in polvere",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "lievito",
+          "quantity": 1,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "curry",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 6,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 6,
       "servings": null,
       "prepTimeMinutes": null,
-      "cookTimeMinutes": 20,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DXoX_Fqo_G6/",
-      "owner": "little_fitness_page_",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "⚠️ Attenzione: crea dipendenza. Brownie al cioccolato in padella (senza forno!) 😎 🍫 Super morbido e intenso, perfetto",
-      "duration_ms": 2812,
-      "usedServerLLM": true,
-      "title": "Brownie al cioccolato in padella (senza forno!)",
-      "ingredient_count": 9,
-      "ingredients": [
-        "fiocchi d’avena",
-        "lievito per dolci",
-        "zucchero",
-        "cacao amaro",
-        "sale",
-        "uova",
-        "latte",
-        "olio di cocco",
-        "cioccolato"
-      ],
-      "step_count": 5,
-      "servings": null,
-      "prepTimeMinutes": 15,
-      "cookTimeMinutes": 35,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_veloci.json",
-      "source_url": "https://www.instagram.com/p/DVZC5vXDKcD/",
-      "owner": "sofitsogood_",
-      "caption_category": "complete_recipe",
-      "caption_score": 28,
-      "caption_excerpt": "190 CALORIE per una crepes proteica che puoi fare anche se NON sai cucinare. Zero voglia di cucinare?",
-      "duration_ms": 2609,
-      "usedServerLLM": true,
-      "title": "crepes proteica",
-      "ingredient_count": 7,
-      "ingredients": [
-        "uova",
-        "farina d’avena",
-        "latte d’avena",
-        "yogurt greco",
-        "burro d’arachidi",
-        "crema proteica al cioccolato",
-        "banana"
-      ],
-      "step_count": 2,
-      "servings": 4,
-      "prepTimeMinutes": null,
       "cookTimeMinutes": null,
       "confidence": "high",
       "draftQuality": "publishable",
@@ -800,14 +2421,21 @@
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
       "niceToFix": [
+        "servings_missing",
         "timings_missing"
       ],
       "autoFixable": [],
       "operationalSignals": [
+        "missing_servings_metadata",
         "missing_timing_metadata"
       ],
       "safeFixes": [],
       "deferredFixes": [
+        {
+          "issue": "servings_missing",
+          "action": "ask_creator_for_servings",
+          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        },
         {
           "issue": "timings_missing",
           "action": "ask_creator_for_timings",
@@ -823,280 +2451,172 @@
     {
       "ok": true,
       "source_file": "profile_coppia_in_cucina.json",
-      "source_url": "https://www.instagram.com/p/DQZz9hnCMU4/",
+      "source_url": "https://www.instagram.com/p/DSGInkHiDFt/",
       "owner": "una.coppia.in.cucina",
-      "caption_category": "ingredient_rich",
+      "caption_category": "messy_recipe_like",
       "caption_score": 18,
-      "caption_excerpt": "CIAMBELLONE CACHI E CASTAGNE INGREDIENTI: • 200 gr. di farina normale o integrale • 4 cachi medi maturi",
-      "duration_ms": 1943,
+      "caption_excerpt": "Alberi natalizi di pasta frolla🎄 👩‍🍳🧑‍🍳Ricetta tradizionale: • 330 gr di farina ’00 + un pò per la",
+      "duration_ms": 2745,
       "usedServerLLM": true,
-      "title": "CIAMBELLONE CACHI E CASTAGNE",
-      "ingredient_count": 6,
+      "title": "Alberi natalizi di pasta frolla",
+      "ingredient_count": 16,
       "ingredients": [
-        "farina normale o integrale",
-        "cachi",
-        "castagne",
-        "olio extravergine d’oliva",
-        "uova",
-        "lievito per dolci"
-      ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_chef_a_casa.json",
-      "source_url": "https://www.instagram.com/p/DRKvT4_jMjH/",
-      "owner": "guida_culinariaeconomica",
-      "caption_category": "ingredient_rich",
-      "caption_score": 18,
-      "caption_excerpt": "Gnocchetti di zucca 🎃 Ingredienti per 2 persone * 250gr di polpa di zucca (cotta al forno con",
-      "duration_ms": 1887,
-      "usedServerLLM": true,
-      "title": "Gnocchetti di zucca",
-      "ingredient_count": 8,
-      "ingredients": [
-        "polpa di zucca",
-        "farina 00",
-        "sale",
-        "pepe",
-        "spezie",
-        "Gorgonzola",
-        "Formaggio spalmabile",
-        "Salsiccia"
-      ],
-      "step_count": 0,
-      "servings": 2,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_nutrizionista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DXbdtd3DMZk/",
-      "owner": "martinalasaluteincucina",
-      "caption_category": "ingredient_rich",
-      "caption_score": 13,
-      "caption_excerpt": "Cheesecake a colazione? Perché no! E sì, si può anche a “dieta”! 🙃 Che dici, ti ispira? ✨seguimi",
-      "duration_ms": 2149,
-      "usedServerLLM": true,
-      "title": "Cheesecake a colazione",
-      "ingredient_count": 8,
-      "ingredients": [
-        "fette biscottate integrali",
-        "caffè o latte",
-        "yogurt greco 0%",
-        "latte parz scremato o bevanda vegetale",
-        "semi di chia",
-        "cacao amaro",
-        "dolcificante",
-        "fragole fresche"
-      ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_dietista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DVGVWlYjU00/",
-      "owner": "dietista.paolastavolone",
-      "caption_category": "method_rich",
-      "caption_score": 22,
-      "caption_excerpt": "🥑 HUMMUS DI AVOCADO E CECI Una crema pronta in 5 minuti che ti salva aperitivi, pranzi veloci",
-      "duration_ms": 2058,
-      "usedServerLLM": true,
-      "title": "Hummus di avocado e ceci",
-      "ingredient_count": 6,
-      "ingredients": [
-        "avocado",
-        "ceci",
-        "limone",
-        "prezzemolo fresco",
-        "olio extravergine d’oliva",
-        "semi oleosi"
-      ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": 5,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_coppia_in_cucina.json",
-      "source_url": "https://www.instagram.com/p/DQdySXYiOUA/",
-      "owner": "una.coppia.in.cucina",
-      "caption_category": "method_rich",
-      "caption_score": 22,
-      "caption_excerpt": "TORTA DI MELE🍂 Ingredienti: • 2 uova • 150 zucchero • 60 burro sciolto a bagno maria •",
-      "duration_ms": 2117,
-      "usedServerLLM": true,
-      "title": "TORTA DI MELE",
-      "ingredient_count": 8,
-      "ingredients": [
-        "uova",
-        "zucchero",
+        "farina ’00",
         "burro",
-        "acqua",
-        "farina",
-        "lievito per dolci",
-        "mele",
-        "cannella"
+        "olio di semi di girasole",
+        "uova",
+        "zucchero semolato",
+        "buccia di limone biologico",
+        "cannella",
+        "sale",
+        "zucchero a velo vanigliato",
+        "succo di limone fresco",
+        "albumi freschi",
+        "colorante alimentare",
+        "Farina",
+        "Olio",
+        "Polpa di mela",
+        "Lievito per dolci"
       ],
+      "ingredientDetails": [
+        {
+          "name": "farina ’00",
+          "quantity": 330,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "burro",
+          "quantity": 165,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio di semi di girasole",
+          "quantity": 100,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "uova",
+          "quantity": 3,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero semolato",
+          "quantity": 130,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "buccia di limone biologico",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cannella",
+          "quantity": 0.5,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "zucchero a velo vanigliato",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "succo di limone fresco",
+          "quantity": 1,
+          "unit": "tsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "albumi freschi",
+          "quantity": 30,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "colorante alimentare",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Farina",
+          "quantity": 150,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Olio",
+          "quantity": 30,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Polpa di mela",
+          "quantity": 100,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Lievito per dolci",
+          "quantity": 4,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 14,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 0,
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
-      "confidence": "medium",
+      "confidence": "high",
       "draftQuality": "needs_more_input",
       "nextAction": "add_method_steps",
       "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
@@ -1129,231 +2649,6 @@
           "issue": "timings_missing",
           "action": "ask_creator_for_timings",
           "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_cucina_antispreco.json",
-      "source_url": "https://www.instagram.com/p/DXJjgtBiONJ/",
-      "owner": "rucoolaaa",
-      "caption_category": "method_rich",
-      "caption_score": 21,
-      "caption_excerpt": "UN SUPERFOOD DA COLTIVARE IN CASA?!? 🌱 Niente strane polveri o ingredieti assurdi: parlo dei GERMOGLI DI LENTICCHIE!",
-      "duration_ms": 3228,
-      "usedServerLLM": true,
-      "title": "UN SUPERFOOD DA COLTIVARE IN CASA?!?",
-      "ingredient_count": 7,
-      "ingredients": [
-        "lenticchie non decorticate",
-        "germogli di lenticchie",
-        "tahini",
-        "succo di limone",
-        "acqua fredda",
-        "aglio in polvere",
-        "sale"
-      ],
-      "step_count": 7,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "medium",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_bbq_italia.json",
-      "source_url": "https://www.instagram.com/p/DWZP4pGClLj/",
-      "owner": "italians_bbq",
-      "caption_category": "method_rich",
-      "caption_score": 21,
-      "caption_excerpt": "🔥Pollo Huli Huli🔥 . . 🧑‍🍳Pollo marinato a lungo, cotto fino alla giusta caramellizzazione e glassato più volte",
-      "duration_ms": 3835,
-      "usedServerLLM": true,
-      "title": "Pollo Huli Huli",
-      "ingredient_count": 12,
-      "ingredients": [
-        "salsa di soia",
-        "succo d’ananas",
-        "ketchup",
-        "aglio",
-        "zenzero fresco grattugiato",
-        "aceto di mele",
-        "worchestershire",
-        "pollo",
-        "dirty rice basmati",
-        "crema di mango",
-        "peperoncino fresco",
-        "cipollotto"
-      ],
-      "step_count": 4,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_veloci.json",
-      "source_url": "https://www.instagram.com/p/DXXRl-FDu-a/",
-      "owner": "pappa_e_champagne",
-      "caption_category": "method_rich",
-      "caption_score": 21,
-      "caption_excerpt": "Torta soffice allo yogurt Perfetta per una merenda semplice o una colazione fatta in casa 🥰 👉🏻 Da",
-      "duration_ms": 3632,
-      "usedServerLLM": true,
-      "title": "Torta soffice allo yogurt",
-      "ingredient_count": 8,
-      "ingredients": [
-        "uova",
-        "zucchero",
-        "yogurt greco",
-        "scorza di limone",
-        "olio di semi",
-        "farina 00",
-        "lievito per dolci",
-        "zucchero a velo"
-      ],
-      "step_count": 5,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": 45,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DPZX42IkbCa/",
-      "owner": "ricette_mmmeat",
-      "caption_category": "method_rich",
-      "caption_score": 21,
-      "caption_excerpt": "Biscotto morbido al cioccolato🍫 • 1 uovo • 1 avocado • 100 g di zucchero di canna •",
-      "duration_ms": 2410,
-      "usedServerLLM": true,
-      "title": "Biscotto morbido al cioccolato",
-      "ingredient_count": 8,
-      "ingredients": [
-        "uovo",
-        "avocado",
-        "zucchero di canna",
-        "estratto di vaniglia",
-        "cacao in polvere",
-        "farina",
-        "bicarbonato di sodio",
-        "cioccolato fondente al 70%"
-      ],
-      "step_count": 4,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": 10,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
         }
       ],
       "appliedAutoFixes": [],
@@ -1370,10 +2665,10 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 16,
       "caption_excerpt": "SANGUCHITOS DE CARNE DESMECHADA🥩, en un pancito de papa que la rompe toda. 🎥 receta de @kulinaria.recetas .",
-      "duration_ms": 3727,
+      "duration_ms": 6187,
       "usedServerLLM": true,
       "title": "SANGUCHITOS DE CARNE DESMECHADA",
-      "ingredient_count": 22,
+      "ingredient_count": 21,
       "ingredients": [
         "harina",
         "leche tibia",
@@ -1381,21 +2676,195 @@
         "azúcar",
         "huevos",
         "aceite",
-        "puré de papa",
+        "papa",
         "sal",
         "queso rallado",
         "perejil",
         "huevo batido",
         "roast beef",
         "cebolla",
-        "morrón",
+        "morron",
         "dientes de ajo",
         "vino",
         "agua o caldo",
-        "perejil",
-        "ají molido",
-        "laurel"
+        "aji molido",
+        "laurel",
+        "repollo"
       ],
+      "ingredientDetails": [
+        {
+          "name": "harina",
+          "quantity": 520,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "leche tibia",
+          "quantity": 150,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "levadura fresca",
+          "quantity": 20,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "azúcar",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "huevos",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "aceite",
+          "quantity": 50,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "papa",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sal",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "queso rallado",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "perejil",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "huevo batido",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "roast beef",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cebolla",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "morron",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "dientes de ajo",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "vino",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "agua o caldo",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "aji molido",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "laurel",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "repollo",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "mayonesa de AJO",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 12,
+      "missingQuantityCount": 9,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 0,
       "servings": 18,
       "prepTimeMinutes": null,
@@ -1442,7 +2911,7 @@
       "caption_category": "messy_recipe_like",
       "caption_score": 14,
       "caption_excerpt": "POSTRE SÚPER CHOCOLATOSO CON SOLO 4 INGREDIENTES 🍫✨ receta de @lasrecetasdesimon 🫶 • Ideal para el verano, sin",
-      "duration_ms": 1788,
+      "duration_ms": 1933,
       "usedServerLLM": true,
       "title": "POSTRE SÚPER CHOCOLATOSO CON SOLO 4 INGREDIENTES",
       "ingredient_count": 4,
@@ -1452,6 +2921,44 @@
         "Cacao Amargo",
         "Almidón de Maíz"
       ],
+      "ingredientDetails": [
+        {
+          "name": "Leche",
+          "quantity": 700,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Endulzante",
+          "quantity": 50,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Cacao Amargo",
+          "quantity": 40,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Almidón de Maíz",
+          "quantity": 80,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 4,
+      "missingQuantityCount": 0,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 1,
       "servings": null,
       "prepTimeMinutes": null,
@@ -1491,38 +2998,51 @@
     },
     {
       "ok": true,
-      "source_file": "profile_bbq_italia.json",
-      "source_url": "https://www.instagram.com/p/DWrSq6UM7C8/",
-      "owner": "missbbq_italy",
+      "source_file": "profile_ricette_facili.json",
+      "source_url": "https://www.instagram.com/p/DVg8E4BgmEA/",
+      "owner": "alessia.casprini",
       "caption_category": "messy_recipe_like",
-      "caption_score": 12,
-      "caption_excerpt": "𝙊𝙛𝙮𝙧 𝙏𝙪𝙧𝙠𝙞𝙨𝙝 𝘼𝘿𝘼𝙉𝘼 𝙆𝙀𝘽𝘼𝘽🔥🔥 Pollo o il classico agnello?🐔🐑 Direttamente dalla Turchia. Costruito sulle spade. Come vuole la",
-      "duration_ms": 4143,
+      "caption_score": 14,
+      "caption_excerpt": "SNACK SANO 3 INGREDIENTI! 🍫 Anche per chi segue un’alimentazione chetogenica o low carb! 🤎 salva il reel",
+      "duration_ms": 2066,
       "usedServerLLM": true,
-      "title": "Ofyr Turkish Adana Kebab",
-      "ingredient_count": 29,
+      "title": "SNACK SANO 3 INGREDIENTI!",
+      "ingredient_count": 3,
       "ingredients": [
-        "pollo macinato",
-        "cipolla",
-        "zenzero grattugiato",
-        "aglio",
-        "peperoncino verde",
-        "succo di limone",
-        "coriandolo fresco",
-        "ras el hanout",
-        "sale",
-        "macinato di agnello",
-        "cipolla rossa",
-        "peperone rosso",
-        "prezzemolo",
-        "aglio",
-        "sale",
-        "baharat",
-        "paprika",
-        "cumino",
-        "chili",
-        "aglio in polvere"
+        "mandorle",
+        "gocce di cioccolato senza zucchero",
+        "cocco"
       ],
+      "ingredientDetails": [
+        {
+          "name": "mandorle",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "gocce di cioccolato senza zucchero",
+          "quantity": 10,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "cocco",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 1,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 0,
       "servings": null,
       "prepTimeMinutes": null,
@@ -1555,136 +3075,6 @@
           "issue": "servings_missing",
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_bbq_italia.json",
-      "source_url": "https://www.instagram.com/p/DW1rvZgjJhV/",
-      "owner": "missbbq_italy",
-      "caption_category": "messy_recipe_like",
-      "caption_score": 12,
-      "caption_excerpt": "-𝙏𝙀𝘼𝙈 𝘽𝙊𝘽𝘽𝙔- Being chosen by @bobbyflay was a true honor for me. Our team had a strong connection",
-      "duration_ms": 1892,
-      "usedServerLLM": true,
-      "title": "TEAM BOBBY",
-      "ingredient_count": 0,
-      "ingredients": [],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "low",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_more_recipe_detail",
-      "actionReason": "The caption does not contain enough ingredient structure to create a reliable draft.",
-      "blockingIssues": [
-        "ingredients_missing",
-        "steps_missing",
-        "low_confidence_parse"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "low_signal_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata",
-        "low_confidence_parse"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "ingredients_missing",
-          "action": "ask_creator_for_ingredients",
-          "reason": "A recipe without ingredient structure cannot be repaired safely from context alone."
-        },
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "low_confidence_parse",
-          "action": "manual_review",
-          "reason": "The issue is blocking and does not have a deterministic safe fix yet."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_nutrizionista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DC8ujztIJM6/",
-      "owner": "martinalasaluteincucina",
-      "caption_category": "messy_recipe_like",
-      "caption_score": 10,
-      "caption_excerpt": "👉🏻seguimi @martinalasaluteincucina avere ogni giorno consigli e ricette. 👉🏻trovi le mie guide nutrizionali con i miei menu settimanali",
-      "duration_ms": 2286,
-      "usedServerLLM": true,
-      "title": "pancake di mele",
-      "ingredient_count": 7,
-      "ingredients": [
-        "farina 00 o di riso",
-        "latte o bevanda veg",
-        "uovo",
-        "mele",
-        "miele",
-        "yogurt greco magro",
-        "cannella"
-      ],
-      "step_count": 0,
-      "servings": 2,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
         },
         {
           "issue": "timings_missing",
@@ -1701,62 +3091,91 @@
     {
       "ok": true,
       "source_file": "profile_chef_a_casa.json",
-      "source_url": "https://www.instagram.com/p/DTi_2Gnktl8/",
-      "owner": "artenacoziinha_",
+      "source_url": "https://www.instagram.com/p/C4J-SXsrnxU/",
+      "owner": "anachefencasa",
       "caption_category": "messy_recipe_like",
-      "caption_score": 10,
-      "caption_excerpt": "🚨 ISSO AQUI É PERIGOSO 🚨 Não era pra ser só um docinho… Virou uma travessa inteira 🍫🤯",
-      "duration_ms": 1906,
+      "caption_score": 13,
+      "caption_excerpt": "Por petición popular, comparto de nuevo la tarta de queso más famosa. GUÁRDATELA y así no se te",
+      "duration_ms": 3107,
       "usedServerLLM": true,
-      "title": "ISSO AQUI É PERIGOSO",
+      "title": "TARTA DE QUESO “LA VIÑA”",
       "ingredient_count": 6,
       "ingredients": [
-        "leite condensado",
-        "creme de leite",
-        "chocolate meio amargo",
-        "manteiga",
-        "Oreo",
-        "chocolate branco"
+        "queso crema tipo Philadelphia",
+        "huevos L",
+        "nata o crema de leche",
+        "azúcar",
+        "harina",
+        "molde"
       ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
+      "ingredientDetails": [
         {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
+          "name": "queso crema tipo Philadelphia",
+          "quantity": 1000,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         },
         {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+          "name": "huevos L",
+          "quantity": 7,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         },
         {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+          "name": "nata o crema de leche",
+          "quantity": 500,
+          "unit": "ml",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "azúcar",
+          "quantity": 400,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "harina",
+          "quantity": 1,
+          "unit": "tbsp",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "molde",
+          "quantity": 25,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         }
       ],
+      "measuredIngredientCount": 6,
+      "missingQuantityCount": 0,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 5,
+      "servings": 12,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": 50,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [],
+      "autoFixable": [],
+      "operationalSignals": [],
+      "safeFixes": [],
+      "deferredFixes": [],
       "appliedAutoFixes": [],
       "passes": [
         "full_recipe_caption_parse",
@@ -1765,336 +3184,91 @@
     },
     {
       "ok": true,
-      "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DYCysq-NkIc/",
-      "owner": "alicegrandi87",
-      "caption_category": "messy_recipe_like",
-      "caption_score": 10,
-      "caption_excerpt": "PANE SENZA FARINA 😱 senza glutine ✨ Soffice, proteico e con solo 2 ingredienti: 👉 300g di albumi",
-      "duration_ms": 3223,
+      "source_file": "profile_bbq_italia.json",
+      "source_url": "https://www.instagram.com/p/DX_V5bgj6w0/",
+      "owner": "bbqhouseitalia",
+      "caption_category": "weak_recipe_signal",
+      "caption_score": 21,
+      "caption_excerpt": "𝗦𝗼𝗿𝗽𝗿𝗲𝗻𝗱𝗶𝗹𝗮 𝗰𝗼𝗻 𝗹𝗮 𝘀𝗲𝗺𝗽𝗹𝗶𝗰𝗶𝘁𝗮̀. 🍣 Per la Festa della Mamma abbiamo pensato a un piatto che unisce la",
+      "duration_ms": 2864,
       "usedServerLLM": true,
-      "title": "PANE SENZA FARINA",
-      "ingredient_count": 3,
-      "ingredients": [
-        "albumi",
-        "semi di lino",
-        "sale"
-      ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_papa_in_cucina.json",
-      "source_url": "https://www.instagram.com/p/CHyDCYwjeKs/",
-      "owner": "chiara_in_cucinaa",
-      "caption_category": "messy_recipe_like",
-      "caption_score": 10,
-      "caption_excerpt": "Cantucci 🤩❤️ 3 uova 200 g zucchero 500 g farina 100 g di burro ammorbidito 200 g di",
-      "duration_ms": 2928,
-      "usedServerLLM": true,
-      "title": "Cantucci",
+      "title": "Sorprendila con la semplicità",
       "ingredient_count": 7,
       "ingredients": [
-        "uova",
-        "zucchero",
-        "farina",
-        "burro",
-        "mandorle",
-        "Lievito Istantaneo per Biscotti PANEANGELI",
-        "limone"
+        "filetto di salmone fresco",
+        "cedro",
+        "pepe rosa in grani",
+        "aneto fresco",
+        "olio EVO",
+        "sale di Maldon",
+        "asparagi sottili"
       ],
-      "step_count": 0,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_more_input",
-      "nextAction": "add_method_steps",
-      "actionReason": "The draft has ingredients, but no preparation method was found. Ask the creator for at least one real step or assembly instruction.",
-      "blockingIssues": [
-        "steps_missing"
-      ],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "ingredients_only_caption",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
+      "ingredientDetails": [
         {
-          "issue": "steps_missing",
-          "action": "ask_creator_for_method_steps",
-          "reason": "Preparation steps should come from the creator or explicit caption text; the server must not invent a method."
+          "name": "filetto di salmone fresco",
+          "quantity": 800,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         },
         {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+          "name": "cedro",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         },
         {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+          "name": "pepe rosa in grani",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "aneto fresco",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio EVO",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "sale di Maldon",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "asparagi sottili",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         }
       ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_dietista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DXmbIrPihkf/",
-      "owner": "dietista.paolastavolone",
-      "caption_category": "weak_recipe_signal",
-      "caption_score": 20,
-      "caption_excerpt": "Burger di zucchine 🥒✨ Se pensi che le verdure siano noiose… questa ricetta ti farà cambiare idea. Salvala",
-      "duration_ms": 1694,
-      "usedServerLLM": true,
-      "title": "Burger di zucchine",
-      "ingredient_count": 4,
-      "ingredients": [
-        "zucchina",
-        "uovo",
-        "farina",
-        "mozzarella sfilacciata"
-      ],
-      "step_count": 3,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_sane.json",
-      "source_url": "https://www.instagram.com/p/DYAZr6RoOt_/",
-      "owner": "fitunicorn_healthy_kitchen",
-      "caption_category": "weak_recipe_signal",
-      "caption_score": 20,
-      "caption_excerpt": "STRAWBERRY CHIA SEED BOWL 🍓 📍 se ami le fragole e se alla ricerca di una ricetta sana",
-      "duration_ms": 2165,
-      "usedServerLLM": true,
-      "title": "STRAWBERRY CHIA SEED BOWL",
-      "ingredient_count": 5,
-      "ingredients": [
-        "fragole",
-        "semi di chia",
-        "yogurt greco",
-        "fragole",
-        "granola"
-      ],
-      "step_count": 1,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "medium",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_cucina_antispreco.json",
-      "source_url": "https://www.instagram.com/p/DTkiDCaiImH/",
-      "owner": "le_ricce_in_cucina",
-      "caption_category": "weak_recipe_signal",
-      "caption_score": 19,
-      "caption_excerpt": "Panino gourmet con salsiccia di Bra e Toma 🔥 Questo panino è possibile solo in Piemonte. Perché solo",
-      "duration_ms": 2430,
-      "usedServerLLM": true,
-      "title": "Panino gourmet con salsiccia di Bra e Toma",
-      "ingredient_count": 5,
-      "ingredients": [
-        "salsiccia di Bra",
-        "Toma piemontese",
-        "pane per hamburger oppure pane rustico",
-        "senape",
-        "miele"
-      ],
+      "measuredIngredientCount": 2,
+      "missingQuantityCount": 5,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
       "step_count": 6,
       "servings": null,
       "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "needs_creator_review",
-      "nextAction": "add_ingredient_amounts",
-      "actionReason": "The recipe structure is usable, but ingredient amounts are missing or too vague for a creator-ready draft.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "quantities_missing",
-        "servings_missing",
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "method_without_amounts",
-        "missing_servings_metadata",
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "quantities_missing",
-          "action": "ask_creator_for_amounts",
-          "reason": "Ingredient amounts are useful for publishing quality, but inventing doses would be unsafe."
-        },
-        {
-          "issue": "servings_missing",
-          "action": "ask_creator_for_servings",
-          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
-        },
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_ricette_veloci.json",
-      "source_url": "https://www.instagram.com/p/DYCuMWPxa2b/",
-      "owner": "i_menu_come_una_volta",
-      "caption_category": "weak_recipe_signal",
-      "caption_score": 19,
-      "caption_excerpt": "EP. 3 ✨ Riso in teglia al forno: una ricetta veloce, pratica e con pochi ingredienti 💛 ⚠️",
-      "duration_ms": 3228,
-      "usedServerLLM": true,
-      "title": "Riso in teglia al forno",
-      "ingredient_count": 12,
-      "ingredients": [
-        "riso",
-        "acqua",
-        "zucchine",
-        "porro",
-        "sale",
-        "olio",
-        "spezie preferite",
-        "aglio in polvere",
-        "formaggio grattugiato",
-        "mozzarella",
-        "olio",
-        "noci"
-      ],
-      "step_count": 3,
-      "servings": null,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": 35,
+      "cookTimeMinutes": 15,
       "confidence": "high",
       "draftQuality": "publishable",
       "nextAction": "publish",
@@ -2123,176 +3297,62 @@
     },
     {
       "ok": true,
-      "source_file": "profile_cucina_antispreco.json",
-      "source_url": "https://www.instagram.com/p/DUi8LmgDQpG/",
-      "owner": "le_ricce_in_cucina",
-      "caption_category": "complete_recipe",
-      "caption_score": 26,
-      "caption_excerpt": "FONDUTA VALDOSTANA (quella vera) La fonduta valdostana non è una crema al formaggio qualsiasi. È una preparazione lenta,",
-      "duration_ms": 3737,
-      "usedServerLLM": true,
-      "title": "FONDUTA VALDOSTANA (quella vera)",
-      "ingredient_count": 5,
-      "ingredients": [
-        "Fontina DOP",
-        "Latte intero",
-        "Tuorli",
-        "Burro",
-        "Sale"
-      ],
-      "step_count": 8,
-      "servings": 4,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_dietista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DX4eLT5KWgM/",
-      "owner": "dietista.paolastavolone",
-      "caption_category": "complete_recipe",
-      "caption_score": 26,
-      "caption_excerpt": "Overnight lamponi e cioccolato 🍫💗 Una colazione golosa, fresca e pronta al risveglio. Perfetta quando vuoi qualcosa di",
-      "duration_ms": 2416,
-      "usedServerLLM": true,
-      "title": "Overnight lamponi e cioccolato",
-      "ingredient_count": 7,
-      "ingredients": [
-        "fiocchi d’avena",
-        "semi di chia",
-        "latte",
-        "lamponi",
-        "yogurt greco magro",
-        "cioccolato fondente 85%",
-        "lamponi"
-      ],
-      "step_count": 4,
-      "servings": 2,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
-        {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
-        }
-      ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
       "source_file": "profile_ricette_veloci.json",
-      "source_url": "https://www.instagram.com/p/DYEtMvvsZiE/",
-      "owner": "sofitsogood_",
-      "caption_category": "complete_recipe",
-      "caption_score": 26,
-      "caption_excerpt": "🥑 SALSA FIT AVOCADO & UOVA (cremosa, veloce, proteica!) Vuoi qualcosa di buono da spalmare sul pane ma",
-      "duration_ms": 2378,
+      "source_url": "https://www.instagram.com/p/DHmHq9xAa4X/",
+      "owner": "ricettegram_fit",
+      "caption_category": "weak_recipe_signal",
+      "caption_score": 21,
+      "caption_excerpt": "Spiedini Salsiccia e Zucchine – facili, sfiziosi e perfetti in friggitrice ad aria! Ingredienti: • 1 zucchina •",
+      "duration_ms": 2158,
       "usedServerLLM": true,
-      "title": "SALSA FIT AVOCADO & UOVA",
-      "ingredient_count": 5,
+      "title": "Spiedini Salsiccia e Zucchine",
+      "ingredient_count": 4,
       "ingredients": [
-        "avocado maturo",
-        "uova sode",
-        "sale",
-        "pepe",
-        "pane"
+        "zucchina",
+        "salsiccia",
+        "spiedini di legno",
+        "olio"
       ],
-      "step_count": 5,
-      "servings": 1,
-      "prepTimeMinutes": null,
-      "cookTimeMinutes": null,
-      "confidence": "high",
-      "draftQuality": "publishable",
-      "nextAction": "publish",
-      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
-      "blockingIssues": [],
-      "niceToFix": [
-        "timings_missing"
-      ],
-      "autoFixable": [],
-      "operationalSignals": [
-        "missing_timing_metadata"
-      ],
-      "safeFixes": [],
-      "deferredFixes": [
+      "ingredientDetails": [
         {
-          "issue": "timings_missing",
-          "action": "ask_creator_for_timings",
-          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+          "name": "zucchina",
+          "quantity": 1,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "salsiccia",
+          "quantity": 200,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "spiedini di legno",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
         }
       ],
-      "appliedAutoFixes": [],
-      "passes": [
-        "full_recipe_caption_parse",
-        "draft_quality_gate"
-      ]
-    },
-    {
-      "ok": true,
-      "source_file": "profile_dietista_ricette.json",
-      "source_url": "https://www.instagram.com/p/DYEtLRZio0d/",
-      "owner": "dietista.paolastavolone",
-      "caption_category": "complete_recipe",
-      "caption_score": 26,
-      "caption_excerpt": "Una “focaccia” furba, pronta in pochi minuti! Croccante fuori, morbida dentro… ma molto più leggera e bilanciata. Ingredienti",
-      "duration_ms": 7511,
-      "usedServerLLM": true,
-      "title": "Una “focaccia” furba, pronta in pochi minuti!",
-      "ingredient_count": 7,
-      "ingredients": [
-        "pane carasau",
-        "stracchino",
-        "pomodorini",
-        "olio extravergine di oliva",
-        "acqua",
-        "sale",
-        "origano"
-      ],
-      "step_count": 2,
-      "servings": 4,
+      "measuredIngredientCount": 2,
+      "missingQuantityCount": 2,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 4,
+      "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": 15,
       "confidence": "high",
@@ -2300,11 +3360,21 @@
       "nextAction": "publish",
       "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
       "blockingIssues": [],
-      "niceToFix": [],
+      "niceToFix": [
+        "servings_missing"
+      ],
       "autoFixable": [],
-      "operationalSignals": [],
+      "operationalSignals": [
+        "missing_servings_metadata"
+      ],
       "safeFixes": [],
-      "deferredFixes": [],
+      "deferredFixes": [
+        {
+          "issue": "servings_missing",
+          "action": "ask_creator_for_servings",
+          "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
+        }
+      ],
       "appliedAutoFixes": [],
       "passes": [
         "full_recipe_caption_parse",
@@ -2314,25 +3384,78 @@
     {
       "ok": true,
       "source_file": "profile_ricette_facili.json",
-      "source_url": "https://www.instagram.com/p/DXt11zSjHVa/",
-      "owner": "cucinamammaela",
-      "caption_category": "complete_recipe",
-      "caption_score": 26,
-      "caption_excerpt": "Colazione sana, proteica e che sa di tiramisù 🤤✨ La fai la sera prima e al mattino hai",
-      "duration_ms": 2524,
+      "source_url": "https://www.instagram.com/p/DXcLihiMmuc/",
+      "owner": "gioiatraifornelli",
+      "caption_category": "weak_recipe_signal",
+      "caption_score": 21,
+      "caption_excerpt": "⏱️Cronometrata! Pronta in meno di 15 minuti 3 ingredienti e basta una padella. Zero sbatti, meno corrente… e",
+      "duration_ms": 3221,
       "usedServerLLM": true,
-      "title": "Colazione sana, proteica e che sa di tiramisù",
-      "ingredient_count": 7,
+      "title": "Cronometrata! Pronta in meno di 15 minuti",
+      "ingredient_count": 6,
       "ingredients": [
-        "yogurt greco",
-        "semi di chia",
-        "caffè",
-        "Sciroppo d’acero o miele",
-        "yogurt",
-        "cacao amaro",
-        "cioccolato"
+        "pasta sfoglia",
+        "verdura",
+        "scamorza",
+        "bresaola",
+        "olio evo",
+        "semi di sesamo"
       ],
-      "step_count": 3,
+      "ingredientDetails": [
+        {
+          "name": "pasta sfoglia",
+          "quantity": 2,
+          "unit": "piece",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "verdura",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "scamorza",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "bresaola",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "olio evo",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "semi di sesamo",
+          "quantity": null,
+          "unit": null,
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 1,
+      "missingQuantityCount": 5,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 6,
       "servings": null,
       "prepTimeMinutes": null,
       "cookTimeMinutes": null,
@@ -2357,6 +3480,92 @@
           "action": "ask_creator_for_servings",
           "reason": "Servings affect shopping and nutrition; keep them explicit unless a future deterministic rule is added."
         },
+        {
+          "issue": "timings_missing",
+          "action": "ask_creator_for_timings",
+          "reason": "Prep and cook times are helpful metadata but should not be guessed from a short caption."
+        }
+      ],
+      "appliedAutoFixes": [],
+      "passes": [
+        "full_recipe_caption_parse",
+        "draft_quality_gate"
+      ]
+    },
+    {
+      "ok": true,
+      "source_file": "profile_pane_pizza_lievitati.json",
+      "source_url": "https://www.instagram.com/p/DGL8oB3u8uI/",
+      "owner": "maxmilian.m",
+      "caption_category": "complete_recipe",
+      "caption_score": 28,
+      "caption_excerpt": "Ora che ho perso la vista ci vedo di più. !! Se cuocete in casa o in forni",
+      "duration_ms": 2737,
+      "usedServerLLM": true,
+      "title": "Ricetta Pizza al Piatto",
+      "ingredient_count": 4,
+      "ingredients": [
+        "Farina",
+        "Acqua",
+        "Lievito di birra fresco",
+        "Sale"
+      ],
+      "ingredientDetails": [
+        {
+          "name": "Farina",
+          "quantity": 600,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Acqua",
+          "quantity": 400,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Lievito di birra fresco",
+          "quantity": 2,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        },
+        {
+          "name": "Sale",
+          "quantity": 18,
+          "unit": "g",
+          "status": null,
+          "confidence": null,
+          "matchedIngredientId": null
+        }
+      ],
+      "measuredIngredientCount": 4,
+      "missingQuantityCount": 0,
+      "duplicateIngredientNames": [],
+      "duplicateIngredientNameCount": 0,
+      "step_count": 12,
+      "servings": 4,
+      "prepTimeMinutes": null,
+      "cookTimeMinutes": null,
+      "confidence": "high",
+      "draftQuality": "publishable",
+      "nextAction": "publish",
+      "actionReason": "The draft has a title, ingredients, quantities, steps, and no blocking catalog issues.",
+      "blockingIssues": [],
+      "niceToFix": [
+        "timings_missing"
+      ],
+      "autoFixable": [],
+      "operationalSignals": [
+        "missing_timing_metadata"
+      ],
+      "safeFixes": [],
+      "deferredFixes": [
         {
           "issue": "timings_missing",
           "action": "ask_creator_for_timings",

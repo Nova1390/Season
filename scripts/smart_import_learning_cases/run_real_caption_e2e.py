@@ -264,17 +264,38 @@ def call_parse_recipe_caption(
     token: str,
     caption: str,
 ) -> dict[str, Any]:
-    return post_json(
-        f"{supabase_url.rstrip('/')}/functions/v1/parse-recipe-caption",
-        {
-            "apikey": anon_key,
-            "Authorization": f"Bearer {token}",
-        },
-        {
-            "caption": caption,
-            "languageCode": "it",
-        },
-    )
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            return post_json(
+                f"{supabase_url.rstrip('/')}/functions/v1/parse-recipe-caption",
+                {
+                    "apikey": anon_key,
+                    "Authorization": f"Bearer {token}",
+                },
+                {
+                    "caption": caption,
+                    "languageCode": "it",
+                },
+            )
+        except Exception as error:
+            last_error = error
+            retry_after = retry_after_seconds_from_error(error)
+            if retry_after is None or attempt >= 2:
+                raise
+            time.sleep(max(1.0, retry_after + 0.2))
+
+    raise last_error or RuntimeError("parse-recipe-caption failed without an error")
+
+
+def retry_after_seconds_from_error(error: Exception) -> float | None:
+    text = str(error)
+    if "TOO_FREQUENT_REQUESTS" not in text and "HTTP 429" not in text:
+        return None
+    match = re.search(r'"retryAfterSeconds"\s*:\s*(\d+(?:\.\d+)?)', text)
+    if match:
+        return float(match.group(1))
+    return 1.0
 
 
 def ingredient_names(result: dict[str, Any]) -> list[str]:
@@ -286,6 +307,48 @@ def ingredient_names(result: dict[str, Any]) -> list[str]:
         for item in ingredients
         if isinstance(item, dict) and isinstance(item.get("name"), str)
     ]
+
+
+def ingredient_details(result: dict[str, Any]) -> list[dict[str, Any]]:
+    ingredients = result.get("ingredients")
+    if not isinstance(ingredients, list):
+        return []
+    details: list[dict[str, Any]] = []
+    for item in ingredients:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        details.append({
+            "name": name,
+            "quantity": item.get("quantity"),
+            "unit": item.get("unit"),
+            "status": item.get("status"),
+            "confidence": item.get("confidence"),
+            "matchedIngredientId": item.get("matchedIngredientId"),
+        })
+    return details
+
+
+def normalized_ingredient_name(value: str) -> str:
+    value = normalize(value)
+    value = re.sub(r"[_-]", " ", value)
+    value = re.sub(r"[^a-z0-9àèéìòùç'\s]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def duplicate_ingredient_names(details: list[dict[str, Any]]) -> list[str]:
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    for item in details:
+        label = str(item.get("name") or "").strip()
+        key = normalized_ingredient_name(label)
+        if not key:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+        labels.setdefault(key, label)
+    return sorted(labels[key] for key, count in counts.items() if count > 1)
 
 
 def step_count(result: dict[str, Any]) -> int:
@@ -301,6 +364,9 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
     scorecard = agent.get("scorecard") if isinstance(agent.get("scorecard"), dict) else {}
     auto_fix_plan = agent.get("autoFixPlan") if isinstance(agent.get("autoFixPlan"), dict) else {}
     meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+    details = ingredient_details(result)
+    duplicates = duplicate_ingredient_names(details)
+    measured_count = sum(1 for item in details if item.get("quantity") is not None)
     return {
         "ok": response.get("ok") is True,
         "source_file": post.get("source_file"),
@@ -312,8 +378,13 @@ def summarize_response(post: dict[str, Any], response: dict[str, Any], duration_
         "duration_ms": duration_ms,
         "usedServerLLM": meta.get("usedServerLLM"),
         "title": result.get("title"),
-        "ingredient_count": len(ingredient_names(result)),
-        "ingredients": ingredient_names(result)[:20],
+        "ingredient_count": len(details),
+        "ingredients": [str(item.get("name")) for item in details[:20]],
+        "ingredientDetails": details[:40],
+        "measuredIngredientCount": measured_count,
+        "missingQuantityCount": max(0, len(details) - measured_count),
+        "duplicateIngredientNames": duplicates,
+        "duplicateIngredientNameCount": len(duplicates),
         "step_count": step_count(result),
         "servings": result.get("servings"),
         "prepTimeMinutes": result.get("prepTimeMinutes"),
@@ -351,6 +422,11 @@ def summarize_error(post: dict[str, Any], error: Exception, duration_ms: int) ->
         "title": None,
         "ingredient_count": 0,
         "ingredients": [],
+        "ingredientDetails": [],
+        "measuredIngredientCount": 0,
+        "missingQuantityCount": 0,
+        "duplicateIngredientNames": [],
+        "duplicateIngredientNameCount": 0,
         "step_count": 0,
         "servings": None,
         "prepTimeMinutes": None,
@@ -410,6 +486,9 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
     ok_count = sum(1 for item in summaries if item.get("ok"))
     publishable_count = sum(1 for item in summaries if item.get("nextAction") in {"publish", "ready_to_review"})
     needs_more_input_count = sum(1 for item in summaries if item.get("draftQuality") == "needs_more_input")
+    duplicate_draft_count = sum(1 for item in summaries if int(item.get("duplicateIngredientNameCount") or 0) > 0)
+    measured_ingredient_total = sum(int(item.get("measuredIngredientCount") or 0) for item in summaries)
+    ingredient_total = sum(int(item.get("ingredient_count") or 0) for item in summaries)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     lines = [
@@ -427,6 +506,8 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
         f"- Edge responses OK: {ok_count}/{len(summaries)}",
         f"- Publish-ready drafts: {publishable_count}",
         f"- Needs more input: {needs_more_input_count}",
+        f"- Drafts with duplicate ingredient names: {duplicate_draft_count}",
+        f"- Ingredients with explicit quantities: {measured_ingredient_total}/{ingredient_total}",
         f"- Caption categories: {json.dumps(grouped_counts(summaries, 'caption_category'), sort_keys=True)}",
         f"- Draft qualities: {json.dumps(grouped_counts(summaries, 'draftQuality'), sort_keys=True)}",
         f"- Agent next actions: {json.dumps(grouped_counts(summaries, 'nextAction'), sort_keys=True)}",
@@ -453,6 +534,7 @@ def write_report(path: Path, summaries: list[dict[str, Any]], selected_count: in
             f"- Caption signal: {summary.get('caption_category')} score={summary.get('caption_score')}",
             f"- Result: ok={summary.get('ok')} usedLLM={summary.get('usedServerLLM')} duration_ms={summary.get('duration_ms')}",
             f"- Draft: ingredients={summary.get('ingredient_count')} steps={summary.get('step_count')} confidence={summary.get('confidence')}",
+            f"- Quantity coverage: measured={summary.get('measuredIngredientCount')} missing={summary.get('missingQuantityCount')} duplicate_names={', '.join(summary.get('duplicateIngredientNames') or []) or 'none'}",
             f"- Agent: quality={summary.get('draftQuality')} next={summary.get('nextAction')}",
             f"- Blocking issues: {', '.join(summary.get('blockingIssues') or []) or 'none'}",
             f"- Nice to fix: {', '.join(summary.get('niceToFix') or []) or 'none'}",

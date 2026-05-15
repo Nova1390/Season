@@ -655,21 +655,22 @@ Deno.serve(async (request) => {
       });
 
       const recipeOutput = validation.value;
+      const mappedIngredients = dedupeParsedIngredients(recipeOutput.ingredients.map((item) => {
+        const normalized = recoverExplicitMeasuredIngredient({
+          name: item.name.trim(),
+          quantity: item.quantity,
+          unit: item.unit,
+        });
+        if (normalized.quantity !== null && normalized.unit !== null) {
+          console.log(
+            `[SEASON_IMPORT_EDGE] phase=final_quantity_preserved name_length=${normalized.name.length} quantity=${normalized.quantity} unit=${normalized.unit}`,
+          );
+        }
+        return normalized;
+      }));
       const mappedResult: ParseRecipeCaptionResult = {
         title: recipeOutput.title.trim() ? recipeOutput.title : null,
-        ingredients: recipeOutput.ingredients.map((item) => {
-          const normalized = recoverExplicitMeasuredIngredient({
-            name: item.name.trim(),
-            quantity: item.quantity,
-            unit: item.unit,
-          });
-          if (normalized.quantity !== null && normalized.unit !== null) {
-            console.log(
-              `[SEASON_IMPORT_EDGE] phase=final_quantity_preserved name_length=${normalized.name.length} quantity=${normalized.quantity} unit=${normalized.unit}`,
-            );
-          }
-          return normalized;
-        }),
+        ingredients: mappedIngredients,
         steps: recipeOutput.steps.map((step) => step.trim()).filter(Boolean),
         prepTimeMinutes: recipeOutput.prepTimeMinutes,
         cookTimeMinutes: recipeOutput.cookTimeMinutes,
