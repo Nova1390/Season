@@ -75,6 +75,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 a guarded external-evidence importer was added for reviewed CSV/JSON files. It supports dry-run, validates source/license/type/status fields locally, and writes only advisory rows through `upsert_catalog_agent_external_evidence(...)`.
 - 2026-05-15 the first reviewed Italian external-evidence batch was drafted for `stracchino`, `fiocchi d avena`, `pecorino romano`, `pomodorini`, and `olive`; all rows remain `needs_review` advisory evidence.
 - 2026-05-15 the first reviewed Italian external-evidence batch was imported into `Season-dev`: 6 advisory rows, 0 failures, IDs `1`-`6`. Context RPC smoke confirmed external evidence coverage for `stracchino`, `fiocchi d avena`, and `olive`.
+- 2026-05-15 dry-run Catalog Agent smoke `#109` confirmed the imported Italian evidence reaches the LLM packet: 3 terms with external evidence, 3 proposals returned, 0 persisted, 0 quality-gate blocks. `olive` stayed high-risk review, `fiocchi d avena` became create-canonical, and `acqua di cottura` stayed ignore-noise. Report: `docs/catalog-agent-external-evidence-smoke-2026-05-15.md`.
 
 ## Current Closeout Audit
 
