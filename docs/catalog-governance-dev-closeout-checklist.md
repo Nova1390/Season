@@ -1262,3 +1262,23 @@ Validation and worker dry-run:
 - Failed: `0`.
 - Orchestrator and temporary operator token were disabled/removed after verification.
 - Temporary local key/output files were removed from `/tmp`.
+
+Low-risk real apply:
+
+- Orchestrator run: `#106`.
+- Worker job: `#34`.
+- Worker: `low_risk_apply_batch`.
+- Mode: real apply with `limit=1`.
+- Applied: `1`.
+- Failed: `0`.
+- Proposal `#51` status: `auto_applied`.
+- Mutation type: `approve_alias`.
+- Alias created: `ingredient_aliases_v2.id = 183`.
+- Alias: `pepe`.
+- Target: `black_pepper`.
+- Alias status: `approved`, `is_active=true`.
+- Apply audit: `catalog_agent_apply_audit.id = 9`.
+- Rollback plan: `delete_inserted_alias` for alias id `183`.
+- Real-apply and orchestrator flags were disabled immediately after verification.
+- Temporary operator token and local `/tmp` key/output files were removed.
+- No staging changes were made.
