@@ -142,9 +142,15 @@ Current dev deployment:
 - Hosting path: `/home/u280052083/domains/seasonapp.it/public_html/catalog`
 - Supabase environment: `Season-dev`
 - Config file on host: `config.local.js`
-- Current cache version: `20260515-2`
+- Current cache version: `20260515-3`
 - Latest deployment behavior: operational-focus default statuses and backend
   duplicate-open-proposal cleanup at Catalog Agent run start.
+- `config.local.js` is also cache-busted in `index.html`; otherwise an operator
+  browser can keep the older default status filter and still show the full
+  `needs_human_review` backlog.
+- `index.html` and `config.local.js` are served with `no-store` headers because
+  the console is operational tooling and stale filters are more dangerous than
+  an extra tiny network request.
 
 If the URL returns `404`, first verify that the Hostinger subdomain still points to the custom folder and that the folder exists. The expected folder is:
 

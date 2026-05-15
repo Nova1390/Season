@@ -8,3 +8,11 @@ DirectoryIndex index.html
   Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
   Header set Content-Security-Policy "default-src 'self'; script-src 'self' https://esm.sh; connect-src 'self' https://*.supabase.co; style-src 'self'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 </IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|config\.local\.js)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>

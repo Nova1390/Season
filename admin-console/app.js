@@ -492,11 +492,14 @@ async function loadInbox(options = {}) {
   renderInbox();
   const loadedItems = Array.isArray(data?.items) ? data.items.length : 0;
   const hiddenDuplicates = Math.max(loadedItems - items.length, 0);
-  setStatus(
-    hiddenDuplicates > 0 && elements.latestOnlyInput?.checked
-      ? `Loaded ${items.length} proposals, hiding ${hiddenDuplicates} historical duplicates.`
-      : `Loaded ${loadedItems} proposals.`
-  );
+  const includesHumanReviewBacklog = statuses.includes("needs_human_review");
+  const loadedLabel = includesHumanReviewBacklog
+    ? `Loaded ${loadedItems} proposals, including human-review backlog.`
+    : `Loaded ${loadedItems} operational proposals.`;
+  const dedupeLabel = hiddenDuplicates > 0 && elements.latestOnlyInput?.checked
+    ? ` Hiding ${hiddenDuplicates} historical duplicates.`
+    : "";
+  setStatus(`${loadedLabel}${dedupeLabel}`);
   await loadOperations({ silent: true });
 }
 
