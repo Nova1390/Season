@@ -154,7 +154,8 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
     errors.push("variant_kind must be string or null");
   }
 
-  if (!(payload.specificity_rank_suggestion === null || (Number.isInteger(payload.specificity_rank_suggestion) && payload.specificity_rank_suggestion >= 0))) {
+  const specificityRankSuggestion = payload.specificity_rank_suggestion;
+  if (!(specificityRankSuggestion === null || (typeof specificityRankSuggestion === "number" && Number.isInteger(specificityRankSuggestion) && specificityRankSuggestion >= 0))) {
     errors.push("specificity_rank_suggestion must be null or non-negative integer");
   }
 
@@ -217,14 +218,14 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
     if (typeof payload.variant_kind !== "string" || payload.variant_kind.trim().length === 0) {
       errors.push("variant_kind required when parent_candidate_slug is provided");
     }
-    if (!Number.isInteger(payload.specificity_rank_suggestion) || (payload.specificity_rank_suggestion as number) < 1) {
+    if (typeof specificityRankSuggestion !== "number" || !Number.isInteger(specificityRankSuggestion) || specificityRankSuggestion < 1) {
       errors.push("specificity_rank_suggestion must be >= 1 when parent_candidate_slug is provided");
     }
   } else {
     if (payload.variant_kind !== null) {
       errors.push("variant_kind must be null when parent_candidate_slug is null");
     }
-    if (payload.specificity_rank_suggestion !== null) {
+    if (specificityRankSuggestion !== null) {
       errors.push("specificity_rank_suggestion must be null when parent_candidate_slug is null");
     }
   }
@@ -236,7 +237,7 @@ export function validateCatalogEnrichmentProposal(payload: unknown): {
   return {
     ok: true,
     errors: [],
-    value: payload as CatalogEnrichmentProposal,
+    value: payload as unknown as CatalogEnrichmentProposal,
   };
 }
 

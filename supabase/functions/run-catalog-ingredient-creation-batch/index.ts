@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   env,
   extractBearerToken,
@@ -17,6 +17,8 @@ const MIN_CONFIDENCE = 0.6;
 const WORKER_ENABLED = env("CATALOG_AGENT_INGREDIENT_CREATION_ENABLED", "false").toLowerCase() === "true";
 
 type RunnerMode = "user" | "service_role";
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 interface BatchRequest {
   limit?: number;
@@ -66,7 +68,7 @@ Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
   const startedAt = performance.now();
   let agentWorkerJobId: number | null = null;
-  let serviceClient: ReturnType<typeof createClient> | null = null;
+  let serviceClient: ServiceSupabaseClient | null = null;
 
   try {
     console.log(`[SEASON_INGREDIENT_CREATE_BATCH] phase=request_received method=${request.method} request_id=${requestId}`);
@@ -275,7 +277,7 @@ async function resolveAndAuthorize(
 }
 
 async function fetchReadyDrafts(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   limit: number,
   sourceDomain: string | null,
 ): Promise<ReadyDraftRow[]> {
@@ -324,7 +326,7 @@ async function fetchReadyDrafts(
 }
 
 async function startWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
 ): Promise<void> {
   const { error } = await client.rpc("start_catalog_agent_worker_job", {
@@ -337,7 +339,7 @@ async function startWorkerJob(
 }
 
 async function completeWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
   summary: Record<string, unknown>,
 ): Promise<void> {
@@ -352,7 +354,7 @@ async function completeWorkerJob(
 }
 
 async function failWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
   message: string,
   summary: Record<string, unknown>,
@@ -406,7 +408,7 @@ function invalidDraftReason(draft: ReadyDraftRow, slug: string | null): string |
 }
 
 async function createIngredientFromDraft(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   draft: ReadyDraftRow,
 ): Promise<CreateFromDraftRow> {
   const normalizedText = normalizeText(draft.normalized_text);

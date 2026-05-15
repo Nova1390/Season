@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   env,
   extractBearerToken,
@@ -85,6 +85,8 @@ const SAFE_CATEGORY_ALLOWLIST: Record<string, SafeCategoryPolicy> = {
     lexicalGuard: /\bfarina\b(?!.*\b(semola|semolino|amido)\b)/i,
   },
 };
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 type RunnerMode = "user" | "service_role";
 
@@ -183,7 +185,7 @@ interface NormalizedIdentityInput {
 Deno.serve(async (request) => {
   let agentRunId: number | null = null;
   let agentWorkerJobId: number | null = null;
-  let serviceClient: ReturnType<typeof createClient> | null = null;
+  let serviceClient: ServiceSupabaseClient | null = null;
   try {
     console.log(`[SEASON_CATALOG_ENRICH_BATCH] phase=request_received method=${request.method}`);
 
@@ -249,7 +251,7 @@ Deno.serve(async (request) => {
     let placeholderSkippedDuringProcessing = 0;
 
     for (const draft of pendingDrafts) {
-      const normalizedText = normalizeText(draft.normalized_text);
+      const normalizedText = normalizeText(draft.normalized_text) ?? "";
       const identityInput = normalizeIngredientIdentityInput(normalizedText);
       const cleanedNormalizedText = normalizeText(identityInput.cleanedText) ?? normalizedText;
       console.log(
@@ -752,7 +754,7 @@ async function resolveAndAuthorize(request: Request): Promise<{ allowed: boolean
 }
 
 async function fetchPendingDrafts(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   limit: number,
   debugRunId: string | null,
 ): Promise<PendingSelectionResult> {
@@ -980,7 +982,7 @@ async function fetchPendingDrafts(
   };
 }
 
-async function currentDraftStatus(client: ReturnType<typeof createClient>, normalizedText: string): Promise<string> {
+async function currentDraftStatus(client: ServiceSupabaseClient, normalizedText: string): Promise<string> {
   const { data, error } = await client
     .from("catalog_ingredient_enrichment_drafts")
     .select("status")
@@ -995,7 +997,7 @@ async function currentDraftStatus(client: ReturnType<typeof createClient>, norma
 }
 
 async function markDraftAppliedAlreadyExists(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
 ): Promise<void> {
   const { error } = await client
@@ -1081,7 +1083,7 @@ async function fetchProposalWithFallback(input: {
   };
 }
 
-async function startWorkerJob(client: ReturnType<typeof createClient>, jobId: number): Promise<void> {
+async function startWorkerJob(client: ServiceSupabaseClient, jobId: number): Promise<void> {
   const { error } = await client.rpc("start_catalog_agent_worker_job", {
     p_job_id: jobId,
   });
@@ -1091,7 +1093,7 @@ async function startWorkerJob(client: ReturnType<typeof createClient>, jobId: nu
 }
 
 async function completeWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   jobId: number,
   summary: Record<string, unknown>,
 ): Promise<void> {
@@ -1105,7 +1107,7 @@ async function completeWorkerJob(
 }
 
 async function failWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   jobId: number,
   failureReason: string,
   summary: Record<string, unknown>,
@@ -1232,7 +1234,7 @@ function isSafeExistingCanonicalAutoReady(
 }
 
 async function upsertDraft(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   proposal: ProposalResponse,
   status: "pending" | "ready",
@@ -1272,7 +1274,7 @@ async function upsertDraft(
 }
 
 async function persistDraftHierarchy(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   proposal: ProposalResponse,
 ): Promise<void> {
@@ -1305,7 +1307,7 @@ async function persistDraftHierarchy(
 }
 
 async function evaluateAutoPromotionEligibility(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   proposal: ProposalResponse,
 ): Promise<AutoPromotionEligibility> {
@@ -1356,7 +1358,7 @@ async function evaluateAutoPromotionEligibility(
 }
 
 async function resolveProposalParentCandidateSlug(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   proposal: ProposalResponse,
 ): Promise<ProposalResponse> {
   const parentCandidateSlug = normalizeText(proposal.parent_candidate_slug);
@@ -1380,7 +1382,7 @@ async function resolveProposalParentCandidateSlug(
 }
 
 async function resolveIngredientSlugFromIdentityText(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   value: string,
 ): Promise<string | null> {
   const normalized = normalizeText(value);
@@ -1397,7 +1399,7 @@ async function resolveIngredientSlugFromIdentityText(
 }
 
 async function resolveEffectiveParentCandidateSlug(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   proposal: ProposalResponse,
   parentCandidateSlug: string | null,
@@ -1422,7 +1424,7 @@ async function resolveEffectiveParentCandidateSlug(
 }
 
 async function findActiveIngredientSlugBySlug(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   slug: string,
 ): Promise<string | null> {
   const { data, error } = await client
@@ -1441,7 +1443,7 @@ async function findActiveIngredientSlugBySlug(
 }
 
 async function findSingleActiveIngredientSlugByLocalization(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   text: string,
 ): Promise<string | null> {
   const { data, error } = await client
@@ -1462,7 +1464,7 @@ async function findSingleActiveIngredientSlugByLocalization(
 }
 
 async function findSingleActiveIngredientSlugByAlias(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   text: string,
 ): Promise<string | null> {
   const { data, error } = await client
@@ -1485,7 +1487,7 @@ async function findSingleActiveIngredientSlugByAlias(
 }
 
 async function findSingleActiveIngredientSlugByIds(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   ingredientIds: string[],
 ): Promise<string | null> {
   if (ingredientIds.length === 0) {
@@ -1534,7 +1536,7 @@ function getSafeFallbackRootSlug(
 }
 
 async function ingredientSlugExists(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   slug: string,
 ): Promise<boolean> {
   const { data, error } = await client
@@ -1552,7 +1554,7 @@ async function ingredientSlugExists(
 }
 
 async function hasCanonicalConflict(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   suggestedSlug: string,
 ): Promise<boolean> {
@@ -1589,7 +1591,7 @@ async function hasCanonicalConflict(
 }
 
 async function hasApprovedAliasConflict(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   normalizedText: string,
   suggestedSlug: string,
 ): Promise<boolean> {
@@ -1621,7 +1623,7 @@ async function hasApprovedAliasConflict(
   return aliasTargetSlug !== normalizedSuggestedSlug;
 }
 
-async function validateDraft(client: ReturnType<typeof createClient>, normalizedText: string): Promise<DraftValidateRow> {
+async function validateDraft(client: ServiceSupabaseClient, normalizedText: string): Promise<DraftValidateRow> {
   const { data, error } = await client.rpc("validate_catalog_ingredient_enrichment_draft", {
     p_normalized_text: normalizedText,
   });
@@ -1977,7 +1979,7 @@ function isTrackedDebugTerm(value: string): boolean {
 }
 
 async function createDebugRun(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   functionName: string,
   mode: string,
   metadata: Record<string, unknown>,
@@ -2005,7 +2007,7 @@ async function createDebugRun(
 }
 
 async function writeDebugEvent(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   runId: string | null,
   functionName: string,
   stage: string,

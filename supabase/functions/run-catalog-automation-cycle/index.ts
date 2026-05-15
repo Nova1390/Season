@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   env,
   extractBearerToken,
@@ -20,6 +20,8 @@ const MAX_LIMIT = 5000;
 const FUNCTION_CALL_TIMEOUT_MS = numberEnv("CATALOG_AUTOMATION_FUNCTION_TIMEOUT_MS", 55000);
 
 type RunnerMode = "user" | "service_role";
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 interface AutomationRequest {
   recovery_limit?: number;
@@ -341,7 +343,7 @@ Deno.serve(async (request) => {
 });
 
 async function runRecoveryStage(input: {
-  userClient: ReturnType<typeof createClient> | null;
+  userClient: ServiceSupabaseClient | null;
   recoveryLimit: number;
   mode: RunnerMode;
 }): Promise<{
@@ -404,7 +406,7 @@ async function runRecoveryStage(input: {
 }
 
 async function runCandidateIntakeStage(input: {
-  userClient: ReturnType<typeof createClient> | null;
+  userClient: ServiceSupabaseClient | null;
   candidateLimit: number;
   mode: RunnerMode;
 }): Promise<{
@@ -606,7 +608,7 @@ async function runFunctionStage(input: {
 }
 
 async function runAutoAliasStage(input: {
-  userClient: ReturnType<typeof createClient> | null;
+  userClient: ServiceSupabaseClient | null;
   limit: number;
   applyEnabled: boolean;
   dryRun: boolean;
@@ -722,7 +724,7 @@ async function runAutoAliasStage(input: {
 }
 
 async function runAutoLocalizationStage(input: {
-  userClient: ReturnType<typeof createClient> | null;
+  userClient: ServiceSupabaseClient | null;
   limit: number;
   applyEnabled: boolean;
   dryRun: boolean;
@@ -796,7 +798,7 @@ async function runAutoLocalizationStage(input: {
 }
 
 async function runModernReconciliationStage(input: {
-  userClient: ReturnType<typeof createClient> | null;
+  userClient: ServiceSupabaseClient | null;
   limit: number;
   applyEnabled: boolean;
   dryRun: boolean;
@@ -878,7 +880,7 @@ async function runModernReconciliationStage(input: {
 }
 
 async function runQualifierReconciliationStage(input: {
-  client: ReturnType<typeof createClient>;
+  client: ServiceSupabaseClient;
   limit: number;
   applyEnabled: boolean;
   dryRun: boolean;
@@ -948,7 +950,7 @@ async function runQualifierReconciliationStage(input: {
   }
 }
 
-async function countPendingDrafts(client: ReturnType<typeof createClient>): Promise<number> {
+async function countPendingDrafts(client: ServiceSupabaseClient): Promise<number> {
   const { count, error } = await client
     .from("catalog_ingredient_enrichment_drafts")
     .select("normalized_text", { count: "exact", head: true })
@@ -962,7 +964,7 @@ async function countPendingDrafts(client: ReturnType<typeof createClient>): Prom
 }
 
 async function createDebugRun(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   functionName: string,
   mode: string,
   metadata: Record<string, unknown>,
@@ -990,7 +992,7 @@ async function createDebugRun(
 }
 
 async function writeDebugEvent(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   runId: string | null,
   functionName: string,
   stage: string,

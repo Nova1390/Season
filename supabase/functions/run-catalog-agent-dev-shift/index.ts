@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
 import {
   env,
@@ -16,6 +16,8 @@ interface DevShiftRequest {
   run_triage?: boolean;
   debug?: boolean;
 }
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 const FUNCTION_NAME = "run-catalog-agent-dev-shift";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT_DEV_SHIFT";
@@ -37,7 +39,7 @@ const CORS_HEADERS = {
 Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
   const startedAt = performance.now();
-  let adminClient: ReturnType<typeof createClient> | null = null;
+  let adminClient: ServiceSupabaseClient | null = null;
   let shiftRunId: number | null = null;
 
   try {
@@ -203,7 +205,7 @@ Deno.serve(async (request) => {
 });
 
 async function insertShiftRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   requestPayload: Record<string, unknown>,
 ): Promise<number> {
   const { data, error } = await adminClient
@@ -224,7 +226,7 @@ async function insertShiftRun(
 }
 
 async function finishShiftRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   shiftRunId: number,
   input: {
     status: "skipped" | "completed";
@@ -257,7 +259,7 @@ async function finishShiftRun(
 }
 
 async function failShiftRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   shiftRunId: number,
   message: string,
   durationMs: number,
@@ -290,7 +292,7 @@ async function readPayload(request: Request): Promise<DevShiftRequest> {
   }
 }
 
-async function buildDigest(adminClient: ReturnType<typeof createClient>): Promise<Record<string, unknown>> {
+async function buildDigest(adminClient: ServiceSupabaseClient): Promise<Record<string, unknown>> {
   return await rpcObject(adminClient, "catalog_agent_build_daily_digest", {
     p_report_date: new Date().toISOString().slice(0, 10),
     p_environment: "dev",
@@ -298,7 +300,7 @@ async function buildDigest(adminClient: ReturnType<typeof createClient>): Promis
 }
 
 async function rpcObject(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   name: string,
   args: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

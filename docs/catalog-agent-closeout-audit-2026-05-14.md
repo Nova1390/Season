@@ -1,6 +1,8 @@
 # Catalog Agent Closeout Audit - 2026-05-14
 
-Status: dev closeout audit for `agent/catalog-governance`.
+Status: historical dev closeout audit for `agent/catalog-governance`.
+
+Superseded for current branch state by `docs/catalog-agent-closeout-audit-2026-05-15.md`.
 
 Scope:
 
@@ -73,13 +75,17 @@ Recent important dev evidence:
 
 ## Pending Risks
 
-- `deno check supabase/functions/run-catalog-agent-triage/index.ts` still reports pre-existing Supabase generic typing noise; `llm_contract.ts` checks cleanly, but the main runtime type-check signal is not yet useful enough.
+- At this historical checkpoint, `deno check supabase/functions/run-catalog-agent-triage/index.ts` reported pre-existing Supabase generic typing noise; this was later resolved in the 2026-05-15 branch audit.
 - Level `7.0` is a foundation, not complete canonical creation autonomy.
 - Catalog matcher logic now has a first deterministic wrapper, but parent/child scoring, redirects, and multilingual false-friend handling still need deeper treatment.
 - Learning writer automation now covers quality-gate suggestions and worker terminal surprises; rejected/overridden proposal outcomes still need deeper review classification.
 - Staging has not been validated for this agent workflow.
 - PAT/token rotation is still recommended before any staging promotion or sensitive deploy window.
 - Multi-pass reasoning and self-repair can increase token use, so run size and daily limits must stay conservative.
+
+2026-05-15 update:
+
+- The Supabase generic typing-noise item above was resolved in the current branch audit. See `docs/catalog-agent-closeout-audit-2026-05-15.md`.
 
 ## Recommended Next Steps
 

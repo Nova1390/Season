@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
 import {
   env,
@@ -18,6 +18,8 @@ interface OrchestratorRequest {
   dry_run?: boolean;
   debug?: boolean;
 }
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 interface WorkerJobRow {
   id: number;
@@ -259,7 +261,7 @@ Deno.serve(async (request) => {
 });
 
 async function insertAgentRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   input: {
     sourceDomain: string | null;
     authUserId: string | null;
@@ -292,7 +294,7 @@ async function insertAgentRun(
 }
 
 async function createWorkerJob(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   input: {
     agentRunId: number;
     workerName: string;
@@ -385,7 +387,7 @@ async function invokeWorker(input: {
 }
 
 async function completeRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   summary: Record<string, unknown>,
 ): Promise<void> {
@@ -405,7 +407,7 @@ async function completeRun(
 }
 
 async function failRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   message: string,
   summary: Record<string, unknown>,
@@ -427,7 +429,7 @@ async function failRun(
 }
 
 async function failOpenWorkerJob(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   workerJobId: number,
   message: string,
   summary: Record<string, unknown>,
@@ -450,7 +452,7 @@ async function failOpenWorkerJob(
 }
 
 async function insertRunEvent(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   eventType: string,
   payload: Record<string, unknown>,

@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
 import {
   env,
@@ -15,6 +15,8 @@ interface ApplyBatchRequest {
   debug?: boolean;
 }
 
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
+
 const FUNCTION_NAME = "catalog-low-risk-apply-batch";
 const LOG_PREFIX = "SEASON_CATALOG_LOW_RISK_APPLY_BATCH";
 
@@ -29,7 +31,7 @@ Deno.serve(async (request) => {
   const requestId = requestIdFromHeaders(request);
   const startedAt = performance.now();
   let agentWorkerJobId: number | null = null;
-  let serviceClient: ReturnType<typeof createClient> | null = null;
+  let serviceClient: ServiceSupabaseClient | null = null;
 
   try {
     console.log(`[${LOG_PREFIX}] phase=request_received method=${request.method} request_id=${requestId}`);
@@ -159,7 +161,7 @@ Deno.serve(async (request) => {
 });
 
 async function previewEligibleProposals(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   limit: number,
 ): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await client.rpc("get_catalog_agent_auto_apply_diagnostics");
@@ -173,7 +175,7 @@ async function previewEligibleProposals(
 }
 
 async function startWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
 ): Promise<void> {
   const { error } = await client.rpc("start_catalog_agent_worker_job", {
@@ -186,7 +188,7 @@ async function startWorkerJob(
 }
 
 async function completeWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
   summary: Record<string, unknown>,
 ): Promise<void> {
@@ -201,7 +203,7 @@ async function completeWorkerJob(
 }
 
 async function failWorkerJob(
-  client: ReturnType<typeof createClient>,
+  client: ServiceSupabaseClient,
   workerJobId: number,
   message: string,
   summary: Record<string, unknown>,

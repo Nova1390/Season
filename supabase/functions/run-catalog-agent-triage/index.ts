@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveCatalogAdminOrServiceRole } from "../_shared/auth.ts";
 import {
   env,
@@ -28,6 +28,8 @@ interface AgentRunRequest {
   include_non_new?: boolean;
   dry_run?: boolean;
 }
+
+type ServiceSupabaseClient = SupabaseClient<any, "public", "public", any, any>;
 
 interface ProviderInvocationResult {
   parsed: unknown;
@@ -551,7 +553,7 @@ Deno.serve(async (request) => {
   }
 });
 
-async function countRunsToday(adminClient: ReturnType<typeof createClient>): Promise<number> {
+async function countRunsToday(adminClient: ServiceSupabaseClient): Promise<number> {
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
@@ -571,7 +573,7 @@ async function countRunsToday(adminClient: ReturnType<typeof createClient>): Pro
 }
 
 async function insertRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   input: {
     status: "started" | "completed" | "failed" | "cancelled";
     sourceDomain: string | null;
@@ -609,7 +611,7 @@ async function insertRun(
 }
 
 async function completeRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   summary: Record<string, unknown>,
 ) {
@@ -629,7 +631,7 @@ async function completeRun(
 }
 
 async function failRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   message: string,
   summary: Record<string, unknown>,
@@ -651,7 +653,7 @@ async function failRun(
 }
 
 async function insertRunEvent(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   eventType: string,
   payload: Record<string, unknown>,
@@ -672,7 +674,7 @@ async function insertRunEvent(
 }
 
 async function fetchSnapshot(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   limit: number,
   sourceDomain: string | null,
   includeNonNew: boolean,
@@ -694,7 +696,7 @@ async function fetchSnapshot(
 }
 
 async function fetchLearningContext(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   eligibleItems: WorkItem[],
 ): Promise<Record<string, unknown>> {
   const normalizedTexts = eligibleItems
@@ -721,7 +723,7 @@ async function fetchLearningContext(
 }
 
 async function fetchTrainingSignalContext(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   eligibleItems: WorkItem[],
 ): Promise<Record<string, unknown>> {
   const normalizedTexts = Array.from(new Set(eligibleItems
@@ -815,7 +817,7 @@ Return this exact JSON shape:
 }`;
 
 async function invokeProvider(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   requestId: string,
   runId: number,
   snapshot: Record<string, unknown>,
@@ -861,7 +863,7 @@ async function invokeProvider(
 }
 
 async function invokeProviderWithAdaptiveRetry(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   requestId: string,
   runId: number,
   snapshot: Record<string, unknown>,
@@ -1080,7 +1082,7 @@ function repairBlockingQuestion(reason: string): string {
 }
 
 async function invokeMultiPassProvider(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   requestId: string,
   runId: number,
   compactPacket: Record<string, unknown>,
@@ -1563,7 +1565,7 @@ function evaluateProposalQuality(
 }
 
 async function handleLearningWriterSuggestions(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   qualityGate: ProposalQualityGateResult,
   proposals: CatalogAgentProposalOutput[],
@@ -2122,7 +2124,7 @@ function isSafeProposedSlug(value: string | null): boolean {
 }
 
 async function insertProposals(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: ServiceSupabaseClient,
   runId: number,
   proposals: CatalogAgentProposalOutput[],
   eligibleItems: WorkItem[],

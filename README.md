@@ -123,6 +123,7 @@ Start here:
 - [Catalog Admin Console Plan](docs/catalog-admin-console-plan.md): web-first internal console direction for catalog agent review, validation, apply, and learning memory.
 - [Catalog Admin Operator Runbook](docs/catalog-admin-operator-runbook.md): practical guide for using the dev console safely.
 - [Catalog Governance Dev Closeout Checklist](docs/catalog-governance-dev-closeout-checklist.md): final dev checks before promoting or reviewing the current catalog-governance branch.
+- [Catalog Agent Closeout Audit 2026-05-15](docs/catalog-agent-closeout-audit-2026-05-15.md): current branch audit for dev Supabase, Edge Function checks, docs cleanup, and promotion risks.
 - [Data architecture](Season/Docs/DataArchitecture.md): per-domain source-of-truth and sync model.
 - [Security disposition](docs/security/supabase-security-findings-disposition.md): security findings and decisions.
 - [Catalog consolidation plan](docs/catalog-system-review-and-consolidation-plan.md): review snapshot and refactor roadmap for catalog operations.
@@ -146,7 +147,7 @@ Notes:
 - Debug is configured for the development Supabase environment.
 - Release is configured for the staging Supabase environment.
 - `CODE_SIGNING_ALLOWED=NO` validates compilation and packaging, not App Store signing.
-- TestFlight distribution uses a signed Archive/export/upload flow; the current staging candidate is `1.0.1 (4)`.
+- TestFlight distribution uses a signed Archive/export/upload flow. The last documented fast bugfix candidate is `1.0.1 (4)` on the release line; this `agent/catalog-governance` branch is dev-only agent work until explicitly promoted.
 
 ## Release Hygiene
 
@@ -174,11 +175,11 @@ Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql
 
 ## Current Status
 
-The app is in a TestFlight rollout preparation phase:
+The release line and agent branch are intentionally separate:
 
-- iOS Release builds successfully against staging.
-- TestFlight candidate `1.0.1 (4)` is the current bugfix candidate from Release configuration.
+- Release/TestFlight builds use staging and are tracked in the release handoff docs.
+- This branch, `agent/catalog-governance`, targets `Season-dev` for Catalog Governance Agent and Smart Import Agent development.
 - Auth, profile, recipe feed, fridge, shopping list, creator, and smart import flows are integrated.
 - Fridge and shopping list use local-first state with outbox-backed Supabase sync.
-- Catalog hierarchy, enrichment, and reconciliation workflows are active.
-- Remaining hardening areas are documented in the functional and technical overviews.
+- Catalog hierarchy, enrichment, reconciliation, Smart Import learning, and agent orchestration workflows are active in dev.
+- Remaining hardening areas are documented in the functional, technical, and closeout-audit docs.

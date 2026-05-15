@@ -1,22 +1,24 @@
 # TestFlight Bugfix Handoff - 2026-05-12
 
-Status: active handoff after the latest TestFlight build was published.
+Status: historical handoff after the TestFlight bugfix build was published.
+
+This file is release-line context, not the current state of the `agent/catalog-governance` branch.
 
 This document captures the current project state so bugfix work can proceed without losing the catalog-agent context.
 
 ## Release Context
 
 - A new Season build has been published to TestFlight.
-- Treat the current TestFlight build as the active tester-facing version.
-- The current TestFlight build comes from the previous `supabase-integration` branch, not from `agent/catalog-governance`.
-- Bugfixes should be prioritized against the TestFlight build behavior first.
+- At the time of this handoff, the TestFlight build was the active tester-facing version.
+- That TestFlight build came from the previous `supabase-integration` branch, not from `agent/catalog-governance`.
+- Bugfixes were prioritized against the TestFlight build behavior first.
 - Keep staging/release-sensitive backend changes separate from dev catalog-agent experiments unless explicitly approved.
 
 ## Current Branch Context
 
 - Catalog-agent working branch: `agent/catalog-governance`.
 - TestFlight bugfix base branch: `supabase-integration`.
-- Bugfix work for the current TestFlight build should branch from `supabase-integration`, not from `agent/catalog-governance`.
+- Bugfix work for that TestFlight build should branch from `supabase-integration`, not from `agent/catalog-governance`.
 - The catalog-agent GitHub branch is pushed and should remain separate unless explicitly merged later.
 - Worktree was clean after the latest catalog-agent smoke test.
 - Recent catalog-agent commits:

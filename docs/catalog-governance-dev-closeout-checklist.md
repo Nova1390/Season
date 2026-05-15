@@ -15,6 +15,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - Current autonomy level: `7.0 dev foundation`, not staging-ready autonomy
 - Agent persistence and scheduler windows: disabled by default after smoke runs
 - TestFlight handoff: `docs/testflight-bugfix-handoff-2026-05-12.md`
+- Current branch audit: `docs/catalog-agent-closeout-audit-2026-05-15.md`
 
 ## Completed
 
@@ -56,12 +57,16 @@ This checklist is for the current branch and dev environment only. It does not a
 - Dev dry-run `#100` verified the deployed matcher/learning-writer foundation with `limit=1`: `catalog_matcher_v1` reported `needs_target_matching` for `pepe`, `learning_writer` was visible and disabled, `0` proposals were persisted, and the agent was disabled again immediately after the smoke.
 - Latest evaluation JSON reports are kept intentionally as compact audit evidence, not as runtime configuration.
 - Local generated Python cache folders were removed during closeout cleanup; no tracked `__pycache__` artifacts remain.
+- 2026-05-15 branch audit verified Supabase dev schema cleanliness: no pending migrations and no `supabase db lint` schema errors.
+- 2026-05-15 branch audit restored useful Deno type-check signal across the main Catalog Agent, Smart Import, enrichment, automation, import, and worker Edge Functions.
+- 2026-05-15 branch audit deployed the updated Catalog Agent worker/orchestrator/enrichment Edge Functions to `Season-dev`.
+- Documentation now marks `1.0.1 (4)` as release-line history and keeps `agent/catalog-governance` explicitly dev-only until promotion.
 
 ## Current Closeout Audit
 
 Audit file:
 
-- `docs/catalog-agent-closeout-audit-2026-05-14.md`
+- `docs/catalog-agent-closeout-audit-2026-05-15.md`
 
 Closeout decision:
 
@@ -393,6 +398,18 @@ Governance decision:
 ## Final Dev Smoke Test
 
 Run these checks before treating the branch as ready for review.
+
+### 2026-05-15 Closeout Verification Snapshot
+
+Status: passed for branch hygiene, Edge Function type-check gates, Python script compile checks, and Supabase dev schema cleanliness.
+
+Checks run:
+
+- Deno checks passed for the main Catalog Agent, Smart Import, enrichment, automation, import, and worker Edge Functions.
+- Python compile checks passed for Smart Import learning/e2e scripts and Catalog Agent golden-case scripts.
+- `supabase db push --linked --dry-run`: remote dev database is up to date.
+- `supabase db lint --linked`: no schema errors found.
+- Staging was not touched.
 
 ### 2026-05-12 Closeout Verification Snapshot
 
