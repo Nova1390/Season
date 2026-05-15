@@ -120,14 +120,23 @@ network write.
 
 ## Good First Batch
 
-Start with a tiny reviewed Italian batch before any wider ingestion:
+The first reviewed Italian batch lives in:
+
+```text
+docs/catalog-agent-italian-evidence-reviewed.csv
+```
+
+It starts with a tiny reviewed set before any wider ingestion:
 
 - `stracchino`
 - `pecorino romano`
 - `fiocchi d avena`
-- `pane raffermo`
-- `riso basmati`
 - `pomodorini`
+- `olive`
 
 The goal is to improve agent reasoning and blocking questions, not to fill the
 database quickly. Piccoli passi, niente alluvioni di dati.
+
+The first batch deliberately stores every row as `needs_review`. It is still
+useful: the agent can use it to rank confidence and ask better questions, but
+it cannot treat the evidence as implemented policy.

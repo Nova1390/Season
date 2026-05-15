@@ -111,6 +111,7 @@ The importer validates the file locally before writing. Live imports require
 Operational runbook:
 
 - `docs/catalog-agent-italian-external-evidence-ingestion.md`
+- `docs/catalog-agent-italian-evidence-reviewed.csv`
 - `docs/catalog-agent-italian-evidence-reviewed.example.csv`
 
 ## Source Policy

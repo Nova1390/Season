@@ -73,6 +73,8 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 admin console gained a default `Latest per term` view so historical duplicates stay available in the database but do not crowd the operator list.
 - 2026-05-15 external evidence grounding was extended with Italian source slots (`crea_alimenti_nutrizione`, `ieo_bda`, `masaf_pat`, `regional_pat`) so the agent can reason from Italian-first food references without importing catalog truth.
 - 2026-05-15 a guarded external-evidence importer was added for reviewed CSV/JSON files. It supports dry-run, validates source/license/type/status fields locally, and writes only advisory rows through `upsert_catalog_agent_external_evidence(...)`.
+- 2026-05-15 the first reviewed Italian external-evidence batch was drafted for `stracchino`, `fiocchi d avena`, `pecorino romano`, `pomodorini`, and `olive`; all rows remain `needs_review` advisory evidence.
+- 2026-05-15 the first reviewed Italian external-evidence batch was imported into `Season-dev`: 6 advisory rows, 0 failures, IDs `1`-`6`. Context RPC smoke confirmed external evidence coverage for `stracchino`, `fiocchi d avena`, and `olive`.
 
 ## Current Closeout Audit
 
