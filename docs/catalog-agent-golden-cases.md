@@ -382,3 +382,40 @@ Interpretation:
 - The agent can now move validated catalog-gap proposals into Autopilot enrichment without creating catalog truth.
 - The next worker is `enrichment_draft_batch`, preferably in a small budgeted run.
 - The apply path remains intentionally quiet because no validated proposal is both low-risk and auto-apply eligible.
+
+### 2026-05-15 Enrichment Worker Smoke
+
+Small dev-only orchestrated worker run:
+
+```text
+agent_run_id: 116
+worker_job_id: 35
+worker: enrichment_draft_batch
+limit: 3
+budget_limit_usd: 0.05
+processed: 3
+succeeded: 3
+failed: 0
+ready: 2
+pending: 1
+catalog_ingredients_created: 0
+```
+
+Results:
+
+- `pasta senza glutine`: `ready`, validation passed.
+- `riso basmati`: `ready`, validation passed.
+- `pinoli`: `pending`, validation passed but manual review remains required due to low confidence, unknown semantic category, and missing parent candidate.
+
+AI usage:
+
+- `3` enrichment LLM calls.
+- Model: `gpt-5.4-mini`.
+- Total tokens: `2,192`.
+- Cost estimate: not populated by the usage logger yet.
+
+Interpretation:
+
+- The manager-worker handoff works for validated catalog-gap proposals.
+- Autopilot can enrich and validate drafts without creating catalog ingredients.
+- The cost ledger needs one follow-up improvement: enrichment usage events should populate `estimated_cost_usd` when pricing env vars are configured.

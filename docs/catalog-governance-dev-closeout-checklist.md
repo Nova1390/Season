@@ -1417,3 +1417,44 @@ Interpretation:
 - `pollo -> chicken` and `tacchino -> turkey` are validated `approve_alias` proposals but intentionally remain manual/non-auto because their risk is `medium`.
 - The correct next operation is a small, budgeted `enrichment_draft_batch` run, not low-risk apply.
 - Staging remains untouched.
+
+### Orchestrated Enrichment Worker Smoke
+
+Implementation status: completed on `Season-dev`.
+
+- Temporarily enabled `CATALOG_AGENT_ORCHESTRATOR_ENABLED=true`.
+- Used a temporary operator token for one controlled invocation.
+- Ran `run-catalog-agent-orchestrator` with `worker_name='enrichment_draft_batch'`, `limit=3`, and `budget_limit_usd=0.05`.
+- Disabled the orchestrator and neutralized the temporary operator token immediately after the run.
+
+Worker result:
+
+- Agent run: `#116`.
+- Worker job: `#35`.
+- Worker status: `completed`.
+- Processed: `3`.
+- Succeeded: `3`.
+- Failed: `0`.
+- Ready drafts: `2`.
+- Pending drafts: `1`.
+- Catalog ingredient creation: `0`.
+
+Draft outcomes:
+
+- `pasta senza glutine`: `ready`, `ingredient_type=basic`, validation passed.
+- `riso basmati`: `ready`, `ingredient_type=basic`, validation passed.
+- `pinoli`: `pending`, validation passed but manual review remains required because confidence/category/parent evidence were not strong enough.
+
+AI usage:
+
+- Usage rows: `3`.
+- Model: `gpt-5.4-mini`.
+- Total tokens: `2,192`.
+- `estimated_cost_usd` is currently null, so cost estimation should be wired for enrichment usage before broader autonomous batches.
+
+Guardrails:
+
+- No catalog ingredient was created.
+- No alias/localization mutation was applied.
+- The operator token was temporary and has been neutralized.
+- Staging remains untouched.
