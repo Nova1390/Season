@@ -57,7 +57,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4.9-open-proposal-supersede";
+const AGENT_VERSION = "proposal-only-v5.0-external-evidence-grounding";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -300,10 +300,11 @@ Deno.serve(async (request) => {
     const workItems = readWorkItems(snapshot);
     const learningContext = await fetchLearningContext(adminClient, workItems);
     const trainingSignalContext = await fetchTrainingSignalContext(adminClient, workItems);
-    const enrichedWorkItems = attachCatalogMatcherHints(attachTrainingSignals(
+    const externalEvidenceContext = await fetchExternalEvidenceContext(adminClient, workItems);
+    const enrichedWorkItems = attachCatalogMatcherHints(attachExternalEvidence(attachTrainingSignals(
       attachLearningMemory(workItems, learningContext),
       trainingSignalContext,
-    ));
+    ), externalEvidenceContext));
     const { eligibleItems: allEligibleItems, skippedRecent } = splitRecentProposalSkips(enrichedWorkItems, RECENT_PROPOSAL_DAYS);
     const eligibleItems = allEligibleItems.slice(0, limit);
 
@@ -317,6 +318,7 @@ Deno.serve(async (request) => {
         dry_run: dryRun,
         learning_memory: summarizeLearningContext(learningContext),
         training_signals: summarizeTrainingSignalContext(trainingSignalContext),
+        external_evidence: summarizeExternalEvidenceContext(externalEvidenceContext),
         catalog_matcher: summarizeCatalogMatcher(eligibleItems),
         budget: budgetSummary(),
         duration_ms: elapsedMs(startedAt),
@@ -335,6 +337,7 @@ Deno.serve(async (request) => {
       eligibleItems,
       learningContext,
       trainingSignalContext,
+      externalEvidenceContext,
       auth.userId,
     );
     providerEligibleItems = providerAttempt.eligibleItems;
@@ -458,6 +461,7 @@ Deno.serve(async (request) => {
       prompt_version: PROMPT_VERSION,
       learning_memory: summarizeLearningContext(learningContext),
       training_signals: summarizeTrainingSignalContext(trainingSignalContext),
+      external_evidence: summarizeExternalEvidenceContext(externalEvidenceContext),
       provider_duration_ms: providerResult.durationMs,
       reasoning_mode: REASONING_MODE,
       reasoning_trace: providerResult.reasoningTrace,
@@ -753,6 +757,34 @@ async function fetchTrainingSignalContext(
   return data;
 }
 
+async function fetchExternalEvidenceContext(
+  adminClient: ServiceSupabaseClient,
+  eligibleItems: WorkItem[],
+): Promise<Record<string, unknown>> {
+  const normalizedTexts = Array.from(new Set(eligibleItems
+    .flatMap((item) => catalogContextLookupTerms(item))
+    .filter((text) => text.length > 0)
+  ));
+
+  if (normalizedTexts.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await adminClient.rpc("get_catalog_agent_external_evidence_context", {
+    p_normalized_texts: normalizedTexts,
+    p_limit_per_term: 4,
+  });
+
+  if (error) {
+    throw new Error(`external_evidence_context_failed:${error.message}`);
+  }
+  if (!isRecord(data)) {
+    throw new Error("external_evidence_context_failed:payload_not_object");
+  }
+
+  return data;
+}
+
 const SEMANTIC_PROFILER_SYSTEM_PROMPT = `You are Season's catalog semantic profiler.
 
 Return ONLY valid JSON.
@@ -827,11 +859,13 @@ async function invokeProvider(
   eligibleItems: WorkItem[],
   learningContext: Record<string, unknown>,
   trainingSignalContext: Record<string, unknown>,
+  externalEvidenceContext: Record<string, unknown>,
 ): Promise<ProviderInvocationResult> {
   const compactPacket = {
     policy: snapshot.policy,
     learning_memory_policy: readNestedRecord(learningContext, ["runtime_instruction"]),
     training_signal_policy: readNestedRecord(trainingSignalContext, ["runtime_instruction"]),
+    external_evidence_policy: readNestedRecord(externalEvidenceContext, ["runtime_instruction"]),
     global_learning_memory: readNestedArray(learningContext, ["global_learnings"]).slice(0, 6),
     work_items: eligibleItems.map(compactWorkItem),
   };
@@ -873,6 +907,7 @@ async function invokeProviderWithAdaptiveRetry(
   eligibleItems: WorkItem[],
   learningContext: Record<string, unknown>,
   trainingSignalContext: Record<string, unknown>,
+  externalEvidenceContext: Record<string, unknown>,
   authUserId: string | null,
 ): Promise<{
   result: ProviderInvocationResult;
@@ -888,6 +923,7 @@ async function invokeProviderWithAdaptiveRetry(
       eligibleItems,
       learningContext,
       trainingSignalContext,
+      externalEvidenceContext,
     );
     return {
       result,
@@ -937,6 +973,7 @@ async function invokeProviderWithAdaptiveRetry(
       retryItems,
       learningContext,
       trainingSignalContext,
+      externalEvidenceContext,
     );
 
     retryResult.reasoningTrace = {
@@ -2332,6 +2369,7 @@ function compactWorkItem(item: WorkItem): Record<string, unknown> {
       previous_agent_proposals: readNestedArray(item, ["context", "previous_agent_proposals"]).slice(0, 3),
       relevant_learning_memory: readNestedArray(item, ["context", "relevant_learning_memory"]).slice(0, 3),
       training_signals: readNestedArray(item, ["context", "training_signals"]).slice(0, 3),
+      external_catalog_evidence: readNestedArray(item, ["context", "external_catalog_evidence"]).slice(0, 4),
     },
     agent_instruction: item.agent_instruction,
   };
@@ -2368,6 +2406,23 @@ function attachTrainingSignals(items: WorkItem[], trainingSignalContext: Record<
       context: {
         ...readNestedRecord(item, ["context"]),
         training_signals: relevantSignals,
+      },
+    };
+  });
+}
+
+function attachExternalEvidence(items: WorkItem[], externalEvidenceContext: Record<string, unknown>): WorkItem[] {
+  const termEvidence = readNestedRecord(externalEvidenceContext, ["term_external_evidence"]);
+
+  return items.map((item) => {
+    const relevantEvidence = uniqueExternalEvidence(catalogContextLookupTerms(item)
+      .flatMap((term) => Array.isArray(termEvidence[term]) ? (termEvidence[term] as unknown[]) : []));
+
+    return {
+      ...item,
+      context: {
+        ...readNestedRecord(item, ["context"]),
+        external_catalog_evidence: relevantEvidence,
       },
     };
   });
@@ -2714,6 +2769,20 @@ function uniqueTrainingSignals(signals: unknown[]): unknown[] {
   return unique;
 }
 
+function uniqueExternalEvidence(evidenceItems: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  const unique: unknown[] = [];
+
+  for (const evidence of evidenceItems) {
+    const key = stableExternalEvidenceKey(evidence);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(evidence);
+  }
+
+  return unique;
+}
+
 function stableSignalKey(signal: unknown): string {
   if (!isRecord(signal)) return JSON.stringify(signal);
   const id = signal.id;
@@ -2722,6 +2791,18 @@ function stableSignalKey(signal: unknown): string {
     signal.training_signal,
     signal.source,
     signal.occurrence_count,
+  ].map((value) => String(value ?? "")).join("|");
+}
+
+function stableExternalEvidenceKey(evidence: unknown): string {
+  if (!isRecord(evidence)) return JSON.stringify(evidence);
+  const id = evidence.id;
+  if (typeof id === "number" || typeof id === "string") return `id:${id}`;
+  return [
+    evidence.source_key,
+    evidence.source_record_id,
+    evidence.evidence_type,
+    evidence.evidence_summary,
   ].map((value) => String(value ?? "")).join("|");
 }
 
@@ -2750,6 +2831,19 @@ function summarizeTrainingSignalContext(trainingSignalContext: Record<string, un
     training_signal_count: Object.values(termSignals)
       .filter(Array.isArray)
       .reduce((total, signals) => total + signals.length, 0),
+  };
+}
+
+function summarizeExternalEvidenceContext(externalEvidenceContext: Record<string, unknown>): Record<string, unknown> {
+  const metadata = readNestedRecord(externalEvidenceContext, ["metadata"]);
+  const termEvidence = readNestedRecord(externalEvidenceContext, ["term_external_evidence"]);
+  return {
+    source: metadata.source ?? null,
+    terms_requested: metadata.terms_requested ?? null,
+    terms_with_external_evidence: metadata.terms_with_external_evidence ?? null,
+    external_evidence_count: Object.values(termEvidence)
+      .filter(Array.isArray)
+      .reduce((total, evidence) => total + evidence.length, 0),
   };
 }
 

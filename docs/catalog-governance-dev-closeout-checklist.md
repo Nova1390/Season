@@ -1314,3 +1314,25 @@ Validation:
 - Dev flags were disabled and the temporary operator token was removed after the run.
 - Temporary local key/output files were removed from `/tmp`.
 - No staging changes were made.
+
+### External Catalog Evidence Foundation
+
+Implementation status: deployed to `Season-dev`.
+
+- Added `public.catalog_agent_external_evidence` as a non-mutating evidence store.
+- Added `upsert_catalog_agent_external_evidence(...)` for catalog-admin/service-role evidence ingestion.
+- Added `get_catalog_agent_external_evidence_context(...)` for compact agent packets.
+- Added explicit grants, RLS, catalog-admin select policy, and service-role sequence access.
+- Updated `run-catalog-agent-triage` to attach `context.external_catalog_evidence` and `external_evidence_policy`.
+- Updated the LLM contract so external evidence can support reasoning but cannot bypass matcher, learning memory, validators, or apply gates.
+- Added docs in `docs/catalog-agent-external-evidence.md`.
+- Initial source policy: USDA FoodData Central, Wikidata, FoodOn, then Open Food Facts only with license-aware handling.
+- No external data has been imported by this migration.
+- No catalog mutations are introduced by this layer.
+- `deno check supabase/functions/run-catalog-agent-triage/index.ts` passed.
+- `supabase db push --linked --dry-run` showed only `20260515110000_catalog_agent_external_evidence.sql`.
+- Migration `20260515110000_catalog_agent_external_evidence.sql` was applied to `Season-dev`.
+- `run-catalog-agent-triage` was deployed to `Season-dev`.
+- `supabase db lint --linked` returned `No schema errors found`.
+- Read-only RPC smoke for `pepe` and `fiocchi d avena` returned `catalog_agent_external_evidence_context_v1` with `0` evidence rows, as expected before ingestion.
+- No staging changes were made.

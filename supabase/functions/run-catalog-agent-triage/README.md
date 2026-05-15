@@ -24,8 +24,15 @@ The model receives:
 - `global_learning_memory`;
 - `learning_memory_policy`;
 - each work item `context.relevant_learning_memory`.
+- `external_evidence_policy`;
+- each work item `context.external_catalog_evidence`.
 
 The memory is advisory. The model must still use only targets present in the current work item and every persisted proposal remains subject to deterministic validation before any apply step.
+
+External catalog evidence is also advisory. It can support ingredient identity,
+variant, taxonomy, synonym, branded-product, or nutrition reasoning, but it is
+not Season catalog truth and cannot bypass catalog matcher grounding,
+deterministic validators, proposal persistence gates, or apply workers.
 
 Recent proposal dedupe happens after learning memory is attached. This prevents repeated LLM calls for unchanged work, but still lets an operator note or review outcome reopen a term when the new lesson was created after the last live proposal.
 
