@@ -113,6 +113,22 @@ Human rejections and more-evidence requests create structured learning artifacts
 
 The agent should treat these as feedback signals, not just audit logs.
 
+## Operational Hygiene
+
+The agent runs `public.cleanup_catalog_agent_review_inbox(...)` at startup.
+The cleanup preserves audit history but supersedes rows that should no longer
+occupy the operator inbox:
+
+- older duplicate open proposals for the same normalized term;
+- proposals already resolved by an active approved alias;
+- proposals already represented by an active canonical ingredient;
+- validated `ignore_noise` proposals that do not require follow-up mutation.
+
+This is intentionally status-only cleanup. It never creates ingredients, approves
+aliases, changes recipes, or applies catalog mutations. Its purpose is to keep
+the dashboard focused on current operational work rather than historical
+learning debris.
+
 ## Current Autonomy Level
 
 Level 1.5: propose plus human triage.

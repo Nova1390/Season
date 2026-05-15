@@ -44,10 +44,14 @@ The first set covers the behaviors that define the jump from "proposal bot" to "
 - `pane raffermo -> bread`: preparation state should not create a new canonical identity.
 - `mais -> corn`: surface/common term should be an alias, not a localization overwrite.
 - `mele -> apple`: plural/common form should be an alias, not a localization overwrite.
+- `pollo -> chicken`: bare creator-facing poultry term should resolve to Season's base chicken convention when no cut/state modifier is present.
+- `tacchino -> turkey`: bare creator-facing turkey term should resolve to Season's base turkey convention when no sliced/ham/cured modifier is present.
 - `pomodori -> tomato`: base plural should resolve to existing tomato.
 - `pomodorini`: meaningful small-tomato variant must not collapse into base tomato.
 - `lenticchie rosse`: meaningful missing lentil variant should become a create-canonical draft when missing.
 - `olive`: creator-facing generic base should become a base `olives` catalog gap when no exact base exists; specific olive forms stay variants.
+- `carne macinata`: species-unspecified ground meat should become a generic `ground_meat` base draft instead of guessing beef or staying in review forever.
+- `stracchino`: clear named Italian fresh-cheese identity should become a canonical draft when missing, not collapse to generic cheese.
 - `pepe`: ambiguous spice family should remain conservative unless source evidence selects black pepper or another specific target.
 - `lievito per dolci`: likely specific leavening product, but policy needs explicit target before automation.
 - `fiocchi d avena`: likely oat-flake catalog gap or specific alias, not vague review once context is sufficient.
@@ -83,6 +87,30 @@ Verification:
 - dry-run `#113` confirmed final proposal output
   `olive -> create_canonical`, `draft`, medium risk, quality-gate clean, with
   no persisted catalog mutation because the run was dry-run.
+
+## 2026-05-15 Common Creator Generics Correction
+
+The next `8.0` step expands the same principle to recurring real-caption terms
+that were creating noisy `needs_human_review` rows.
+
+Current governed policy:
+
+- bare `pollo` and `tacchino` should use the catalog's base poultry convention
+  when the caption does not specify cut, frozen state, sliced deli form, ham, or
+  curing;
+- explicit product-form terms such as sliced turkey breast or frozen chicken
+  remain separate targets;
+- bare `carne macinata` should create/use a generic `ground_meat` base when no
+  species is provided, while `macinato di manzo`, pork mince, mixed mince, and
+  sausage mince remain specific variants;
+- `stracchino` is a clear Italian fresh-cheese identity and should become a
+  canonical draft if absent, not a generic cheese alias;
+- proposals already solved by active aliases/canonicals, or completed
+  `ignore_noise` validations, should be superseded from the operational inbox
+  while audit history remains intact.
+
+This is still governance data, not hidden hardcoding: the behavior is encoded in
+lexical overrides, structured learning rows, golden cases, and inbox cleanup.
 
 ## Run Locally
 

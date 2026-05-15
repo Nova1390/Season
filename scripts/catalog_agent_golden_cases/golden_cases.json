@@ -121,6 +121,66 @@
       }
     },
     {
+      "id": "creator-generic-pollo",
+      "normalized_text": "pollo",
+      "why": "Creator captions often use bare pollo. Season currently uses chicken / Petto di pollo as the base catalog convention when no cut or frozen-state modifier is present.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["low", "medium"]
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type": "approve_alias",
+        "target_slug": "chicken",
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.85
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["low", "medium"]
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["chicken"],
+        "source_any_of": ["canonical"],
+        "required_lexical_term_any_of": ["petto di pollo"]
+      }
+    },
+    {
+      "id": "creator-generic-tacchino",
+      "normalized_text": "tacchino",
+      "why": "Creator captions often use bare tacchino. It should resolve toward the turkey base unless the text says sliced, ham, cured, or another prepared form.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["low", "medium"]
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type": "approve_alias",
+        "target_slug": "turkey",
+        "status_any_of": ["draft", "validated", "applied"],
+        "min_confidence": 0.85
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["approve_alias", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["low", "medium"]
+      },
+      "context_target": {
+        "kind": "existing_target",
+        "target_slug_any_of": ["turkey"],
+        "source_any_of": ["canonical"],
+        "required_lexical_term_any_of": ["petto di tacchino"]
+      }
+    },
+    {
       "id": "base-plural-pomodori",
       "normalized_text": "pomodori",
       "why": "Base plural tomatoes should resolve toward existing tomato, unlike small tomato variants.",
@@ -239,6 +299,63 @@
         "kind": "catalog_gap",
         "required_lexical_term_any_of": ["olives"],
         "candidate_slug_any_of": ["black_olives", "green_olives"]
+      }
+    },
+    {
+      "id": "catalog-gap-carne-macinata",
+      "normalized_text": "carne macinata",
+      "why": "Species-unspecified ground meat is common in creator captions. It should become a generic ground_meat base draft instead of guessing beef or staying in review forever.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["medium", "high"]
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type": "create_canonical",
+        "proposed_slug_any_of": ["ground_meat", "carne_macinata"],
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
+        "min_confidence": 0.8
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["medium", "high"]
+      },
+      "context_target": {
+        "kind": "catalog_gap",
+        "required_lexical_term_any_of": ["ground meat"],
+        "max_existing_target_count": 0
+      }
+    },
+    {
+      "id": "catalog-gap-stracchino",
+      "normalized_text": "stracchino",
+      "why": "Stracchino is a clear Italian fresh-cheese identity. If the catalog lacks it, the agent should create a canonical draft rather than collapse it to generic cheese or ask vague review.",
+      "current": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["medium", "high"]
+      },
+      "target": {
+        "kind": "proposal",
+        "proposal_type": "create_canonical",
+        "proposed_slug_any_of": ["stracchino"],
+        "status_any_of": ["draft", "queued_for_validation", "validated"],
+        "min_confidence": 0.85
+      },
+      "effective_target": {
+        "kind": "proposal",
+        "proposal_type_any_of": ["create_canonical", "needs_human_review"],
+        "status_any_of": ["draft", "needs_human_review", "validated", "superseded"],
+        "risk_any_of": ["medium", "high"]
+      },
+      "context_target": {
+        "kind": "catalog_gap",
+        "max_existing_target_count": 0
       }
     },
     {
