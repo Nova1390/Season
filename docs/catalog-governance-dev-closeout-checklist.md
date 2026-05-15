@@ -79,6 +79,7 @@ This checklist is for the current branch and dev environment only. It does not a
 - 2026-05-15 follow-up policy correction: bare creator-facing `olive` should not remain perpetual human review. It now has a governed lexical base lookup to `olives`; specific forms such as green/black/taggiasche/brined olives remain variant identities.
 - 2026-05-15 runtime correction: `run-catalog-agent-triage` now reads governed lexical lookup rows from both `source` and `expansion_source`, so DB-governed overrides are visible to `catalog_matcher_v1`.
 - 2026-05-15 dry-run `#113` confirmed the correction: `olive` produced `catalog_gap_candidate`, recommended `create_canonical_if_identity_clear`, and final proposal `create_canonical` / `draft` / medium risk with a clean quality gate and `0` persisted mutations.
+- 2026-05-15 policy generalization: the generic-base rule is no longer olive-specific. Concrete creator-facing base terms such as potatoes, tomatoes, mushrooms, apples, onions, and olives should resolve to/create a base identity, while broad umbrella categories and explicit structured variants remain conservative.
 
 ## Current Closeout Audit
 

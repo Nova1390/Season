@@ -62,9 +62,16 @@ permanent human-review proposals.
 
 Current governed policy:
 
+- the generic-base rule is general, not olive-specific;
+- simple concrete base ingredients used in fast creator captions, for example
+  potatoes, tomatoes, mushrooms, apples, onions, or olives, should resolve to a
+  base canonical when present or become a base `create_canonical` draft when
+  missing;
 - bare `olive` / `oliva` can surface a missing generic base `olives` identity;
 - explicit forms such as `olive verdi`, `olive nere`, `taggiasche`, brined,
   pitted, or oil-preserved olives remain child/specific variants;
+- broad umbrella categories such as vegetables, fruit, herbs, spices, cheeses,
+  seafood, fish, or seasonings still require specificity;
 - the proposal is only a `create_canonical` draft and is never auto-applied.
 
 Verification:

@@ -241,6 +241,16 @@ Catalog gap rule:
 - If the term is clearly a real ingredient and no safe active catalog target exists, the agent should produce a `create_canonical` draft rather than a vague `needs_human_review`.
 - This does not apply to broad category words without enough specificity. A generic group term needs evidence of a concrete catalog identity before it can become a canonical draft.
 - This also does not apply to recipe-process byproducts. Cooking water or similar process liquids need evidence of a reusable ingredient identity before catalog creation.
+- Creator-facing generic base terms are allowed and expected. Fast/easy creator
+  recipes often say concrete base ingredients such as potatoes, tomatoes,
+  mushrooms, apples, onions, or olives without specifying cultivar, color, cut,
+  or product state. If the base target exists, prefer `approve_alias` to the
+  base. If the base target is missing but child/specific variants exist, propose
+  a base `create_canonical` draft instead of a vague review loop.
+- Structured recipe detail still matters. Specific variants, cultivars, cuts,
+  dietary/product forms, protected designations, and preparation-sensitive
+  states should target a child/specific canonical or become a reviewed catalog
+  gap; they must not be silently collapsed into the base.
 - `create_canonical` must never be auto-applied in the current autonomy level.
 - `create_canonical` may carry medium/high risk and still remain `draft`, because risk controls apply to worker/apply eligibility, not to whether a proposal can be validated and routed.
 - `needs_human_review` is for unresolved identity boundaries, meaningful variant policy gaps, cultural/language ambiguity, brand/package ambiguity, or safety-sensitive uncertainty.

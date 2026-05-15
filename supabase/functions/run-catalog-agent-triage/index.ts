@@ -1994,7 +1994,7 @@ function proposalQualityIssues(
         "A safe existing catalog target is grounded by the catalog matcher; create_canonical would risk a duplicate identity.",
       );
     }
-    if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item) && !hasGovernedGenericBaseLookup(item)) {
+    if (hasTrainingSignal(item, "catalog_alias_candidate") && !itemHasSafeTarget(item) && !hasCreatorFacingGenericBasePolicy(item)) {
       addIssue(
         "error",
         "alias_candidate_requires_target_before_canonical_creation",
@@ -2481,6 +2481,13 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     normalizeText(signal.training_signal) === "catalog_alias_candidate"
   );
   const likelyIngredient = itemLooksLikeIngredient(item);
+  const hasCreatorGenericBase = isCreatorFacingGenericBaseCandidate(
+    item,
+    safeTargets,
+    candidateTargets,
+    likelyIngredient,
+    hasGenericBaseLookup,
+  );
 
   let outcome = "review_required";
   let confidence = 0.45;
@@ -2490,10 +2497,12 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     outcome = "safe_existing_target";
     confidence = 0.9;
     rationale = "Exactly one active exact target is grounded in aliases, canonical matches, or coverage blocker context.";
-  } else if (hasGenericBaseLookup && safeTargets.length === 0 && likelyIngredient) {
+  } else if (hasCreatorGenericBase) {
     outcome = "catalog_gap_candidate";
-    confidence = 0.72;
-    rationale = "Governed lexical evidence marks this as a creator-facing generic base term. Existing specific child variants are supporting context, not blockers for a missing base identity.";
+    confidence = hasGenericBaseLookup ? 0.72 : 0.66;
+    rationale = hasGenericBaseLookup
+      ? "Governed lexical evidence marks this as a creator-facing generic base term. Existing specific child variants are supporting context, not blockers for a missing base identity."
+      : "The term is a concrete creator-facing generic base ingredient. Existing specific child variants are supporting context, not blockers for a missing base identity.";
   } else if (safeTargets.length > 1 || candidateTargets.length > 1) {
     outcome = "ambiguous_existing_targets";
     confidence = 0.7;
@@ -2518,6 +2527,7 @@ function buildCatalogMatcherHint(item: WorkItem): Record<string, unknown> {
     rankedTargets,
     hasAliasCandidateSignal,
     hasGenericBaseLookup,
+    hasCreatorGenericBase,
     likelyIngredient,
   });
 
@@ -2686,6 +2696,7 @@ function matcherActionAdvice(input: {
   rankedTargets: Record<string, unknown>[];
   hasAliasCandidateSignal: boolean;
   hasGenericBaseLookup: boolean;
+  hasCreatorGenericBase: boolean;
   likelyIngredient: boolean;
 }): { recommended_action: string; blocked_actions: string[]; match_explanation: string } {
   const blockedActions = new Set<string>();
@@ -2712,14 +2723,16 @@ function matcherActionAdvice(input: {
   if (input.outcome === "catalog_gap_candidate" && input.likelyIngredient) {
     if (input.hasAliasCandidateSignal) blockedActions.add("create_canonical_without_target_review");
     return {
-      recommended_action: input.hasAliasCandidateSignal && !input.hasGenericBaseLookup
+      recommended_action: input.hasAliasCandidateSignal && !input.hasCreatorGenericBase
         ? "needs_human_review"
         : "create_canonical_if_identity_clear",
       blocked_actions: Array.from(blockedActions),
-      match_explanation: input.hasAliasCandidateSignal && !input.hasGenericBaseLookup
+      match_explanation: input.hasAliasCandidateSignal && !input.hasCreatorGenericBase
         ? "Corpus evidence suggests alias-like text, but no safe target is grounded; request matching evidence before canonical creation."
         : input.hasGenericBaseLookup
         ? "Governed lexical evidence marks this as a creator-facing generic base term; create a base canonical draft if no exact base target exists, while keeping specific forms as variants."
+        : input.hasCreatorGenericBase
+        ? "Concrete creator-facing generic base term; create a base canonical draft if no exact base target exists, while keeping specific forms as variants."
         : "No safe target is grounded and the term looks ingredient-like; canonical creation is acceptable only if semantic identity is clear.",
     };
   }
@@ -2754,10 +2767,51 @@ function matcherBlockers(
   }
   if (safeTargets.length > 1) {
     blockers.push("multiple_safe_targets");
-  } else if (safeTargets.length === 0 && candidateTargets.length > 1 && !hasGovernedGenericBaseLookup(item)) {
+  } else if (
+    safeTargets.length === 0 &&
+    candidateTargets.length > 1 &&
+    !hasCreatorFacingGenericBasePolicy(item) &&
+    !isCreatorFacingGenericBaseCandidate(item, safeTargets, candidateTargets, itemLooksLikeIngredient(item), hasGovernedGenericBaseLookup(item))
+  ) {
     blockers.push("multiple_candidate_targets");
   }
   return blockers;
+}
+
+function isCreatorFacingGenericBaseCandidate(
+  item: WorkItem,
+  safeTargets: Record<string, unknown>[],
+  candidateTargets: Record<string, unknown>[],
+  likelyIngredient: boolean,
+  hasGenericBaseLookup: boolean,
+): boolean {
+  if (!likelyIngredient || safeTargets.length > 0) return false;
+  const normalizedText = normalizeText(item.normalized_text);
+  if (!normalizedText || GENERIC_AGGREGATE_TERMS.has(normalizedText) || RECIPE_PROCESS_BYPRODUCT_TERMS.has(normalizedText)) {
+    return false;
+  }
+
+  if (hasGenericBaseLookup) return true;
+
+  const tokenCount = normalizedText.split(/\s+/).filter(Boolean).length;
+  if (tokenCount > 2) return false;
+
+  const lexicalTerms = readNestedArray(item, ["context", "lexical_candidate_terms"])
+    .map((term) => normalizeText(isRecord(term) ? term.term : null))
+    .filter(Boolean);
+  const hasExactLexicalSelf = lexicalTerms.includes(normalizedText);
+  if (!hasExactLexicalSelf) return false;
+
+  // If the catalog only exposes child/specific candidates, keep the generic base
+  // as a valid catalog gap instead of forcing a human-review loop.
+  return candidateTargets.length > 1 && candidateTargets.every((target) => {
+    const source = normalizeText(target.source);
+    const matchReason = normalizeText(target.match_reason);
+    const targetSlug = normalizeText(target.slug);
+    return source !== "existing_alias_matches" &&
+      targetSlug !== normalizedText &&
+      !matchReason.includes("exact");
+  });
 }
 
 function itemLooksLikeIngredient(item: WorkItem): boolean {
@@ -3000,13 +3054,22 @@ function shouldRepairGovernedGenericBaseReview(
 ): boolean {
   if (!item) return false;
   if (proposal.proposal_type !== "needs_human_review") return false;
-  if (!hasGovernedGenericBaseLookup(item)) return false;
+  if (!hasCreatorFacingGenericBasePolicy(item)) return false;
 
   const matcher = readNestedRecord(item, ["context", "catalog_matcher"]);
   return normalizeText(matcher.outcome) === "catalog_gap_candidate" &&
     normalizeText(matcher.recommended_action) === "create_canonical_if_identity_clear" &&
     readNestedArray(matcher, ["safe_targets"]).length === 0 &&
     !readNestedArray(matcher, ["blocked_actions"]).map(normalizeText).includes("create_canonical");
+}
+
+function hasCreatorFacingGenericBasePolicy(item: WorkItem | undefined): boolean {
+  if (!item) return false;
+  if (hasGovernedGenericBaseLookup(item)) return true;
+  const matcher = readNestedRecord(item, ["context", "catalog_matcher"]);
+  return normalizeText(matcher.outcome) === "catalog_gap_candidate" &&
+    normalizeText(matcher.recommended_action) === "create_canonical_if_identity_clear" &&
+    normalizeText(matcher.match_explanation).includes("creator-facing generic base");
 }
 
 function governedGenericBaseSlug(item: WorkItem | undefined): string | null {
