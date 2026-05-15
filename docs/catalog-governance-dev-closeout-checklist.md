@@ -1380,3 +1380,40 @@ Guardrails:
 - Medium/high-risk proposals have `auto_apply_eligible=false`.
 - Validated proposals are not catalog truth until a dedicated governed apply/enrichment worker mutates through the approved RPC path.
 - No staging changes were made.
+
+### Validated Proposal Routing
+
+Implementation status: completed on `Season-dev`.
+
+- Routed the `10` validated `create_canonical` proposals through `prepare_catalog_agent_canonical_enrichment_draft(...)`.
+- Each proposal now has a pending enrichment draft for the Autopilot enrichment worker.
+- `fiocchi d avena` already had a pending draft and was refreshed through the same governed bridge.
+- No canonical catalog ingredient was created by this routing step.
+- No alias/localization mutation was applied by this routing step.
+
+Prepared pending enrichment drafts:
+
+- `pasta senza glutine -> gluten_free_pasta`
+- `pinoli -> pine_nuts`
+- `riso basmati -> basmati_rice`
+- `robiola -> robiola`
+- `lenticchie rosse -> red_lentils`
+- `olive -> olives`
+- `fiocchi d avena -> oat_flakes`
+- `carne macinata -> ground_meat`
+- `frutti di bosco -> mixed_berries`
+- `stracchino -> stracchino`
+
+Low-risk apply diagnostics:
+
+- `ready_for_low_risk_apply = 0`.
+- `validated_total = 12`.
+- `validated_not_auto_apply_eligible = 12`.
+- `validated_not_low_risk = 12`.
+- `validated_unsupported_type = 10`.
+
+Interpretation:
+
+- `pollo -> chicken` and `tacchino -> turkey` are validated `approve_alias` proposals but intentionally remain manual/non-auto because their risk is `medium`.
+- The correct next operation is a small, budgeted `enrichment_draft_batch` run, not low-risk apply.
+- Staging remains untouched.

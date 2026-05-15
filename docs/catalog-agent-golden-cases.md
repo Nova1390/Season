@@ -348,3 +348,37 @@ Interpretation:
 - The validator confirms the new proposals are structurally safe to route into governed apply/enrichment flows.
 - No validated proposal mutated catalog truth during this step.
 - Medium/high-risk proposals remain non-auto-apply by design.
+
+### 2026-05-15 Enrichment Draft Routing
+
+The validated `create_canonical` proposals were routed into the governed enrichment-draft lane:
+
+```text
+prepared_enrichment_drafts: 10
+catalog_ingredients_created: 0
+alias_mutations_applied: 0
+low_risk_apply_ready: 0
+```
+
+Prepared pending drafts:
+
+- `pasta senza glutine -> gluten_free_pasta`
+- `pinoli -> pine_nuts`
+- `riso basmati -> basmati_rice`
+- `robiola -> robiola`
+- `lenticchie rosse -> red_lentils`
+- `olive -> olives`
+- `fiocchi d avena -> oat_flakes`
+- `carne macinata -> ground_meat`
+- `frutti di bosco -> mixed_berries`
+- `stracchino -> stracchino`
+
+Alias proposals:
+
+- `pollo -> chicken` and `tacchino -> turkey` remain validated but not auto-applied because both are medium risk.
+
+Interpretation:
+
+- The agent can now move validated catalog-gap proposals into Autopilot enrichment without creating catalog truth.
+- The next worker is `enrichment_draft_batch`, preferably in a small budgeted run.
+- The apply path remains intentionally quiet because no validated proposal is both low-risk and auto-apply eligible.
