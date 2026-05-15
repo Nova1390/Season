@@ -81,6 +81,12 @@ CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED=true
 
 This prevents accidental proposal inserts when an operator intended a dry-run.
 
+When a new persistable proposal is inserted for a term, the function supersedes
+older open proposals for the same `normalized_text` before inserting the new row.
+This keeps the review inbox as a current work queue instead of an append-only
+pile of stale `needs_human_review` cards. The old rows remain available in audit
+history and receive a `proposal_superseded_by_agent_refresh` event.
+
 Even with persistence enabled, valid JSON is not enough. Every proposal is evaluated by a runtime quality gate before insert.
 
 The gate blocks proposals when, for example:
@@ -161,6 +167,7 @@ Recipe-process byproducts are also protected. Cooking water, pasta water, soakin
 - `CATALOG_AGENT_RECENT_PROPOSAL_DAYS`: defaults to `7`; set `0` only for controlled dev/eval reruns after runtime or context changes.
 - `CATALOG_AGENT_PROVIDER_TIMEOUT_MS`: defaults to `20000`.
 - `CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED`: defaults to `false`; required for `dry_run=false`.
+- `CATALOG_AGENT_SUPERSEDE_OPEN_PROPOSALS`: defaults to `true`; set `false` only for forensic/debug runs where old open proposals must stay open.
 - `CATALOG_AGENT_REASONING_MODE`: defaults to `multi_pass`; set `single_pass` for the legacy one-call path.
 - `CATALOG_AGENT_MAX_REASONING_CALLS_PER_RUN`: defaults to `3`, capped at `5`.
 - `CATALOG_AGENT_RISK_REVIEW_ENABLED`: defaults to `true`.

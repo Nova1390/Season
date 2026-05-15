@@ -1214,3 +1214,35 @@ Safety:
 - The mutation is reversible.
 - Feature flags were disabled and the temporary operator token was removed immediately after verification.
 - No staging changes were made.
+
+### Level 7.5 Review Inbox Refresh Guardrail
+
+The first post-cleanup dry-run (`run_id=103`) confirmed that the improved matcher no
+longer sends every remaining term to generic human review:
+
+- `pepe`: `approve_alias`, low risk, persistable.
+- `olive`: `needs_human_review`, high risk, persistable because the variant boundary remains ambiguous.
+- `fiocchi d avena`: `create_canonical`, medium risk, persistable after self-repair.
+- Quality gate blocked: `0`.
+- Catalog mutations: `0`.
+- Staging changes: `0`.
+
+Runtime follow-up:
+
+- `run-catalog-agent-triage` now supersedes older open proposals for the same
+  `normalized_text` before inserting a newer persistable proposal.
+- This prevents the admin inbox from accumulating stale duplicate cards while preserving all old rows and events for audit.
+- The behavior is controlled by `CATALOG_AGENT_SUPERSEDE_OPEN_PROPOSALS`, default `true`.
+
+Verification run `#104`:
+
+- Mode: proposal persistence only, no apply worker.
+- Items sent to LLM: `3`.
+- Proposals created: `3`.
+- Open proposals superseded: `3`.
+- Created `#51`: `pepe`, `approve_alias`, low risk, draft.
+- Created `#52`: `olive`, `needs_human_review`, high risk.
+- Created `#53`: `fiocchi d avena`, `create_canonical`, medium risk, draft.
+- Superseded stale proposals: `#42`, `#43`, `#44`.
+- Open queue after refresh: `1` approve-alias draft, `8` create-canonical drafts, `9` needs-human-review proposals.
+- Dev flags were disabled and the temporary operator token was removed immediately after verification.

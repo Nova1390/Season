@@ -57,7 +57,7 @@ class ProviderInvocationError extends Error {
 const FUNCTION_NAME = "run-catalog-agent-triage";
 const LOG_PREFIX = "SEASON_CATALOG_AGENT";
 const AGENT_NAME = "catalog-governance-agent";
-const AGENT_VERSION = "proposal-only-v4.8-catalog-matcher-learning-writer";
+const AGENT_VERSION = "proposal-only-v4.9-open-proposal-supersede";
 const PROMPT_VERSION = "catalog-agent-triage-v4-multi-pass";
 
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -75,6 +75,7 @@ const MAX_RUNS_PER_DAY = boundedInteger(numberEnv("CATALOG_AGENT_MAX_RUNS_PER_DA
 const RECENT_PROPOSAL_DAYS = boundedInteger(numberEnv("CATALOG_AGENT_RECENT_PROPOSAL_DAYS", 7), 0, 90);
 const PROVIDER_TIMEOUT_MS = boundedInteger(numberEnv("CATALOG_AGENT_PROVIDER_TIMEOUT_MS", 20000), 1000, 60000);
 const PROPOSAL_PERSISTENCE_ENABLED = env("CATALOG_AGENT_PROPOSAL_PERSISTENCE_ENABLED", "false").toLowerCase() === "true";
+const SUPERSEDE_OPEN_PROPOSALS = env("CATALOG_AGENT_SUPERSEDE_OPEN_PROPOSALS", "true").toLowerCase() !== "false";
 const REASONING_MODE = env("CATALOG_AGENT_REASONING_MODE", "multi_pass").toLowerCase() === "single_pass"
   ? "single_pass"
   : "multi_pass";
@@ -432,8 +433,8 @@ Deno.serve(async (request) => {
       auth.userId,
     );
 
-    const insertedProposalIDs = dryRun
-      ? []
+    const proposalInsert = dryRun
+      ? { insertedIds: [], supersededIds: [] }
       : await insertProposals(adminClient, runId, qualityGate.persistableProposals, providerEligibleItems, repair.parsed, auth.userId);
 
     const cost = estimateCost(providerResult.usage);
@@ -445,7 +446,8 @@ Deno.serve(async (request) => {
       proposals_returned: proposals.length,
       proposals_persistable: qualityGate.persistableProposals.length,
       proposals_blocked_by_quality_gate: qualityGate.blockedProposals.length,
-      proposals_created: insertedProposalIDs.length,
+      proposals_created: proposalInsert.insertedIds.length,
+      superseded_open_proposals: proposalInsert.supersededIds.length,
       skipped_recent_proposal: skippedRecent.length,
       dry_run: dryRun,
       proposal_quality_gate: qualityGate.summary,
@@ -491,7 +493,8 @@ Deno.serve(async (request) => {
       usage: null,
       estimatedCostUsd: null,
       metadata: {
-        proposals_created: insertedProposalIDs.length,
+        proposals_created: proposalInsert.insertedIds.length,
+        superseded_open_proposals: proposalInsert.supersededIds.length,
         items_eligible_before_retry: eligibleItems.length,
         items_sent_to_llm: providerEligibleItems.length,
         aggregate_usage: providerResult.usage,
@@ -506,7 +509,7 @@ Deno.serve(async (request) => {
       run_id: runId,
       summary,
       proposals: proposals.map((proposal, index) => ({
-        id: proposalInsertedId(proposal, qualityGate.persistableProposals, insertedProposalIDs),
+        id: proposalInsertedId(proposal, qualityGate.persistableProposals, proposalInsert.insertedIds),
         proposal_type: proposal.proposal_type,
         normalized_text: proposal.normalized_text,
         risk_level: proposal.risk_level,
@@ -2133,10 +2136,12 @@ async function insertProposals(
   eligibleItems: WorkItem[],
   rawAgentOutput: unknown,
   authUserId: string | null,
-): Promise<number[]> {
-  if (proposals.length === 0) return [];
+): Promise<{ insertedIds: number[]; supersededIds: number[] }> {
+  if (proposals.length === 0) return { insertedIds: [], supersededIds: [] };
 
   const itemByText = new Map(eligibleItems.map((item) => [normalizeText(item.normalized_text), item]));
+  const proposalTexts = Array.from(new Set(proposals.map((proposal) => normalizeText(proposal.normalized_text)).filter(Boolean)));
+  const supersededIds = await supersedeOpenProposalsForTexts(adminClient, runId, proposalTexts, authUserId);
   const rows = proposals.map((proposal) => {
     const item = itemByText.get(normalizeText(proposal.normalized_text));
     return {
@@ -2189,6 +2194,68 @@ async function insertProposals(
     if (eventError) {
       throw new Error(`insert_proposal_events_failed:${eventError.message}`);
     }
+  }
+
+  return { insertedIds: ids, supersededIds };
+}
+
+async function supersedeOpenProposalsForTexts(
+  adminClient: ServiceSupabaseClient,
+  runId: number,
+  normalizedTexts: string[],
+  authUserId: string | null,
+): Promise<number[]> {
+  if (!SUPERSEDE_OPEN_PROPOSALS || normalizedTexts.length === 0) return [];
+
+  const openStatuses = [
+    "draft",
+    "needs_human_review",
+    "queued_for_validation",
+    "validated",
+    "failed_validation",
+  ];
+
+  const { data, error } = await adminClient
+    .from("catalog_agent_proposals")
+    .select("id, normalized_text, proposal_type, status")
+    .in("normalized_text", normalizedTexts)
+    .in("status", openStatuses);
+
+  if (error) {
+    throw new Error(`select_open_proposals_for_supersede_failed:${error.message}`);
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  const ids = rows
+    .map((row) => Number((row as Record<string, unknown>).id))
+    .filter((id) => Number.isFinite(id));
+
+  if (ids.length === 0) return [];
+
+  const { error: updateError } = await adminClient
+    .from("catalog_agent_proposals")
+    .update({ status: "superseded" })
+    .in("id", ids);
+
+  if (updateError) {
+    throw new Error(`supersede_open_proposals_failed:${updateError.message}`);
+  }
+
+  const { error: eventError } = await adminClient
+    .from("catalog_agent_proposal_events")
+    .insert(ids.map((id) => ({
+      proposal_id: id,
+      run_id: runId,
+      event_type: "proposal_superseded_by_agent_refresh",
+      event_payload: {
+        source: FUNCTION_NAME,
+        reason: "newer_persistable_proposal_for_same_normalized_text",
+      },
+      created_by: authUserId,
+    })));
+
+  if (eventError) {
+    throw new Error(`insert_supersede_events_failed:${eventError.message}`);
   }
 
   return ids;
@@ -2763,6 +2830,7 @@ function budgetSummary(): Record<string, unknown> {
     recent_proposal_days: RECENT_PROPOSAL_DAYS,
     provider_timeout_ms: PROVIDER_TIMEOUT_MS,
     proposal_persistence_enabled: PROPOSAL_PERSISTENCE_ENABLED,
+    supersede_open_proposals: SUPERSEDE_OPEN_PROPOSALS,
     reasoning_mode: REASONING_MODE,
     max_reasoning_calls_per_run: MAX_REASONING_CALLS_PER_RUN,
     risk_review_enabled: RISK_REVIEW_ENABLED,
