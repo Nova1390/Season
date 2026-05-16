@@ -247,6 +247,17 @@ enum SocialImportParser {
         var candidate = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return nil }
 
+        if let ingredientMarkerRange = candidate.range(
+            of: #"(?i)\b(?:ingredienti|ingredients)\s*:"#,
+            options: .regularExpression
+        ) {
+            let prefix = String(candidate[..<ingredientMarkerRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !prefix.isEmpty {
+                candidate = prefix
+            }
+        }
+
         if let colonRange = candidate.range(of: ":") {
             let prefix = String(candidate[..<colonRange.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -561,7 +572,12 @@ enum SocialImportParser {
                 return nearIngredientBlock && hasQuantitylessHighSignalIngredient(in: fragment)
             }
             let recoveredQuantityless = nearIngredientBlock
-                ? fragments.flatMap(quantitylessHighSignalIngredientFragments)
+                ? fragments
+                    // A measured fragment already has its ingredient identity. Recovering
+                    // sub-terms from it can create false extras such as "olio" from
+                    // "tonno sott'olio 120g" or duplicate nouns from preparation states.
+                    .filter { !hasQuantityPattern(in: $0) && !hasBareCountPattern(in: $0) }
+                    .flatMap(quantitylessHighSignalIngredientFragments)
                 : []
             return (accepted + recoveredQuantityless).filter { fragment in
                 seen.insert(normalizedIngredientText(fragment)).inserted

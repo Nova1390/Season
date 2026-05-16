@@ -12,7 +12,7 @@ How to test:
 2. Paste one caption into the Smart Import caption field. Leave URL empty unless a test explicitly adds one later.
 3. Run Import Draft.
 4. Compare final draft ingredients against expected ingredients and quantities.
-5. Record: lost ingredients, custom ingredients, wrong quantity/unit, fallback notice/attempt, and obvious title/noise leakage.
+5. Record: lost ingredients, custom ingredients, duplicated ingredients, wrong quantity/unit, fallback notice/attempt, and obvious title/noise leakage.
 
 Expected fallback:
 - `skip`: local import should likely resolve all useful ingredient candidates and skip server fallback if refinement asks for one.
@@ -31,6 +31,8 @@ Expected fallback:
 | SI-CVP-006 | easy | `Ingredienti: bucatini 180g / guanciale 90g / pecorino romano / pepe nero` | pasta, guanciale, pecorino, black pepper | pasta 180g; guanciale 90g; pecorino/pepper default or q.b. | skip |
 | SI-CVP-007 | easy | `Ingredienti: tonno sott'olio 120g / capperi sotto sale / acciughe sott'olio 2 / pasta 200g` | tuna, capers, anchovies, pasta | tuna 120g; anchovies 2 piece; pasta 200g; capers default | skip |
 | SI-CVP-008 | easy | `Ingredienti: patate 4 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b.` | potato, mushrooms, garlic, salt | potato 4 piece; mushrooms 200g; garlic 1 clove; salt q.b.; rosemary may be missed if not cataloged | maybe |
+| SI-CVP-026 | easy | `Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo` | pasta, tuna, capers, anchovies, parsley | pasta 200g; tuna 120g; anchovies 2 piece; no extra olive oil from sott'olio | skip |
+| SI-CVP-027 | easy | `Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano` | rice, mushrooms, broth, butter, parmesan | rice 180g; mushrooms 250g; broth 700ml; butter 20g; parmesan 30g | skip |
 
 ## Realistic Creator Captions With CTA, Noise, Emojis
 
@@ -88,5 +90,7 @@ Pass criteria for first 10:
 - No high-value ingredient silently lost.
 - No high-value ingredient degraded to custom when a local catalog match exists.
 - Explicit quantities survive into the final draft.
+- Inline recipe titles are clean: `Ingredienti:` must not remain attached to the title.
+- Preparation-state phrases do not create false extra ingredients, e.g. `sott'olio` must not add standalone olive oil.
 - Non-countable q.b. ingredients avoid invalid `.piece` draft behavior.
 - Weak captions may trigger fallback, but strong inline ingredient blocks should not.

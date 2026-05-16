@@ -4543,6 +4543,7 @@ struct CreateRecipeView: View {
 private struct SmartImportRealFlowAuditSample {
     let id: String
     let caption: String
+    let expectedTitle: String?
 }
 
 private struct SmartImportRealFlowCandidateRow: Codable {
@@ -4637,6 +4638,9 @@ private struct SmartImportCaptionHarnessSummary: Codable {
 private struct SmartImportRealFlowAuditSampleReport: Codable {
     let sampleID: String
     let caption: String
+    let suggestedTitle: String
+    let expectedTitle: String?
+    let titleStatus: String
     let localConfidence: String
     let fallbackDecision: String
     let refinementReasons: [String]
@@ -4644,6 +4648,7 @@ private struct SmartImportRealFlowAuditSampleReport: Codable {
     let finalDraftIngredients: [SmartImportRealFlowDraftRow]
     let lostCandidateTexts: [String]
     let quantityUnitDrifts: [String]
+    let duplicateDraftKeys: [String]
     let customDraftNames: [String]
 }
 
@@ -4653,6 +4658,7 @@ private struct SmartImportRealFlowAuditSummary: Codable {
     let totalFinalDraftIngredients: Int
     let lostCandidateCount: Int
     let quantityUnitDriftCount: Int
+    let duplicateFinalDraftCount: Int
     let customDraftIngredientCount: Int
     let fallbackAttemptCount: Int
     let fallbackSkippedAllResolvedCount: Int
@@ -4769,6 +4775,7 @@ extension CreateRecipeView {
             totalFinalDraftIngredients: reports.reduce(0) { $0 + $1.finalDraftIngredients.count },
             lostCandidateCount: reports.reduce(0) { $0 + $1.lostCandidateTexts.count },
             quantityUnitDriftCount: reports.reduce(0) { $0 + $1.quantityUnitDrifts.count },
+            duplicateFinalDraftCount: reports.reduce(0) { $0 + $1.duplicateDraftKeys.count },
             customDraftIngredientCount: reports.reduce(0) { $0 + $1.customDraftNames.count },
             fallbackAttemptCount: reports.filter { $0.fallbackDecision == "attempt_server_fallback" }.count,
             fallbackSkippedAllResolvedCount: reports.filter { $0.fallbackDecision == "skip_server_fallback_all_candidates_resolved" }.count
@@ -4901,6 +4908,12 @@ extension CreateRecipeView {
         return SmartImportRealFlowAuditSampleReport(
             sampleID: sample.id,
             caption: sample.caption,
+            suggestedTitle: localSuggestion.suggestedTitle ?? "",
+            expectedTitle: sample.expectedTitle,
+            titleStatus: smartImportTitleStatus(
+                actual: localSuggestion.suggestedTitle,
+                expected: sample.expectedTitle
+            ),
             localConfidence: localSuggestion.confidence.rawValue,
             fallbackDecision: fallbackDecision,
             refinementReasons: refinement.reasons,
@@ -4910,6 +4923,7 @@ extension CreateRecipeView {
                 .filter { $0.matchedDraftIndex == nil }
                 .map(\.rawText),
             quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+            duplicateDraftKeys: duplicateDraftKeys(in: drafts),
             customDraftNames: finalRows
                 .filter(\.isCustom)
                 .map(\.name)
@@ -5225,50 +5239,108 @@ extension CreateRecipeView {
         }
     }
 
+    private func duplicateDraftKeys(in drafts: [CreateIngredientDraft]) -> [String] {
+        var counts: [String: Int] = [:]
+        for draft in drafts {
+            let key = specificityEntityID(for: draft)
+            if !key.isEmpty {
+                counts[key, default: 0] += 1
+                continue
+            }
+            let normalizedName = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
+            if !normalizedName.isEmpty {
+                counts["name:\(normalizedName)", default: 0] += 1
+            }
+        }
+        return counts
+            .filter { $0.value > 1 }
+            .map(\.key)
+            .sorted()
+    }
+
+    private func smartImportTitleStatus(actual: String?, expected: String?) -> String {
+        let actualNormalized = normalizedIngredientMatchText(actual ?? "")
+        guard let expected,
+              !expected.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if actualNormalized.isEmpty || actualNormalized == "untitled recipe" {
+                return "not_required"
+            }
+            return actualNormalized.range(
+                of: #"\b\d+(?:[.,]\d+)?\s*(g|kg|ml|l|spicchio|spicchi)\b"#,
+                options: .regularExpression
+            ) == nil ? "not_required" : "suspect_quantity_in_title"
+        }
+
+        let expectedNormalized = normalizedIngredientMatchText(expected)
+        guard !expectedNormalized.isEmpty else { return "not_required" }
+        if actualNormalized == expectedNormalized {
+            return "pass"
+        }
+        if actualNormalized.contains(expectedNormalized),
+           actualNormalized.range(
+            of: #"\b\d+(?:[.,]\d+)?\s*(g|kg|ml|l|spicchio|spicchi)\b"#,
+            options: .regularExpression
+           ) == nil {
+            return "acceptable_extra_text"
+        }
+        return "fail"
+    }
+
     private static let smartImportRealFlowAuditSamples: [SmartImportRealFlowAuditSample] = [
         SmartImportRealFlowAuditSample(
             id: "inline_pomodoro",
-            caption: "Ingredienti: 200g spaghetti / passata di pomodoro 250g / olio evo q.b. / sale q.b."
+            caption: "Ingredienti: 200g spaghetti / passata di pomodoro 250g / olio evo q.b. / sale q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "bare_count_veg",
-            caption: "zucchine 2 / patate 3 / cipolle dorate 1 / olio evo q.b."
+            caption: "zucchine 2 / patate 3 / cipolle dorate 1 / olio evo q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "frittata_bare_count",
-            caption: "4 uova / zucchine 2 / parmigiano 30g / sale q.b. / pepe q.b."
+            caption: "4 uova / zucchine 2 / parmigiano 30g / sale q.b. / pepe q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "farina_dough",
-            caption: "farina 00 500g / acqua 350 ml / olio evo q.b. / sale q.b."
+            caption: "farina 00 500g / acqua 350 ml / olio evo q.b. / sale q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "pasta_al_volo",
-            caption: "pasta al volo: 200g pasta, 1 spicchio aglio, olio evo q.b., acciughe sott'olio 2, capperi sotto sale"
+            caption: "pasta al volo: 200g pasta, 1 spicchio aglio, olio evo q.b., acciughe sott'olio 2, capperi sotto sale",
+            expectedTitle: "pasta al volo"
         ),
         SmartImportRealFlowAuditSample(
             id: "carbonara",
-            caption: "Carbonara cremosa: spaghetti 200g / guanciale 80g / 2 uova / pecorino romano 40g / pepe nero q.b."
+            caption: "Carbonara cremosa: spaghetti 200g / guanciale 80g / 2 uova / pecorino romano 40g / pepe nero q.b.",
+            expectedTitle: "Carbonara cremosa"
         ),
         SmartImportRealFlowAuditSample(
             id: "tonno_capperi_acciughe",
-            caption: "Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo"
+            caption: "Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo",
+            expectedTitle: "Pasta tonno e capperi"
         ),
         SmartImportRealFlowAuditSample(
             id: "risotto_funghi",
-            caption: "Risotto ai funghi Ingredienti: riso 180g, funghi 250g, brodo vegetale, burro, parmigiano reggiano 30g"
+            caption: "Risotto ai funghi Ingredienti: riso 180g, funghi 250g, brodo vegetale, burro, parmigiano reggiano 30g",
+            expectedTitle: "Risotto ai funghi"
         ),
         SmartImportRealFlowAuditSample(
             id: "risotto_funghi_inline_servings_measured",
-            caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano"
+            caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano",
+            expectedTitle: "Risotto ai funghi"
         ),
         SmartImportRealFlowAuditSample(
             id: "noisy_zucchine",
-            caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero"
+            caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "patate_funghi",
-            caption: "Patate e funghi in padella: patate 3 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b."
+            caption: "Patate e funghi in padella: patate 3 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b.",
+            expectedTitle: "Patate e funghi in padella"
         )
     ]
 

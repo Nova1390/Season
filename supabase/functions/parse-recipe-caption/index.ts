@@ -1051,6 +1051,12 @@ function inferDeterministicTitle(caption: string): string | null {
 
 function cleanedRecipeTitleCandidate(raw: string): string | null {
   let candidate = raw.trim();
+  const ingredientMarker = candidate.match(/\b(?:ingredienti|ingredients)\s*:/i);
+  if (ingredientMarker?.index !== undefined && ingredientMarker.index > 0) {
+    const prefix = candidate.slice(0, ingredientMarker.index).trim();
+    if (prefix) candidate = prefix;
+  }
+
   const colonIndex = candidate.indexOf(":");
   if (colonIndex > 0) {
     const prefix = candidate.slice(0, colonIndex).trim();

@@ -96,6 +96,8 @@ Does:
 - Extracts candidate ingredient lines deterministically.
 - Recovers basic quantity/unit patterns.
 - For inline captions such as `Recipe per 2: ingredient 100g, ingredient 200ml. Cook...`, treats text before `:` as the title, keeps only the ingredient-list sentence for candidates, and stops before procedural verbs.
+- For social captions such as `Recipe title Ingredienti: ingredient 100g...`, strips the `Ingredienti:` marker from the title while preserving the measured ingredient block.
+- Avoids recovering standalone sub-ingredients from measured preparation-state phrases, for example it must not create a separate oil ingredient from `tonno sott'olio 120g`.
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
@@ -115,6 +117,7 @@ Does:
 - Requires authenticated user context.
 - Accepts `caption`, optional `url`, `languageCode`, and optional `ingredientCandidates`.
 - If candidates are present, calls LLM only for candidates that require it: ambiguous or none, plus low-confidence alias when applicable.
+- Normalizes title extraction for inline `Ingredienti:`/`Ingredients:` captions before any model fallback.
 - Preserves explicit candidate quantities/units over LLM-resolved names so the model can rename an ingredient but cannot move a dose to another ingredient.
 - Deduplicates identical resolved ingredient candidates conservatively, preferring entries with explicit quantity/unit.
 - Returns existing-compatible recipe parse output.
