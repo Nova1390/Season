@@ -2,7 +2,7 @@
 
 ## Working Today
 - The app is in TestFlight rollout preparation for an iOS 26+ release.
-- TestFlight build `1.0.1 (4)` is the current bugfix candidate from Release configuration.
+- TestFlight build `1.0.1 (9)` is the next Smart Import bugfix candidate after the creator-caption regression gate.
 - Debug builds target the development Supabase environment; Release builds target the staging Supabase environment.
 - `Season/PrivacyInfo.xcprivacy` is present and lint-clean for app-level privacy manifest coverage.
 - Supabase auth path is integrated for app testing flows.

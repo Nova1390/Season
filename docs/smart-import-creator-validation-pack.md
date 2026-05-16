@@ -91,11 +91,12 @@ May 16 intensive simulator pass:
 - Server-fallback degradation audit passed on the protected samples: simulated server output with `Untitled recipe` and degraded/no-quantity ingredients did not override the better local title, quantities, unique ingredient list, or steps. Live server rows were `unauthenticated` in the simulator session and must not be counted as live Edge Function proof.
 - During the pass, the remote import quota returned `Limite giornaliero import raggiunto`; this must not block the local parser from producing a usable draft.
 
-May 16 release-candidate `1.0.1 (8)` gate notes:
+May 16 release-candidate `1.0.1 (9)` gate notes:
 - Release/staging simulator login and session persistence passed after restoring authenticated `profiles` grants and app-side Supabase auth storage.
 - Manual UI verification passed for risotto, insalata, pancake, and pasta captions on the Release simulator. `REG-20260516-002` specifically preserves `Limone` as `0.5 pezzo`.
 - Supabase staging preflight passed: migration history is up to date and schema lint reports no errors.
 - Release iPhoneOS build with `CODE_SIGNING_ALLOWED=NO` passed before upload/archive preparation.
+- Build number was bumped from `1.0.1 (8)` to `1.0.1 (9)` for the next TestFlight candidate, because App Store Connect requires a new build number for every upload.
 
 Hard release rule after this pass:
 - Do not upload another TestFlight build for Smart Import unless the 100-caption stress harness, the real-flow audit, and at least the three manual UI regression cases above have been re-run on the exact candidate branch.

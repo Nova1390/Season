@@ -306,12 +306,12 @@ Configurazione in Xcode:
 
 Stato TestFlight:
 
-- `CURRENT_PROJECT_VERSION = 8`.
+- `CURRENT_PROJECT_VERSION = 9`.
 - `MARKETING_VERSION = 1.0.1`.
 - Release compila contro staging.
 - TestFlight candidate `1.0.1 (7)` e stato caricato come bugfix, ma non deve essere considerato validato per Smart Import: le caption creator hanno mostrato regressioni su titolo e quantita. Prima di una nuova build serve il gate in `docs/smart-import-creator-validation-pack.md`.
-- Hotfix branch `hotfix/smart-import-user-flow-build-8` contiene correzioni validate su simulator per parsing caption, quantita, titoli, mezze quantita naturali e q.b.; non e ancora una nuova build TestFlight finche non viene richiesto esplicitamente upload.
-- Candidate `1.0.1 (8)` deve essere caricato solo se restano verdi: Smart Import stress/audit, manual UI regression captions, Release simulator staging smoke, Supabase lint/dry-run e Release iPhoneOS build.
+- Hotfix branch `hotfix/smart-import-user-flow-build-8` contiene correzioni validate su simulator per parsing caption, quantita, titoli, mezze quantita naturali, q.b., `gocce di cioccolato` non mappato a `cola`, e verbi procedurali all'infinito.
+- Candidate `1.0.1 (9)` e il prossimo build number da usare per TestFlight dopo merge del pacchetto Smart Import; i gate Smart Import devono restare verdi prima dell'upload firmato.
 - Ultimo pass simulator Smart Import: 100 caption, 72 pass, 28 partial da gap catalogo/specificita, 0 fail, 0 title failure, 0 missing expected ingredients, 0 invented quantities. Vedi `docs/smart-import-creator-validation-pack.md`.
 - Supabase staging preflight del 16 maggio 2026: `supabase db lint --linked` senza errori e `supabase db push --linked --dry-run` aggiornato dopo la migration `20260516105000_restore_profiles_authenticated_grants.sql`.
 - Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
