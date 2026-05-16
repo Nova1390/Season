@@ -807,8 +807,17 @@ private struct StylizedSeasonalityChart: View {
         Path { path in
             guard let first = points.first else { return }
             path.move(to: first)
-            for point in points.dropFirst() {
-                path.addLine(to: point)
+            for index in 1..<points.count {
+                let previous = points[index - 1]
+                let current = points[index]
+                let mid = CGPoint(
+                    x: (previous.x + current.x) / 2,
+                    y: (previous.y + current.y) / 2
+                )
+                path.addQuadCurve(to: mid, control: previous)
+            }
+            if let last = points.last {
+                path.addLine(to: last)
             }
         }
     }

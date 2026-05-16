@@ -209,10 +209,10 @@ private struct AuthEntryScreen: View {
 
             LinearGradient(
                 stops: [
-                    .init(color: DS.Color.ink.opacity(0.18), location: 0.0),
-                    .init(color: DS.Color.ink.opacity(0.24), location: 0.28),
-                    .init(color: DS.Color.ink.opacity(0.56), location: 0.62),
-                    .init(color: DS.Color.ink.opacity(0.90), location: 1.0)
+                    .init(color: Color.black.opacity(0.18), location: 0.0),
+                    .init(color: Color.black.opacity(0.24), location: 0.28),
+                    .init(color: Color.black.opacity(0.56), location: 0.62),
+                    .init(color: Color.black.opacity(0.90), location: 1.0)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -480,7 +480,7 @@ private struct AuthEntryScreen: View {
 private struct AuthGateAppleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(DS.Color.ink)
+            .foregroundStyle(Color.black.opacity(configuration.isPressed ? 0.72 : 0.92))
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color.white.opacity(configuration.isPressed ? 0.88 : 0.96))

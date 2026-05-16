@@ -982,7 +982,7 @@ final class ProduceViewModel: ObservableObject {
 
         return inSeasonItems
             .map { item in
-                let score = bestPickScore(for: item) * 100.0
+                let score = todayPickScore(for: item) * 100.0
                 let reasons = rankingReasons(for: item)
                 return RankedInSeasonItem(item: item, score: score, reasons: reasons)
             }
@@ -2330,6 +2330,80 @@ final class ProduceViewModel: ObservableObject {
         }
         // Fallback: bias more to seasonality if preferences are empty.
         return (seasonality * 0.85) + (nutrition * 0.15)
+    }
+
+    private func todayPickScore(for item: ProduceItem) -> Double {
+        let currentSeasonality = seasonalityScore(for: item)
+        let amplitude = item.seasonalityAmplitude()
+        let peakDistance = Double(min(6, item.seasonalityPeakDistance(month: currentMonth)))
+        let peakProximity = max(0, 1.0 - (peakDistance / 6.0))
+        let trend = min(1.0, max(0.0, 0.5 + (item.seasonalityDelta(month: currentMonth) * 1.8)))
+        let freshnessPriority = todayFreshnessPriority(for: item)
+        let nutrition = nutritionScore(for: item)
+
+        var score =
+            (currentSeasonality * 0.34)
+            + (amplitude * 0.26)
+            + (peakProximity * 0.20)
+            + (freshnessPriority * 0.10)
+            + (trend * 0.06)
+            + (nutrition * 0.04)
+
+        if item.isYearRoundSeasonal() {
+            score -= 0.22
+        }
+        if isAromaticOrSpice(item) {
+            score *= 0.58
+        }
+        if isMostlyImportedTropical(item) {
+            score *= 0.72
+        }
+        if item.category == .legume {
+            score *= 0.90
+        }
+
+        return min(1.0, max(0.0, score))
+    }
+
+    private func todayFreshnessPriority(for item: ProduceItem) -> Double {
+        switch item.category {
+        case .fruit:
+            return 1.0
+        case .vegetable:
+            return 0.95
+        case .tuber:
+            return 0.72
+        case .legume:
+            return 0.58
+        }
+    }
+
+    private func isAromaticOrSpice(_ item: ProduceItem) -> Bool {
+        let searchText = ([item.id] + Array(item.localizedNames.values))
+            .joined(separator: " ")
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+        let aromaticTerms = [
+            "basil", "basilico", "thyme", "timo", "oregano", "origano",
+            "rosemary", "rosmarino", "sage", "salvia", "mint", "menta",
+            "parsley", "prezzemolo", "bay leaf", "alloro", "marjoram",
+            "maggiorana", "chives", "erba cipollina", "dill", "aneto",
+            "coriander", "coriandolo"
+        ]
+        return aromaticTerms.contains { searchText.contains($0) }
+    }
+
+    private func isMostlyImportedTropical(_ item: ProduceItem) -> Bool {
+        let searchText = ([item.id] + Array(item.localizedNames.values))
+            .joined(separator: " ")
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+        let tropicalTerms = [
+            "pineapple", "ananas", "mango", "avocado", "lime",
+            "banana", "coconut", "cocco", "papaya", "passion fruit",
+            "frutto della passione"
+        ]
+        return tropicalTerms.contains { searchText.contains($0) }
     }
 
     private func rankedHomeRecipes(from source: [Recipe]) -> [RankedRecipe] {

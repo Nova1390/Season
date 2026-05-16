@@ -186,6 +186,18 @@ struct ProduceItem: Identifiable, Codable, Hashable {
         return seasonalityScore(month: clampedMonth) - seasonalityScore(month: previousMonth)
     }
 
+    func seasonalityAmplitude() -> Double {
+        Self.seasonalityAmplitude(for: seasonMonths)
+    }
+
+    func seasonalityPeakDistance(month: Int) -> Int {
+        Self.seasonalityPeakDistance(for: seasonMonths, month: month)
+    }
+
+    func isYearRoundSeasonal() -> Bool {
+        Self.isYearRoundSeasonal(for: seasonMonths)
+    }
+
     func seasonalityPhase(month: Int) -> SeasonalityPhase {
         let score = seasonalityScore(month: month)
         let delta = seasonalityDelta(month: month)
@@ -205,6 +217,32 @@ struct ProduceItem: Identifiable, Codable, Hashable {
 
     func seasonalityScore(month: Int) -> Double {
         Self.seasonalityScore(for: seasonMonths, month: month)
+    }
+
+    static func seasonalityAmplitude(for seasonMonths: [Int]) -> Double {
+        let scores = (1...12).map { seasonalityScore(for: seasonMonths, month: $0) }
+        guard let minScore = scores.min(), let maxScore = scores.max() else { return 0 }
+        return max(0, maxScore - minScore)
+    }
+
+    static func seasonalityPeakDistance(for seasonMonths: [Int], month: Int) -> Int {
+        let clampedMonth = max(1, min(12, month))
+        let monthlyScores = (1...12).map { month in
+            (month: month, score: seasonalityScore(for: seasonMonths, month: month))
+        }
+        guard let peakScore = monthlyScores.map({ $0.score }).max() else { return 6 }
+        let peakMonths = monthlyScores
+            .filter { abs($0.score - peakScore) < 0.001 }
+            .map { $0.month }
+        return peakMonths
+            .map { circularMonthDistance(from: clampedMonth, to: $0) }
+            .min() ?? 6
+    }
+
+    static func isYearRoundSeasonal(for seasonMonths: [Int]) -> Bool {
+        let validSeasonMonths = Set(seasonMonths.filter { (1...12).contains($0) })
+        guard !validSeasonMonths.isEmpty else { return false }
+        return validSeasonMonths.count >= 11 || seasonalityAmplitude(for: seasonMonths) < 0.18
     }
 
     static func seasonalityScore(for seasonMonths: [Int], month: Int) -> Double {

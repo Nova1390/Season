@@ -425,16 +425,16 @@ struct InSeasonTodayView: View {
         let name = ranked.item.displayName(languageCode: viewModel.localizer.languageCode)
         let firstReason = ranked.reasons.first ?? viewModel.localizer.text(.reasonInSeasonNow)
         if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "\(name) è tra gli ingredienti migliori ora: \(firstReason.lowercased())."
+            return "\(name) è una scelta forte adesso: \(firstReason.lowercased())."
         }
         return "\(name) is one of the strongest picks right now: \(firstReason.lowercased())."
     }
 
     private func greetingTitle(for items: [RankedInSeasonItem]) -> String {
         if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "Oggi sei nel picco stagionale."
+            return "Il meglio di stagione, proprio ora."
         }
-        return "Today is a seasonal peak."
+        return "The best of the season, right now."
     }
 
     private var monthInsightLabel: String {
@@ -446,29 +446,29 @@ struct InSeasonTodayView: View {
 
     private func monthInsightTitle(peak: Int, arriving: Int, leaving: Int) -> String {
         if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "\(peak) ingredienti al picco, \(arriving) in arrivo, \(leaving) in uscita."
+            return "\(peak) al meglio, \(arriving) primizie, \(leaving) agli ultimi giorni."
         }
-        return "\(peak) ingredients at peak, \(arriving) arriving, \(leaving) on their way out."
+        return "\(peak) at their best, \(arriving) first-of-season, \(leaving) ending soon."
     }
 
     private var localizedPeakLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "al picco" : "at peak"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "al meglio" : "at best"
     }
 
     private var localizedArrivingLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "in arrivo" : "arriving"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "primizie" : "first picks"
     }
 
     private var localizedLeavingLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "in uscita" : "leaving"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "ultimi giorni" : "ending soon"
     }
 
     private var localizedStableLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "stabile" : "steady"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "stagione stabile" : "steady season"
     }
 
     private var featuredEyebrow: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "Il protagonista del mese" : "This month's main character"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "Scelto per adesso" : "Picked for right now"
     }
 
     private var pairingLabel: String {
