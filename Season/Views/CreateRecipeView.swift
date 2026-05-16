@@ -1532,9 +1532,15 @@ struct CreateRecipeView: View {
                     sourceURL: sourceURL,
                     fallbackCaption: cleanedCaption
                 ), isServerSuggestionUseful(serverSuggestion) {
+                    let protectedSuggestion = serverSuggestionPreservingLocalGuarantees(
+                        serverSuggestion,
+                        localSuggestion: localSuggestion,
+                        parserCandidates: smartImportCandidates,
+                        caption: cleanedCaption
+                    )
                     importServerNoticeText = ""
-                    print("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(serverSuggestion.confidence.rawValue)")
-                    applyImportedSuggestion(serverSuggestion, sourceURL: sourceURL)
+                    print("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(protectedSuggestion.confidence.rawValue)")
+                    applyImportedSuggestion(protectedSuggestion, sourceURL: sourceURL)
                     return
                 }
                 print("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
@@ -1877,6 +1883,95 @@ struct CreateRecipeView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() ?? ""
         return !titleCandidate.isEmpty && titleCandidate != "untitled recipe"
+    }
+
+    private func serverSuggestionPreservingLocalGuarantees(
+        _ serverSuggestion: SocialImportSuggestion,
+        localSuggestion: SocialImportSuggestion,
+        parserCandidates: [SmartImportIngredientCandidate],
+        caption: String
+    ) -> SocialImportSuggestion {
+        let localDrafts = localSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: caption)
+        }
+        let serverDrafts = serverSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: caption)
+        }
+
+        let localLost = lostCandidateTexts(candidates: parserCandidates, drafts: localDrafts)
+        let serverLost = lostCandidateTexts(candidates: parserCandidates, drafts: serverDrafts)
+        let localDrifts = quantityUnitDrifts(candidates: parserCandidates, drafts: localDrafts)
+        let serverDrifts = quantityUnitDrifts(candidates: parserCandidates, drafts: serverDrafts)
+        let localDuplicates = duplicateDraftKeys(in: localDrafts)
+        let serverDuplicates = duplicateDraftKeys(in: serverDrafts)
+
+        let shouldPreserveLocalIngredients = !localSuggestion.suggestedIngredients.isEmpty && (
+            serverDrafts.isEmpty
+                || serverLost.count > localLost.count
+                || serverDrifts.count > localDrifts.count
+                || serverDuplicates.count > localDuplicates.count
+                || serverDrafts.count < localDrafts.count
+        )
+
+        let serverTitle = serverSuggestion.suggestedTitle?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let localTitle = localSuggestion.suggestedTitle?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let selectedTitle: String? = {
+            if isUsableImportedTitle(serverTitle) {
+                return serverTitle
+            }
+            if isUsableImportedTitle(localTitle) {
+                return localTitle
+            }
+            return serverTitle ?? localTitle
+        }()
+
+        let selectedIngredients = shouldPreserveLocalIngredients
+            ? localSuggestion.suggestedIngredients
+            : serverSuggestion.suggestedIngredients
+        let selectedSteps = serverSuggestion.suggestedSteps.isEmpty
+            ? localSuggestion.suggestedSteps
+            : serverSuggestion.suggestedSteps
+        let selectedConfidence = shouldPreserveLocalIngredients
+            ? localSuggestion.confidence
+            : serverSuggestion.confidence
+
+        print(
+            "[SEASON_IMPORT] phase=server_quality_gate " +
+            "preserve_local_ingredients=\(shouldPreserveLocalIngredients) " +
+            "local_lost=\(localLost.count) server_lost=\(serverLost.count) " +
+            "local_drifts=\(localDrifts.count) server_drifts=\(serverDrifts.count) " +
+            "local_duplicates=\(localDuplicates.count) server_duplicates=\(serverDuplicates.count) " +
+            "selected_title=\(selectedTitle ?? "nil") " +
+            "selected_steps=\(selectedSteps.count)"
+        )
+
+        return SocialImportSuggestion(
+            sourceURL: serverSuggestion.sourceURL ?? localSuggestion.sourceURL,
+            sourcePlatform: serverSuggestion.sourcePlatform ?? localSuggestion.sourcePlatform,
+            sourceCaptionRaw: serverSuggestion.sourceCaptionRaw ?? localSuggestion.sourceCaptionRaw,
+            suggestedTitle: selectedTitle,
+            suggestedIngredients: selectedIngredients,
+            suggestedSteps: selectedSteps,
+            confidence: selectedConfidence
+        )
+    }
+
+    private func isUsableImportedTitle(_ raw: String?) -> Bool {
+        let cleaned = raw?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return !cleaned.isEmpty && cleaned != "untitled recipe"
+    }
+
+    private func lostCandidateTexts(
+        candidates: [SmartImportIngredientCandidate],
+        drafts: [CreateIngredientDraft]
+    ) -> [String] {
+        candidates
+            .filter { matchedDraftIndex(for: $0, drafts: drafts) == nil }
+            .map(\.rawText)
     }
 
     private func importQualityFeedbackText(for confidence: SocialImportConfidence) -> String {
@@ -3572,6 +3667,9 @@ struct CreateRecipeView: View {
         if let forcedMeat = forcedMeatMatch(for: query) {
             return forcedMeat
         }
+        if let forcedCorn = forcedCornMatch(for: query) {
+            return forcedCorn
+        }
         if let forcedPastaMatch = forcedPastaOverCondimentMatch(for: query) {
             return forcedPastaMatch
         }
@@ -3923,6 +4021,19 @@ struct CreateRecipeView: View {
         }
         if term.count >= 4 && query.contains(term) {
             return 1
+        }
+        return nil
+    }
+
+    private func forcedCornMatch(for raw: String) -> ImportedIngredientMatch? {
+        let normalized = normalizedImportSurfaceWithoutLexical(raw)
+        if queryContainsPhrase(normalized, phrase: "mais in scatola"),
+           let cannedCorn = BasicIngredientCatalog.all.first(where: { $0.id == "canned_corn" }) {
+            return .basic(cannedCorn)
+        }
+        if normalized == "mais" || normalized == "mais dolce",
+           let corn = viewModel.produceItems.first(where: { $0.id == "corn" }) {
+            return .produce(corn)
         }
         return nil
     }
@@ -4669,6 +4780,20 @@ private struct SmartImportRealFlowAuditReport: Codable {
     let summary: SmartImportRealFlowAuditSummary
 }
 
+private struct SmartImportServerFallbackAuditRow: Codable {
+    let sampleID: String
+    let serverOK: Bool
+    let serverError: String?
+    let serverTitle: String?
+    let finalTitle: String
+    let finalConfidence: String
+    let finalStepsCount: Int
+    let finalDraftIngredients: [SmartImportRealFlowDraftRow]
+    let lostCandidateTexts: [String]
+    let quantityUnitDrifts: [String]
+    let duplicateDraftKeys: [String]
+}
+
 extension CreateRecipeView {
     @MainActor
     static func runSmartImportCaptionHarnessIfRequested() async {
@@ -4759,6 +4884,211 @@ extension CreateRecipeView {
             print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_SUMMARY] \(json)")
         }
         print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=end")
+    }
+
+    @MainActor
+    static func runSmartImportServerFallbackAuditIfRequested() async {
+        guard ProcessInfo.processInfo.environment["SEASON_RUN_SMART_IMPORT_SERVER_FALLBACK_AUDIT"] == "1" else {
+            return
+        }
+
+        let viewModel = ProduceViewModel(languageCode: AppLanguage.italian.rawValue)
+        let auditView = CreateRecipeView(viewModel: viewModel)
+        let samples = smartImportRealFlowAuditSamples.filter {
+            [
+                "risotto_funghi_inline_servings_measured",
+                "insalata_pollo_inline_servings_measured",
+                "pancake_banana_avena_inline_servings_measured"
+            ].contains($0.id)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+
+        print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=begin samples=\(samples.count)")
+        for sample in samples {
+            let degradedRow = auditView.smartImportDegradingServerFallbackAuditRow(for: sample)
+            if let data = try? encoder.encode(degradedRow),
+               let json = String(data: data, encoding: .utf8) {
+                print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_DEGRADE_AUDIT_ROW] \(json)")
+            }
+            let row = await auditView.smartImportServerFallbackAuditRow(for: sample)
+            if let data = try? encoder.encode(row),
+               let json = String(data: data, encoding: .utf8) {
+                print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT_ROW] \(json)")
+            }
+        }
+        print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=end")
+    }
+
+    private func smartImportDegradingServerFallbackAuditRow(
+        for sample: SmartImportRealFlowAuditSample
+    ) -> SmartImportServerFallbackAuditRow {
+        let cleanedCaption = removingEmojis(from: sample.caption)
+        let localSuggestion = SocialImportParser.parse(
+            sourceURLRaw: "",
+            captionRaw: cleanedCaption,
+            produceItems: viewModel.produceItems,
+            basicIngredients: BasicIngredientCatalog.all,
+            languageCode: localizer.languageCode
+        )
+        let candidates = smartImportIngredientCandidates(from: cleanedCaption)
+        let degradedIngredients = localSuggestion.suggestedIngredients.map { ingredient in
+            RecipeIngredient(
+                ingredientID: ingredient.ingredientID,
+                produceID: ingredient.produceID,
+                basicIngredientID: ingredient.basicIngredientID,
+                quality: ingredient.quality,
+                name: ingredient.name,
+                quantityValue: 0,
+                quantityUnit: .piece,
+                rawIngredientLine: ingredient.rawIngredientLine,
+                mappingConfidence: ingredient.mappingConfidence
+            )
+        }
+        let degradingServerSuggestion = SocialImportSuggestion(
+            sourceURL: localSuggestion.sourceURL,
+            sourcePlatform: localSuggestion.sourcePlatform,
+            sourceCaptionRaw: localSuggestion.sourceCaptionRaw,
+            suggestedTitle: "Untitled recipe",
+            suggestedIngredients: degradedIngredients,
+            suggestedSteps: localSuggestion.suggestedSteps,
+            confidence: .high
+        )
+        let finalSuggestion = serverSuggestionPreservingLocalGuarantees(
+            degradingServerSuggestion,
+            localSuggestion: localSuggestion,
+            parserCandidates: candidates,
+            caption: cleanedCaption
+        )
+        let drafts = finalSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+        }
+        return SmartImportServerFallbackAuditRow(
+            sampleID: sample.id,
+            serverOK: true,
+            serverError: "simulated_degrading_server_output",
+            serverTitle: degradingServerSuggestion.suggestedTitle,
+            finalTitle: finalSuggestion.suggestedTitle ?? "",
+            finalConfidence: finalSuggestion.confidence.rawValue,
+            finalStepsCount: finalSuggestion.suggestedSteps.count,
+            finalDraftIngredients: drafts.enumerated().map { index, draft in
+                SmartImportRealFlowDraftRow(
+                    index: index,
+                    name: ingredientDraftDisplayName(draft),
+                    produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                    basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                    quantityValue: draft.quantityValue,
+                    quantityUnit: draft.quantityUnit.rawValue,
+                    isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                )
+            },
+            lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+            quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+            duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+        )
+    }
+
+    private func smartImportServerFallbackAuditRow(
+        for sample: SmartImportRealFlowAuditSample
+    ) async -> SmartImportServerFallbackAuditRow {
+        let cleanedCaption = removingEmojis(from: sample.caption)
+        let localSuggestion = SocialImportParser.parse(
+            sourceURLRaw: "",
+            captionRaw: cleanedCaption,
+            produceItems: viewModel.produceItems,
+            basicIngredients: BasicIngredientCatalog.all,
+            languageCode: localizer.languageCode
+        )
+        let candidates = smartImportIngredientCandidates(from: cleanedCaption)
+
+        do {
+            let serverResponse = try await SupabaseService.shared.parseRecipeCaption(
+                caption: cleanedCaption,
+                url: "",
+                languageCode: localizer.languageCode,
+                ingredientCandidates: candidates.isEmpty ? nil : candidates
+            )
+            guard let serverSuggestion = socialImportSuggestionFromServerResponse(
+                serverResponse,
+                sourceURL: "",
+                fallbackCaption: cleanedCaption
+            ) else {
+                return SmartImportServerFallbackAuditRow(
+                    sampleID: sample.id,
+                    serverOK: false,
+                    serverError: "server_response_not_useful",
+                    serverTitle: nil,
+                    finalTitle: localSuggestion.suggestedTitle ?? "",
+                    finalConfidence: localSuggestion.confidence.rawValue,
+                    finalStepsCount: localSuggestion.suggestedSteps.count,
+                    finalDraftIngredients: [],
+                    lostCandidateTexts: candidates.map(\.rawText),
+                    quantityUnitDrifts: [],
+                    duplicateDraftKeys: []
+                )
+            }
+
+            let finalSuggestion = serverSuggestionPreservingLocalGuarantees(
+                serverSuggestion,
+                localSuggestion: localSuggestion,
+                parserCandidates: candidates,
+                caption: cleanedCaption
+            )
+            let drafts = finalSuggestion.suggestedIngredients.map {
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+            }
+
+            return SmartImportServerFallbackAuditRow(
+                sampleID: sample.id,
+                serverOK: true,
+                serverError: nil,
+                serverTitle: serverSuggestion.suggestedTitle,
+                finalTitle: finalSuggestion.suggestedTitle ?? "",
+                finalConfidence: finalSuggestion.confidence.rawValue,
+                finalStepsCount: finalSuggestion.suggestedSteps.count,
+                finalDraftIngredients: drafts.enumerated().map { index, draft in
+                    SmartImportRealFlowDraftRow(
+                        index: index,
+                        name: ingredientDraftDisplayName(draft),
+                        produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                        basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                        quantityValue: draft.quantityValue,
+                        quantityUnit: draft.quantityUnit.rawValue,
+                        isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                    )
+                },
+                lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+                quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+                duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+            )
+        } catch {
+            let drafts = localSuggestion.suggestedIngredients.map {
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+            }
+            return SmartImportServerFallbackAuditRow(
+                sampleID: sample.id,
+                serverOK: false,
+                serverError: String(describing: error),
+                serverTitle: nil,
+                finalTitle: localSuggestion.suggestedTitle ?? "",
+                finalConfidence: localSuggestion.confidence.rawValue,
+                finalStepsCount: localSuggestion.suggestedSteps.count,
+                finalDraftIngredients: drafts.enumerated().map { index, draft in
+                    SmartImportRealFlowDraftRow(
+                        index: index,
+                        name: ingredientDraftDisplayName(draft),
+                        produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                        basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                        quantityValue: draft.quantityValue,
+                        quantityUnit: draft.quantityUnit.rawValue,
+                        isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                    )
+                },
+                lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+                quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+                duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+            )
+        }
     }
 
     @MainActor
@@ -5203,8 +5533,12 @@ extension CreateRecipeView {
         guard !normalizedCandidate.isEmpty else { return nil }
         for (index, draft) in drafts.enumerated() {
             let normalizedDraft = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
+            guard !normalizedDraft.isEmpty else { continue }
             let draftQueries = Set(importedIngredientMatchQueries(from: ingredientDraftDisplayName(draft)))
-            if normalizedDraft == normalizedCandidate || draftQueries.contains(normalizedCandidate) {
+            if normalizedDraft == normalizedCandidate
+                || draftQueries.contains(normalizedCandidate)
+                || queryContainsPhrase(normalizedDraft, phrase: normalizedCandidate)
+                || queryContainsPhrase(normalizedCandidate, phrase: normalizedDraft) {
                 return index
             }
         }
@@ -5331,6 +5665,16 @@ extension CreateRecipeView {
             id: "risotto_funghi_inline_servings_measured",
             caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano",
             expectedTitle: "Risotto ai funghi"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "insalata_pollo_inline_servings_measured",
+            caption: "Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.",
+            expectedTitle: "Insalata di pollo"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pancake_banana_avena_inline_servings_measured",
+            caption: "Pancake banana e avena x2: banana 1, uova 2, fiocchi d’avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.",
+            expectedTitle: "Pancake banana e avena"
         ),
         SmartImportRealFlowAuditSample(
             id: "noisy_zucchine",

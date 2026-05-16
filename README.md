@@ -135,7 +135,7 @@ Notes:
 - Debug is configured for the development Supabase environment.
 - Release is configured for the staging Supabase environment.
 - `CODE_SIGNING_ALLOWED=NO` validates compilation and packaging, not App Store signing.
-- TestFlight distribution uses a signed Archive/export/upload flow; the current staging candidate is `1.0.1 (4)`.
+- TestFlight distribution uses a signed Archive/export/upload flow. Smart Import changes require the creator validation gate before another upload.
 
 ## Release Hygiene
 
@@ -166,7 +166,7 @@ Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql
 The app is in a TestFlight rollout preparation phase:
 
 - iOS Release builds successfully against staging.
-- TestFlight candidate `1.0.1 (4)` is the current bugfix candidate from Release configuration.
+- TestFlight candidate `1.0.1 (7)` was uploaded as a bugfix candidate, but Smart Import is under hotfix validation after creator-caption regressions on title and quantity preservation.
 - Auth, profile, recipe feed, fridge, shopping list, creator, and smart import flows are integrated.
 - Fridge and shopping list use local-first state with outbox-backed Supabase sync.
 - Catalog hierarchy, enrichment, and reconciliation workflows are active.

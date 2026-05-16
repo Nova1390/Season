@@ -7,6 +7,12 @@ Scope:
 - No backend, SQL, Edge Function, catalog write, translation, or LLM contract changes.
 - Use this pack before further parser work to measure real-world creator behavior.
 
+Release gate:
+- Do not upload a new TestFlight build after Smart Import parser changes until the real-flow audit, server-fallback audit, and at least the regression cases below have been verified.
+- A single successful caption is not enough. The risotto caption is a useful smoke test, but it must not be treated as proof that titles and quantities work for other creator captions.
+- Server/LLM output is allowed to improve a draft, but it must not overwrite a better local title, remove explicit quantities, introduce duplicate ingredients, or downgrade catalog matches.
+- If TestFlight already contains a build with a failed Smart Import regression, mark it as not suitable for wider distribution and ship a new build only after this gate passes.
+
 How to test:
 1. Open Create Recipe.
 2. Paste one caption into the Smart Import caption field. Leave URL empty unless a test explicitly adds one later.
@@ -33,6 +39,34 @@ Expected fallback:
 | SI-CVP-008 | easy | `Ingredienti: patate 4 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b.` | potato, mushrooms, garlic, salt | potato 4 piece; mushrooms 200g; garlic 1 clove; salt q.b.; rosemary may be missed if not cataloged | maybe |
 | SI-CVP-026 | easy | `Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo` | pasta, tuna, capers, anchovies, parsley | pasta 200g; tuna 120g; anchovies 2 piece; no extra olive oil from sott'olio | skip |
 | SI-CVP-027 | easy | `Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano` | rice, mushrooms, broth, butter, parmesan | rice 180g; mushrooms 250g; broth 700ml; butter 20g; parmesan 30g | skip |
+| SI-CVP-031 | easy | `Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.` | chicken, lettuce, cherry tomato, corn, olives, olive oil, lemon | chicken 250g; lettuce 120g; cherry tomatoes 150g; corn 80g; olives 40g; oil 1 tbsp; lemon default | skip |
+| SI-CVP-032 | easy | `Pancake banana e avena x2: banana 1, uova 2, fiocchi d'avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.` | banana, eggs, oat flakes, milk, yeast/leavening | banana 1 piece; eggs 2 piece; oats 80g; milk 100ml; yeast 1 tsp | maybe |
+
+## May 16 Smart Import Regression Cases
+
+These cases reproduce the user-facing failures found on TestFlight build `1.0.1 (7)`: title staying `Untitled recipe`, explicit quantities disappearing after server fallback, and ingredient lists degrading after a seemingly successful "Alta qualità" import.
+
+| ID | Caption | Must pass |
+|---|---|---|
+| REG-20260516-001 | `Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano` | Title `Risotto ai funghi`; 5 unique ingredients; all explicit quantities preserved; at least 1 step. |
+| REG-20260516-002 | `Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.` | Title `Insalata di pollo`; 7 unique ingredients; no missing quantities for measured ingredients; at least 1 step. |
+| REG-20260516-003 | `Pancake banana e avena x2: banana 1, uova 2, fiocchi d'avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.` | Title `Pancake banana e avena`; banana 1, eggs 2, oats 80g, milk 100ml, leavening 1 tsp; at least 1 step. |
+
+Automated checks:
+
+```bash
+SEASON_RUN_SMART_IMPORT_REAL_FLOW_AUDIT=1 run the Debug app on simulator
+SEASON_RUN_SMART_IMPORT_SERVER_FALLBACK_AUDIT=1 run the Debug app on simulator
+```
+
+The server-fallback audit has two parts:
+- A deterministic degrading-server simulation that feeds `Untitled recipe` and quantityless ingredients into the Swift quality gate. This must preserve the local title, quantities, and unique ingredients.
+- A live Edge Function attempt when the simulator has an authenticated Supabase session. If the simulator is unauthenticated, the live rows may show `serverError: unauthenticated`; that is not a pass for the live server, but the degrading simulation still validates the client-side safety gate.
+
+Manual checks:
+- Run at least `REG-20260516-001`, `REG-20260516-002`, and `REG-20260516-003` through the actual Create Recipe UI before TestFlight upload.
+- Keep the keyboard open/closed states in mind: the bottom publish bar must not hide the ingredients being validated.
+- Do not accept `Alta qualità` as a pass condition by itself; inspect title, portions, ingredients, quantities, duplicate rows, and steps.
 
 ## Realistic Creator Captions With CTA, Noise, Emojis
 

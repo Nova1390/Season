@@ -26,6 +26,10 @@ The core invariant is:
 
 `public.ingredients` is the canonical identity model, and `public.create_catalog_ingredient_from_candidate(...)` is the single canonical writer for new ingredient identity.
 
+Operational invariant for creator import quality:
+
+The server parser and LLM are assistants, not final authority over a better local draft. If Swift parsing has already recovered a clean title, explicit quantities, unique ingredient rows, or catalog matches, a server fallback must not overwrite those fields with a weaker result.
+
 ## 2. System Overview
 
 ```mermaid
@@ -101,6 +105,8 @@ Does:
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
+- Applies a server quality gate before accepting `parse-recipe-caption` fallback output. The gate compares local and server drafts for lost candidates, quantity/unit drift, duplicate ingredient keys, draft count, and usable title.
+- Preserves local ingredients/title when the server fallback degrades the local result, while still allowing useful server steps to enrich the final draft.
 - Emits unresolved custom ingredient observations after publish/save when final ingredients remain custom.
 
 Must not:
@@ -118,6 +124,8 @@ Does:
 - Accepts `caption`, optional `url`, `languageCode`, and optional `ingredientCandidates`.
 - If candidates are present, calls LLM only for candidates that require it: ambiguous or none, plus low-confidence alias when applicable.
 - Normalizes title extraction for inline `Ingredienti:`/`Ingredients:` captions before any model fallback.
+- Normalizes title extraction for one-line captions such as `Insalata di pollo per 2: pollo 250g...` before rejecting a line as ingredient-like.
+- Extracts simple inline procedure sentences such as `Taglia tutto...`, `Frulla tutto...`, `Tosta il riso...`, and `Manteca...` without inventing missing steps.
 - Preserves explicit candidate quantities/units over LLM-resolved names so the model can rename an ingredient but cannot move a dose to another ingredient.
 - Deduplicates identical resolved ingredient candidates conservatively, preferring entries with explicit quantity/unit.
 - Returns existing-compatible recipe parse output.

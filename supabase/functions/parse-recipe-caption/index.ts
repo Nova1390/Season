@@ -1042,9 +1042,9 @@ function inferDeterministicTitle(caption: string): string | null {
     const lower = cleaned.toLowerCase();
     if (isSectionHeader(lower)) continue;
     if (lower.startsWith("#") || lower.startsWith("http")) continue;
-    if (looksLikeIngredientLine(cleaned)) continue;
     const title = cleanedRecipeTitleCandidate(cleaned);
     if (title) return title;
+    if (looksLikeIngredientLine(cleaned)) continue;
   }
   return null;
 }
@@ -1107,10 +1107,19 @@ function extractDeterministicSteps(caption: string): string[] {
   }
   if (steps.length > 0) return steps;
 
-  return lines
+  const lineSteps = lines
     .map(stripListMarker)
-    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna)\b/i.test(line))
+    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna|taglia|frulla|tosta|unisci|condisci|manteca)\b/i.test(line))
     .map((line) => line.replace(/^(step\s*)?\d+[\).\:-]\s+/i, "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  if (lineSteps.length > 0) return lineSteps;
+
+  return caption
+    .split(/[.!?]+/)
+    .map((part) => stripListMarker(part))
+    .filter((part) => /^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna|taglia|frulla|tosta|unisci|condisci|manteca)\b/i.test(part))
+    .map((part) => part.trim())
     .filter(Boolean)
     .slice(0, 12);
 }

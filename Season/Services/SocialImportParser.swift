@@ -107,7 +107,7 @@ enum SocialImportParser {
                 basicIngredients: basicIngredients,
                 languageCode: languageCode
             )
-            steps = []
+            steps = suggestedInlineSteps(from: lines)
         }
 
         let confidence = classifyConfidence(
@@ -449,6 +449,39 @@ enum SocialImportParser {
         return sentenceSplit.count > 1 ? sentenceSplit : cleanedLines
     }
 
+    nonisolated private static func suggestedInlineSteps(from lines: [String]) -> [String] {
+        let text = lines
+            .joined(separator: " ")
+            .replacingOccurrences(of: #"https?://\S+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return [] }
+
+        let procedurePattern = #"(?i)\b(taglia|tagliate|frulla|frullate|cuoci|cuocete|tosta|tostate|aggiungi|aggiungete|unisci|unite|condisci|condite|manteca|mantecate|mescola|mescolate|versa|versate|servi|servite|salta|saltate|inforna|infornate|impasta|impastate|scola|scolate)\b"#
+        let sentenceSeparators = CharacterSet(charactersIn: ".!?")
+        let sentences = text
+            .components(separatedBy: sentenceSeparators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let proceduralSentences = sentences.compactMap { sentence -> String? in
+            guard sentence.range(of: procedurePattern, options: .regularExpression) != nil else {
+                return nil
+            }
+            if let colonRange = sentence.range(of: ":") {
+                let prefix = String(sentence[..<colonRange.lowerBound])
+                let remainder = String(sentence[colonRange.upperBound...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if lineContainsStrongIngredientSignal(remainder),
+                   prefix.range(of: procedurePattern, options: .regularExpression) == nil {
+                    return nil
+                }
+            }
+            return cleanedStructuredStepLine(sentence)
+        }
+
+        return Array(proceduralSentences.prefix(8))
+    }
+
     nonisolated private static func cleanedStructuredStepLine(_ raw: String) -> String {
         let noBullet = raw.replacingOccurrences(
             of: #"^\s*[-•\*]+\s*"#,
@@ -487,11 +520,16 @@ enum SocialImportParser {
                 basicIngredients: basicIngredients,
                 languageCode: languageCode
             ) else {
-                guard shouldPreserveCustomOnlyIngredient(line) else {
+                guard shouldPreserveCustomOnlyIngredient(line)
+                    || hasQuantityPattern(in: line)
+                    || hasBareCountPattern(in: line) else {
                     continue
                 }
                 let quantity = extractQuantity(from: line)
-                let normalizedName = normalizedIngredientText(line)
+                let parsed = parsedIngredientCandidateText(line)
+                let normalizedName = parsed.normalizedText.isEmpty
+                    ? normalizedIngredientText(line)
+                    : parsed.normalizedText
                 guard seen.insert("custom:\(normalizedName)").inserted else { continue }
                 result.append(
                     RecipeIngredient(
@@ -1002,6 +1040,10 @@ enum SocialImportParser {
             "cipolla",
             "cipolla rossa",
             "cipolla bianca",
+            "mais",
+            "banana",
+            "avena",
+            "lievito",
             "rosmarino",
             "peperoncino",
             "patate",
@@ -1039,7 +1081,8 @@ enum SocialImportParser {
             "olio", "aglio", "limone", "paprika", "sedano", "tonno", "latte", "cocco",
             "salmone", "orata", "pesce", "spada", "pollo", "melanzana", "melanzane",
             "pomodorino", "pomodorini", "spaghetti", "bucatini", "curry",
-            "ceci", "rosmarino", "peperoncino", "lenticchie"
+            "ceci", "rosmarino", "peperoncino", "lenticchie", "mais", "banana",
+            "avena", "lievito"
         ])
         return !tokens.isDisjoint(with: signals)
     }
@@ -1053,16 +1096,24 @@ enum SocialImportParser {
     ) -> [String] {
         let existingText = normalizedIngredientText(existingCandidates.joined(separator: " "))
         var seen = Set(existingCandidates.map(normalizedIngredientText))
-        return lines.compactMap { line in
-            guard let colonRange = line.range(of: ":") else { return nil }
+        return lines.flatMap { line -> [String] in
+            guard let colonRange = line.range(of: ":") else { return [] }
             let prefix = String(line[..<colonRange.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !prefix.isEmpty,
-                  prefix.split(whereSeparator: { $0.isWhitespace }).count <= 4 else {
-                return nil
+            let normalizedPrefix = normalizedIngredientText(prefix)
+                .replacingOccurrences(
+                    of: #"(?i)\b(?:per|x|dose\s+per)\s*\d+\s*(?:persone|persona|porzioni|porzione)?\b"#,
+                    with: " ",
+                    options: .regularExpression
+                )
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedPrefix.isEmpty,
+                  normalizedPrefix.split(whereSeparator: { $0.isWhitespace }).count <= 8 else {
+                return []
             }
 
-            let candidates = titleIngredientSurfaceCandidates(from: prefix)
+            let candidates = titleIngredientSurfaceCandidates(from: normalizedPrefix)
+            var recovered: [String] = []
             for candidate in candidates {
                 let normalized = normalizedIngredientText(candidate)
                 guard !normalized.isEmpty,
@@ -1080,10 +1131,10 @@ enum SocialImportParser {
                     languageCode: languageCode
                 ) != nil || shouldPreserveCustomOnlyIngredient(candidate) {
                     seen.insert(normalized)
-                    return candidate
+                    recovered.append(candidate)
                 }
             }
-            return nil
+            return recovered
         }
     }
 
@@ -1094,11 +1145,12 @@ enum SocialImportParser {
         if let protected = protectedPhrases.first(where: { normalized.contains($0) }) {
             return [protected]
         }
+        let embeddedIngredients = quantitylessHighSignalIngredientFragments(from: normalized)
         let droppedDescriptors = normalized
             .replacingOccurrences(of: #"(?i)\b(al|alla|allo|alle|ai|agli|con|in)\b.*$"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let firstToken = normalized.split(separator: " ").first.map(String.init) ?? normalized
-        return [droppedDescriptors, firstToken, normalized, prefix]
+        return (embeddedIngredients + [droppedDescriptors, firstToken, normalized, prefix])
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
     }
@@ -1427,6 +1479,9 @@ enum SocialImportParser {
         "mushroom": ["fungo", "funghi"],
         "potato": ["patata", "patate"],
         "zucchini": ["zucchina", "zucchine"],
+        "corn": ["mais", "mais dolce"],
+        "canned_corn": ["mais", "mais in scatola"],
+        "banana": ["banana"],
         "eggplant": ["melanzana", "melanzane"],
         "passata": ["passata di pomodoro"],
         "pecorino": ["pecorino romano"],

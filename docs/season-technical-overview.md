@@ -309,7 +309,7 @@ Stato TestFlight:
 - `CURRENT_PROJECT_VERSION = 4`.
 - `MARKETING_VERSION = 1.0.1`.
 - Release compila contro staging.
-- TestFlight candidate `1.0.1 (4)` e il candidato bugfix corrente da configurazione Release.
+- TestFlight candidate `1.0.1 (7)` e stato caricato come bugfix, ma non deve essere considerato validato per Smart Import: le caption creator hanno mostrato regressioni su titolo e quantita. Prima di una nuova build serve il gate in `docs/smart-import-creator-validation-pack.md`.
 - Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
 
 ## 13. Build e verifica
@@ -327,6 +327,7 @@ Nota:
 
 - `CODE_SIGNING_ALLOWED=NO` valida compilazione e bundle, non firma App Store/TestFlight.
 - Per TestFlight serve Archive firmato da Xcode o pipeline export/upload configurata; il candidato corrente e gia stato caricato e resta soggetto a processing/review su App Store Connect.
+- Per modifiche Smart Import, non caricare TestFlight solo dopo build verde. Devono passare audit reale locale, audit server-fallback e verifica manuale UI sulle regression caption `REG-20260516-*`.
 
 ## 14. Asset e design system
 

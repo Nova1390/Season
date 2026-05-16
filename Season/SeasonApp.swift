@@ -24,6 +24,7 @@ struct SeasonApp: App {
                     await runSmartImportBatchAuditIfRequested()
                     await CreateRecipeView.runSmartImportCaptionHarnessIfRequested()
                     await CreateRecipeView.runSmartImportRealFlowAuditIfRequested()
+                    await CreateRecipeView.runSmartImportServerFallbackAuditIfRequested()
                     await CreateRecipeView.runSmartImportSpecificityAuditIfRequested()
                     #endif
                 }
