@@ -1751,8 +1751,9 @@ struct CreateRecipeView: View {
         stepDrafts = mappedSteps.isEmpty ? [CreateStepDraft()] : mappedSteps
 
         if !suggestion.suggestedIngredients.isEmpty {
+            let sourceCaptionRaw = suggestion.sourceCaptionRaw ?? importCaptionRaw
             let mappedIngredientDrafts = suggestion.suggestedIngredients.map {
-                normalizedImportedIngredientDraft(from: $0)
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: sourceCaptionRaw)
             }
             ingredientDrafts = mappedIngredientDrafts
             for draft in mappedIngredientDrafts {
@@ -5258,6 +5259,10 @@ extension CreateRecipeView {
             caption: "Risotto ai funghi Ingredienti: riso 180g, funghi 250g, brodo vegetale, burro, parmigiano reggiano 30g"
         ),
         SmartImportRealFlowAuditSample(
+            id: "risotto_funghi_inline_servings_measured",
+            caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano"
+        ),
+        SmartImportRealFlowAuditSample(
             id: "noisy_zucchine",
             caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero"
         ),
@@ -5768,6 +5773,13 @@ extension CreateRecipeView {
             expect("brodo vegetale", needle: "brodo vegetale", target: "brodo vegetale", exact: "basic:broth"),
             expect("burro", needle: "burro", target: "burro", exact: "basic:butter"),
             expect("parmigiano reggiano 30g", needle: "parmigiano reggiano", target: "parmigiano reggiano", exact: "basic:parmesan", wrong: ["basic:pecorino"])
+        ]),
+        SmartImportSpecificitySample(id: "spec_034b_inline_servings_risotto", caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano", expected: [
+            expect("riso 180g", needle: "riso", target: "riso", exact: "basic:rice"),
+            expect("funghi 250g", needle: "funghi", target: "funghi", exact: "produce:mushroom", parents: ["produce:mushroom"], allowParent: true),
+            expect("brodo vegetale caldo 700ml", needle: "brodo vegetale", target: "brodo vegetale", exact: "basic:broth"),
+            expect("burro 20g", needle: "burro", target: "burro", exact: "basic:butter"),
+            expect("parmigiano 30g", needle: "parmigiano", target: "parmigiano", exact: "basic:parmesan", wrong: ["basic:pecorino"])
         ]),
         SmartImportSpecificitySample(id: "spec_035_quantityless_pasta_fredda", caption: "Pasta fredda: pasta 200g, pomodori 3, tonno sott'olio 120g, capperi, basilico. Raffredda e condisci.", expected: [
             expect("pasta 200g", needle: "pasta", target: "pasta", exact: "basic:pasta", parents: ["basic:pasta"], allowParent: true),

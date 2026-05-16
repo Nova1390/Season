@@ -222,14 +222,16 @@ enum SocialImportParser {
             if lower.hasPrefix("ingredients") || lower.hasPrefix("ingredienti") {
                 continue
             }
-            return cleaned
+            if let title = cleanedRecipeTitleCandidate(from: cleaned) {
+                return title
+            }
         }
         return nil
     }
 
     private static func suggestTitle(introLines: [String], fallbackLines: [String]) -> String {
         if let firstIntro = introLines.first(where: { !$0.isEmpty }) {
-            let firstSentence = firstIntro
+            let firstSentence = (cleanedRecipeTitleCandidate(from: firstIntro) ?? firstIntro)
                 .split(separator: ".", maxSplits: 1, omittingEmptySubsequences: true)
                 .first
                 .map(String.init)?
@@ -239,6 +241,41 @@ enum SocialImportParser {
             }
         }
         return suggestTitle(from: fallbackLines) ?? "Untitled recipe"
+    }
+
+    private static func cleanedRecipeTitleCandidate(from raw: String) -> String? {
+        var candidate = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidate.isEmpty else { return nil }
+
+        if let colonRange = candidate.range(of: ":") {
+            let prefix = String(candidate[..<colonRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let remainder = String(candidate[colonRange.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !prefix.isEmpty,
+               !remainder.isEmpty,
+               lineContainsStrongIngredientSignal(remainder) {
+                candidate = prefix
+            }
+        }
+
+        candidate = candidate.replacingOccurrences(
+            of: #"(?i)\s+(?:per|x|dose\s+per)\s*\d+\s*(?:persone|persona|porzioni|porzione)?\s*$"#,
+            with: "",
+            options: .regularExpression
+        )
+        candidate = candidate.replacingOccurrences(
+            of: #"[!?.,:\-–—…\s]+$"#,
+            with: "",
+            options: .regularExpression
+        )
+        candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard candidate.count >= 3 else { return nil }
+        let normalized = normalizedSectionHeader(candidate)
+        guard !normalized.hasPrefix("ingredienti"),
+              !normalized.hasPrefix("ingredients") else { return nil }
+        return candidate
     }
 
     private static func parseStructuredCaption(_ rawCaption: String) -> StructuredCaption? {
@@ -549,7 +586,9 @@ enum SocialImportParser {
     }
 
     nonisolated private static func ingredientCandidateFragments(from line: String) -> [String] {
-        let cleaned = cleanedCreatorCaptionNoise(from: cleanedIngredientCandidateLine(line))
+        let cleaned = ingredientListPrefixBeforeProcedure(
+            cleanedCreatorCaptionNoise(from: cleanedIngredientCandidateLine(line))
+        )
         guard !cleaned.isEmpty else { return [] }
         let separators = CharacterSet(charactersIn: ",/;+")
         // Keep measured mains separate from "con ..." garnish/sauce lists, e.g.
@@ -574,6 +613,38 @@ enum SocialImportParser {
                 || hasBareCountPattern(in: part)
         }
         return shortIngredientLikeParts || hasIngredientSignal ? parts : [cleaned]
+    }
+
+    nonisolated private static func ingredientListPrefixBeforeProcedure(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+
+        let sentenceParts = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: ".!?"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard sentenceParts.count > 1,
+              let first = sentenceParts.first,
+              measuredSignalCount(in: first) >= 2 else {
+            return trimmed
+        }
+
+        let laterLooksProcedural = sentenceParts.dropFirst().contains { part in
+            part.range(
+                of: #"(?i)^\s*(taglia|aggiungi|metti|unisci|rosola|cuoci|condisci|tosta|bagna|servi|mescola|manteca|sfuma)\b"#,
+                options: .regularExpression
+            ) != nil
+        }
+        return laterLooksProcedural ? first : trimmed
+    }
+
+    nonisolated private static func measuredSignalCount(in raw: String) -> Int {
+        let pattern = #"\b\d+(?:[.,/]\d+)?\s?(?:g|kg|ml|l|tbsp|tsp|cup|cups|oz|pcs|x|spicchio|spicchi|cucchiaio|cucchiai|cucchiaino|cucchiaini)?\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return 0
+        }
+        let range = NSRange(location: 0, length: raw.utf16.count)
+        return regex.numberOfMatches(in: raw, options: [], range: range)
     }
 
     nonisolated private static func splitMeasuredConTrailingIngredients(_ raw: String) -> [String] {

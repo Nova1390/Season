@@ -287,7 +287,7 @@ export function validateLLMRecipeImportOutput(payload: unknown): {
   return {
     ok: true,
     errors: [],
-    value: payload as LLMRecipeImportOutput,
+    value: payload as unknown as LLMRecipeImportOutput,
   };
 }
 
@@ -363,7 +363,7 @@ export function validateLLMIngredientResolutionOutput(payload: unknown): {
   return {
     ok: true,
     errors: [],
-    value: payload as LLMIngredientResolutionOutput,
+    value: payload as unknown as LLMIngredientResolutionOutput,
   };
 }
 

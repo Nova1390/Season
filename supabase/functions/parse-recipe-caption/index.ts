@@ -677,7 +677,7 @@ function buildSmartImportResult(input: {
   candidates: NormalizedIngredientCandidate[];
   llmResolvedByIndex: Map<number, LLMResolvedIngredient>;
 }): ParseRecipeCaptionResult {
-  const ingredients = input.candidates.map((candidate): ParsedIngredient => {
+  const mappedIngredients = input.candidates.map((candidate): ParsedIngredient => {
     const llmResolved = input.llmResolvedByIndex.get(candidate.index);
     if (llmResolved) {
       const recovered = recoverExplicitMeasuredIngredient({
@@ -685,8 +685,14 @@ function buildSmartImportResult(input: {
         quantity: llmResolved.quantity,
         unit: llmResolved.unit,
       });
+      const anchoredQuantity = normalizedPositiveNumber(candidate.possibleQuantity);
+      const anchoredUnit = normalizedAllowedUnit(candidate.possibleUnit);
       return {
-        ...recovered,
+        name: recovered.name,
+        // Quantity written by the creator in the original caption is more reliable than
+        // the resolver. The LLM may rename the ingredient, but it must not move doses.
+        quantity: anchoredQuantity ?? recovered.quantity,
+        unit: anchoredQuantity !== null ? (anchoredUnit ?? recovered.unit) : recovered.unit,
         status: llmResolved.status,
         confidence: clamp01(llmResolved.confidence),
         matchType: candidate.matchType,
@@ -705,6 +711,7 @@ function buildSmartImportResult(input: {
       matchedIngredientId: candidate.matchedIngredientId,
     };
   });
+  const ingredients = dedupedSmartImportIngredients(mappedIngredients);
 
   return {
     title: inferDeterministicTitle(input.caption) || inferTitleFromURL(input.url),
@@ -716,6 +723,36 @@ function buildSmartImportResult(input: {
     confidence: confidenceFromIngredients(ingredients),
     inferredDish: null,
   };
+}
+
+function dedupedSmartImportIngredients(ingredients: ParsedIngredient[]): ParsedIngredient[] {
+  const byKey = new Map<string, ParsedIngredient>();
+  for (const ingredient of ingredients) {
+    const normalizedName = normalizeText(ingredient.name);
+    const key = `${ingredient.matchedIngredientId ?? "unmatched"}|${normalizedName}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, ingredient);
+      continue;
+    }
+
+    const incomingScore = smartImportIngredientDedupeScore(ingredient);
+    const existingScore = smartImportIngredientDedupeScore(existing);
+    if (incomingScore > existingScore) {
+      byKey.set(key, ingredient);
+    }
+  }
+  return Array.from(byKey.values());
+}
+
+function smartImportIngredientDedupeScore(ingredient: ParsedIngredient): number {
+  let score = clamp01(ingredient.confidence ?? 0) * 10;
+  if (ingredient.quantity !== null && ingredient.quantity > 0) score += 100;
+  if (ingredient.unit !== null) score += 20;
+  if (ingredient.status === "resolved") score += 10;
+  if (ingredient.status === "inferred") score += 5;
+  score += Math.min(ingredient.name.length, 40) / 100;
+  return score;
 }
 
 function llmResolutionMap(items: LLMResolvedIngredient[]): Map<number, LLMResolvedIngredient> {
@@ -1006,9 +1043,31 @@ function inferDeterministicTitle(caption: string): string | null {
     if (isSectionHeader(lower)) continue;
     if (lower.startsWith("#") || lower.startsWith("http")) continue;
     if (looksLikeIngredientLine(cleaned)) continue;
-    return cleaned.replace(/[!?.,:\-–—…\s]+$/g, "").trim() || null;
+    const title = cleanedRecipeTitleCandidate(cleaned);
+    if (title) return title;
   }
   return null;
+}
+
+function cleanedRecipeTitleCandidate(raw: string): string | null {
+  let candidate = raw.trim();
+  const colonIndex = candidate.indexOf(":");
+  if (colonIndex > 0) {
+    const prefix = candidate.slice(0, colonIndex).trim();
+    const remainder = candidate.slice(colonIndex + 1).trim();
+    if (prefix && remainder && looksLikeIngredientLine(remainder)) {
+      candidate = prefix;
+    }
+  }
+
+  candidate = candidate
+    .replace(/\s+(?:per|x|dose\s+per)\s*\d+\s*(?:persone|persona|porzioni|porzione)?\s*$/i, "")
+    .replace(/[!?.,:\-–—…\s]+$/g, "")
+    .trim();
+
+  if (!candidate || candidate.length < 3) return null;
+  if (isSectionHeader(candidate.toLowerCase())) return null;
+  return candidate;
 }
 
 function inferTitleFromURL(url: string): string | null {
