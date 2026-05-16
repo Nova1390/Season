@@ -49,7 +49,7 @@ These cases reproduce the user-facing failures found on TestFlight build `1.0.1 
 | ID | Caption | Must pass |
 |---|---|---|
 | REG-20260516-001 | `Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano` | Title `Risotto ai funghi`; 5 unique ingredients; all explicit quantities preserved; at least 1 step. |
-| REG-20260516-002 | `Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.` | Title `Insalata di pollo`; 7 unique ingredients; no missing quantities for measured ingredients; at least 1 step. |
+| REG-20260516-002 | `Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.` | Title `Insalata di pollo`; 7 unique ingredients; no missing quantities for measured ingredients; `limone mezzo` preserved as 0.5 piece; at least 1 step. |
 | REG-20260516-003 | `Pancake banana e avena x2: banana 1, uova 2, fiocchi d'avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.` | Title `Pancake banana e avena`; banana 1, eggs 2, oats 80g, milk 100ml, leavening 1 tsp; at least 1 step. |
 
 Automated checks:
@@ -73,6 +73,28 @@ May 16 simulator notes:
 - The title parser is tolerant of inline servings followed by ingredient lists even when the simulator keyboard injects a malformed separator, e.g. `x2ç` or `per 2ç`. This protects the same creator-caption shape as the real `:` input.
 - Manual UI verification passed for `REG-20260516-002` and `REG-20260516-003` after the scroll/title robustness fix: clean title, correct servings, no duplicate ingredients, explicit quantities preserved, and at least one step.
 - `lievito` in the pancake case may still require catalog confirmation until the catalog agent resolves the governed canonical mapping; this is not a Smart Import quantity/title regression.
+
+May 16 intensive simulator pass:
+- Branch under test: `hotfix/smart-import-user-flow-build-8`.
+- Simulator: iPhone 17 Pro, Debug build, local Swift Smart Import flow.
+- Automated stress file: `/private/tmp/season_smart_import_stress_100.json`.
+- Result: 100 captions tested, 72 pass, 28 partial, 0 fail.
+- Regression metrics: 0 title failures, 0 title suspects, 0 missing expected ingredients, 0 invented quantities, duplicate rate effectively 0 on the expected core ingredients.
+- The 28 partial rows are catalog coverage/specificity gaps, not parser regressions: examples include `lievito`, `fragole`, `pinoli`, `carne macinata`, `panna fresca`.
+- Remaining specificity warnings include parent matches such as `farina 00 -> flour` and `cipolla rossa -> onion`; the visible creator text is preserved, but catalog identity can be improved by Catalog Agent.
+- Manual UI verification passed for `REG-20260516-002`, `REG-20260516-003`, and a keyboard-injection pasta case: `Pasta tonno e limone per 2ç pasta 180g, tonno sottàolio 120g...`.
+- The keyboard-injection pasta case must produce title `Pasta tonno e limone`, 6 ingredients, preserved quantities for pasta and tuna, q.b. ingredients without fake numeric doses, and at least one step.
+- During the pass, the remote import quota returned `Limite giornaliero import raggiunto`; this must not block the local parser from producing a usable draft.
+
+May 16 release-candidate `1.0.1 (8)` gate notes:
+- Release/staging simulator login and session persistence passed after restoring authenticated `profiles` grants and app-side Supabase auth storage.
+- Manual UI verification passed for risotto, insalata, pancake, and pasta captions on the Release simulator. `REG-20260516-002` specifically preserves `Limone` as `0.5 pezzo`.
+- Supabase staging preflight passed: migration history is up to date and schema lint reports no errors.
+- Release iPhoneOS build with `CODE_SIGNING_ALLOWED=NO` passed before upload/archive preparation.
+
+Hard release rule after this pass:
+- Do not upload another TestFlight build for Smart Import unless the 100-caption stress harness, the real-flow audit, and at least the three manual UI regression cases above have been re-run on the exact candidate branch.
+- Treat a green build as compile evidence only. Smart Import requires user-flow evidence before distribution.
 
 ## Realistic Creator Captions With CTA, Noise, Emojis
 

@@ -21,6 +21,30 @@ struct SupabaseConfiguration {
     let anonKey: String
 }
 
+private struct SeasonSupabaseAuthStorage: AuthLocalStorage {
+    private let prefix: String
+
+    init(projectHost: String) {
+        self.prefix = "season.supabase.auth.\(projectHost)."
+    }
+
+    func store(key: String, value: Data) throws {
+        UserDefaults.standard.set(value, forKey: prefixedKey(key))
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        UserDefaults.standard.data(forKey: prefixedKey(key))
+    }
+
+    func remove(key: String) throws {
+        UserDefaults.standard.removeObject(forKey: prefixedKey(key))
+    }
+
+    private func prefixedKey(_ key: String) -> String {
+        prefix + key
+    }
+}
+
 enum SupabaseServiceError: LocalizedError {
     case missingConfiguration(String)
     case invalidURL
@@ -1223,9 +1247,18 @@ final class SupabaseService {
             let configuration = try SupabaseService.loadConfiguration(from: bundle)
             self.configuration = configuration
             self.configurationIssue = nil
+            let projectHost = configuration.url.host ?? "default"
+            let options = SupabaseClientOptions(
+                auth: .init(
+                    storage: SeasonSupabaseAuthStorage(projectHost: projectHost),
+                    storageKey: "season-\(projectHost)-auth-token",
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
             self.client = SupabaseClient(
                 supabaseURL: configuration.url,
-                supabaseKey: configuration.anonKey
+                supabaseKey: configuration.anonKey,
+                options: options
             )
         } catch {
             self.configuration = nil

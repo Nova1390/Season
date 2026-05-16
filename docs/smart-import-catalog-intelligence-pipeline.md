@@ -102,11 +102,16 @@ Does:
 - For inline captions such as `Recipe per 2: ingredient 100g, ingredient 200ml. Cook...`, treats text before `:` as the title, keeps only the ingredient-list sentence for candidates, and stops before procedural verbs.
 - For social captions such as `Recipe title Ingredienti: ingredient 100g...`, strips the `Ingredienti:` marker from the title while preserving the measured ingredient block.
 - Avoids recovering standalone sub-ingredients from measured preparation-state phrases, for example it must not create a separate oil ingredient from `tonno sott'olio 120g`.
+- Normalizes simulator/user-input separator noise before parsing, for example `per 2ç` as `per 2:` and intra-word `sottàolio` as `sott'olio`, while keeping the displayed creator draft human-readable.
+- Splits dense one-line captions into ingredient-like fragments instead of falling back to one large block when there are many comma-separated terms.
+- Keeps q.b. tokens sentence-safe so `prezzemolo q.b., olio...` does not prematurely end extraction or contaminate the next ingredient with procedure text.
+- Preserves natural half quantities such as `limone mezzo`, `mezza cipolla`, and `half lemon` as `0.5 piece` when the matched catalog item is not a countable ingredient where the half token would be misleading.
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
 - Applies a server quality gate before accepting `parse-recipe-caption` fallback output. The gate compares local and server drafts for lost candidates, quantity/unit drift, duplicate ingredient keys, draft count, and usable title.
 - Preserves local ingredients/title when the server fallback degrades the local result, while still allowing useful server steps to enrich the final draft.
+- Test harnesses must assert title quality, missing expected ingredients, duplicate keys, invented quantities, and quantity/unit drift. A single risotto smoke test is not enough for release confidence.
 - Emits unresolved custom ingredient observations after publish/save when final ingredients remain custom.
 
 Must not:

@@ -81,8 +81,9 @@ enum SocialImportParser {
     ) -> SocialImportSuggestion {
         let normalizedURL = normalizeURL(sourceURLRaw)
         let platform = detectPlatform(from: normalizedURL)
+        let parserCaptionRaw = normalizedKeyboardInjectedCaption(captionRaw)
 
-        let structuredCaption = parseStructuredCaption(captionRaw)
+        let structuredCaption = parseStructuredCaption(parserCaptionRaw)
         let title: String?
         let ingredients: [RecipeIngredient]
         let steps: [String]
@@ -95,7 +96,7 @@ enum SocialImportParser {
             ingredients = suggestedStructuredIngredients(from: structuredCaption.ingredientLines)
             steps = suggestedStructuredSteps(from: structuredCaption.stepLines)
         } else {
-            let lines = captionRaw
+            let lines = parserCaptionRaw
                 .components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
@@ -134,14 +135,15 @@ enum SocialImportParser {
         basicIngredients: [BasicIngredient] = [],
         languageCode: String
     ) -> [SmartImportIngredientCandidate] {
+        let parserCaptionRaw = normalizedKeyboardInjectedCaption(captionRaw)
         let lines: [String]
-        if let structuredCaption = parseStructuredCaption(captionRaw),
+        if let structuredCaption = parseStructuredCaption(parserCaptionRaw),
            !structuredCaption.ingredientLines.isEmpty {
             lines = structuredCaption.ingredientLines
                 .flatMap(ingredientCandidateFragmentsIncludingRecoveredQuantityless)
                 .filter { !isLikelyNoiseIngredientLine($0) }
         } else {
-            let allLines = captionRaw
+            let allLines = parserCaptionRaw
                 .components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
@@ -149,7 +151,7 @@ enum SocialImportParser {
         }
 
         let titleLines = titleIngredientCandidates(
-            from: captionRaw.components(separatedBy: .newlines),
+            from: parserCaptionRaw.components(separatedBy: .newlines),
             existingCandidates: lines,
             produceItems: produceItems,
             basicIngredients: basicIngredients,
@@ -201,6 +203,16 @@ enum SocialImportParser {
         return trimmed
     }
 
+    nonisolated private static func normalizedKeyboardInjectedCaption(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(of: "ç", with: ":")
+            .replacingOccurrences(
+                of: #"([A-Za-zÀ-ÖØ-öø-ÿ])à([A-Za-zÀ-ÖØ-öø-ÿ])"#,
+                with: #"$1'$2"#,
+                options: .regularExpression
+            )
+    }
+
     private static func detectPlatform(from url: String?) -> SocialSourcePlatform? {
         guard let url else { return nil }
         let lower = url.lowercased()
@@ -246,6 +258,7 @@ enum SocialImportParser {
     private static func cleanedRecipeTitleCandidate(from raw: String) -> String? {
         var candidate = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else { return nil }
+        var extractedFromTitleAndIngredientsShape = false
 
         if let ingredientMarkerRange = candidate.range(
             of: #"(?i)\b(?:ingredienti|ingredients)\s*:"#,
@@ -267,6 +280,7 @@ enum SocialImportParser {
                !remainder.isEmpty,
                lineContainsStrongIngredientSignal(remainder) {
                 candidate = prefix
+                extractedFromTitleAndIngredientsShape = true
             }
         }
 
@@ -282,6 +296,7 @@ enum SocialImportParser {
                !remainder.isEmpty,
                lineContainsStrongIngredientSignal(remainder) {
                 candidate = prefix
+                extractedFromTitleAndIngredientsShape = true
             }
         }
 
@@ -298,10 +313,27 @@ enum SocialImportParser {
         candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard candidate.count >= 3 else { return nil }
+        if !extractedFromTitleAndIngredientsShape,
+           isLikelyIngredientOnlyTitleCandidate(candidate) {
+            return nil
+        }
         let normalized = normalizedSectionHeader(candidate)
         guard !normalized.hasPrefix("ingredienti"),
               !normalized.hasPrefix("ingredients") else { return nil }
         return candidate
+    }
+
+    nonisolated private static func isLikelyIngredientOnlyTitleCandidate(_ raw: String) -> Bool {
+        let normalized = normalizedIngredientText(raw)
+        guard !normalized.isEmpty else { return false }
+        if raw.range(
+            of: #"(?i)^\s*(?:\d+(?:[.,]\d+)?\s*)?[a-zÀ-ÖØ-öø-ÿ][a-zÀ-ÖØ-öø-ÿ\s']*\s+\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi)?\b"#,
+            options: .regularExpression
+        ) != nil {
+            return true
+        }
+        let separatorCount = raw.filter { ",/;".contains($0) }.count
+        return separatorCount >= 2 && lineContainsStrongIngredientSignal(raw)
     }
 
     private static func parseStructuredCaption(_ rawCaption: String) -> StructuredCaption? {
@@ -360,15 +392,15 @@ enum SocialImportParser {
         }
 
         // Defensive fallback for simulator/keyboard injection quirks where ":" can arrive as
-        // "ç" after the servings token. Real user keyboards still send ":", but keeping this
+        // "ç". Real user keyboards still send ":", but keeping this
         // tolerant prevents title extraction from collapsing into the whole caption.
-        return raw.range(of: #"(?<=\d)ç\s*"#, options: .regularExpression)
+        return raw.range(of: #"ç\s*"#, options: .regularExpression)
     }
 
     private static func detectedSectionHeader(from line: String) -> (section: StructuredCaption.Section, remainder: String?)? {
-        if let colonRange = line.range(of: ":") {
-            let marker = String(line[..<colonRange.lowerBound])
-            let remainder = String(line[colonRange.upperBound...])
+        if let separatorRange = ingredientTitleSeparatorRange(in: line) {
+            let marker = String(line[..<separatorRange.lowerBound])
+            let remainder = String(line[separatorRange.upperBound...])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedMarker = normalizedSectionHeader(marker)
             if normalizedMarker == "ingredienti" || normalizedMarker == "ingredients" {
@@ -428,7 +460,7 @@ enum SocialImportParser {
         let fragments = ingredientCandidateFragments(from: line).flatMap { fragment -> [String] in
             if hasQuantityPattern(in: fragment)
                 || hasQuantoBastaPattern(in: fragment)
-                || (hasBareCountPattern(in: fragment) && hasFoodSignal(in: normalizedIngredientText(fragment)))
+                || shouldAcceptBareCountIngredientFragment(fragment, nearIngredientBlock: true)
                 || hasQuantitylessHighSignalIngredient(in: fragment) {
                 return [fragment]
             }
@@ -539,7 +571,7 @@ enum SocialImportParser {
         var seen = Set<String>()
         var result: [RecipeIngredient] = []
 
-        for line in candidates {
+        func appendIngredientCandidate(_ line: String) {
             guard let match = detectIngredientMatch(
                 in: line,
                 produceItems: produceItems,
@@ -549,14 +581,14 @@ enum SocialImportParser {
                 guard shouldPreserveCustomOnlyIngredient(line)
                     || hasQuantityPattern(in: line)
                     || hasBareCountPattern(in: line) else {
-                    continue
+                    return
                 }
                 let quantity = extractQuantity(from: line)
                 let parsed = parsedIngredientCandidateText(line)
                 let normalizedName = parsed.normalizedText.isEmpty
                     ? normalizedIngredientText(line)
                     : parsed.normalizedText
-                guard seen.insert("custom:\(normalizedName)").inserted else { continue }
+                guard seen.insert("custom:\(normalizedName)").inserted else { return }
                 result.append(
                     RecipeIngredient(
                         produceID: nil,
@@ -569,13 +601,13 @@ enum SocialImportParser {
                         mappingConfidence: .unmapped
                     )
                 )
-                continue
+                return
             }
             let quantity = extractQuantity(from: line)
 
             switch match {
             case .produce(let produce):
-                guard seen.insert("produce:\(produce.id)").inserted else { continue }
+                guard seen.insert("produce:\(produce.id)").inserted else { return }
                 result.append(
                     RecipeIngredient(
                         produceID: produce.id,
@@ -588,7 +620,7 @@ enum SocialImportParser {
                     )
                 )
             case .basic(let basic):
-                guard seen.insert("basic:\(basic.id)").inserted else { continue }
+                guard seen.insert("basic:\(basic.id)").inserted else { return }
                 result.append(
                     RecipeIngredient(
                         produceID: nil,
@@ -601,6 +633,22 @@ enum SocialImportParser {
                     )
                 )
             }
+        }
+
+        for line in candidates {
+            appendIngredientCandidate(line)
+        }
+
+        // Dense creator captions can hide final garnish/pantry terms after measured items
+        // (e.g. "olio evo q.b., basilico"). This recovery pass is conservative because the
+        // same dedupe keys are used and only catalog-matched or explicitly measured terms survive.
+        let recoveryCandidates = lines
+            .flatMap(ingredientCandidateFragmentsIncludingRecoveredQuantityless)
+            + lines.flatMap(trailingIngredientLikeFragments)
+            .map(cleanedStructuredIngredientLine)
+            .filter { !$0.isEmpty && !isLikelyNoiseIngredientLine($0) }
+        for line in recoveryCandidates {
+            appendIngredientCandidate(line)
         }
 
         return result
@@ -629,8 +677,7 @@ enum SocialImportParser {
                 if hasQuantityPattern(in: fragment) {
                     return true
                 }
-                if hasBareCountPattern(in: fragment),
-                   hasFoodSignal(in: normalizedIngredientText(fragment)) {
+                if shouldAcceptBareCountIngredientFragment(fragment, nearIngredientBlock: nearIngredientBlock) {
                     return true
                 }
                 return nearIngredientBlock && hasQuantitylessHighSignalIngredient(in: fragment)
@@ -650,7 +697,7 @@ enum SocialImportParser {
     }
 
     nonisolated private static func hasQuantityPattern(in line: String) -> Bool {
-        let pattern = #"\b\d+(?:[.,/]\d+)?\s?(?:g|kg|ml|l|tbsp|tsp|cup|cups|oz|pcs|x|spicchio|spicchi|cucchiaio|cucchiai|cucchiaino|cucchiaini)\b"#
+        let pattern = #"\b\d+(?:[.,/]\d+)?\s?(?:g|kg|ml|l|tbsp|tsp|cup|cups|oz|pcs|x|spicchio|spicchi|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|fetta|fette|slice|slices)\b"#
         return line.range(of: pattern, options: .regularExpression) != nil
     }
 
@@ -662,7 +709,28 @@ enum SocialImportParser {
     }
 
     nonisolated private static func hasQuantoBastaPattern(in line: String) -> Bool {
-        line.range(of: #"(?i)\bq\s*\.?\s*b\s*\.?\b|\bqb\b|\bquanto basta\b"#, options: .regularExpression) != nil
+        line.range(of: quantoBastaTokenPattern, options: .regularExpression) != nil
+    }
+
+    nonisolated private static func shouldAcceptBareCountIngredientFragment(
+        _ fragment: String,
+        nearIngredientBlock: Bool
+    ) -> Bool {
+        guard hasBareCountPattern(in: fragment),
+              !isLikelyDurationOrInstructionCount(fragment) else {
+            return false
+        }
+        if hasFoodSignal(in: normalizedIngredientText(fragment)) {
+            return true
+        }
+        return nearIngredientBlock
+    }
+
+    nonisolated private static func isLikelyDurationOrInstructionCount(_ raw: String) -> Bool {
+        raw.range(
+            of: #"(?i)\b(?:min|mins|minuti|minuto|ore|ora|secondi|secondo|lato|lati|gradi|°c)\b"#,
+            options: .regularExpression
+        ) != nil
     }
 
     nonisolated private static func ingredientCandidateFragments(from line: String) -> [String] {
@@ -683,7 +751,13 @@ enum SocialImportParser {
             .map(cleanedCreatorIngredientFragment)
             .filter { !$0.isEmpty }
 
-        guard parts.count > 1, parts.count <= 8 else { return [cleaned] }
+        guard parts.count > 1 else { return [cleaned] }
+
+        if parts.count > 8 {
+            let plausibleParts = parts.filter(isCreatorIngredientLikeFragment)
+            return plausibleParts.count > 1 ? Array(plausibleParts.prefix(12)) : [cleaned]
+        }
+
         let shortIngredientLikeParts = parts.allSatisfy { part in
             part.split(whereSeparator: { $0.isWhitespace }).count <= 5
         }
@@ -699,7 +773,8 @@ enum SocialImportParser {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return trimmed }
 
-        let sentenceParts = trimmed
+        let sentenceSafe = sentenceSplitSafeIngredientText(trimmed)
+        let sentenceParts = sentenceSafe
             .components(separatedBy: CharacterSet(charactersIn: ".!?"))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
@@ -719,7 +794,7 @@ enum SocialImportParser {
     }
 
     nonisolated private static func measuredSignalCount(in raw: String) -> Int {
-        let pattern = #"\b\d+(?:[.,/]\d+)?\s?(?:g|kg|ml|l|tbsp|tsp|cup|cups|oz|pcs|x|spicchio|spicchi|cucchiaio|cucchiai|cucchiaino|cucchiaini)?\b"#
+        let pattern = #"\b\d+(?:[.,/]\d+)?\s?(?:g|kg|ml|l|tbsp|tsp|cup|cups|oz|pcs|x|spicchio|spicchi|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|fetta|fette|slice|slices)?\b"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return 0
         }
@@ -733,7 +808,7 @@ enum SocialImportParser {
             return [trimmed]
         }
 
-        let pattern = #"(?i)^(.+?\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi)?)(?:\s+con\s+)(.+)$"#
+        let pattern = #"(?i)^(.+?\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi|fetta|fette|slice|slices)?)(?:\s+con\s+)(.+)$"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return [trimmed]
         }
@@ -759,13 +834,35 @@ enum SocialImportParser {
         return trailingLooksIngredientLike ? [left, trailing] : [trimmed]
     }
 
+    nonisolated private static func trailingIngredientLikeFragments(from line: String) -> [String] {
+        let cleaned = ingredientListPrefixBeforeProcedure(
+            cleanedCreatorCaptionNoise(from: cleanedIngredientCandidateLine(line))
+        )
+        guard !cleaned.isEmpty else { return [] }
+        let separators = CharacterSet(charactersIn: ",/;+")
+        let segments = cleaned
+            .components(separatedBy: separators)
+            .map(cleanedCreatorIngredientFragment)
+            .flatMap(sentenceBoundedIngredientFragments)
+            .map(cleanedCreatorIngredientFragment)
+            .filter { !$0.isEmpty }
+        guard segments.count > 1 else { return [] }
+        return segments.suffix(3).flatMap { segment -> [String] in
+            if isCreatorIngredientLikeFragment(segment) {
+                return [segment]
+            }
+            let recovered = quantitylessHighSignalIngredientFragments(from: segment)
+            return recovered.isEmpty ? [] : recovered
+        }
+    }
+
     nonisolated private static func splitMeasuredConjunctionFragment(_ raw: String) -> [String] {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.range(of: #"(?i)\s+e\s+"#, options: .regularExpression) != nil else {
             return [trimmed]
         }
 
-        let quantityPattern = #"(?i)\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi)?\b"#
+        let quantityPattern = #"(?i)\b\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi|fetta|fette|slice|slices)?\b"#
         guard let regex = try? NSRegularExpression(pattern: quantityPattern, options: [.caseInsensitive]) else {
             return [trimmed]
         }
@@ -829,6 +926,7 @@ enum SocialImportParser {
         var trimmed = strippedLeadingProcedureVerbIfIngredientLike(raw)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         trimmed = strippedLeadingCreatorFillerIfIngredientLike(trimmed)
+        trimmed = strippedTrailingProcedureIfIngredientLike(trimmed)
         trimmed = trailingMeasuredIngredientFromNoisyTitle(trimmed)
         return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -843,7 +941,7 @@ enum SocialImportParser {
         let normalized = normalizedIngredientText(trimmed)
         return hasQuantityPattern(in: trimmed)
             || hasQuantoBastaPattern(in: trimmed)
-            || (hasBareCountPattern(in: trimmed) && hasFoodSignal(in: normalized))
+            || shouldAcceptBareCountIngredientFragment(trimmed, nearIngredientBlock: true)
             || hasFoodSignal(in: normalized)
             || hasQuantitylessHighSignalIngredient(in: trimmed)
     }
@@ -917,7 +1015,7 @@ enum SocialImportParser {
         let normalizedRemainder = normalizedIngredientText(remainder)
         let ingredientLike = hasQuantityPattern(in: remainder)
             || hasQuantoBastaPattern(in: remainder)
-            || (hasBareCountPattern(in: remainder) && hasFoodSignal(in: normalizedRemainder))
+            || shouldAcceptBareCountIngredientFragment(remainder, nearIngredientBlock: true)
             || hasFoodSignal(in: normalizedRemainder)
             || !quantitylessHighSignalIngredientFragments(from: remainder).isEmpty
         return ingredientLike ? remainder : trimmed
@@ -940,10 +1038,36 @@ enum SocialImportParser {
         let normalized = normalizedIngredientText(remainder)
         let ingredientLike = hasQuantityPattern(in: remainder)
             || hasQuantoBastaPattern(in: remainder)
-            || (hasBareCountPattern(in: remainder) && hasFoodSignal(in: normalized))
+            || shouldAcceptBareCountIngredientFragment(remainder, nearIngredientBlock: true)
             || hasFoodSignal(in: normalized)
             || hasQuantitylessHighSignalIngredient(in: remainder)
         return ingredientLike ? remainder : trimmed
+    }
+
+    nonisolated private static func strippedTrailingProcedureIfIngredientLike(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        let sentenceSafe = sentenceSplitSafeIngredientText(trimmed)
+        let pattern = #"(?i)^(.+?)\s+\b(taglia|tagliate|frulla|frullate|cuoci|cuocete|tosta|tostate|aggiungi|aggiungete|unisci|unite|condisci|condite|manteca|mantecate|mescola|mescolate|versa|versate|servi|servite|salta|saltate|inforna|infornate|impasta|impastate|scola|scolate|rosola|rosolate|completa|completate)\b.*$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return trimmed
+        }
+        let range = NSRange(location: 0, length: sentenceSafe.utf16.count)
+        guard let match = regex.firstMatch(in: sentenceSafe, options: [], range: range),
+              match.numberOfRanges == 3,
+              let prefixRange = Range(match.range(at: 1), in: sentenceSafe) else {
+            return trimmed
+        }
+        let prefix = String(sentenceSafe[prefixRange])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prefix.isEmpty else { return trimmed }
+        let normalized = normalizedIngredientText(prefix)
+        let ingredientLike = hasQuantityPattern(in: prefix)
+            || hasQuantoBastaPattern(in: prefix)
+            || shouldAcceptBareCountIngredientFragment(prefix, nearIngredientBlock: true)
+            || hasFoodSignal(in: normalized)
+            || hasQuantitylessHighSignalIngredient(in: prefix)
+        return ingredientLike ? prefix : trimmed
     }
 
     nonisolated private static func trailingMeasuredIngredientFromNoisyTitle(_ raw: String) -> String {
@@ -953,7 +1077,7 @@ enum SocialImportParser {
             return trimmed
         }
 
-        let trailingIngredientPattern = #"(?i)\b((?:pesce\s+spada|latte\s+di\s+cocco|farina\s+00|cipolla\s+(?:rossa|dorata|bianca)|spaghetti|bucatini|pomodorini|pomodori|pomodoro|orata|salmone|pollo|riso|ceci|patate|zucchine|melanzane|aglio|pasta|curry)\s+\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|spicchio|spicchi|pezzo|pezzi|piece|pieces)?)\s*$"#
+        let trailingIngredientPattern = #"(?i)\b((?:pesce\s+spada|latte\s+di\s+cocco|farina\s+00|cipolla\s+(?:rossa|dorata|bianca)|spaghetti|bucatini|pomodorini|pomodori|pomodoro|orata|salmone|pollo|riso|ceci|patate|zucchine|peperoni|peperone|melanzane|aglio|pasta|curry)\s+\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|spicchio|spicchi|pezzo|pezzi|piece|pieces)?)\s*$"#
         guard let range = trimmed.range(of: trailingIngredientPattern, options: .regularExpression) else {
             return trimmed
         }
@@ -964,7 +1088,7 @@ enum SocialImportParser {
         ingredientCandidateFragmentsWithoutTitleStripping(from: line).contains { fragment in
             hasQuantityPattern(in: fragment)
                 || hasQuantoBastaPattern(in: fragment)
-                || (hasBareCountPattern(in: fragment) && hasFoodSignal(in: normalizedIngredientText(fragment)))
+                || shouldAcceptBareCountIngredientFragment(fragment, nearIngredientBlock: true)
                 || !quantitylessHighSignalIngredientFragments(from: fragment).isEmpty
         }
     }
@@ -989,7 +1113,8 @@ enum SocialImportParser {
     nonisolated private static func sentenceBoundedIngredientFragments(from raw: String) -> [String] {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        let sentenceParts = trimmed
+        let sentenceSafe = sentenceSplitSafeIngredientText(trimmed)
+        let sentenceParts = sentenceSafe
             .components(separatedBy: CharacterSet(charactersIn: ".!?"))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
@@ -999,11 +1124,21 @@ enum SocialImportParser {
         let ingredientLike = sentenceParts.filter { part in
             hasQuantityPattern(in: part)
                 || hasQuantoBastaPattern(in: part)
-                || (hasBareCountPattern(in: part) && hasFoodSignal(in: normalizedIngredientText(part)))
+                || shouldAcceptBareCountIngredientFragment(part, nearIngredientBlock: true)
                 || hasQuantitylessHighSignalIngredient(in: part)
         }
         return ingredientLike.isEmpty ? [trimmed] : ingredientLike
     }
+
+    nonisolated private static func sentenceSplitSafeIngredientText(_ raw: String) -> String {
+        raw.replacingOccurrences(
+            of: quantoBastaTokenPattern,
+            with: "qb",
+            options: .regularExpression
+        )
+    }
+
+    nonisolated private static let quantoBastaTokenPattern = #"(?i)(?:\bq\s*\.?\s*b\s*\.?(?=$|[^a-z0-9À-ÖØ-öø-ÿ])|\bqb\b|\bquanto\s+basta\b)"#
 
     nonisolated private static func quantitylessHighSignalIngredientFragments(from line: String) -> [String] {
         let normalized = normalizedIngredientText(line)
@@ -1063,13 +1198,19 @@ enum SocialImportParser {
             "bucatini",
             "riso",
             "ceci",
+            "pane",
+            "miele",
             "cipolla",
             "cipolla rossa",
             "cipolla bianca",
             "mais",
             "banana",
+            "mela",
+            "mele",
             "avena",
             "lievito",
+            "peperone",
+            "peperoni",
             "rosmarino",
             "peperoncino",
             "patate",
@@ -1108,7 +1249,7 @@ enum SocialImportParser {
             "salmone", "orata", "pesce", "spada", "pollo", "melanzana", "melanzane",
             "pomodorino", "pomodorini", "spaghetti", "bucatini", "curry",
             "ceci", "rosmarino", "peperoncino", "lenticchie", "mais", "banana",
-            "avena", "lievito"
+            "mela", "mele", "avena", "lievito", "peperone", "peperoni", "pane", "miele"
         ])
         return !tokens.isDisjoint(with: signals)
     }
@@ -1123,8 +1264,8 @@ enum SocialImportParser {
         let existingText = normalizedIngredientText(existingCandidates.joined(separator: " "))
         var seen = Set(existingCandidates.map(normalizedIngredientText))
         return lines.flatMap { line -> [String] in
-            guard let colonRange = line.range(of: ":") else { return [] }
-            let prefix = String(line[..<colonRange.lowerBound])
+            guard let separatorRange = ingredientTitleSeparatorRange(in: line) else { return [] }
+            let prefix = String(line[..<separatorRange.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedPrefix = normalizedIngredientText(prefix)
                 .replacingOccurrences(
@@ -1206,6 +1347,10 @@ enum SocialImportParser {
            let chicken = basicIngredients.first(where: { $0.id == "chicken" }) {
             return .basic(chicken)
         }
+        if protectedText(normalizedText, matches: ["peperone", "peperoni", "bell pepper", "bell peppers"]),
+           let bellPepper = produceItems.first(where: { $0.id == "bell_pepper" }) {
+            return .produce(bellPepper)
+        }
         if protectedText(normalizedText, matches: ["latte di cocco", "coconut milk"]),
            let coconutMilk = basicIngredients.first(where: { $0.id == "coconut_milk" }) {
             return .basic(coconutMilk)
@@ -1246,6 +1391,10 @@ enum SocialImportParser {
         if protectedText(normalizedText, matches: ["pollo", "chicken", "petto di pollo"]),
            basicIngredients.contains(where: { $0.id == "chicken" }) {
             return SmartImportCatalogMatch(matchType: .exact, matchedIngredientId: "basic:chicken", confidence: 0.99)
+        }
+        if protectedText(normalizedText, matches: ["peperone", "peperoni", "bell pepper", "bell peppers"]),
+           produceItems.contains(where: { $0.id == "bell_pepper" }) {
+            return SmartImportCatalogMatch(matchType: .exact, matchedIngredientId: "produce:bell_pepper", confidence: 0.99)
         }
         if protectedText(normalizedText, matches: ["latte di cocco", "coconut milk"]),
            basicIngredients.contains(where: { $0.id == "coconut_milk" }) {
@@ -1483,6 +1632,8 @@ enum SocialImportParser {
         "cipolle": ["cipolla", "cipolle"],
         "fungo": ["fungo", "funghi"],
         "funghi": ["fungo", "funghi"],
+        "mela": ["mela", "mele"],
+        "mele": ["mela", "mele"],
         "pomodoro": ["pomodoro", "pomodori"],
         "pomodori": ["pomodoro", "pomodori"],
         "pomodorino": ["pomodoro", "pomodorino", "pomodorini"],
@@ -1497,6 +1648,8 @@ enum SocialImportParser {
         "pasta": ["spaghetti", "bucatini", "pasta"],
         "rice": ["riso", "riso secco"],
         "tomato": ["pomodoro", "pomodori", "pomodorino", "pomodorini", "pomodoro san marzano"],
+        "bread": ["pane", "pane raffermo"],
+        "honey": ["miele"],
         "basil": ["basilico"],
         "parsley": ["prezzemolo"],
         "oregano": ["origano"],
@@ -1505,9 +1658,12 @@ enum SocialImportParser {
         "mushroom": ["fungo", "funghi"],
         "potato": ["patata", "patate"],
         "zucchini": ["zucchina", "zucchine"],
+        "peperone": ["peperone", "peperoni"],
+        "peperoni": ["peperone", "peperoni"],
         "corn": ["mais", "mais dolce"],
         "canned_corn": ["mais", "mais in scatola"],
         "banana": ["banana"],
+        "apple": ["mela", "mele"],
         "eggplant": ["melanzana", "melanzane"],
         "passata": ["passata di pomodoro"],
         "pecorino": ["pecorino romano"],
@@ -1526,6 +1682,7 @@ enum SocialImportParser {
         "olive_oil": ["olio evo", "olio extravergine", "olio extra vergine", "olio"],
         "broth": ["brodo", "brodo vegetale"],
         "salt": ["sale"],
+        "oats": ["avena", "fiocchi d avena", "fiocchi d'avena", "oats", "oat flakes"],
         "eggs": ["uovo", "uova", "egg", "eggs"]
     ]
 
@@ -1619,12 +1776,12 @@ enum SocialImportParser {
         let quantity = parsedSmartImportQuantity(from: cleaned)
         var normalized = cleaned
             .replacingOccurrences(
-                of: #"(?i)\b(?:\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi)?\b"#,
+                of: #"(?i)\b(?:\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi|fetta|fette|slice|slices)?\b"#,
                 with: " ",
                 options: .regularExpression
             )
             .replacingOccurrences(
-                of: #"(?i)\b(q\.?b\.?|quanto basta)\b"#,
+                of: quantoBastaTokenPattern,
                 with: " ",
                 options: .regularExpression
             )
@@ -1633,8 +1790,12 @@ enum SocialImportParser {
     }
 
     private static func parsedSmartImportQuantity(from raw: String) -> (value: Double, unit: String?)? {
-        let pattern = #"(?i)\b(\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi)?\b"#
-        let reversedPattern = #"(?i)\b([a-zÀ-ÖØ-öø-ÿ0-9][a-zÀ-ÖØ-öø-ÿ0-9\s']{1,40}?)\s+(\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi)?\s*$"#
+        if raw.range(of: #"(?i)\bmezzo\b|\bmezza\b|\bhalf\b"#, options: .regularExpression) != nil {
+            return (0.5, "piece")
+        }
+
+        let pattern = #"(?i)\b(\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi|fetta|fette|slice|slices)?\b"#
+        let reversedPattern = #"(?i)\b([a-zÀ-ÖØ-öø-ÿ0-9][a-zÀ-ÖØ-öø-ÿ0-9\s']{1,40}?)\s+(\d+/\d+|\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cup|cups|cucchiaio|cucchiai|cucchiaino|cucchiaini|bustina|bustine|piece|pieces|pezzo|pezzi|costa|coste|foglia|foglie|spicchio|spicchi|fetta|fette|slice|slices)?\s*$"#
 
         if let reversed = parsedQuantityMatch(in: raw, pattern: reversedPattern, quantityGroup: 2, unitGroup: 3) {
             return reversed
@@ -1694,7 +1855,9 @@ enum SocialImportParser {
             return (parsedValue, "tsp")
         case "spicchio", "spicchi":
             return (parsedValue, "clove")
-        case "piece", "pieces", "pezzo", "pezzi", "costa", "coste", "foglia", "foglie":
+        case "fetta", "fette", "slice", "slices":
+            return (parsedValue, "slice")
+        case "piece", "pieces", "pezzo", "pezzi", "costa", "coste", "foglia", "foglie", "bustina", "bustine":
             return (parsedValue, "piece")
         default:
             return (parsedValue, nil)
