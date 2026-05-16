@@ -75,6 +75,11 @@ struct CreateRecipeView: View {
         case draft
     }
 
+    private enum ComposerScrollTarget {
+        static let importSection = "create_import_section"
+        static let importActions = "create_import_actions"
+    }
+
     struct PrefillDraft {
         let title: String
         let imageAssetName: String?
@@ -211,23 +216,31 @@ struct CreateRecipeView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            composerStateSummary
-                            heroComposerSection
-                            importFromLinkSection
-                            titleSection
-                            servingsSection
-                            smartImportReviewSummary
-                            ingredientsSection
-                            stepsSection
-                            socialLinksSection
-                            previewSection
-                            Color.clear.frame(height: 12)
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 24) {
+                                composerStateSummary
+                                heroComposerSection
+                                importFromLinkSection
+                                    .id(ComposerScrollTarget.importSection)
+                                titleSection
+                                servingsSection
+                                smartImportReviewSummary
+                                ingredientsSection
+                                stepsSection
+                                socialLinksSection
+                                previewSection
+                                Color.clear.frame(height: 132)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 14)
+                            .padding(.bottom, 24)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 24)
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: showImportTools) { _, isExpanded in
+                            guard isExpanded else { return }
+                            scrollImportActionsIntoView(using: scrollProxy)
+                        }
                     }
                 }
             }
@@ -381,6 +394,7 @@ struct CreateRecipeView: View {
                     }
                     .buttonStyle(SeasonSecondaryButtonStyle())
                     .disabled(!canRunSmartImport || isImportAnalyzing)
+                    .id(ComposerScrollTarget.importActions)
 
                     if let importConfidence {
                         ImportQualityBadge(confidence: importConfidence, localizer: localizer)
@@ -790,6 +804,15 @@ struct CreateRecipeView: View {
             onSaveDraft: { persistDraftIfNeeded(showFeedback: true) },
             onPublish: publish
         )
+    }
+
+    private func scrollImportActionsIntoView(using proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+                proxy.scrollTo(ComposerScrollTarget.importActions, anchor: .center)
+            }
+        }
     }
 
     private var composerStateSummary: some View {

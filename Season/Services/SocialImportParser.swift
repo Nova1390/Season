@@ -258,10 +258,25 @@ enum SocialImportParser {
             }
         }
 
-        if let colonRange = candidate.range(of: ":") {
-            let prefix = String(candidate[..<colonRange.lowerBound])
+        if let separatorRange = ingredientTitleSeparatorRange(in: candidate) {
+            let prefix = String(candidate[..<separatorRange.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            let remainder = String(candidate[colonRange.upperBound...])
+            let remainder = String(candidate[separatorRange.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !prefix.isEmpty,
+               !remainder.isEmpty,
+               lineContainsStrongIngredientSignal(remainder) {
+                candidate = prefix
+            }
+        }
+
+        if let servingRange = candidate.range(
+            of: #"(?i)\s+(?:per|x|dose\s+per)\s*\d+\s*(?:persone|persona|porzioni|porzione)?\b"#,
+            options: .regularExpression
+        ) {
+            let prefix = String(candidate[..<servingRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let remainder = String(candidate[servingRange.upperBound...])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !prefix.isEmpty,
                !remainder.isEmpty,
@@ -337,6 +352,17 @@ enum SocialImportParser {
             ingredientLines: ingredientLines,
             stepLines: stepLines
         )
+    }
+
+    nonisolated private static func ingredientTitleSeparatorRange(in raw: String) -> Range<String.Index>? {
+        if let range = raw.range(of: #"[:：]\s*"#, options: .regularExpression) {
+            return range
+        }
+
+        // Defensive fallback for simulator/keyboard injection quirks where ":" can arrive as
+        // "ç" after the servings token. Real user keyboards still send ":", but keeping this
+        // tolerant prevents title extraction from collapsing into the whole caption.
+        return raw.range(of: #"(?<=\d)ç\s*"#, options: .regularExpression)
     }
 
     private static func detectedSectionHeader(from line: String) -> (section: StructuredCaption.Section, remainder: String?)? {
@@ -467,9 +493,9 @@ enum SocialImportParser {
             guard sentence.range(of: procedurePattern, options: .regularExpression) != nil else {
                 return nil
             }
-            if let colonRange = sentence.range(of: ":") {
-                let prefix = String(sentence[..<colonRange.lowerBound])
-                let remainder = String(sentence[colonRange.upperBound...])
+            if let separatorRange = ingredientTitleSeparatorRange(in: sentence) {
+                let prefix = String(sentence[..<separatorRange.lowerBound])
+                let remainder = String(sentence[separatorRange.upperBound...])
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if lineContainsStrongIngredientSignal(remainder),
                    prefix.range(of: procedurePattern, options: .regularExpression) == nil {
@@ -854,9 +880,9 @@ enum SocialImportParser {
 
     nonisolated private static func cleanedIngredientCandidateLine(_ raw: String) -> String {
         var cleaned = cleanedStructuredIngredientLine(raw)
-        if let colonRange = cleaned.range(of: ":") {
-            let prefix = String(cleaned[..<colonRange.lowerBound])
-            let remainder = String(cleaned[colonRange.upperBound...])
+        if let separatorRange = ingredientTitleSeparatorRange(in: cleaned) {
+            let prefix = String(cleaned[..<separatorRange.lowerBound])
+            let remainder = String(cleaned[separatorRange.upperBound...])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let prefixTokenCount = prefix.split(whereSeparator: { $0.isWhitespace }).count
             let normalizedPrefix = normalizedSectionHeader(prefix)

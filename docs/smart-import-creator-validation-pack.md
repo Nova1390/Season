@@ -68,6 +68,12 @@ Manual checks:
 - Keep the keyboard open/closed states in mind: the bottom publish bar must not hide the ingredients being validated.
 - Do not accept `Alta qualità` as a pass condition by itself; inspect title, portions, ingredients, quantities, duplicate rows, and steps.
 
+May 16 simulator notes:
+- The Smart Import disclosure now scrolls its action button into view when opened, so `Importa bozza` must remain tappable above the sticky `Salva bozza / Pubblica` bar.
+- The title parser is tolerant of inline servings followed by ingredient lists even when the simulator keyboard injects a malformed separator, e.g. `x2ç` or `per 2ç`. This protects the same creator-caption shape as the real `:` input.
+- Manual UI verification passed for `REG-20260516-002` and `REG-20260516-003` after the scroll/title robustness fix: clean title, correct servings, no duplicate ingredients, explicit quantities preserved, and at least one step.
+- `lievito` in the pancake case may still require catalog confirmation until the catalog agent resolves the governed canonical mapping; this is not a Smart Import quantity/title regression.
+
 ## Realistic Creator Captions With CTA, Noise, Emojis
 
 | ID | Difficulty | Caption | Expected core ingredients | Expected quantities | Expected fallback |
