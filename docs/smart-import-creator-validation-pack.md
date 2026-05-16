@@ -51,6 +51,8 @@ These cases reproduce the user-facing failures found on TestFlight build `1.0.1 
 | REG-20260516-001 | `Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano` | Title `Risotto ai funghi`; 5 unique ingredients; all explicit quantities preserved; at least 1 step. |
 | REG-20260516-002 | `Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.` | Title `Insalata di pollo`; 7 unique ingredients; no missing quantities for measured ingredients; `limone mezzo` preserved as 0.5 piece; at least 1 step. |
 | REG-20260516-003 | `Pancake banana e avena x2: banana 1, uova 2, fiocchi d'avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.` | Title `Pancake banana e avena`; banana 1, eggs 2, oats 80g, milk 100ml, leavening 1 tsp; at least 1 step. |
+| REG-20260516-004 | `Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, latte 80ml, lievito 1 bustina, gocce di cioccolato 70g. Mescola tutto, versa negli stampi e cuoci a 180 gradi per 20 minuti.` | Title `Muffin banana e cioccolato`; chocolate chips must remain `gocce di cioccolato`/custom if not cataloged and must never match `cola`; at least 1 step. |
+| REG-20260516-005 | `Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.` | Title `Frittata spinaci e patate`; 6 ingredients; infinitive procedure verbs must produce at least 1 step. |
 
 Automated checks:
 
@@ -84,6 +86,9 @@ May 16 intensive simulator pass:
 - Remaining specificity warnings include parent matches such as `farina 00 -> flour` and `cipolla rossa -> onion`; the visible creator text is preserved, but catalog identity can be improved by Catalog Agent.
 - Manual UI verification passed for `REG-20260516-002`, `REG-20260516-003`, and a keyboard-injection pasta case: `Pasta tonno e limone per 2ç pasta 180g, tonno sottàolio 120g...`.
 - The keyboard-injection pasta case must produce title `Pasta tonno e limone`, 6 ingredients, preserved quantities for pasta and tuna, q.b. ingredients without fake numeric doses, and at least one step.
+- Post-TestFlight device feedback added two regression guards: substring catalog matches must not map `gocce di cioccolato` to `cola`, and Italian infinitive procedure text such as `Lessare... saltare... unire...` must count as preparation steps.
+- Follow-up simulator audit after those guards: 52 real-flow captions, 0 blocking samples, 0 title failures, 0 lost expected ingredients, 0 quantity/unit drifts, 0 duplicate final drafts, 0 forbidden matches, 0 step failures. The two new regressions passed as `muffin_chocolate_chips_not_cola` and `frittata_infinitive_steps`.
+- Server-fallback degradation audit passed on the protected samples: simulated server output with `Untitled recipe` and degraded/no-quantity ingredients did not override the better local title, quantities, unique ingredient list, or steps. Live server rows were `unauthenticated` in the simulator session and must not be counted as live Edge Function proof.
 - During the pass, the remote import quota returned `Limite giornaliero import raggiunto`; this must not block the local parser from producing a usable draft.
 
 May 16 release-candidate `1.0.1 (8)` gate notes:

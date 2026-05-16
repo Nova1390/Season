@@ -1109,7 +1109,7 @@ function extractDeterministicSteps(caption: string): string[] {
 
   const lineSteps = lines
     .map(stripListMarker)
-    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna|taglia|frulla|tosta|unisci|condisci|manteca)\b/i.test(line))
+    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|cuocere|mescola|mescolare|aggiungi|aggiungere|inforna|infornare|taglia|tagliare|frulla|frullare|tosta|tostare|unisci|unire|condisci|condire|manteca|mantecare|salta|saltare|lessa|lessare|scola|scolare|versa|versare|impasta|impastare|rosola|rosolare)\b/i.test(line))
     .map((line) => line.replace(/^(step\s*)?\d+[\).\:-]\s+/i, "").trim())
     .filter(Boolean)
     .slice(0, 12);
@@ -1118,7 +1118,7 @@ function extractDeterministicSteps(caption: string): string[] {
   return caption
     .split(/[.!?]+/)
     .map((part) => stripListMarker(part))
-    .filter((part) => /^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna|taglia|frulla|tosta|unisci|condisci|manteca)\b/i.test(part))
+    .filter((part) => /^(mix|cook|bake|stir|combine|serve|cuoci|cuocere|mescola|mescolare|aggiungi|aggiungere|inforna|infornare|taglia|tagliare|frulla|frullare|tosta|tostare|unisci|unire|condisci|condire|manteca|mantecare|salta|saltare|lessa|lessare|scola|scolare|versa|versare|impasta|impastare|rosola|rosolare)\b/i.test(part))
     .map((part) => part.trim())
     .filter(Boolean)
     .slice(0, 12);

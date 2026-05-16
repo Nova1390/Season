@@ -514,7 +514,7 @@ enum SocialImportParser {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return [] }
 
-        let procedurePattern = #"(?i)\b(taglia|tagliate|frulla|frullate|cuoci|cuocete|tosta|tostate|aggiungi|aggiungete|unisci|unite|condisci|condite|manteca|mantecate|mescola|mescolate|versa|versate|servi|servite|salta|saltate|inforna|infornate|impasta|impastate|scola|scolate)\b"#
+        let procedurePattern = smartImportProcedureVerbPattern
         let sentenceSeparators = CharacterSet(charactersIn: ".!?")
         let sentences = text
             .components(separatedBy: sentenceSeparators)
@@ -786,7 +786,7 @@ enum SocialImportParser {
 
         let laterLooksProcedural = sentenceParts.dropFirst().contains { part in
             part.range(
-                of: #"(?i)^\s*(taglia|aggiungi|metti|unisci|rosola|cuoci|condisci|tosta|bagna|servi|mescola|manteca|sfuma)\b"#,
+                of: smartImportLeadingProcedureVerbPattern,
                 options: .regularExpression
             ) != nil
         }
@@ -1048,7 +1048,7 @@ enum SocialImportParser {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return trimmed }
         let sentenceSafe = sentenceSplitSafeIngredientText(trimmed)
-        let pattern = #"(?i)^(.+?)\s+\b(taglia|tagliate|frulla|frullate|cuoci|cuocete|tosta|tostate|aggiungi|aggiungete|unisci|unite|condisci|condite|manteca|mantecate|mescola|mescolate|versa|versate|servi|servite|salta|saltate|inforna|infornate|impasta|impastate|scola|scolate|rosola|rosolate|completa|completate)\b.*$"#
+        let pattern = #"(?i)^(.+?)\s+\b(taglia|tagliare|tagliate|frulla|frullare|frullate|cuoci|cuocere|cuocete|tosta|tostare|tostate|aggiungi|aggiungere|aggiungete|unisci|unire|unite|condisci|condire|condite|manteca|mantecare|mantecate|mescola|mescolare|mescolate|versa|versare|versate|servi|servire|servite|salta|saltare|saltate|inforna|infornare|infornate|impasta|impastare|impastate|scola|scolare|scolate|rosola|rosolare|rosolate|completa|completare|completate|lessa|lessare|lessate|bolli|bollire|bollite)\b.*$"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return trimmed
         }
@@ -1580,9 +1580,6 @@ enum SocialImportParser {
         if normalizedLine.range(of: "\\b\(escaped)\\b", options: .regularExpression) != nil {
             return 3
         }
-        if normalizedLine.contains(candidate) {
-            return 2
-        }
         return nil
     }
 
@@ -1618,6 +1615,10 @@ enum SocialImportParser {
         "olive": ["tapenade"],
         "sale": ["capperi", "sotto"]
     ]
+
+    nonisolated private static let smartImportProcedureVerbPattern = #"(?i)\b(taglia|tagliare|tagliate|frulla|frullare|frullate|cuoci|cuocere|cuocete|tosta|tostare|tostate|aggiungi|aggiungere|aggiungete|unisci|unire|unite|condisci|condire|condite|manteca|mantecare|mantecate|mescola|mescolare|mescolate|versa|versare|versate|servi|servire|servite|salta|saltare|saltate|inforna|infornare|infornate|impasta|impastare|impastate|scola|scolare|scolate|rosola|rosolare|rosolate|completa|completare|completate|lessa|lessare|lessate|bolli|bollire|bollite|sfuma|sfumare|sfumate|bagna|bagnare|bagnate|metti|mettere|mettete)\b"#
+
+    nonisolated private static let smartImportLeadingProcedureVerbPattern = #"(?i)^\s*(taglia|tagliare|aggiungi|aggiungere|metti|mettere|unisci|unire|rosola|rosolare|cuoci|cuocere|condisci|condire|tosta|tostare|bagna|bagnare|servi|servire|mescola|mescolare|manteca|mantecare|sfuma|sfumare|salta|saltare|lessa|lessare|bolli|bollire|versa|versare|inforna|infornare|impasta|impastare|scola|scolare)\b"#
 
     nonisolated private static let italianLexicalVariants: [String: [String]] = [
         "uovo": ["uovo", "uova"],

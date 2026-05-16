@@ -4203,10 +4203,10 @@ struct CreateRecipeView: View {
         if query == term {
             return 3
         }
-        if query.hasPrefix(term) || term.hasPrefix(query) {
+        if query.hasPrefix("\(term) ") || term.hasPrefix("\(query) ") {
             return 2
         }
-        if term.count >= 4 && query.contains(term) {
+        if term.count >= 4 && queryContainsPhrase(query, phrase: term) {
             return 1
         }
         return nil
@@ -4882,17 +4882,23 @@ private struct SmartImportRealFlowAuditSample {
     let caption: String
     let expectedTitle: String?
     let expectedIngredients: [String]
+    let expectedMinimumSteps: Int
+    let forbiddenMatchedIngredientIDs: [String]
 
     init(
         id: String,
         caption: String,
         expectedTitle: String?,
-        expectedIngredients: [String] = []
+        expectedIngredients: [String] = [],
+        expectedMinimumSteps: Int = 0,
+        forbiddenMatchedIngredientIDs: [String] = []
     ) {
         self.id = id
         self.caption = caption
         self.expectedTitle = expectedTitle
         self.expectedIngredients = expectedIngredients
+        self.expectedMinimumSteps = expectedMinimumSteps
+        self.forbiddenMatchedIngredientIDs = forbiddenMatchedIngredientIDs
     }
 }
 
@@ -4998,6 +5004,9 @@ private struct SmartImportRealFlowAuditSampleReport: Codable {
     let expectedTitle: String?
     let titleStatus: String
     let localConfidence: String
+    let finalStepsCount: Int
+    let expectedMinimumSteps: Int
+    let stepStatus: String
     let fallbackDecision: String
     let refinementReasons: [String]
     let candidates: [SmartImportRealFlowCandidateRow]
@@ -5005,6 +5014,7 @@ private struct SmartImportRealFlowAuditSampleReport: Codable {
     let lostCandidateTexts: [String]
     let lostExpectedIngredients: [String]
     let quantityUnitDrifts: [String]
+    let forbiddenMatchedIngredientIDsFound: [String]
     let duplicateDraftKeys: [String]
     let customDraftNames: [String]
 }
@@ -5018,6 +5028,8 @@ private struct SmartImportRealFlowAuditSummary: Codable {
     let lostCandidateCount: Int
     let lostExpectedIngredientCount: Int
     let quantityUnitDriftCount: Int
+    let stepFailCount: Int
+    let forbiddenMatchCount: Int
     let duplicateFinalDraftCount: Int
     let customDraftIngredientCount: Int
     let fallbackAttemptCount: Int
@@ -5360,6 +5372,8 @@ extension CreateRecipeView {
             lostCandidateCount: reports.reduce(0) { $0 + $1.lostCandidateTexts.count },
             lostExpectedIngredientCount: reports.reduce(0) { $0 + $1.lostExpectedIngredients.count },
             quantityUnitDriftCount: reports.reduce(0) { $0 + $1.quantityUnitDrifts.count },
+            stepFailCount: reports.filter { $0.stepStatus == "fail" }.count,
+            forbiddenMatchCount: reports.reduce(0) { $0 + $1.forbiddenMatchedIngredientIDsFound.count },
             duplicateFinalDraftCount: reports.reduce(0) { $0 + $1.duplicateDraftKeys.count },
             customDraftIngredientCount: reports.reduce(0) { $0 + $1.customDraftNames.count },
             fallbackAttemptCount: reports.filter { $0.fallbackDecision == "attempt_server_fallback" }.count,
@@ -5370,6 +5384,8 @@ extension CreateRecipeView {
                     || !$0.lostCandidateTexts.isEmpty
                     || !$0.lostExpectedIngredients.isEmpty
                     || !$0.quantityUnitDrifts.isEmpty
+                    || $0.stepStatus == "fail"
+                    || !$0.forbiddenMatchedIngredientIDsFound.isEmpty
                     || !$0.duplicateDraftKeys.isEmpty
             }.count
         )
@@ -5544,6 +5560,12 @@ extension CreateRecipeView {
                 expected: sample.expectedTitle
             ),
             localConfidence: localSuggestion.confidence.rawValue,
+            finalStepsCount: localSuggestion.suggestedSteps.count,
+            expectedMinimumSteps: sample.expectedMinimumSteps,
+            stepStatus: smartImportStepStatus(
+                actualCount: localSuggestion.suggestedSteps.count,
+                expectedMinimum: sample.expectedMinimumSteps
+            ),
             fallbackDecision: fallbackDecision,
             refinementReasons: refinement.reasons,
             candidates: candidateRows,
@@ -5556,6 +5578,10 @@ extension CreateRecipeView {
                 drafts: drafts
             ),
             quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+            forbiddenMatchedIngredientIDsFound: forbiddenMatchedIngredientIDsFound(
+                forbiddenMatchedIngredientIDs: sample.forbiddenMatchedIngredientIDs,
+                drafts: drafts
+            ),
             duplicateDraftKeys: duplicateDraftKeys(in: drafts),
             customDraftNames: finalRows
                 .filter(\.isCustom)
@@ -5841,6 +5867,25 @@ extension CreateRecipeView {
         }
     }
 
+    private func forbiddenMatchedIngredientIDsFound(
+        forbiddenMatchedIngredientIDs: [String],
+        drafts: [CreateIngredientDraft]
+    ) -> [String] {
+        guard !forbiddenMatchedIngredientIDs.isEmpty else { return [] }
+        let forbidden = Set(forbiddenMatchedIngredientIDs)
+        return drafts.compactMap { draft -> String? in
+            if !draft.produceID.isEmpty {
+                let id = "produce:\(draft.produceID)"
+                return forbidden.contains(id) ? id : nil
+            }
+            if !draft.basicIngredientID.isEmpty {
+                let id = "basic:\(draft.basicIngredientID)"
+                return forbidden.contains(id) ? id : nil
+            }
+            return nil
+        }
+    }
+
     private func smartImportTitleStatus(actual: String?, expected: String?) -> String {
         let actualNormalized = normalizedIngredientMatchText(actual ?? "")
         guard let expected,
@@ -5867,6 +5912,11 @@ extension CreateRecipeView {
             return "acceptable_extra_text"
         }
         return "fail"
+    }
+
+    private func smartImportStepStatus(actualCount: Int, expectedMinimum: Int) -> String {
+        guard expectedMinimum > 0 else { return "not_required" }
+        return actualCount >= expectedMinimum ? "pass" : "fail"
     }
 
     private static let smartImportRealFlowAuditSamples: [SmartImportRealFlowAuditSample] = [
@@ -6012,7 +6062,7 @@ extension CreateRecipeView {
             id: "couscous_verdure_inline",
             caption: "Cous cous alle verdure per 2: cous cous 160g, zucchine 1, peperoni 1, ceci 120g, olio evo q.b., limone mezzo. Reidrata e condisci.",
             expectedTitle: "Cous cous alle verdure",
-            expectedIngredients: ["Couscous", "Zucchina", "Peperone", "Ceci", "Olio", "Limone"]
+            expectedIngredients: ["cous cous", "Zucchina", "Peperone", "Ceci", "Olio", "Limone"]
         ),
         SmartImportRealFlowAuditSample(
             id: "piadina_tacchino_inline",
@@ -6090,6 +6140,21 @@ extension CreateRecipeView {
             caption: "Torta di meleç mele 3, farina 00 250g, uova 2, zucchero 120g, latte 100ml, lievito 1 bustina. Mescola e inforna.",
             expectedTitle: "Torta di mele",
             expectedIngredients: ["Mela", "farina 00", "Uova", "Zucchero", "Latte", "lievito"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "muffin_chocolate_chips_not_cola",
+            caption: "Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, latte 80ml, lievito 1 bustina, gocce di cioccolato 70g. Mescola tutto, versa negli stampi e cuoci a 180 gradi per 20 minuti.",
+            expectedTitle: "Muffin banana e cioccolato",
+            expectedIngredients: ["Banana", "Farina", "Uova", "Zucchero", "Latte", "lievito", "gocce di cioccolato"],
+            expectedMinimumSteps: 1,
+            forbiddenMatchedIngredientIDs: ["basic:cola"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "frittata_infinitive_steps",
+            caption: "Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.",
+            expectedTitle: "Frittata spinaci e patate",
+            expectedIngredients: ["Uova", "Spinaci", "Patate", "Parmigiano", "Sale", "Olio"],
+            expectedMinimumSteps: 1
         ),
         SmartImportRealFlowAuditSample(
             id: "ingredienti_multiline_title",
@@ -6178,6 +6243,20 @@ extension CreateRecipeView {
             sourceURL: nil,
             expectedTitle: nil,
             expectedIngredients: ["spaghetti", "pomodoro", "olio", "aglio", "basilico"]
+        ),
+        SmartImportCaptionHarnessSample(
+            sampleID: "REG-20260516-005",
+            caption: "Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, latte 80ml, lievito 1 bustina, gocce di cioccolato 70g. Mescola tutto, versa negli stampi e cuoci a 180 gradi per 20 minuti.",
+            sourceURL: nil,
+            expectedTitle: "Muffin banana e cioccolato",
+            expectedIngredients: ["banana", "farina", "uova", "zucchero", "latte", "lievito", "gocce di cioccolato"]
+        ),
+        SmartImportCaptionHarnessSample(
+            sampleID: "REG-20260516-006",
+            caption: "Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.",
+            sourceURL: nil,
+            expectedTitle: "Frittata spinaci e patate",
+            expectedIngredients: ["uova", "spinaci", "patate", "parmigiano", "sale", "olio"]
         )
     ]
 }

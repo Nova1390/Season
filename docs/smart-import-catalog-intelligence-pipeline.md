@@ -106,6 +106,8 @@ Does:
 - Splits dense one-line captions into ingredient-like fragments instead of falling back to one large block when there are many comma-separated terms.
 - Keeps q.b. tokens sentence-safe so `prezzemolo q.b., olio...` does not prematurely end extraction or contaminate the next ingredient with procedure text.
 - Preserves natural half quantities such as `limone mezzo`, `mezza cipolla`, and `half lemon` as `0.5 piece` when the matched catalog item is not a countable ingredient where the half token would be misleading.
+- Rejects unsafe substring-only catalog matches. A catalog candidate must match as a normalized token/phrase, not as letters hidden inside another word; for example `gocce di cioccolato` must not resolve to `cola` just because `cioccolato` contains that substring.
+- Treats common Italian infinitive cooking verbs as procedural evidence, including `lessare`, `saltare`, `unire`, `cuocere`, `mescolare`, and `versare`, so creator captions written in recipe shorthand still produce steps.
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
