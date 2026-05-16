@@ -1207,6 +1207,9 @@ final class SupabaseService {
     private let client: SupabaseClient?
     private let authRepository: AuthRepository
     private let recipeRepository: RecipeRepository
+    private let authStateQueue = DispatchQueue(label: "season.supabase.auth_state")
+    private var cachedAuthenticatedUserID: UUID?
+    private var cachedAuthenticatedEmail: String?
     private let currentProfileCacheQueue = DispatchQueue(label: "season.supabase.current_profile_cache")
     private var cachedCurrentProfileUserID: UUID?
     private var cachedCurrentProfile: Profile?
@@ -1241,11 +1244,15 @@ final class SupabaseService {
     }
 
     func currentAuthenticatedUserID() -> UUID? {
-        authRepository.currentAuthenticatedUserID()
+        authRepository.currentAuthenticatedUserID() ?? authStateQueue.sync {
+            cachedAuthenticatedUserID
+        }
     }
 
     func currentAuthenticatedEmail() -> String? {
-        authRepository.currentAuthenticatedEmail()
+        authRepository.currentAuthenticatedEmail() ?? authStateQueue.sync {
+            cachedAuthenticatedEmail
+        }
     }
 
     func isCurrentUserCatalogAdmin() async -> Bool {
@@ -1399,7 +1406,8 @@ final class SupabaseService {
         guard let client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
-        _ = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+        let session = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+        rememberAuthenticatedUser(id: session.user.id, email: session.user.email)
         invalidateCurrentProfileCache()
         notifyAuthStateDidChange()
     }
@@ -1412,7 +1420,8 @@ final class SupabaseService {
 
         Task {
             do {
-                _ = try await client.auth.session(from: url)
+                let session = try await client.auth.session(from: url)
+                rememberAuthenticatedUser(id: session.user.id, email: session.user.email)
                 invalidateCurrentProfileCache()
                 notifyAuthStateDidChange()
                 print("[SEASON_AUTH] phase=callback_session_loaded")
@@ -1425,6 +1434,7 @@ final class SupabaseService {
     func signInWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithEmail") {
             let userID = try await authRepository.signInWithEmail(email: email, password: password)
+            rememberAuthenticatedUser(id: userID, email: email)
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
@@ -1434,7 +1444,8 @@ final class SupabaseService {
     func signUpWithEmail(email: String, password: String) async throws -> EmailSignUpResult {
         try await instrumentedRequest(name: "signUpWithEmail") {
             let result = try await authRepository.signUpWithEmail(email: email, password: password)
-            if case .signedIn = result {
+            if case .signedIn(let userID) = result {
+                rememberAuthenticatedUser(id: userID, email: email)
                 invalidateCurrentProfileCache()
                 notifyAuthStateDidChange()
             }
@@ -1445,6 +1456,7 @@ final class SupabaseService {
     func signOut() async throws {
         try await instrumentedRequest(name: "signOut") {
             try await authRepository.signOut()
+            clearRememberedAuthenticatedUser()
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
         }
@@ -1465,6 +1477,7 @@ final class SupabaseService {
                 givenName: givenName,
                 familyName: familyName
             )
+            rememberAuthenticatedUser(id: userID, email: nil)
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
@@ -3948,6 +3961,23 @@ final class SupabaseService {
 
     private func notifyAuthStateDidChange() {
         NotificationCenter.default.post(name: .seasonAuthStateDidChange, object: nil)
+    }
+
+    private func rememberAuthenticatedUser(id: UUID, email: String?) {
+        authStateQueue.sync {
+            cachedAuthenticatedUserID = id
+            let normalizedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalizedEmail?.isEmpty == false {
+                cachedAuthenticatedEmail = normalizedEmail
+            }
+        }
+    }
+
+    private func clearRememberedAuthenticatedUser() {
+        authStateQueue.sync {
+            cachedAuthenticatedUserID = nil
+            cachedAuthenticatedEmail = nil
+        }
     }
 
     private enum CurrentProfileFetchState {
