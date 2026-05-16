@@ -1,13 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const config = window.SEASON_ADMIN_CONFIG ?? {};
-const requiredConfig = ["supabaseUrl", "supabaseAnonKey"];
-const isConfigured = requiredConfig.every((key) => {
-  const value = config[key];
-  return typeof value === "string" && value.length > 0 && !value.includes("paste-");
-});
+const rootConfig = window.SEASON_ADMIN_CONFIG ?? {};
+const environmentConfigs = normalizeEnvironmentConfigs(rootConfig);
+let activeEnvironmentKey = resolveEnvironmentKey();
+let config = environmentConfigs[activeEnvironmentKey] ?? {};
+let isConfigured = isEnvironmentConfigured(config);
+let eventsBound = false;
 
 const state = {
+  environmentKey: activeEnvironmentKey,
   client: null,
   session: null,
   isAdmin: false,
@@ -31,6 +32,8 @@ const state = {
 
 const elements = {
   environmentLabel: document.querySelector("#environmentLabel"),
+  environmentNav: document.querySelector("#environmentNav"),
+  environmentModeNotice: document.querySelector("#environmentModeNotice"),
   configWarning: document.querySelector("#configWarning"),
   authPanel: document.querySelector("#authPanel"),
   appPanel: document.querySelector("#appPanel"),
@@ -92,8 +95,104 @@ const tooltip = {
 
 init();
 
+function normalizeEnvironmentConfigs(rawConfig) {
+  const defaultStatuses = rawConfig.defaultStatuses ?? [
+    "draft",
+    "failed_validation",
+    "queued_for_validation",
+    "validated"
+  ];
+  const defaultLimit = rawConfig.defaultLimit ?? 25;
+  const rawEnvironments = rawConfig.environments && typeof rawConfig.environments === "object"
+    ? rawConfig.environments
+    : {
+        dev: {
+          environmentLabel: rawConfig.environmentLabel,
+          supabaseUrl: rawConfig.supabaseUrl,
+          supabaseAnonKey: rawConfig.supabaseAnonKey,
+          capabilities: rawConfig.capabilities
+        }
+      };
+
+  const normalized = {};
+  for (const [key, environment] of Object.entries(rawEnvironments)) {
+    normalized[key] = {
+      ...environment,
+      key,
+      defaultStatuses: environment.defaultStatuses ?? defaultStatuses,
+      defaultLimit: environment.defaultLimit ?? defaultLimit,
+      capabilities: normalizeCapabilities(environment.capabilities, key)
+    };
+  }
+
+  if (!normalized.dev) {
+    normalized.dev = {
+      key: "dev",
+      environmentLabel: "Season-dev",
+      supabaseUrl: "",
+      supabaseAnonKey: "",
+      defaultStatuses,
+      defaultLimit,
+      capabilities: normalizeCapabilities({}, "dev")
+    };
+  }
+
+  for (const key of ["staging", "prod"]) {
+    if (!normalized[key]) {
+      normalized[key] = {
+        key,
+        environmentLabel: key === "prod" ? "Season-prod" : "Season-staging",
+        supabaseUrl: "",
+        supabaseAnonKey: "",
+        defaultStatuses,
+        defaultLimit,
+        capabilities: normalizeCapabilities({ readOnly: true }, key)
+      };
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeCapabilities(capabilities = {}, key = "dev") {
+  const isDev = key === "dev";
+  const readOnly = capabilities.readOnly ?? !isDev;
+  return {
+    readOnly,
+    workerRuns: capabilities.workerRuns ?? (isDev && !readOnly),
+    proposalReview: capabilities.proposalReview ?? (isDev && !readOnly),
+    proposalApply: capabilities.proposalApply ?? (isDev && !readOnly),
+    rollback: capabilities.rollback ?? (isDev && !readOnly),
+    scheduledAutonomy: capabilities.scheduledAutonomy ?? isDev
+  };
+}
+
+function resolveEnvironmentKey() {
+  const hashMatch = window.location.hash.match(/^#\/([a-z0-9_-]+)/i);
+  const requested = hashMatch?.[1];
+  if (requested && environmentConfigs[requested]) return requested;
+
+  const stored = window.localStorage.getItem("season-admin-environment");
+  if (stored && environmentConfigs[stored]) return stored;
+
+  const configuredDefault = rootConfig.defaultEnvironment;
+  if (configuredDefault && environmentConfigs[configuredDefault]) return configuredDefault;
+
+  return "dev";
+}
+
+function isEnvironmentConfigured(environment) {
+  return ["supabaseUrl", "supabaseAnonKey"].every((key) => {
+    const value = environment?.[key];
+    return typeof value === "string" && value.length > 0 && !value.includes("paste-");
+  });
+}
+
 async function init() {
+  state.environmentKey = activeEnvironmentKey;
   elements.environmentLabel.textContent = config.environmentLabel ?? "Not configured";
+  renderEnvironmentNav();
+  renderEnvironmentMode();
   elements.configWarning.hidden = isConfigured;
   elements.authPanel.hidden = false;
   elements.appPanel.hidden = true;
@@ -105,6 +204,8 @@ async function init() {
     "validated"
   ]).join(", ");
   elements.limitInput.value = String(config.defaultLimit ?? 25);
+  bindEvents();
+  updateWorkerRunHint();
 
   if (!isConfigured) {
     elements.loginForm.querySelectorAll("input, button").forEach((control) => {
@@ -115,6 +216,9 @@ async function init() {
     return;
   }
 
+  elements.loginForm.querySelectorAll("input, button").forEach((control) => {
+    control.disabled = false;
+  });
   state.client = createClient(config.supabaseUrl, config.supabaseAnonKey, {
     auth: {
       persistSession: true,
@@ -122,8 +226,6 @@ async function init() {
       detectSessionInUrl: false
     }
   });
-
-  bindEvents();
 
   const { data, error } = await state.client.auth.getSession();
   if (error) {
@@ -141,6 +243,9 @@ async function init() {
 }
 
 function bindEvents() {
+  if (eventsBound) return;
+  eventsBound = true;
+
   elements.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     await signIn();
@@ -154,18 +259,7 @@ function bindEvents() {
     state.selected = null;
     state.draftsByText = new Map();
     state.learningMemory = null;
-    state.operations = {
-      summary: null,
-      autoApplySummary: null,
-      autoApplyDiagnostics: null,
-      scheduleStatus: null,
-      scheduleGuard: null,
-      latestDigest: null,
-      scheduleShiftHealth: null,
-      scheduleShiftRuns: [],
-      workerJobs: [],
-      applyAudits: []
-    };
+    state.operations = emptyOperationsState();
     setAuthMessage("");
     renderSession();
   });
@@ -186,17 +280,122 @@ function bindEvents() {
 
   bindHelpTooltips();
   updateWorkerRunHint();
+
+  window.addEventListener("hashchange", () => {
+    const nextEnvironmentKey = resolveEnvironmentKey();
+    if (nextEnvironmentKey !== activeEnvironmentKey) {
+      void switchEnvironment(nextEnvironmentKey);
+    }
+  });
+}
+
+function renderEnvironmentNav() {
+  if (!elements.environmentNav) return;
+
+  const order = ["dev", "staging", "prod"]
+    .filter((key) => environmentConfigs[key]);
+  elements.environmentNav.innerHTML = order.map((key) => {
+    const environment = environmentConfigs[key];
+    const classes = [
+      "environment-link",
+      key === activeEnvironmentKey ? "active" : "",
+      environment.capabilities?.readOnly ? "read-only" : "",
+      isEnvironmentConfigured(environment) ? "" : "unconfigured"
+    ].filter(Boolean).join(" ");
+    return `
+      <a class="${classes}" href="#/${escapeHTML(key)}">
+        ${escapeHTML(environment.environmentLabel ?? key)}
+      </a>
+    `;
+  }).join("");
+}
+
+function renderEnvironmentMode() {
+  if (!elements.environmentModeNotice) return;
+
+  const capabilities = config.capabilities ?? {};
+  const label = config.environmentLabel ?? activeEnvironmentKey;
+  if (!isConfigured) {
+    elements.environmentModeNotice.hidden = false;
+    elements.environmentModeNotice.textContent = `${label} is not configured yet. Add its Supabase URL and anon key in config.local.js.`;
+    return;
+  }
+
+  if (capabilities.readOnly) {
+    elements.environmentModeNotice.hidden = false;
+    elements.environmentModeNotice.textContent = `${label} is read-only in this console. Monitoring is allowed; worker runs, proposal mutations, apply, and rollback are disabled.`;
+    return;
+  }
+
+  elements.environmentModeNotice.hidden = false;
+  elements.environmentModeNotice.textContent = `${label} allows controlled dev operations. Staging and prod should stay read-only until explicitly promoted.`;
+}
+
+async function switchEnvironment(nextEnvironmentKey) {
+  const nextConfig = environmentConfigs[nextEnvironmentKey];
+  if (!nextConfig) return;
+
+  if (state.client) {
+    await state.client.auth.signOut();
+  }
+
+  activeEnvironmentKey = nextEnvironmentKey;
+  config = nextConfig;
+  isConfigured = isEnvironmentConfigured(config);
+  window.localStorage.setItem("season-admin-environment", activeEnvironmentKey);
+  resetRuntimeState();
+  await init();
+}
+
+function resetRuntimeState() {
+  state.environmentKey = activeEnvironmentKey;
+  state.client = null;
+  state.session = null;
+  state.isAdmin = false;
+  state.inbox = null;
+  state.selected = null;
+  state.draftsByText = new Map();
+  state.learningMemory = null;
+  state.operations = emptyOperationsState();
+  setAuthMessage("");
+  setStatus("Environment changed. Sign in again.");
+}
+
+function canUseCapability(capability) {
+  return config.capabilities?.[capability] === true && config.capabilities?.readOnly !== true;
+}
+
+function emptyOperationsState() {
+  return {
+    summary: null,
+    autoApplySummary: null,
+    autoApplyDiagnostics: null,
+    scheduleStatus: null,
+    scheduleGuard: null,
+    latestDigest: null,
+    scheduleShiftHealth: null,
+    scheduleShiftRuns: [],
+    workerJobs: [],
+    applyAudits: []
+  };
 }
 
 function updateWorkerRunHint() {
   const workerName = elements.workerNameInput.value;
+  const workerEnabled = canUseCapability("workerRuns");
   const hints = {
     low_risk_apply_batch: "Low-risk apply runs in dry-run only. Real apply stays disabled from the console.",
     enrichment_draft_batch: "Enrichment fills pending drafts; it may call the LLM but does not create final ingredients.",
     ingredient_creation_batch: "Ingredient creation only consumes ready enrichment drafts and is gated by backend flags."
   };
 
-  elements.workerRunHint.textContent = hints[workerName] ?? "Worker execution is bounded by backend policy and audit logs.";
+  elements.runWorkerButton.disabled = !workerEnabled;
+  elements.workerNameInput.disabled = !workerEnabled;
+  elements.workerLimitInput.disabled = !workerEnabled;
+  elements.workerSourceDomainInput.disabled = !workerEnabled;
+  elements.workerRunHint.textContent = workerEnabled
+    ? hints[workerName] ?? "Worker execution is bounded by backend policy and audit logs."
+    : "This environment is read-only from the console. Worker execution is disabled.";
 }
 
 function bindHelpTooltips() {
@@ -275,6 +474,10 @@ function positionHelpTooltip(target) {
 async function runAgentWorker(event) {
   event.preventDefault();
   if (!state.session || !state.isAdmin) return;
+  if (!canUseCapability("workerRuns")) {
+    setStatus("Worker runs are disabled for this environment.", "error");
+    return;
+  }
 
   const workerName = elements.workerNameInput.value;
   const limit = clampNumber(Number(elements.workerLimitInput.value), 1, 3, 1);
@@ -435,7 +638,7 @@ async function openAdminSession() {
     state.selected = null;
     state.draftsByText = new Map();
     state.learningMemory = null;
-    state.operations = { summary: null, autoApplySummary: null, autoApplyDiagnostics: null, workerJobs: [], applyAudits: [] };
+    state.operations = emptyOperationsState();
     renderSession();
     setAuthMessage(`${attemptedEmail} is not authorized for the catalog console.`, "error");
     setStatus("Access denied.");
@@ -510,6 +713,8 @@ async function loadOperations(options = {}) {
   }
 
   const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
+  const scheduleEnvironment = activeEnvironmentKey;
+  const shouldLoadSchedule = config.capabilities?.scheduledAutonomy === true;
 
   const [
     summaryResult,
@@ -534,31 +739,31 @@ async function loadOperations(options = {}) {
       .eq("day", todayISO)
       .maybeSingle(),
     state.client.rpc("get_catalog_agent_auto_apply_diagnostics"),
-    state.client
+    shouldLoadSchedule ? state.client
       .from("catalog_agent_dev_schedule_status")
       .select("*")
-      .eq("environment", "dev")
-      .maybeSingle(),
-    state.client.rpc("catalog_agent_dev_schedule_guard", {
-      p_environment: "dev"
-    }),
-    state.client
+      .eq("environment", scheduleEnvironment)
+      .maybeSingle() : Promise.resolve({ data: null, error: null }),
+    shouldLoadSchedule ? state.client.rpc("catalog_agent_dev_schedule_guard", {
+      p_environment: scheduleEnvironment
+    }) : Promise.resolve({ data: null, error: null }),
+    shouldLoadSchedule ? state.client
       .from("catalog_agent_daily_digests")
       .select("id,environment,report_date,status,anomaly_count,anomalies,recommended_next_action,updated_at")
-      .eq("environment", "dev")
+      .eq("environment", scheduleEnvironment)
       .order("report_date", { ascending: false })
       .limit(1)
-      .maybeSingle(),
-    state.client
+      .maybeSingle() : Promise.resolve({ data: null, error: null }),
+    shouldLoadSchedule ? state.client
       .from("catalog_agent_dev_shift_health")
       .select("*")
-      .maybeSingle(),
-    state.client
+      .maybeSingle() : Promise.resolve({ data: null, error: null }),
+    shouldLoadSchedule ? state.client
       .from("catalog_agent_dev_shift_runs")
       .select("id,status,skip_reason,error_message,duration_ms,started_at,finished_at,guard_snapshot,worker_results,skipped_workers")
-      .eq("environment", "dev")
+      .eq("environment", scheduleEnvironment)
       .order("started_at", { ascending: false })
-      .limit(8),
+      .limit(8) : Promise.resolve({ data: [], error: null }),
     state.client
       .from("catalog_agent_worker_jobs")
       .select("id,agent_run_id,worker_name,worker_function,requested_action,status,risk_ceiling,item_limit,dry_run,summary,failure_reason,created_at,started_at,finished_at")
@@ -743,6 +948,23 @@ function renderOperations() {
 }
 
 function renderScheduleStatus(scheduleStatus, scheduleGuard, latestDigest, scheduleShiftHealth) {
+  if (config.capabilities?.scheduledAutonomy !== true) {
+    elements.scheduleGuardState.textContent = "Read-only";
+    elements.scheduleKillSwitch.textContent = "N/A";
+    elements.scheduleAnomalyCount.textContent = "0";
+    elements.scheduleLatestDigest.textContent = "N/A";
+    elements.scheduleShiftHealth.textContent = "N/A";
+    elements.scheduleShiftRunsToday.textContent = "0";
+    elements.scheduleWindowStatus.textContent = "Disabled";
+    elements.scheduleDigestStatus.textContent = "read-only";
+    elements.scheduleDigestStatus.className = "schedule-pill";
+    elements.scheduleNextAction.textContent = "Scheduled autonomy is disabled for this environment.";
+    elements.scheduleWindowMessage.textContent = "This page is monitor-only unless explicitly promoted.";
+    elements.scheduleShiftMessage.textContent = "No dev-shift lane is active for this environment.";
+    elements.scheduleAnomalyList.innerHTML = "";
+    return;
+  }
+
   const guardOk = scheduleGuard?.ok === true;
   const guardReason = scheduleGuard?.reason ?? (guardOk ? "allowed" : "not loaded");
   const digestStatus = latestDigest?.status ?? scheduleStatus?.latest_digest_status ?? "none";
@@ -950,6 +1172,11 @@ function renderAutoApplyDiagnostics(diagnostics) {
 }
 
 async function rollbackApplyAudit(applyAuditId) {
+  if (!canUseCapability("rollback")) {
+    setStatus("Rollback is disabled for this environment.", "error");
+    return;
+  }
+
   if (!Number.isFinite(applyAuditId) || applyAuditId <= 0) {
     setStatus("Invalid audit id.", "error");
     return;
@@ -1206,6 +1433,11 @@ function renderSelectedProposal() {
 }
 
 async function reviewProposal(action) {
+  if (!canUseCapability("proposalReview")) {
+    setStatus("Proposal review actions are disabled for this environment.", "error");
+    return;
+  }
+
   const note = elements.proposalDetail.querySelector("#reviewNote")?.value?.trim() ?? "";
   if (action === "reject" && !note) {
     setStatus("Reject requires a reviewer note.", "error");
@@ -1236,6 +1468,11 @@ async function reviewProposal(action) {
 }
 
 async function validateProposal() {
+  if (!canUseCapability("proposalReview")) {
+    setStatus("Proposal validation is disabled for this environment.", "error");
+    return;
+  }
+
   setStatus("Running deterministic validation...");
   const { error } = await state.client.rpc("validate_catalog_agent_proposal", {
     p_proposal_id: state.selected.proposal_id
@@ -1250,6 +1487,11 @@ async function validateProposal() {
 }
 
 async function prepareCanonicalDraft() {
+  if (!canUseCapability("proposalReview")) {
+    setStatus("Draft preparation is disabled for this environment.", "error");
+    return;
+  }
+
   const proposalId = state.selected?.proposal_id;
   if (!proposalId) return;
 
@@ -1272,6 +1514,11 @@ async function prepareCanonicalDraft() {
 }
 
 async function applyProposal() {
+  if (!canUseCapability("proposalApply")) {
+    setStatus("Apply is disabled for this environment.", "error");
+    return;
+  }
+
   setStatus("Applying validated proposal through governed RPC...");
   const { error } = await state.client.rpc("apply_catalog_agent_proposal", {
     p_proposal_id: state.selected.proposal_id
@@ -1433,6 +1680,9 @@ function getProposalActionState(proposal, draft = null) {
     && applyTypes.includes(proposalType);
   const canRequestMore = !isClosed;
   const canReject = !isClosed;
+  const canReview = canUseCapability("proposalReview");
+  const canApplyCapability = canUseCapability("proposalApply");
+  const readOnlyReason = "This environment is read-only from the console.";
 
   return {
     guidance: actionGuidance({
@@ -1446,28 +1696,28 @@ function getProposalActionState(proposal, draft = null) {
       draftStatus
     }),
     prepareDraft: {
-      enabled: canPrepareDraft,
-      reason: canPrepareDraft ? "" : "Only open create_canonical proposals without a ready draft can prepare an enrichment draft."
+      enabled: canReview && canPrepareDraft,
+      reason: !canReview ? readOnlyReason : canPrepareDraft ? "" : "Only open create_canonical proposals without a ready draft can prepare an enrichment draft."
     },
     queue: {
-      enabled: canQueue,
-      reason: canQueue ? "" : "Only actionable proposal types can be queued for validation."
+      enabled: canReview && canQueue,
+      reason: !canReview ? readOnlyReason : canQueue ? "" : "Only actionable proposal types can be queued for validation."
     },
     validate: {
-      enabled: canValidate,
-      reason: canValidate ? "" : "Validation runs only after a proposal is queued and actionable."
+      enabled: canReview && canValidate,
+      reason: !canReview ? readOnlyReason : canValidate ? "" : "Validation runs only after a proposal is queued and actionable."
     },
     apply: {
-      enabled: canApply,
-      reason: canApply ? "" : "Apply requires validated, low-risk approve_alias or add_localization."
+      enabled: canApplyCapability && canApply,
+      reason: !canApplyCapability ? readOnlyReason : canApply ? "" : "Apply requires validated, low-risk approve_alias or add_localization."
     },
     more: {
-      enabled: canRequestMore,
-      reason: canRequestMore ? "" : "Closed proposals cannot request more evidence."
+      enabled: canReview && canRequestMore,
+      reason: !canReview ? readOnlyReason : canRequestMore ? "" : "Closed proposals cannot request more evidence."
     },
     reject: {
-      enabled: canReject,
-      reason: canReject ? "" : "Closed proposals cannot be rejected again."
+      enabled: canReview && canReject,
+      reason: !canReview ? readOnlyReason : canReject ? "" : "Closed proposals cannot be rejected again."
     },
     learning: {
       enabled: true,
@@ -1512,6 +1762,10 @@ function actionButton(action, label, state, variant = "") {
 }
 
 function rollbackButton(audit) {
+  if (!canUseCapability("rollback")) {
+    return `<button type="button" class="secondary" disabled>Rollback disabled</button>`;
+  }
+
   if (audit.status !== "applied") {
     return `<button type="button" class="secondary" disabled>Rollback unavailable</button>`;
   }

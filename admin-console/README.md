@@ -23,6 +23,7 @@ The first version is a zero-build static web app:
 It currently supports:
 
 - email/password login through Supabase Auth;
+- one static console with separate environment pages: `#/dev`, `#/staging`, and `#/prod`;
 - explicit catalog-admin authorization check before the workspace opens;
 - loading the catalog agent review inbox;
 - filtering by proposal status and limit;
@@ -103,6 +104,13 @@ Operations worker controls are deliberately narrow:
 - the default review list now hides historical duplicate proposals while leaving audit history in the database;
 - verified `https://catalog.seasonapp.it/`, `app.js?v=20260515-1`, and `styles.css?v=20260515-1` return `200`.
 
+2026-05-16:
+
+- added single-domain environment pages for `#/dev`, `#/staging`, and `#/prod`;
+- kept legacy single-environment `config.local.js` compatibility so the existing dev console keeps working after static deploy;
+- staging/prod default to read-only/unconfigured until their Supabase anon keys and promotion policy are added;
+- cache version `20260516-1`.
+
 ## Local Setup
 
 Create a local config file from the example:
@@ -111,12 +119,20 @@ Create a local config file from the example:
 cp admin-console/config.example.js admin-console/config.local.js
 ```
 
-Edit `admin-console/config.local.js` with the target environment public Supabase URL and anon key.
+Edit `admin-console/config.local.js` with the target environment public Supabase URLs and anon keys.
 
 Use `Season-dev` first:
 
 - project ref: `gyuedxycbnqljryenapx`;
 - URL: `https://gyuedxycbnqljryenapx.supabase.co`.
+
+The console supports multiple environment pages on the same domain:
+
+- `https://catalog.seasonapp.it/#/dev`
+- `https://catalog.seasonapp.it/#/staging`
+- `https://catalog.seasonapp.it/#/prod`
+
+Dev can expose controlled worker operations. Staging and prod should remain read-only in `config.local.js` until a promotion checklist explicitly enables more capabilities.
 
 Never put a service-role key in this folder.
 
@@ -140,9 +156,9 @@ Current dev deployment:
 
 - URL: `https://catalog.seasonapp.it/`
 - Hosting path: `/home/u280052083/domains/seasonapp.it/public_html/catalog`
-- Supabase environment: `Season-dev`
+- Supabase environments: `Season-dev` today; `Season-staging` and `Season-prod` pages are supported by config but should stay read-only until explicitly enabled
 - Config file on host: `config.local.js`
-- Current cache version: `20260515-3`
+- Current cache version: `20260516-1`
 - Latest deployment behavior: operational-focus default statuses and backend
   duplicate-open-proposal cleanup at Catalog Agent run start.
 - `config.local.js` is also cache-busted in `index.html`; otherwise an operator

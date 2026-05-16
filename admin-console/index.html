@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Season Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=20260515-3">
-    <script src="./config.local.js?v=20260515-3"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260516-1">
+    <script src="./config.local.js?v=20260516-1"></script>
   </head>
   <body>
     <div class="shell">
@@ -25,6 +25,11 @@
           <a href="#ops">Operations</a>
         </nav>
 
+        <div class="environment-switcher" aria-label="Supabase environments">
+          <span>Environment</span>
+          <div id="environmentNav" class="environment-nav"></div>
+        </div>
+
         <div class="session">
           <span id="sessionEmail">Signed out</span>
           <button id="signOutButton" type="button" class="secondary" hidden>Sign out</button>
@@ -35,6 +40,8 @@
         <section id="configWarning" class="notice" hidden>
           Configure `admin-console/config.local.js` before using the console.
         </section>
+
+        <section id="environmentModeNotice" class="notice environment-notice" hidden></section>
 
         <section id="authPanel" class="auth-panel">
           <div>
@@ -260,6 +267,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260515-3"></script>
+    <script type="module" src="./app.js?v=20260516-1"></script>
   </body>
 </html>

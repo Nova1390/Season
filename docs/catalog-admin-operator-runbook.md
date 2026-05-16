@@ -1,6 +1,6 @@
 # Catalog Admin Operator Runbook
 
-Status: dev console live at `https://catalog.seasonapp.it/`; staging remains intentionally untouched.
+Status: console live at `https://catalog.seasonapp.it/`; dev is operational, staging/prod pages are monitor-only until explicitly configured/promoted.
 
 This runbook explains how to operate the Season catalog governance console without needing to read SQL, raw JSON, or backend code first.
 
@@ -23,13 +23,21 @@ Open:
 https://catalog.seasonapp.it/
 ```
 
-Sign in with a Supabase Auth user that has catalog-admin access on `Season-dev`.
+Environment pages:
+
+- `https://catalog.seasonapp.it/#/dev`
+- `https://catalog.seasonapp.it/#/staging`
+- `https://catalog.seasonapp.it/#/prod`
+
+Sign in with a Supabase Auth user that has catalog-admin access on the selected Supabase environment.
 
 Expected behavior:
 
 - non-authenticated users see only login;
 - authenticated users without catalog-admin access are signed out;
-- the sidebar shows the active environment, currently `Season-dev`;
+- the sidebar shows the active environment;
+- switching environment signs out the current session and requires a fresh login for that Supabase project;
+- staging/prod should be read-only from the console until an explicit promotion checklist changes their capabilities;
 - privileged buttons still fail server-side if permissions are missing.
 
 ## 3. Review Inbox
