@@ -229,3 +229,8 @@
 "home.filter.peak_season" = "Di stagione";
 "home.filter.trending" = "Trending";
 "home.meta.recipe" = "Ricetta";
+"notifications.title" = "Notifiche";
+"notifications.subtitle" = "Promemoria utili da frigo, lista e stagione.";
+"notifications.mark_all_read" = "Segna lette";
+"notifications.empty_title" = "Tutto tranquillo";
+"notifications.empty_body" = "Quando ci sarà qualcosa di utile da fare, lo troverai qui.";

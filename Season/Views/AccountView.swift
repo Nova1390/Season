@@ -1355,6 +1355,7 @@ struct AccountView: View {
         case .instagram: return viewModel.localizer.localized("common.instagram")
         case .tiktok: return viewModel.localizer.localized("common.tiktok")
         case .apple: return viewModel.localizer.localized("common.apple")
+        case .google: return "Google"
         }
     }
 
@@ -1717,6 +1718,7 @@ struct AccountView: View {
                 case .instagram: return viewModel.localizer.text(.authOAuthNotConfiguredInstagram)
                 case .tiktok: return viewModel.localizer.text(.authOAuthNotConfiguredTikTok)
                 case .apple: return viewModel.localizer.text(.authOAuthNotConfiguredApple)
+                case .google: return "Google OAuth is not configured yet."
                 }
             case .missingPresentationAnchor:
                 return viewModel.localizer.text(.authMissingApplePresentationAnchor)
@@ -1727,6 +1729,7 @@ struct AccountView: View {
                 case .instagram: return viewModel.localizer.text(.authFailedInstagram)
                 case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
                 case .apple: return viewModel.localizer.text(.authFailedApple)
+                case .google: return "Google sign-in failed. Please try again."
                 }
             case .oauthFlowFailed(_, let details):
                 return details
@@ -1743,6 +1746,7 @@ struct AccountView: View {
         case .instagram: return viewModel.localizer.text(.authFailedInstagram)
         case .tiktok: return viewModel.localizer.text(.authFailedTikTok)
         case .apple: return viewModel.localizer.text(.authFailedApple)
+        case .google: return "Google sign-in failed. Please try again."
         }
     }
 

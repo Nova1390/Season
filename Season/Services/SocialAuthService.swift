@@ -61,6 +61,8 @@ enum SocialAuthError: LocalizedError {
                 return "TikTok OAuth is not configured yet."
             case .apple:
                 return "Apple Sign In is not configured yet."
+            case .google:
+                return "Google OAuth is not configured yet."
             }
         case .oauthFlowFailed(_, let details):
             return details
@@ -88,12 +90,48 @@ struct SocialAuthService: SocialAuthServicing {
         case .apple:
             logger.debug("Entering Apple auth branch")
             return try await AppleSignInAuthenticator().authenticate()
+        case .google:
+            logger.debug("Entering Google OAuth branch")
+            return try await GoogleOAuthAuthenticator().authenticate()
         case .instagram:
             logger.debug("Entering Instagram OAuth stub branch")
             return try await OAuthProviderAuthenticator(provider: .instagram).authenticate()
         case .tiktok:
             logger.debug("Entering TikTok OAuth stub branch")
             return try await OAuthProviderAuthenticator(provider: .tiktok).authenticate()
+        }
+    }
+}
+
+private struct GoogleOAuthAuthenticator {
+    @MainActor
+    func authenticate() async throws -> SocialAuthResult {
+        let redirectURL = URL(string: "season://auth/callback")!
+
+        do {
+            let userID = try await SupabaseService.shared.signInWithGoogleOAuth(redirectTo: redirectURL)
+            let profile = try? await SupabaseService.shared.fetchMyProfile()
+            let email = SupabaseService.shared.currentAuthenticatedEmail()
+            let fallbackDisplayName = email?
+                .split(separator: "@")
+                .first
+                .map(String.init)
+
+            SeasonLog.debug("[SEASON_AUTH] phase=google_oauth_succeeded")
+            return SocialAuthResult(
+                provider: .google,
+                providerUserID: userID.uuidString,
+                displayName: profile?.display_name ?? fallbackDisplayName,
+                handle: profile?.season_username,
+                profileImageURL: profile?.avatar_url,
+                accessToken: nil
+            )
+        } catch {
+            SeasonLog.debug("[SEASON_AUTH] phase=google_oauth_failed error=\(error.localizedDescription)")
+            throw SocialAuthError.oauthFlowFailed(
+                provider: .google,
+                details: "Google sign-in failed. Please try again."
+            )
         }
     }
 }

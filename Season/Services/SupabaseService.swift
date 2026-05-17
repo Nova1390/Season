@@ -1451,6 +1451,25 @@ final class SupabaseService {
         notifyAuthStateDidChange()
     }
 
+    @MainActor
+    func signInWithGoogleOAuth(redirectTo: URL) async throws -> UUID {
+        try await instrumentedRequest(name: "signInWithGoogleOAuth") {
+            guard let client else {
+                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
+            }
+
+            let session = try await client.auth.signInWithOAuth(
+                provider: .google,
+                redirectTo: redirectTo,
+                scopes: "openid email profile"
+            )
+            rememberAuthenticatedUser(id: session.user.id, email: session.user.email)
+            invalidateCurrentProfileCache()
+            notifyAuthStateDidChange()
+            return session.user.id
+        }
+    }
+
     func handleAuthCallbackURL(_ url: URL) {
         guard let client else {
             SeasonLog.debug("[SEASON_AUTH] phase=callback_ignored reason=missing_configuration url=\(url.absoluteString)")

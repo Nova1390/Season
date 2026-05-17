@@ -166,9 +166,11 @@ struct SeasonTopBar: View {
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     var leading: SeasonTopBarLeading = .none
     var trailingAccessory: AnyView? = nil
+    var showsNotificationsButton: Bool = true
 
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(SeasonNotificationReadStore.readIDsStorageKey) private var readNotificationIDsRaw = ""
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -257,16 +259,34 @@ struct SeasonTopBar: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                SeasonLog.debug("[SEASON_TOPBAR] phase=notifications_stub action=tap")
-            } label: {
-                topBarIcon(
-                    systemName: "bell",
-                    accessibilityLabel: produceViewModel.localizer.localized("home.topbar.notifications")
-                )
+            if showsNotificationsButton {
+                NavigationLink {
+                    NotificationsView(
+                        produceViewModel: produceViewModel,
+                        fridgeViewModel: fridgeViewModel,
+                        shoppingListViewModel: shoppingListViewModel
+                    )
+                } label: {
+                    topBarIcon(
+                        systemName: "bell",
+                        accessibilityLabel: produceViewModel.localizer.localized("home.topbar.notifications"),
+                        showIndicator: unreadNotificationCount > 0
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    private var unreadNotificationCount: Int {
+        let readIDs = SeasonNotificationReadStore.readIDs(from: readNotificationIDsRaw)
+        return SeasonNotificationCenter.notifications(
+            produceViewModel: produceViewModel,
+            fridgeViewModel: fridgeViewModel,
+            shoppingListViewModel: shoppingListViewModel
+        )
+        .filter { !readIDs.contains($0.id) }
+        .count
     }
 
     @ViewBuilder
@@ -302,6 +322,7 @@ private struct SeasonTopBarModifier: ViewModifier {
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
     var leading: SeasonTopBarLeading
     var trailingAccessory: AnyView?
+    var showsNotificationsButton: Bool = true
 
     func body(content: Content) -> some View {
         content
@@ -311,7 +332,8 @@ private struct SeasonTopBarModifier: ViewModifier {
                     produceViewModel: produceViewModel,
                     shoppingListViewModel: shoppingListViewModel,
                     leading: leading,
-                    trailingAccessory: trailingAccessory
+                    trailingAccessory: trailingAccessory,
+                    showsNotificationsButton: showsNotificationsButton
                 )
             }
     }
@@ -322,14 +344,16 @@ extension View {
         produceViewModel: ProduceViewModel,
         shoppingListViewModel: ShoppingListViewModel,
         leading: SeasonTopBarLeading = .none,
-        trailingAccessory: AnyView? = nil
+        trailingAccessory: AnyView? = nil,
+        showsNotificationsButton: Bool = true
     ) -> some View {
         modifier(
             SeasonTopBarModifier(
                 produceViewModel: produceViewModel,
                 shoppingListViewModel: shoppingListViewModel,
                 leading: leading,
-                trailingAccessory: trailingAccessory
+                trailingAccessory: trailingAccessory,
+                showsNotificationsButton: showsNotificationsButton
             )
         )
     }

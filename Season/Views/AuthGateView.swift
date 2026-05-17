@@ -15,6 +15,7 @@ private enum AuthEntryMode {
 
 private enum AuthActionKind {
     case apple
+    case google
     case signUp
     case logIn
     case username
@@ -53,13 +54,13 @@ private func mappedAuthMessage(_ error: Error, action: AuthActionKind) -> String
     if let socialError = error as? SocialAuthError {
         switch socialError {
         case .cancelled:
-            return "Apple sign-in was cancelled."
+            return action == .google ? "Google sign-in was cancelled." : "Apple sign-in was cancelled."
         case .appleAuthorizationFailed:
             return "Apple sign-in failed. Please try again."
         case .oauthFlowFailed, .unknown, .missingPresentationAnchor:
-            return "Apple sign-in failed. Please try again."
+            return action == .google ? "Google sign-in failed. Please try again." : "Apple sign-in failed. Please try again."
         case .oauthNotConfigured:
-            return "Apple sign-in is not available right now."
+            return action == .google ? "Google sign-in is not available right now." : "Apple sign-in is not available right now."
         }
     }
 
@@ -92,6 +93,8 @@ private func mappedAuthMessage(_ error: Error, action: AuthActionKind) -> String
     switch action {
     case .apple:
         return "Apple sign-in failed. Please try again."
+    case .google:
+        return "Google sign-in failed. Please try again."
     case .signUp:
         return "Sign up failed. Please try again."
     case .logIn:
@@ -289,6 +292,20 @@ private struct AuthEntryScreen: View {
                                 .disabled(isLoading)
                             }
 
+                            if FeatureFlags.googleAuthenticationEnabled {
+                                Button {
+                                    continueWithGoogle()
+                                } label: {
+                                    Label("Continue with Google", systemImage: "g.circle")
+                                        .font(DS.Font.sans(16, weight: .semibold))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.9)
+                                        .frame(maxWidth: .infinity, minHeight: 56)
+                                }
+                                .buttonStyle(AuthGateGoogleButtonStyle())
+                                .disabled(isLoading)
+                            }
+
                             Button {
                                 clearStatus()
                                 mode = .signUp
@@ -450,6 +467,27 @@ private struct AuthEntryScreen: View {
         }
     }
 
+    private func continueWithGoogle() {
+        guard !isLoading else { return }
+        clearStatus()
+        isLoading = true
+
+        Task {
+            defer { isLoading = false }
+            do {
+                _ = try await socialAuthService.authenticate(with: .google)
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=google_sign_in_success")
+                await onAuthCompleted()
+            } catch {
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=google_sign_in_failed error=\(error.localizedDescription)")
+                await MainActor.run {
+                    statusMessage = mappedAuthMessage(error, action: .google)
+                    isError = true
+                }
+            }
+        }
+    }
+
     private func submitEmailAuth() {
         guard !isLoading else { return }
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -503,6 +541,23 @@ private struct AuthEntryScreen: View {
                 }
             }
         }
+    }
+}
+
+private struct AuthGateGoogleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(DS.Color.ink.opacity(configuration.isPressed ? 0.72 : 0.92))
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(DS.Color.card.opacity(configuration.isPressed ? 0.88 : 0.96))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.30), lineWidth: 0.9)
+            )
+            .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
     }
 }
 

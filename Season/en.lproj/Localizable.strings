@@ -229,3 +229,8 @@
 "home.filter.peak_season" = "Best of season";
 "home.filter.trending" = "Trending";
 "home.meta.recipe" = "Recipe";
+"notifications.title" = "Notifications";
+"notifications.subtitle" = "Useful reminders from your fridge, shopping list, and the season.";
+"notifications.mark_all_read" = "Mark read";
+"notifications.empty_title" = "All quiet";
+"notifications.empty_body" = "When there is something useful to do, you will find it here.";

@@ -4,13 +4,14 @@ enum SocialAuthProvider: String, Codable, CaseIterable, Identifiable {
     case instagram
     case tiktok
     case apple
+    case google
 
     var id: String { rawValue }
     var supportsRecipeImport: Bool {
         switch self {
         case .instagram, .tiktok:
             return true
-        case .apple:
+        case .apple, .google:
             return false
         }
     }
