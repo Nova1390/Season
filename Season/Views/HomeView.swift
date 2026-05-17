@@ -1179,8 +1179,7 @@ struct HomeView: View {
     }
 
     /// Inject each editorial module once, matching the v2b cadence: recipe
-    /// rhythm first, then one seasonal recipe band, one tip, one nudge, one
-    /// collection and one community pulse.
+    /// rhythm first, then seasonal recipe band, tip, nudge and collection.
     private func editorialInjection(afterRecipeAt recipeIndex: Int) -> HomeFeedEditorialInjection? {
         guard recipeIndex >= 0 else { return nil }
         let ordinal = recipeIndex + 1 // "after the Nth recipe"
@@ -1189,7 +1188,6 @@ struct HomeView: View {
         case 4:  return .tipBand
         case 5:  return .nudgeCard
         case 7:  return .collectionTile
-        case 9:  return .pulseBand
         default: return nil
         }
     }
@@ -1390,7 +1388,6 @@ struct HomeView: View {
         case .tipBand:        tipBandView
         case .nudgeCard:      nudgeCardView
         case .collectionTile: collectionTileView
-        case .pulseBand:      pulseBandView
         }
     }
 
@@ -1450,17 +1447,6 @@ struct HomeView: View {
                 isInteractive: false
             )
         }
-    }
-
-    private var pulseBandView: some View {
-        let context = pulseContext()
-        return CommunityPulseBand(
-            liveLabel: viewModel.localizer.localized("home.pulse.live"),
-            headline: context.headline,
-            emphasis: context.emphasis,
-            subline: context.subline,
-            avatars: context.avatars
-        )
     }
 
     @ViewBuilder
@@ -1553,80 +1539,6 @@ struct HomeView: View {
             }
         }
         return viewModel.rankedRecipe(forID: recipeID)
-    }
-
-    private func pulseAvatarSources() -> [FeedImageSource] {
-        let pool = (activeMiniFeedItems + remainingFeedItems)
-            .compactMap { item -> Recipe? in
-                if case .recipe(let card) = item { return card.ranked.recipe }
-                return nil
-            }
-        var seen: Set<String> = []
-        var sources: [FeedImageSource] = []
-        for recipe in pool {
-            let avatarRaw = recipe.creatorAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            guard !avatarRaw.isEmpty, let url = URL(string: avatarRaw) else { continue }
-            let key = recipe.canonicalCreatorID ?? avatarRaw
-            if seen.contains(key) { continue }
-            seen.insert(key)
-            sources.append(FeedImageSource(url: url, fallbackAssetName: nil))
-            if sources.count == 4 { break }
-        }
-        if !sources.isEmpty {
-            return sources
-        }
-        return creatorStripData.prefix(4).map(\.avatar)
-    }
-
-    private struct PulseContext {
-        let emphasis: String?
-        let headline: String
-        let subline: String
-        let avatars: [FeedImageSource]
-    }
-
-    private func pulseContext() -> PulseContext {
-        let recipes = (activeMiniFeedItems + remainingFeedItems)
-            .compactMap { item -> Recipe? in
-                if case .recipe(let card) = item { return card.ranked.recipe }
-                return nil
-            }
-        let crispyTotal = recipes.prefix(6).reduce(0) { $0 + viewModel.crispyCount(for: $1) }
-        let creatorNames = Array(NSOrderedSet(array: recipes.map(primaryIdentityLabel(for:)).filter { !$0.isEmpty })) as? [String] ?? []
-        let activeCreatorCount = max(creatorNames.count, pulseAvatarSources().count)
-        let headline: String
-        let subline: String
-
-        if viewModel.languageCode == "it" {
-            headline = activeCreatorCount == 1
-                ? "voce attiva su Season"
-                : "voci attive su Season"
-            let names = creatorNames.prefix(3).joined(separator: " · ")
-            let crispyLine = crispyTotal > 0
-                ? "\(crispyTotal.compactFormatted()) crispy oggi"
-                : "Ricette e fonti in movimento oggi"
-            subline = names.isEmpty
-                ? crispyLine
-                : "\(names) — \(crispyLine)"
-        } else {
-            headline = activeCreatorCount == 1
-                ? "active voice on Season"
-                : "active voices on Season"
-            let names = creatorNames.prefix(3).joined(separator: " · ")
-            let crispyLine = crispyTotal > 0
-                ? "\(crispyTotal.compactFormatted()) crispies today"
-                : "Recipes and sources moving today"
-            subline = names.isEmpty
-                ? crispyLine
-                : "\(names) — \(crispyLine)"
-        }
-
-        return PulseContext(
-            emphasis: activeCreatorCount > 0 ? activeCreatorCount.compactFormatted() : nil,
-            headline: headline,
-            subline: subline,
-            avatars: pulseAvatarSources()
-        )
     }
 
     private struct NudgeSuggestion {
@@ -3312,7 +3224,6 @@ private enum HomeFeedEditorialInjection {
     case tipBand
     case nudgeCard
     case collectionTile
-    case pulseBand
 }
 
 private struct HomeRecipeRoute: Identifiable, Hashable {
