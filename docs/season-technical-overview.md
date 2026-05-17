@@ -64,6 +64,7 @@ Componenti condivisi:
 ### Servizi core
 
 - `SupabaseService`: facade Supabase temporanea per auth, profili, ricette, stati, fridge, shopping, catalog RPC, edge function invoke e storage avatar. Il logging runtime passa da `SeasonLog`.
+- `SmartImportRemoteDataSource`: datasource interno per la edge function `parse-recipe-caption`; `SupabaseService` resta facade retrocompatibile.
 - `RecipeRepository`: layer di accesso remoto per ricette e user recipe states, con fallback per schema drift.
 - `RecipeStore`: persistenza locale ricette create/draft e compatibility loader.
 - `ProduceStore`: loader produce JSON.
