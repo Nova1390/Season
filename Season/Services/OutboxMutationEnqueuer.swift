@@ -66,6 +66,34 @@ final class OutboxMutationEnqueuer {
         )
     }
 
+    @discardableResult
+    func enqueueRecipeSavedState(
+        userID: UUID?,
+        recipeID: String,
+        isSaved: Bool
+    ) -> Bool {
+        appendRecord(
+            userID: userID,
+            entityType: "recipe_state",
+            operationType: "saved",
+            payload: RecipeSavedStateOutboxPayload(recipeID: recipeID, isSaved: isSaved)
+        )
+    }
+
+    @discardableResult
+    func enqueueRecipeCrispiedState(
+        userID: UUID?,
+        recipeID: String,
+        isCrispied: Bool
+    ) -> Bool {
+        appendRecord(
+            userID: userID,
+            entityType: "recipe_state",
+            operationType: "crispied",
+            payload: RecipeCrispiedStateOutboxPayload(recipeID: recipeID, isCrispied: isCrispied)
+        )
+    }
+
     private func appendRecord<T: Encodable>(
         userID: UUID?,
         entityType: String,
@@ -113,4 +141,14 @@ private struct FridgeBackfillOutboxCreatePayload: Codable {
     let customName: String?
     let quantity: Double?
     let unit: String?
+}
+
+private struct RecipeSavedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isSaved: Bool
+}
+
+private struct RecipeCrispiedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isCrispied: Bool
 }

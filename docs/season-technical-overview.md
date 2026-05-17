@@ -72,7 +72,7 @@ Componenti condivisi:
 - `RecipeTranslationService`: traduzione runtime dove supportata.
 - `SocialAuthService`: Apple/OAuth helper.
 - `FollowStore` e `FollowSyncManager`: follow locale e sync delta.
-- `OutboxStore`, `OutboxDispatcher`, `OutboxMutationEnqueuer`: coda mutazioni locali e replay remoto.
+- `OutboxStore`, `OutboxDispatcher`, `OutboxMutationEnqueuer`: coda mutazioni locali e replay remoto per fridge, shopping list e stati ricetta saved/crispy.
 - `BackfillService`: convergenza frigo/shopping verso outbox.
 - `CatalogAdminOpsService`: wrapper operativo per admin catalogo.
 - `ReconciliationDiagnosticsService`: diagnostiche reconciliation.

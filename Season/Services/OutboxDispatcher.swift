@@ -186,6 +186,22 @@ final class OutboxDispatcher {
                 traceID: mutation.mutationID
             )
 
+        case ("recipe_state", "saved"):
+            let payload = try decoder.decode(RecipeSavedStateOutboxPayload.self, from: mutation.payload)
+            try await supabaseService.setRecipeSavedState(
+                recipeID: payload.recipeID,
+                isSaved: payload.isSaved,
+                traceID: mutation.mutationID
+            )
+
+        case ("recipe_state", "crispied"):
+            let payload = try decoder.decode(RecipeCrispiedStateOutboxPayload.self, from: mutation.payload)
+            try await supabaseService.setRecipeCrispiedState(
+                recipeID: payload.recipeID,
+                isCrispied: payload.isCrispied,
+                traceID: mutation.mutationID
+            )
+
         default:
             throw OutboxDispatcherError.unsupportedMutation(
                 entityType: mutation.entityType,
@@ -232,4 +248,14 @@ private struct FridgeOutboxCreatePayload: Codable {
 
 private struct FridgeOutboxDeletePayload: Codable {
     let localItemID: String
+}
+
+private struct RecipeSavedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isSaved: Bool
+}
+
+private struct RecipeCrispiedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isCrispied: Bool
 }

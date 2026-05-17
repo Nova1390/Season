@@ -122,6 +122,8 @@ final class ProduceViewModel: ObservableObject {
     private let produceByNormalizedName: [String: ProduceItem]
     private let basicByID: [String: BasicIngredient]
     private let basicByNormalizedName: [String: BasicIngredient]
+    private let recipeStateOutboxEnqueuer = OutboxMutationEnqueuer()
+    private let recipeStateOutboxDispatcher = OutboxDispatcher()
     private var remoteIngredientAliasLookup: [String: IngredientAliasRecord] = [:]
     private var unifiedIngredientByID: [String: UnifiedIngredientParityEntry] = [:]
     private var unifiedAliasLookup: [String: IngredientAliasMatch] = [:]
@@ -1148,14 +1150,14 @@ final class ProduceViewModel: ObservableObject {
             metadata: ["isCrispied": isCrispied ? "true" : "false"]
         )
         SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
-        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
-        Task { [supabaseService] in
-            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=service_call")
-            do {
-                try await supabaseService.setRecipeCrispiedState(recipeID: recipe.id, isCrispied: isCrispied, traceID: traceID)
-            } catch {
-                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=write_failed error=\(error)")
-            }
+        let didEnqueue = recipeStateOutboxEnqueuer.enqueueRecipeCrispiedState(
+            userID: SupabaseService.shared.currentAuthenticatedUserID(),
+            recipeID: recipe.id,
+            isCrispied: isCrispied
+        )
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=outbox_enqueued success=\(didEnqueue)")
+        Task { [recipeStateOutboxDispatcher] in
+            await recipeStateOutboxDispatcher.processPendingMutations()
         }
     }
 
@@ -1178,15 +1180,14 @@ final class ProduceViewModel: ObservableObject {
             metadata: ["isSaved": isSaved ? "true" : "false"]
         )
         SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
-        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
-
-        Task { [supabaseService] in
-            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=service_call")
-            do {
-                try await supabaseService.setRecipeSavedState(recipeID: recipe.id, isSaved: isSaved, traceID: traceID)
-            } catch {
-                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=write_failed error=\(error)")
-            }
+        let didEnqueue = recipeStateOutboxEnqueuer.enqueueRecipeSavedState(
+            userID: SupabaseService.shared.currentAuthenticatedUserID(),
+            recipeID: recipe.id,
+            isSaved: isSaved
+        )
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=outbox_enqueued success=\(didEnqueue)")
+        Task { [recipeStateOutboxDispatcher] in
+            await recipeStateOutboxDispatcher.processPendingMutations()
         }
     }
 

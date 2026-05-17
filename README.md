@@ -60,7 +60,7 @@ The goal is for published recipes to reference canonical `ingredient_id` values 
 Current app behavior remains hybrid:
 
 - Recipes: Supabase is the target source of truth for published recipes.
-- Fridge and shopping list: local-first with Supabase write-through and outbox replay.
+- Fridge, shopping list, and saved/crispy recipe states: local-first with Supabase outbox replay.
 - Recipe states: local-first for UX, with saved/crispy write-through.
 - Catalog operations: backend-governed through RPCs, edge functions, audit tables, and admin workflows.
 
@@ -171,6 +171,6 @@ The app is in a TestFlight rollout preparation phase:
 - iOS Release builds successfully against staging.
 - TestFlight candidate `1.0.1 (7)` was uploaded as a bugfix candidate, but Smart Import is under hotfix validation after creator-caption regressions on title and quantity preservation.
 - Auth, profile, recipe feed, fridge, shopping list, creator, and smart import flows are integrated.
-- Fridge and shopping list use local-first state with outbox-backed Supabase sync.
+- Fridge, shopping list, and saved/crispy recipe states use local-first state with outbox-backed Supabase sync.
 - Catalog hierarchy, enrichment, and reconciliation workflows are active.
 - Remaining hardening areas are documented in the functional and technical overviews.
