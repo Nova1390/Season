@@ -189,6 +189,7 @@ struct ContentView: View {
             }
             .padding(8)
             .background(.ultraThinMaterial)
+            .background(tabBarSurfaceColor)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -251,11 +252,15 @@ struct ContentView: View {
     }
 
     private var tabBarBorderColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.22) : Color.white.opacity(0.75)
+        colorScheme == .dark ? DS.Color.borderS : Color.white.opacity(0.75)
     }
 
     private var activeTabBackgroundColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.38)
+        colorScheme == .dark ? DS.Color.sageSoft.opacity(0.72) : Color.white.opacity(0.38)
+    }
+
+    private var tabBarSurfaceColor: Color {
+        colorScheme == .dark ? DS.Color.card.opacity(0.86) : Color.white.opacity(0.36)
     }
 
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {

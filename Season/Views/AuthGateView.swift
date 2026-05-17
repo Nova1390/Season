@@ -209,13 +209,24 @@ private struct AuthEntryScreen: View {
 
             LinearGradient(
                 stops: [
-                    .init(color: Color.black.opacity(0.18), location: 0.0),
-                    .init(color: Color.black.opacity(0.24), location: 0.28),
-                    .init(color: Color.black.opacity(0.56), location: 0.62),
-                    .init(color: Color.black.opacity(0.90), location: 1.0)
+                    .init(color: Color.black.opacity(0.12), location: 0.0),
+                    .init(color: Color.black.opacity(0.28), location: 0.30),
+                    .init(color: DS.Color.bg.opacity(0.72), location: 0.66),
+                    .init(color: DS.Color.bg.opacity(0.96), location: 1.0)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [
+                    DS.Color.sage.opacity(0.20),
+                    Color.clear
+                ],
+                center: .bottomLeading,
+                startRadius: 16,
+                endRadius: 360
             )
             .ignoresSafeArea()
 
@@ -243,6 +254,7 @@ private struct AuthEntryScreen: View {
                         Text("Cook with the\nland, not\nagainst it.")
                             .font(DS.Font.serif(46, weight: .medium, italic: true))
                             .foregroundStyle(Color.white)
+                            .shadow(color: Color.black.opacity(0.28), radius: 18, x: 0, y: 10)
                             .lineSpacing(-4)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.leading)
@@ -251,6 +263,7 @@ private struct AuthEntryScreen: View {
                         Text("A field guide to seasonal cooking, built around what’s growing near you right now.")
                             .font(DS.Font.serif(16, weight: .regular, italic: true))
                             .foregroundStyle(Color.white.opacity(0.72))
+                            .shadow(color: Color.black.opacity(0.22), radius: 12, x: 0, y: 6)
                             .lineSpacing(2)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -332,11 +345,11 @@ private struct AuthEntryScreen: View {
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(DS.Color.card.opacity(0.86))
+                                    .fill(DS.Color.card.opacity(0.94))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.white.opacity(0.20), lineWidth: 0.8)
+                                    .stroke(DS.Color.borderM, lineWidth: 0.8)
                             )
 
                             Button {
@@ -496,11 +509,11 @@ private struct AuthGateOutlineButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white.opacity(0.96))
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color.white.opacity(configuration.isPressed ? 0.12 : 0.06))
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.16 : 0.10))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.28), lineWidth: 0.9)
+                    .stroke(Color.white.opacity(0.34), lineWidth: 0.9)
             )
             .opacity(configuration.isPressed ? 0.92 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)

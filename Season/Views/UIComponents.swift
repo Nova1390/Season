@@ -29,13 +29,13 @@ enum SeasonTypography {
 }
 
 enum SeasonColors {
-    static let primarySurface = Color(.systemGroupedBackground)
-    static let secondarySurface = Color(.secondarySystemGroupedBackground)
-    static let subtleSurface = Color(.tertiarySystemGroupedBackground)
-    static let mutedChipSurface = Color(.systemGray6)
-    static let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
-    static let seasonGreenSoft = Color(red: 0.84, green: 0.90, blue: 0.79)
-    static let warningOrange = Color(red: 0.84, green: 0.58, blue: 0.18)
+    static let primarySurface = DS.Color.bg
+    static let secondarySurface = DS.Color.card
+    static let subtleSurface = DS.Color.cardSoft
+    static let mutedChipSurface = DS.Color.cardSoft
+    static let seasonGreen = DS.Color.sageDeep
+    static let seasonGreenSoft = DS.Color.sageSoft
+    static let warningOrange = DS.Color.ochre
 }
 
 enum SeasonChipSemantic {
