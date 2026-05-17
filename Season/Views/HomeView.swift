@@ -1020,12 +1020,12 @@ struct HomeView: View {
                 } label: {
                     Text(localizedAllFilterTitle)
                         .font(DS.Font.chip)
-                        .foregroundStyle(selectedQuickFilter == nil ? Color.white : DS.Color.ink)
+                        .foregroundStyle(selectedQuickFilter == nil ? activeFilterForeground : DS.Color.inkSoft)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(selectedQuickFilter == nil ? DS.Color.ink : DS.Color.card)
+                                .fill(selectedQuickFilter == nil ? activeFilterBackground : DS.Color.card)
                         )
                         .overlay(
                             Capsule(style: .continuous)
@@ -1046,12 +1046,12 @@ struct HomeView: View {
                             Text(filter.title(using: viewModel.localizer))
                                 .font(DS.Font.chip)
                         }
-                        .foregroundStyle(isActive ? Color.white : DS.Color.ink)
+                        .foregroundStyle(isActive ? activeFilterForeground : DS.Color.inkSoft)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(isActive ? DS.Color.ink : DS.Color.card)
+                                .fill(isActive ? activeFilterBackground : DS.Color.card)
                         )
                         .overlay(
                             Capsule(style: .continuous)

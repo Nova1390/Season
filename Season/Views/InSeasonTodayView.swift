@@ -89,6 +89,7 @@ struct InSeasonTodayView: View {
             }
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.lg, style: .continuous)
                 .fill(DS.Color.sageSoft.opacity(0.46))
