@@ -171,6 +171,7 @@ struct SeasonTopBar: View {
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SeasonNotificationReadStore.readIDsStorageKey) private var readNotificationIDsRaw = ""
+    @ObservedObject private var socialNotificationStore = SeasonSocialNotificationStore.shared
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -192,6 +193,9 @@ struct SeasonTopBar: View {
         .padding(.horizontal, DS.Spacing.xl)
         .padding(.bottom, DS.Spacing.sm)
         .background(DS.Color.bg)
+        .task {
+            await socialNotificationStore.refreshIfNeeded(produceViewModel: produceViewModel)
+        }
     }
 
     private var hasLeadingControl: Bool {
@@ -283,7 +287,8 @@ struct SeasonTopBar: View {
         return SeasonNotificationCenter.notifications(
             produceViewModel: produceViewModel,
             fridgeViewModel: fridgeViewModel,
-            shoppingListViewModel: shoppingListViewModel
+            shoppingListViewModel: shoppingListViewModel,
+            socialNotifications: socialNotificationStore.notifications
         )
         .filter { !readIDs.contains($0.id) }
         .count

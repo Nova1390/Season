@@ -1375,6 +1375,115 @@ final class SupabaseService {
         }
     }
 
+    func fetchInboundFollows(for followingId: String) async -> [FollowRelation] {
+        let normalizedFollowingID = normalizeFollowID(followingId)
+        guard !normalizedFollowingID.isEmpty else { return [] }
+
+        guard let client else {
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchInboundFollows phase=request_failed reason=missing_configuration")
+            return []
+        }
+
+        do {
+            let response = try await client
+                .from("follows")
+                .select()
+                .eq("following_id", value: normalizedFollowingID)
+                .execute()
+
+            let rows = try JSONDecoder().decode([CloudFollowRow].self, from: response.data)
+            let iso8601 = ISO8601DateFormatter()
+            return rows.compactMap { row -> FollowRelation? in
+                let follower = normalizeFollowID(row.follower_id ?? "")
+                let following = normalizeFollowID(row.following_id ?? "")
+                guard !follower.isEmpty, !following.isEmpty, follower != following else { return nil }
+                let createdAt = row.created_at.flatMap { iso8601.date(from: $0) } ?? Date()
+                return FollowRelation(followerId: follower, followingId: following, createdAt: createdAt)
+            }
+        } catch {
+            if isMissingFollowsTableError(error) {
+                SeasonLog.debug("[SEASON_SUPABASE] request=fetchInboundFollows phase=request_failed reason=table_missing error=\(error)")
+                return []
+            }
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchInboundFollows phase=request_failed error=\(error)")
+            return []
+        }
+    }
+
+    func fetchSocialNotificationSignals(
+        currentUserID: String,
+        ownedRecipes: [Recipe]
+    ) async -> (
+        followers: [SeasonFollowerNotificationSignal],
+        crispies: [SeasonRecipeCrispyNotificationSignal]
+    ) {
+        async let followerSignals = fetchFollowerNotificationSignals(currentUserID: currentUserID)
+        async let crispySignals = fetchRecipeCrispyNotificationSignals(
+            currentUserID: currentUserID,
+            ownedRecipes: ownedRecipes
+        )
+        return await (followerSignals, crispySignals)
+    }
+
+    private func fetchFollowerNotificationSignals(currentUserID: String) async -> [SeasonFollowerNotificationSignal] {
+        await fetchInboundFollows(for: currentUserID)
+            .filter { $0.isActive }
+            .map {
+                SeasonFollowerNotificationSignal(
+                    followerID: $0.followerId,
+                    createdAt: $0.createdAt
+                )
+            }
+    }
+
+    private func fetchRecipeCrispyNotificationSignals(
+        currentUserID: String,
+        ownedRecipes: [Recipe]
+    ) async -> [SeasonRecipeCrispyNotificationSignal] {
+        guard let client else {
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchReceivedCrispies phase=request_failed reason=missing_configuration")
+            return []
+        }
+
+        let limitedRecipes = Array(ownedRecipes.prefix(25))
+        guard !limitedRecipes.isEmpty else { return [] }
+        let iso8601 = ISO8601DateFormatter()
+        var signals: [SeasonRecipeCrispyNotificationSignal] = []
+
+        for recipe in limitedRecipes {
+            do {
+                let response = try await client
+                    .from("user_recipe_states")
+                    .select("user_id,recipe_id,is_crispied,updated_at")
+                    .eq("recipe_id", value: recipe.id)
+                    .eq("is_crispied", value: true)
+                    .execute()
+
+                let rows = try JSONDecoder().decode([CloudUserRecipeState].self, from: response.data)
+                let remoteRows = rows.filter { row in
+                    let actor = row.user_id?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+                    return !actor.isEmpty && actor != currentUserID
+                }
+                guard !remoteRows.isEmpty else { continue }
+                let latestAt = remoteRows
+                    .compactMap { $0.updated_at.flatMap(iso8601.date(from:)) }
+                    .max() ?? Date()
+                signals.append(
+                    SeasonRecipeCrispyNotificationSignal(
+                        recipeID: recipe.id,
+                        recipeTitle: recipe.title,
+                        count: remoteRows.count,
+                        latestAt: latestAt
+                    )
+                )
+            } catch {
+                SeasonLog.debug("[SEASON_SUPABASE] request=fetchReceivedCrispies phase=request_failed recipe=\(recipe.id) error=\(error)")
+            }
+        }
+
+        return signals.sorted { $0.latestAt > $1.latestAt }
+    }
+
     func createFollow(_ relation: FollowRelation) async -> Bool {
         let followerID = normalizeFollowID(relation.followerId)
         let followingID = normalizeFollowID(relation.followingId)

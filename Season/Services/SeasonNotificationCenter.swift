@@ -4,10 +4,13 @@ enum SeasonNotificationCenter {
     static func notifications(
         produceViewModel: ProduceViewModel,
         fridgeViewModel: FridgeViewModel,
-        shoppingListViewModel: ShoppingListViewModel
+        shoppingListViewModel: ShoppingListViewModel,
+        socialNotifications: [SeasonInboxNotification] = []
     ) -> [SeasonInboxNotification] {
         var items: [SeasonInboxNotification] = []
         let languageCode = produceViewModel.localizer.languageCode
+
+        items.append(contentsOf: socialNotifications)
 
         if let seasonal = seasonalNotification(
             produceViewModel: produceViewModel,

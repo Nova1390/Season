@@ -35,12 +35,17 @@ The bell is no longer a stub. It opens a local notification inbox generated from
 - Seasonal reminder: highlights the current strongest seasonal ingredient and links to Today.
 - Shopping list reminder: appears when the user has pending shopping list items.
 - Fridge reminder: appears when the fridge is empty or has very few ingredients.
+- Social follower reminder: appears when backend follow rows show users following the current creator.
+- Social crispy reminder: appears when backend recipe state rows show another user crispied one of the current creator's recipes.
 
-These notifications are intentionally local and deterministic:
+These notifications are intentionally lightweight:
 
 - No APNs/FCM token is requested yet.
 - No backend notification table is required yet.
+- Social notifications are read-only derivations from existing `follows` and `user_recipe_states` data.
 - Read state is local via `UserDefaults`.
+
+If RLS prevents one of the social reads, the inbox fails closed and simply omits that notification type.
 
 ## Future V2
 

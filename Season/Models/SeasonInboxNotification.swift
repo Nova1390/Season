@@ -4,12 +4,16 @@ enum SeasonNotificationDestination: Hashable {
     case today
     case fridge
     case shoppingList
+    case recipe(String)
+    case none
 }
 
 enum SeasonNotificationKind: String, Hashable {
     case seasonalPeak
     case fridgeSetup
     case shoppingList
+    case newFollower
+    case recipeCrispied
 }
 
 struct SeasonInboxNotification: Identifiable, Hashable {
@@ -20,6 +24,18 @@ struct SeasonInboxNotification: Identifiable, Hashable {
     let systemImage: String
     let destination: SeasonNotificationDestination
     let createdAt: Date
+}
+
+struct SeasonFollowerNotificationSignal: Hashable {
+    let followerID: String
+    let createdAt: Date
+}
+
+struct SeasonRecipeCrispyNotificationSignal: Hashable {
+    let recipeID: String
+    let recipeTitle: String
+    let count: Int
+    let latestAt: Date
 }
 
 enum SeasonNotificationReadStore {

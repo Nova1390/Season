@@ -6,12 +6,14 @@ struct NotificationsView: View {
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
 
     @AppStorage(SeasonNotificationReadStore.readIDsStorageKey) private var readIDsRaw = ""
+    @ObservedObject private var socialNotificationStore = SeasonSocialNotificationStore.shared
 
     private var notifications: [SeasonInboxNotification] {
         SeasonNotificationCenter.notifications(
             produceViewModel: produceViewModel,
             fridgeViewModel: fridgeViewModel,
-            shoppingListViewModel: shoppingListViewModel
+            shoppingListViewModel: shoppingListViewModel,
+            socialNotifications: socialNotificationStore.notifications
         )
     }
 
@@ -47,6 +49,12 @@ struct NotificationsView: View {
         )
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: SeasonLayout.bottomBarContentClearance)
+        }
+        .task {
+            await socialNotificationStore.refreshIfNeeded(
+                produceViewModel: produceViewModel,
+                force: true
+            )
         }
     }
 
@@ -104,15 +112,25 @@ struct NotificationsView: View {
 
     @ViewBuilder
     private func notificationLink(_ notification: SeasonInboxNotification) -> some View {
-        NavigationLink {
-            destination(for: notification)
-        } label: {
-            notificationRow(notification)
+        switch notification.destination {
+        case .none:
+            Button {
+                markRead(notification)
+            } label: {
+                notificationRow(notification, showsChevron: false)
+            }
+            .buttonStyle(.plain)
+        default:
+            NavigationLink {
+                destination(for: notification)
+            } label: {
+                notificationRow(notification)
+            }
+            .simultaneousGesture(TapGesture().onEnded {
+                markRead(notification)
+            })
+            .buttonStyle(.plain)
         }
-        .simultaneousGesture(TapGesture().onEnded {
-            markRead(notification)
-        })
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -135,10 +153,25 @@ struct NotificationsView: View {
                 produceViewModel: produceViewModel,
                 shoppingListViewModel: shoppingListViewModel
             )
+        case .recipe(let recipeID):
+            if let ranked = produceViewModel.rankedRecipe(forID: recipeID) {
+                RecipeDetailView(
+                    rankedRecipe: ranked,
+                    viewModel: produceViewModel,
+                    shoppingListViewModel: shoppingListViewModel
+                )
+            } else {
+                emptyState
+            }
+        case .none:
+            EmptyView()
         }
     }
 
-    private func notificationRow(_ notification: SeasonInboxNotification) -> some View {
+    private func notificationRow(
+        _ notification: SeasonInboxNotification,
+        showsChevron: Bool = true
+    ) -> some View {
         let isUnread = !readIDs.contains(notification.id)
 
         return HStack(alignment: .top, spacing: 14) {
@@ -175,10 +208,12 @@ struct NotificationsView: View {
 
             Spacer(minLength: 8)
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(DS.Color.inkFaint)
-                .padding(.top, 4)
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(DS.Color.inkFaint)
+                    .padding(.top, 4)
+            }
         }
         .padding(16)
         .background(
@@ -199,6 +234,10 @@ struct NotificationsView: View {
             return DS.Color.Reason.fridgeBg
         case .shoppingList:
             return DS.Color.ochreSoft
+        case .newFollower:
+            return DS.Color.sageSoft
+        case .recipeCrispied:
+            return DS.Color.Crispy.bgActive
         }
     }
 
@@ -210,6 +249,10 @@ struct NotificationsView: View {
             return DS.Color.Reason.fridgeFg
         case .shoppingList:
             return DS.Color.ochre
+        case .newFollower:
+            return DS.Color.sage
+        case .recipeCrispied:
+            return DS.Color.Crispy.flameActive
         }
     }
 
