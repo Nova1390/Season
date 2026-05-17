@@ -194,7 +194,7 @@ struct InSeasonTodayView: View {
                         .lineSpacing(2)
                         .lineLimit(3)
 
-                    reasonChipRow(reasons: Array(ranked.reasons.prefix(3)))
+                    todayReasonChipRow(for: ranked, maxCount: 3)
 
                     if !pairings.isEmpty {
                         pairingRow(pairings)
@@ -288,7 +288,7 @@ struct InSeasonTodayView: View {
                     .foregroundStyle(DS.Color.ink)
                     .lineLimit(1)
 
-                reasonChipRow(reasons: Array(ranked.reasons.prefix(2)), compact: true)
+                todayReasonChipRow(for: ranked, maxCount: 2, compact: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -333,6 +333,67 @@ struct InSeasonTodayView: View {
                     )
             }
         }
+    }
+
+    private func todayReasonChipRow(
+        for ranked: RankedInSeasonItem,
+        maxCount: Int,
+        compact: Bool = false
+    ) -> some View {
+        HStack(spacing: 5) {
+            todayStageChip(for: ranked.item, compact: compact)
+
+            ForEach(Array(todaySecondaryReasons(for: ranked, maxCount: max(0, maxCount - 1)).enumerated()), id: \.offset) { _, reason in
+                Text(reason)
+                    .font(DS.Font.sans(compact ? 9.5 : 10.5, weight: .medium))
+                    .foregroundStyle(DS.Color.sageDeep)
+                    .lineLimit(1)
+                    .padding(.horizontal, compact ? 7 : 8)
+                    .padding(.vertical, compact ? 3 : 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(DS.Color.sageSoft.opacity(compact ? 0.42 : 0.52))
+                    )
+            }
+        }
+    }
+
+    private func todayStageChip(for item: ProduceItem, compact: Bool = false) -> some View {
+        let stage = todaySeasonStage(for: item)
+        return Text(stageChipText(for: item))
+            .font(DS.Font.sans(compact ? 9.5 : 10.5, weight: .semibold))
+            .foregroundStyle(stageChipForeground(for: stage))
+            .lineLimit(1)
+            .padding(.horizontal, compact ? 7 : 8)
+            .padding(.vertical, compact ? 3 : 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(stageChipBackground(for: stage).opacity(compact ? 0.46 : 0.58))
+            )
+    }
+
+    private func todaySecondaryReasons(for ranked: RankedInSeasonItem, maxCount: Int) -> [String] {
+        guard maxCount > 0 else { return [] }
+        let genericSeasonReason = viewModel.localizer.text(.reasonInSeasonNow)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let stageText = stageChipText(for: ranked.item)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        var seen: Set<String> = [genericSeasonReason, stageText]
+        var filtered: [String] = []
+
+        for reason in ranked.reasons {
+            let cleaned = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.isEmpty else { continue }
+            let key = cleaned.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            filtered.append(cleaned)
+            if filtered.count == maxCount { break }
+        }
+
+        return filtered
     }
 
     private func pairingRow(_ pairings: [RankedInSeasonItem]) -> some View {
@@ -442,6 +503,9 @@ struct InSeasonTodayView: View {
     private func featuredReasonText(for ranked: RankedInSeasonItem) -> String {
         let name = ranked.item.displayName(languageCode: viewModel.localizer.languageCode)
         let firstReason = ranked.reasons.first ?? viewModel.localizer.text(.reasonInSeasonNow)
+        let isGenericSeasonReason = firstReason
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .localizedCaseInsensitiveCompare(viewModel.localizer.text(.reasonInSeasonNow)) == .orderedSame
         let stage = todaySeasonStage(for: ranked.item)
 
         if viewModel.localizer.languageCode.hasPrefix("it") {
@@ -451,6 +515,9 @@ struct InSeasonTodayView: View {
             case .endOfSeason:
                 return "\(name) è in fine stagione: usalo ora, prima che qualità e disponibilità inizino a calare."
             case .best:
+                if isGenericSeasonReason {
+                    return "\(name) è al meglio adesso: sapore, disponibilità e resa in cucina sono nel punto più interessante del mese."
+                }
                 return "\(name) è al meglio adesso: \(firstReason.lowercased())."
             case .stable:
                 return "\(name) ha una presenza stabile durante l’anno: utile in cucina, ma meno legato a un momento stagionale specifico."
@@ -465,6 +532,9 @@ struct InSeasonTodayView: View {
         case .endOfSeason:
             return "\(name) is near the end of its season: use it before quality and availability taper off."
         case .best:
+            if isGenericSeasonReason {
+                return "\(name) is at its best right now: flavor, availability and kitchen value are in their strongest moment this month."
+            }
             return "\(name) is at its best right now: \(firstReason.lowercased())."
         case .stable:
             return "\(name) has a steady year-round presence: useful, but less tied to a seasonal peak."
@@ -508,6 +578,52 @@ struct InSeasonTodayView: View {
 
     private var localizedStableLabel: String {
         viewModel.localizer.languageCode.hasPrefix("it") ? "stagione stabile" : "steady season"
+    }
+
+    private func stageChipText(for item: ProduceItem) -> String {
+        let isItalian = viewModel.localizer.languageCode.hasPrefix("it")
+        switch todaySeasonStage(for: item) {
+        case .firstOfSeason:
+            return isItalian ? "Primizia" : "First of season"
+        case .endOfSeason:
+            return isItalian ? "Fine stagione" : "End of season"
+        case .best:
+            return isItalian ? "Al meglio" : "At its best"
+        case .stable:
+            return isItalian ? "Stagione stabile" : "Steady season"
+        case .out:
+            return isItalian ? "Fuori picco" : "Off peak"
+        }
+    }
+
+    private func stageChipForeground(for stage: TodaySeasonStage) -> Color {
+        switch stage {
+        case .firstOfSeason:
+            return DS.Color.fresh
+        case .best:
+            return DS.Color.sageDeep
+        case .endOfSeason:
+            return DS.Color.ochre
+        case .stable:
+            return DS.Color.inkSoft
+        case .out:
+            return DS.Color.terracotta
+        }
+    }
+
+    private func stageChipBackground(for stage: TodaySeasonStage) -> Color {
+        switch stage {
+        case .firstOfSeason:
+            return DS.Color.fresh.opacity(0.18)
+        case .best:
+            return DS.Color.sageSoft
+        case .endOfSeason:
+            return DS.Color.ochre.opacity(0.18)
+        case .stable:
+            return DS.Color.inkMuted.opacity(0.12)
+        case .out:
+            return DS.Color.terracotta.opacity(0.14)
+        }
     }
 
     private func featuredEyebrow(for item: ProduceItem) -> String {
