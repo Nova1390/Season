@@ -3,6 +3,7 @@ package it.seasonapp.season.features.auth
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialCustomException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -174,6 +175,9 @@ class AuthViewModel(
         }
         if (this is GetCredentialCancellationException) {
             return "Accesso Google annullato."
+        }
+        if (this is GetCredentialCustomException) {
+            return "Google non è configurato correttamente: in SEASON_GOOGLE_WEB_CLIENT_ID serve il client ID Web, non quello Android."
         }
         return message
             ?.takeIf { it.isNotBlank() && !it.contains("eyJ") && !it.contains("http") }

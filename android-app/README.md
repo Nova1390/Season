@@ -54,6 +54,8 @@ For Android Google Sign-In on the dev build, create a Google Cloud Android OAuth
 
 The app uses the web client id in `SEASON_GOOGLE_WEB_CLIENT_ID` as the server client id for native Google Identity, then exchanges the returned ID token with Supabase Auth.
 
+Important: `SEASON_GOOGLE_WEB_CLIENT_ID` must be the OAuth client of type `Web application`, usually the same client configured in the Supabase Google provider. The Android OAuth client above is still required for package/SHA verification, but it must not be pasted into `SEASON_GOOGLE_WEB_CLIENT_ID`.
+
 ## Build
 
 From `android-app/`:
