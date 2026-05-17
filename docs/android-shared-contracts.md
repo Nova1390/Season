@@ -40,8 +40,9 @@ Google Sign-In should prefer native Android Google identity flow, then exchange 
 Required Google Cloud items before Android auth implementation:
 
 - Android OAuth client.
-- Android package name.
-- Debug SHA-1/SHA-256.
+- Android dev package name: `it.seasonapp.season.dev`.
+- Debug SHA-1: `9C:A9:22:36:B0:0C:98:BD:A4:1C:18:A0:A0:60:FA:0F:B9:79:DE:68`.
+- Debug SHA-256: `96:5D:A7:E3:41:B9:31:FB:2A:94:2B:4C:23:D2:56:48:48:28:94:8F:0B:66:C1:40:54:24:07:77:B6:DE:A7:53`.
 - Release SHA-1/SHA-256 before public testing.
 - Web OAuth client remains used by Supabase provider setup.
 
@@ -51,6 +52,15 @@ Required Supabase behavior:
 - Email/password enabled per environment.
 - Redirect/callback rules documented per environment.
 - RLS must allow authenticated users to read/update their own profile.
+
+Current Android implementation status:
+
+- Supabase Kotlin Auth/PostgREST is wired behind a dev/staging environment gate.
+- Google Credential Manager requests a Google ID token and exchanges it with Supabase.
+- Email/password sign-in and sign-up call Supabase Auth directly.
+- Session restore checks the local Supabase session before showing the signed-out screen.
+- Username onboarding writes only to the authenticated user's `profiles` row.
+- `Season-dev` is the only intended environment for this phase.
 
 ## 3. Profile Contract
 

@@ -13,9 +13,13 @@ data class SeasonEnvironment(
     val kind: SeasonEnvironmentKind,
     val supabaseUrl: String,
     val hasAnonKey: Boolean,
+    val googleWebClientId: String,
 ) {
     val isConfigured: Boolean
         get() = supabaseUrl.isNotBlank() && hasAnonKey
+
+    val hasGoogleWebClientId: Boolean
+        get() = googleWebClientId.isNotBlank()
 
     companion object {
         val current: SeasonEnvironment
@@ -28,7 +32,7 @@ data class SeasonEnvironment(
                 },
                 supabaseUrl = BuildConfig.SEASON_SUPABASE_URL,
                 hasAnonKey = BuildConfig.SEASON_SUPABASE_ANON_KEY.isNotBlank(),
+                googleWebClientId = BuildConfig.SEASON_GOOGLE_WEB_CLIENT_ID,
             )
     }
 }
-

@@ -255,15 +255,17 @@ Initial foundation status:
 - Build types are declared: `debugDev`, `internalStaging`, `release`.
 - A placeholder consumer shell exists for Home, Search, Create, Today, and Profile.
 - Gradle wrapper exists.
-- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR.
+- Supabase Kotlin Auth/PostGREST and Google Credential Manager are wired.
+- Auth UI now supports Google entry, email login/signup, session restore, username onboarding, and logout.
+- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 
 ### Phase 2: Auth and Session
 
-- Google Sign-In dev.
-- Email/password login dev.
-- Username/profile bootstrap.
-- Session persistence.
-- Logout.
+- Google Sign-In dev: code wired; manual verification pending Google Cloud Android OAuth client and local Gradle secrets.
+- Email/password login dev: code wired.
+- Username/profile bootstrap: code wired against shared `profiles`.
+- Session persistence: code wired through Supabase Auth local session.
+- Logout: code wired.
 
 ### Phase 3: Read-Only Product Core
 

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 fun secretOrEmpty(name: String): String {
@@ -42,6 +43,7 @@ android {
             buildConfigField("String", "SEASON_ENVIRONMENT", "\"local-debug\"")
             buildConfigField("String", "SEASON_SUPABASE_URL", "\"\"")
             buildConfigField("String", "SEASON_SUPABASE_ANON_KEY", "\"\"")
+            buildConfigField("String", "SEASON_GOOGLE_WEB_CLIENT_ID", "\"\"")
         }
 
         create("debugDev") {
@@ -52,6 +54,7 @@ android {
             buildConfigField("String", "SEASON_ENVIRONMENT", "\"dev\"")
             buildConfigField("String", "SEASON_SUPABASE_URL", "\"https://gyuedxycbnqljryenapx.supabase.co\"")
             buildConfigField("String", "SEASON_SUPABASE_ANON_KEY", "\"${secretOrEmpty("SEASON_SUPABASE_DEV_ANON_KEY")}\"")
+            buildConfigField("String", "SEASON_GOOGLE_WEB_CLIENT_ID", "\"${secretOrEmpty("SEASON_GOOGLE_WEB_CLIENT_ID")}\"")
         }
 
         create("internalStaging") {
@@ -62,6 +65,7 @@ android {
             buildConfigField("String", "SEASON_ENVIRONMENT", "\"staging\"")
             buildConfigField("String", "SEASON_SUPABASE_URL", "\"https://czdsnnsizyhldiurlmxd.supabase.co\"")
             buildConfigField("String", "SEASON_SUPABASE_ANON_KEY", "\"${secretOrEmpty("SEASON_SUPABASE_STAGING_ANON_KEY")}\"")
+            buildConfigField("String", "SEASON_GOOGLE_WEB_CLIENT_ID", "\"${secretOrEmpty("SEASON_GOOGLE_WEB_CLIENT_ID")}\"")
         }
 
         getByName("release") {
@@ -69,6 +73,7 @@ android {
             buildConfigField("String", "SEASON_ENVIRONMENT", "\"production\"")
             buildConfigField("String", "SEASON_SUPABASE_URL", "\"\"")
             buildConfigField("String", "SEASON_SUPABASE_ANON_KEY", "\"\"")
+            buildConfigField("String", "SEASON_GOOGLE_WEB_CLIENT_ID", "\"\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -94,7 +99,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.postgrest)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

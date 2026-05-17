@@ -25,11 +25,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import it.seasonapp.season.core.design.SeasonTheme
 import it.seasonapp.season.core.env.SeasonEnvironment
 import it.seasonapp.season.features.auth.AuthGateScreen
+import it.seasonapp.season.features.auth.AuthUiState
+import it.seasonapp.season.features.auth.AuthViewModel
+import it.seasonapp.season.features.auth.SeasonProfile
 import it.seasonapp.season.features.create.CreateScreen
 import it.seasonapp.season.features.home.HomeScreen
 import it.seasonapp.season.features.profile.ProfileScreen
@@ -39,19 +45,29 @@ import it.seasonapp.season.features.today.TodayScreen
 @Composable
 fun SeasonAndroidApp() {
     SeasonTheme {
-        var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+        val context = LocalContext.current
+        val authViewModel: AuthViewModel = viewModel()
+        val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
-        if (isAuthenticated) {
-            SeasonShell(onLogout = { isAuthenticated = false })
-        } else {
-            AuthGateScreen(onContinueAsDev = { isAuthenticated = true })
+        when (val state = authState) {
+            is AuthUiState.SignedIn -> SeasonShell(
+                profile = state.profile,
+                onLogout = { authViewModel.signOut(context) },
+            )
+            else -> AuthGateScreen(
+                state = state,
+                onGoogleSignIn = { authViewModel.signInWithGoogle(context) },
+                onEmailSignIn = authViewModel::signInWithEmail,
+                onEmailSignUp = authViewModel::signUpWithEmail,
+                onSaveUsername = authViewModel::saveUsername,
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SeasonShell(onLogout: () -> Unit) {
+private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
     var selectedDestination by rememberSaveable { mutableStateOf(SeasonDestination.Home) }
 
     Scaffold(
@@ -92,7 +108,7 @@ private fun SeasonShell(onLogout: () -> Unit) {
                 SeasonDestination.Search -> SearchScreen()
                 SeasonDestination.Create -> CreateScreen()
                 SeasonDestination.Today -> TodayScreen()
-                SeasonDestination.Profile -> ProfileScreen(onLogout = onLogout)
+                SeasonDestination.Profile -> ProfileScreen(profile = profile, onLogout = onLogout)
             }
         }
     }

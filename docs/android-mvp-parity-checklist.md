@@ -25,6 +25,11 @@ It is not a full feature parity list. It is the minimum real Season experience f
 | Apple Sign-In | Later | Not needed on Android. |
 | OAuth social linking for Instagram/TikTok | Later | Creator polish, not first MVP. |
 
+Current implementation note:
+
+- Google Credential Manager, Supabase ID-token exchange, email login/signup, session restore, logout, and username onboarding are wired in code.
+- Manual Google login still needs the Google Cloud Android OAuth client for `it.seasonapp.season.dev` plus local Gradle secrets.
+
 ## 2. Home
 
 | Capability | Priority | Notes |
@@ -152,7 +157,8 @@ Current foundation note:
 
 - `android-app/` has the initial Compose shell and environment build types.
 - Gradle wrapper exists.
-- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR.
+- Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
+- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 
 ## 13. Regression Caption Set
 

@@ -11,6 +11,8 @@ skills-lock.json
 
 xcuserdata/
 *.xcuserstate
+android-app/.idea/
+android-app/.kotlin/
 Season/Debug/
 smart-import-batch-input.json
 
