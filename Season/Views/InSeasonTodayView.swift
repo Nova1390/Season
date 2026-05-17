@@ -61,9 +61,9 @@ struct InSeasonTodayView: View {
     }
 
     private func monthInsightCard(items: [RankedInSeasonItem]) -> some View {
-        let peakCount = items.filter { seasonalityPhase(for: $0.item) == .inSeason }.count
-        let arrivingCount = items.filter { seasonalityPhase(for: $0.item) == .earlySeason }.count
-        let leavingCount = items.filter { seasonalityPhase(for: $0.item) == .endingSoon }.count
+        let peakCount = items.filter { todaySeasonStage(for: $0.item) == .best }.count
+        let arrivingCount = items.filter { todaySeasonStage(for: $0.item) == .firstOfSeason }.count
+        let leavingCount = items.filter { todaySeasonStage(for: $0.item) == .endOfSeason }.count
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
@@ -177,7 +177,7 @@ struct InSeasonTodayView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(featuredEyebrow)
+                    Text(featuredEyebrow(for: ranked.item))
                         .font(DS.Font.mono(10, weight: .medium))
                         .kerning(0.9)
                         .foregroundStyle(DS.Color.inkMuted)
@@ -398,6 +398,23 @@ struct InSeasonTodayView: View {
         item.seasonalityPhase(month: viewModel.currentMonth)
     }
 
+    private func todaySeasonStage(for item: ProduceItem) -> TodaySeasonStage {
+        if item.isYearRoundSeasonal() {
+            return .stable
+        }
+
+        switch seasonalityPhase(for: item) {
+        case .earlySeason:
+            return .firstOfSeason
+        case .endingSoon:
+            return .endOfSeason
+        case .inSeason:
+            return .best
+        case .outOfSeason:
+            return .out
+        }
+    }
+
     private func scoreText(for ranked: RankedInSeasonItem) -> String {
         "\(Int(min(100, max(0, ranked.score)).rounded()))%"
     }
@@ -424,10 +441,35 @@ struct InSeasonTodayView: View {
     private func featuredReasonText(for ranked: RankedInSeasonItem) -> String {
         let name = ranked.item.displayName(languageCode: viewModel.localizer.languageCode)
         let firstReason = ranked.reasons.first ?? viewModel.localizer.text(.reasonInSeasonNow)
+        let stage = todaySeasonStage(for: ranked.item)
+
         if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "\(name) è una scelta forte adesso: \(firstReason.lowercased())."
+            switch stage {
+            case .firstOfSeason:
+                return "\(name) è una primizia di stagione: arriva ora sui banchi ed è interessante quando è fresco e ben scelto."
+            case .endOfSeason:
+                return "\(name) è in fine stagione: usalo ora, prima che qualità e disponibilità inizino a calare."
+            case .best:
+                return "\(name) è al meglio adesso: \(firstReason.lowercased())."
+            case .stable:
+                return "\(name) ha una presenza stabile durante l’anno: utile in cucina, ma meno legato a un picco stagionale."
+            case .out:
+                return "\(name) è una scelta possibile, ma non è nel suo momento migliore."
+            }
         }
-        return "\(name) is one of the strongest picks right now: \(firstReason.lowercased())."
+
+        switch stage {
+        case .firstOfSeason:
+            return "\(name) is a first-of-season pick: it is just arriving and is worth using while fresh."
+        case .endOfSeason:
+            return "\(name) is near the end of its season: use it before quality and availability taper off."
+        case .best:
+            return "\(name) is at its best right now: \(firstReason.lowercased())."
+        case .stable:
+            return "\(name) has a steady year-round presence: useful, but less tied to a seasonal peak."
+        case .out:
+            return "\(name) is usable, but not in its strongest seasonal moment."
+        }
     }
 
     private func greetingTitle(for items: [RankedInSeasonItem]) -> String {
@@ -446,9 +488,9 @@ struct InSeasonTodayView: View {
 
     private func monthInsightTitle(peak: Int, arriving: Int, leaving: Int) -> String {
         if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "\(peak) al meglio, \(arriving) primizie, \(leaving) agli ultimi giorni."
+            return "\(peak) al meglio, \(arriving) primizie, \(leaving) in fine stagione."
         }
-        return "\(peak) at their best, \(arriving) first-of-season, \(leaving) ending soon."
+        return "\(peak) at their best, \(arriving) first-of-season, \(leaving) end-of-season."
     }
 
     private var localizedPeakLabel: String {
@@ -456,19 +498,30 @@ struct InSeasonTodayView: View {
     }
 
     private var localizedArrivingLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "primizie" : "first picks"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "primizie" : "first-of-season"
     }
 
     private var localizedLeavingLabel: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "ultimi giorni" : "ending soon"
+        viewModel.localizer.languageCode.hasPrefix("it") ? "fine stagione" : "end-of-season"
     }
 
     private var localizedStableLabel: String {
         viewModel.localizer.languageCode.hasPrefix("it") ? "stagione stabile" : "steady season"
     }
 
-    private var featuredEyebrow: String {
-        viewModel.localizer.languageCode.hasPrefix("it") ? "Scelto per adesso" : "Picked for right now"
+    private func featuredEyebrow(for item: ProduceItem) -> String {
+        switch todaySeasonStage(for: item) {
+        case .firstOfSeason:
+            return viewModel.localizer.languageCode.hasPrefix("it") ? "Primizia di stagione" : "First of the season"
+        case .endOfSeason:
+            return viewModel.localizer.languageCode.hasPrefix("it") ? "Fine stagione" : "End of season"
+        case .best:
+            return viewModel.localizer.languageCode.hasPrefix("it") ? "Al meglio adesso" : "Best right now"
+        case .stable:
+            return viewModel.localizer.languageCode.hasPrefix("it") ? "Stagione stabile" : "Steady season"
+        case .out:
+            return viewModel.localizer.languageCode.hasPrefix("it") ? "Scelto per adesso" : "Picked for right now"
+        }
     }
 
     private var pairingLabel: String {
@@ -476,12 +529,30 @@ struct InSeasonTodayView: View {
     }
 
     private func featuredBadgeText(for item: ProduceItem) -> String {
-        let phaseTitle = viewModel.localizer.seasonalityPhaseTitle(seasonalityPhase(for: item))
-        if viewModel.localizer.languageCode.hasPrefix("it") {
-            return "\(phaseTitle) · \(viewModel.currentMonthName)"
+        let isItalian = viewModel.localizer.languageCode.hasPrefix("it")
+        let stageTitle: String
+        switch todaySeasonStage(for: item) {
+        case .firstOfSeason:
+            stageTitle = isItalian ? "Primizia" : "First of season"
+        case .best:
+            stageTitle = isItalian ? "Al meglio" : "At its best"
+        case .endOfSeason:
+            stageTitle = isItalian ? "Fine stagione" : "End of season"
+        case .stable:
+            stageTitle = isItalian ? "Stagione stabile" : "Steady season"
+        case .out:
+            stageTitle = viewModel.localizer.seasonalityPhaseTitle(seasonalityPhase(for: item))
         }
-        return "\(phaseTitle) · \(viewModel.currentMonthName)"
+        return "\(stageTitle) · \(viewModel.currentMonthName)"
     }
+}
+
+private enum TodaySeasonStage: Hashable {
+    case best
+    case firstOfSeason
+    case endOfSeason
+    case stable
+    case out
 }
 
 private enum TodayCategoryFilter: String, CaseIterable, Identifiable {

@@ -199,8 +199,22 @@ struct ProduceItem: Identifiable, Codable, Hashable {
     }
 
     func seasonalityPhase(month: Int) -> SeasonalityPhase {
-        let score = seasonalityScore(month: month)
-        let delta = seasonalityDelta(month: month)
+        let clampedMonth = max(1, min(12, month))
+        let validSeasonMonths = Set(seasonMonths.filter { (1...12).contains($0) })
+        let previousMonth = clampedMonth == 1 ? 12 : (clampedMonth - 1)
+        let nextMonth = clampedMonth == 12 ? 1 : (clampedMonth + 1)
+
+        if validSeasonMonths.contains(clampedMonth), validSeasonMonths.count > 1 {
+            if !validSeasonMonths.contains(previousMonth) {
+                return .earlySeason
+            }
+            if !validSeasonMonths.contains(nextMonth) {
+                return .endingSoon
+            }
+        }
+
+        let score = seasonalityScore(month: clampedMonth)
+        let delta = seasonalityDelta(month: clampedMonth)
         return Self.seasonalityPhase(score: score, delta: delta)
     }
 
