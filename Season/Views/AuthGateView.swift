@@ -187,6 +187,7 @@ struct AuthGateView: View {
 
 private struct AuthEntryScreen: View {
     @AppStorage("accountUsername") private var accountUsername = "You"
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var mode: AuthEntryMode = .entry
     @State private var email = ""
@@ -398,6 +399,17 @@ private struct AuthEntryScreen: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(mode == .entry ? 12 : 0)
+                    .background {
+                        if mode == .entry {
+                            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                .fill(authEntryPanelFill)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.24), lineWidth: 0.8)
+                                )
+                        }
+                    }
                 }
                 .frame(maxWidth: 390)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -406,6 +418,10 @@ private struct AuthEntryScreen: View {
             .safeAreaPadding(.top, 16)
             .safeAreaPadding(.bottom, 24)
         }
+    }
+
+    private var authEntryPanelFill: Color {
+        colorScheme == .dark ? Color.black.opacity(0.32) : Color.black.opacity(0.18)
     }
 
     private func clearStatus() {

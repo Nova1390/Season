@@ -53,6 +53,12 @@ Componenti condivisi:
 - `Season/Components/RemoteImageView.swift`: rendering immagini remote.
 - `Season/Components/AvatarView.swift`: avatar.
 
+Nota dark mode:
+
+- I token in `Assets.xcassets/DesignSystem` sono la fonte primaria per light/dark.
+- I reason badge (`Di stagione`, `Dal frigo`, `Di tendenza`, ecc.) devono avere varianti dark dedicate di background/foreground, non semplici opacity della palette light, per mantenere contrasto premium sulle card scure.
+- La schermata auth usa un pannello di contrasto leggero nella entry state per evitare che la foto di sfondo renda poco leggibili CTA e copy.
+
 ## 4. View model e servizi client
 
 ### View model
