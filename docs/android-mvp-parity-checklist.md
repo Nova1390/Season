@@ -28,14 +28,15 @@ It is not a full feature parity list. It is the minimum real Season experience f
 Current implementation note:
 
 - Google Credential Manager, Supabase ID-token exchange, email login/signup, session restore, logout, and username onboarding are wired in code.
-- Manual Google login still needs the Google Cloud Android OAuth client for `it.seasonapp.season.dev` plus local Gradle secrets.
+- Google login has been manually validated on the dev emulator through username onboarding and shell entry.
+- Supabase Auth session storage is explicit through `SettingsSessionManager` with auto-load/auto-save enabled.
 
 ## 2. Home
 
 | Capability | Priority | Notes |
 |---|---|---|
-| Remote recipe load | MVP | Supabase source of truth. |
-| Main featured recipe | MVP | Ranking can be simpler than iOS initially. |
+| Remote recipe load | MVP | Initial read-only Supabase dev load is wired. |
+| Main featured recipe | MVP | Initial hero uses a stable remote snapshot; ranking can become smarter after detail/search. |
 | Quick filters | MVP | Must be readable in light/dark. |
 | Trending/seasonal sections | MVP | Use same recipe/catalog signals where possible. |
 | Creator strips | Later | Nice, not essential for first Android validation. |

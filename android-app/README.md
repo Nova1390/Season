@@ -17,6 +17,8 @@ Current implementation:
 - Supabase Kotlin Auth/PostgREST client wiring.
 - Google Credential Manager Sign-In wiring.
 - Email/password auth, session restore, logout, and username onboarding.
+- Home read-only recipe loading from Supabase dev.
+- Remote recipe domain mapping for title, source, servings, ingredients, steps, and image URL.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -24,7 +26,7 @@ Current implementation:
 
 Not implemented yet:
 
-- Remote recipes.
+- Recipe detail.
 - Local-first outbox.
 - Smart Import publish.
 
