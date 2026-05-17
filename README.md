@@ -25,7 +25,7 @@ The main iOS tabs are:
 - `Discover`: recipe and ingredient search with filters, trending sections, and quick-add actions.
 - `Create`: recipe composer and smart import flow.
 - `Today`: ranked in-season ingredients and seasonal insights.
-- `Me`: account, profile, preferences, recipe library, diagnostics, and admin tools.
+- `Me`: account, profile, preferences, and recipe library.
 
 ## Technical Overview
 
@@ -61,7 +61,7 @@ Current app behavior remains hybrid:
 
 - Recipes: Supabase is the target source of truth for published recipes.
 - Fridge, shopping list, and saved/crispy recipe states: local-first with Supabase outbox replay.
-- Recipe states: local-first for UX, with saved/crispy write-through.
+- Recipe states: local-first for UX, with saved/crispy reconciled through the outbox instead of fire-and-forget writes.
 - Catalog operations: backend-governed through RPCs, edge functions, audit tables, and admin workflows.
 
 ## Supabase Automation
@@ -153,6 +153,8 @@ For TestFlight, staging should contain the selected recipe catalog. Local TheMea
 Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql`. If catalog autopilot should run on staging, use the dedicated `staging_catalog_autopilot_v2_*` scripts rather than the dev scheduler.
 
 Runtime logging must go through `SeasonLog`; Release builds should not print user identifiers, callback URLs, storage paths, raw RPC payloads, or catalog admin diagnostics. Catalog governance is operated from `catalog.seasonapp.it`; the legacy iOS catalog diagnostics view is Debug-only.
+
+Search ranking/filtering lives in `SearchResultsService`, while `SearchView` owns only query state, debounce, and rendering. Home feed assembly remains behind a cached snapshot and emits timing only through dev-gated `SEASON_HOME_DEBUG` logs.
 
 ## Development Principles
 

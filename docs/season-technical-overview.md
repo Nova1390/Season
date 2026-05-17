@@ -34,7 +34,7 @@ Flow iniziale:
 ## 3. Moduli UI principali
 
 - `HomeView`: feed editoriale, hero ricetta, ranking, creator strip e sezioni stagionali.
-- `SearchView`: ricerca ricette/ingredienti, filtri, sezioni discover e quick add.
+- `SearchView`: ricerca ricette/ingredienti, filtri, sezioni discover e quick add; query state, debounce e rendering restano nella view, mentre ranking/filtering stanno in `SearchResultsService`.
 - `InSeasonTodayView`: classifica ingredienti stagionali e insight mensili.
 - `FridgeView`: lista frigo e ricette cucinabili dal frigo.
 - `RecipeDetailView`: dettaglio ricetta, ingredienti, nutrizione, CTA, media, follow, save/crispy.
@@ -69,6 +69,7 @@ Componenti condivisi:
 - `ProduceStore`: loader produce JSON.
 - `BasicIngredientCatalog`: catalogo ingredienti base locale.
 - `NutritionService`: calcolo score e riepiloghi nutrizionali.
+- `SearchResultsService`: ranking/filtering search puro e testabile, separato dalla UI.
 - `RecipeTranslationService`: traduzione runtime dove supportata.
 - `SocialAuthService`: Apple/OAuth helper.
 - `FollowStore` e `FollowSyncManager`: follow locale e sync delta.
@@ -367,6 +368,7 @@ Diagnostiche app:
 - Backfill manuale.
 - Reconciliation diagnostics.
 - Catalog admin view solo in Debug. Per staging/prod usare la console web `catalog.seasonapp.it`.
+- Home/Search performance logs sono dev-only (`SEASON_HOME_DEBUG`, `SEASON_SEARCH_DEBUG`) e passano sempre da `SeasonLog`.
 
 ## 16. Sicurezza
 

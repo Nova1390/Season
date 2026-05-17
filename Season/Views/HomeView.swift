@@ -1071,11 +1071,11 @@ struct HomeView: View {
     }
 
     private var activeFilterBackground: Color {
-        colorScheme == .dark ? DS.Color.sageDeep : DS.Color.ink
+        DS.Color.ink
     }
 
     private var activeFilterForeground: Color {
-        colorScheme == .dark ? Color.black.opacity(0.86) : Color.white
+        colorScheme == .dark ? DS.Color.bg : Color.white
     }
 
     @ViewBuilder
@@ -1832,10 +1832,14 @@ struct HomeView: View {
         await Task.yield()
         guard !Task.isCancelled, signature == cacheSignature else { return }
 
+        let start = Date()
         let feed = buildHomeFeed()
         guard !Task.isCancelled, signature == cacheSignature else { return }
 
         applyHomeFeedBuild(feed, signature: signature)
+        debugHomeFeed(
+            "phase=cache_applied recipes=\(feed.defaultRecipeCount) mini_filters=\(feed.filteredMiniFeeds.count) duration_ms=\(Int(Date().timeIntervalSince(start) * 1000))"
+        )
     }
 
     private func applyHomeFeedBuild(_ feed: HomeFeedBuild, signature: String) {
@@ -3189,6 +3193,14 @@ private struct HomeFeedBuild {
     let filteredMiniFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let filteredFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let ingredientUsageCountByID: [String: Int]
+
+    var defaultRecipeCount: Int {
+        defaultFeedItems.reduce(into: 0) { count, item in
+            if case .recipe = item {
+                count += 1
+            }
+        }
+    }
 }
 private enum HomeFeedItem: Identifiable {
     case recipe(HookedRecipeCard)
