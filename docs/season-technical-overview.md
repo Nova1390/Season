@@ -237,12 +237,15 @@ Il ranking combina segnali diversi:
 - stagionalità ingrediente;
 - nutrizione e preferenze utente;
 - match frigo;
-- crispy score;
-- view score;
-- trend/freshness;
+- qualita della ricetta: titolo, ingredienti, passaggi, media e metadati;
+- convenienza: tempo totale e affidabilita del tempo;
+- engagement calmierato: crispy score e view score pesati senza dominare il feed;
+- freshness;
 - creator/follow;
 - disponibilità ingredienti;
 - eligibility/presentability della ricetta.
+
+La Home usa filtri rapidi con hard gate: `Pronte ora`, `15 min`, `Proteiche` e `Picco stagione` non ricadono piu sul feed generico quando hanno pochi risultati, cosi la promessa del filtro resta coerente. La diversity del feed evita ripetizioni ravvicinate di creator/source, hook editoriale e ingrediente dominante. Lo spotlight stagionale privilegia il punteggio stagionale corrente; la frequenza d'uso nelle ricette e solo un tie-break leggero, per evitare che ingredienti costanti tutto l'anno dominino sempre.
 
 Classi/aree coinvolte:
 

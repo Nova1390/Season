@@ -61,6 +61,26 @@ struct RecipeTimingInsight: Hashable {
     let label: RecipeTimingLabel
 }
 
+struct HomeRecipeScoreBreakdown: Hashable {
+    let seasonality: Double
+    let nutrition: Double
+    let quality: Double
+    let convenience: Double
+    let engagement: Double
+    let freshness: Double
+    let sourceTrust: Double
+
+    var score: Double {
+        (0.30 * seasonality)
+        + (0.10 * nutrition)
+        + (0.18 * quality)
+        + (0.13 * convenience)
+        + (0.12 * engagement)
+        + (0.07 * freshness)
+        + (0.10 * sourceTrust)
+    }
+}
+
 final class ProduceViewModel: ObservableObject {
     private struct UnifiedIngredientParityEntry {
         let ingredientID: String
@@ -2459,26 +2479,36 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func homeRankingScore(for recipe: Recipe) -> Double {
-        let seasonality = recipeSeasonalityScore(for: recipe)
-        let crispy = crispyScore(for: recipe)
-        let views = viewsScore(for: recipe)
-        let nutrition = nutritionPreferenceScore(for: recipe)
-        let score =
-            (0.50 * seasonality)
-            + (0.20 * crispy)
-            + (0.15 * views)
-            + (0.15 * nutrition)
+        let breakdown = homeRecipeScoreBreakdown(for: recipe)
+        let score = breakdown.score
         debugRankingIfNeeded(
             recipeName: recipe.title,
             channel: "home",
             finalScore: score,
-            seasonality: seasonality,
+            seasonality: breakdown.seasonality,
             fridgeMatch: nil,
-            crispy: crispy,
-            views: views,
-            nutrition: nutrition
+            crispy: crispyScore(for: recipe),
+            views: viewsScore(for: recipe),
+            nutrition: breakdown.nutrition
         )
+        debugHomeScoreBreakdownIfNeeded(recipeName: recipe.title, breakdown: breakdown)
         return score
+    }
+
+    func homeRecipeScoreBreakdown(for recipe: Recipe) -> HomeRecipeScoreBreakdown {
+        let crispy = crispyScore(for: recipe)
+        let views = viewsScore(for: recipe)
+        let engagement = min(1.0, max(0.0, (0.55 * crispy) + (0.45 * views)))
+
+        return HomeRecipeScoreBreakdown(
+            seasonality: recipeSeasonalityScore(for: recipe),
+            nutrition: nutritionPreferenceScore(for: recipe),
+            quality: recipeQualityScore(for: recipe),
+            convenience: recipeConvenienceScore(for: recipe),
+            engagement: engagement,
+            freshness: recipeFreshnessScore(for: recipe),
+            sourceTrust: recipeSourceTrustScore(for: recipe)
+        )
     }
 
     func fridgeRankingScore(for recipe: Recipe, fridgeItemIDs: Set<String>) -> Double {
@@ -2554,6 +2584,19 @@ final class ProduceViewModel: ObservableObject {
         )
     }
 
+    func recipeConvenienceScore(for recipe: Recipe) -> Double {
+        let prep = recipe.prepTimeMinutes ?? 0
+        let cook = recipe.cookTimeMinutes ?? 0
+        let total = prep + cook
+
+        guard total > 0 else { return 0.45 }
+        if total <= 15 { return 1.0 }
+        if total <= 30 { return 0.78 }
+        if total <= 45 { return 0.58 }
+        if total <= 75 { return 0.40 }
+        return 0.25
+    }
+
     func fridgeMatchScore(for recipe: Recipe, fridgeItemIDs: Set<String>) -> Double {
         weightedFridgeMatch(for: recipe, fridgeItemIDs: fridgeItemIDs).score
     }
@@ -2594,6 +2637,16 @@ final class ProduceViewModel: ObservableObject {
         )
     }
 
+    private func debugHomeScoreBreakdownIfNeeded(
+        recipeName: String,
+        breakdown: HomeRecipeScoreBreakdown
+    ) {
+        guard rankingDebugEnabled else { return }
+        print(
+            "RANK DEBUG [home_breakdown] recipe=\(recipeName) seasonality=\(String(format: "%.3f", breakdown.seasonality)) nutrition=\(String(format: "%.3f", breakdown.nutrition)) quality=\(String(format: "%.3f", breakdown.quality)) convenience=\(String(format: "%.3f", breakdown.convenience)) engagement=\(String(format: "%.3f", breakdown.engagement)) freshness=\(String(format: "%.3f", breakdown.freshness)) sourceTrust=\(String(format: "%.3f", breakdown.sourceTrust))"
+        )
+    }
+
     private func averageFiberValue(for ingredients: [ProduceItem]) -> Double {
         let fiberValues = ingredients.compactMap { $0.nutrition?.fiber }
         guard !fiberValues.isEmpty else { return 0 }
@@ -2606,16 +2659,25 @@ final class ProduceViewModel: ObservableObject {
     ) -> RecipeTimingInsight {
         let nextMonth = currentMonth == 12 ? 1 : (currentMonth + 1)
 
-        let perIngredientSignals: [(score: Double, trend: Double)] = recipe.ingredients.map { ingredient in
+        let perIngredientSignals: [(score: Double, trend: Double, weight: Double)] = recipe.ingredients.compactMap { ingredient in
             guard let produceID = ingredient.produceID,
                   let item = produceItem(forID: produceID) else {
-                // Non-seasonal/basic ingredients stay neutral in recipe timing.
-                return (score: 0.5, trend: 0.0)
+                // Non-seasonal/basic ingredients stay neutral and light-touch in recipe timing.
+                return (score: 0.5, trend: 0.0, weight: max(0.15, ingredientWeight(for: ingredient) * 0.35))
             }
 
             let currentScore = item.seasonalityScore(month: currentMonth)
             let nextScore = item.seasonalityScore(month: nextMonth)
-            return (score: currentScore, trend: nextScore - currentScore)
+            let baseWeight = ingredientWeight(for: ingredient)
+            let adjustedWeight: Double
+            if isAromaticOrSpice(item) {
+                adjustedWeight = baseWeight * 0.45
+            } else if isMostlyImportedTropical(item) {
+                adjustedWeight = baseWeight * 0.65
+            } else {
+                adjustedWeight = baseWeight
+            }
+            return (score: currentScore, trend: nextScore - currentScore, weight: adjustedWeight)
         }
 
         if perIngredientSignals.isEmpty {
@@ -2627,8 +2689,18 @@ final class ProduceViewModel: ObservableObject {
             )
         }
 
-        let score = perIngredientSignals.map(\.score).reduce(0, +) / Double(perIngredientSignals.count)
-        let trend = perIngredientSignals.map(\.trend).reduce(0, +) / Double(perIngredientSignals.count)
+        let totalWeight = perIngredientSignals.map(\.weight).reduce(0, +)
+        guard totalWeight > 0 else {
+            let fallbackScore = Double(fallbackSeasonalPercent ?? recipe.seasonalMatchPercent) / 100.0
+            return RecipeTimingInsight(
+                score: fallbackScore,
+                trend: 0.0,
+                label: recipeTimingLabel(score: fallbackScore, trend: 0.0)
+            )
+        }
+
+        let score = perIngredientSignals.reduce(0.0) { $0 + ($1.score * $1.weight) } / totalWeight
+        let trend = perIngredientSignals.reduce(0.0) { $0 + ($1.trend * $1.weight) } / totalWeight
 
         return RecipeTimingInsight(
             score: score,
@@ -2653,6 +2725,60 @@ final class ProduceViewModel: ObservableObject {
     private func recipeSeasonalityScore(for recipe: Recipe) -> Double {
         let insight = recipeTimingInsight(for: recipe, fallbackSeasonalPercent: recipe.seasonalMatchPercent)
         return min(1.0, max(0.0, insight.score))
+    }
+
+    private func recipeQualityScore(for recipe: Recipe) -> Double {
+        let titleScore = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).count >= 8 ? 1.0 : 0.65
+        let ingredientScore = min(1.0, Double(recipe.ingredients.count) / 6.0)
+        let nonEmptySteps = recipe.preparationSteps.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let stepScore = min(1.0, Double(nonEmptySteps.count) / 4.0)
+        let hasVisual = (recipe.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || (recipe.imageURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || recipe.images.contains {
+                ($0.localPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                    || ($0.remoteURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            }
+        let visualScore = hasVisual ? 1.0 : 0.55
+        let hasTiming = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0) > 0
+        let metadataScore = (hasTiming ? 0.55 : 0.25) + (recipe.servings > 0 ? 0.45 : 0.20)
+
+        return min(
+            1.0,
+            max(
+                0.0,
+                (0.18 * titleScore)
+                + (0.24 * ingredientScore)
+                + (0.24 * stepScore)
+                + (0.20 * visualScore)
+                + (0.14 * metadataScore)
+            )
+        )
+    }
+
+    private func recipeFreshnessScore(for recipe: Recipe) -> Double {
+        let age = max(0, Calendar.current.dateComponents([.day], from: recipe.createdAt, to: Date()).day ?? 0)
+        if age <= 7 { return 0.90 }
+        if age <= 30 { return 0.74 }
+        if age <= 90 { return 0.58 }
+        if age <= 180 { return 0.46 }
+        return 0.38
+    }
+
+    private func recipeSourceTrustScore(for recipe: Recipe) -> Double {
+        let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if sourceName?.isEmpty == false {
+            return 0.72
+        }
+        if recipe.sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return 0.68
+        }
+        if recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return 0.64
+        }
+        if recipe.isUserGenerated {
+            return 0.58
+        }
+        return 0.52
     }
 
     private func ingredientWeight(for ingredient: RecipeIngredient) -> Double {

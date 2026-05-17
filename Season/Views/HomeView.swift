@@ -2124,7 +2124,8 @@ struct HomeView: View {
                 candidates: mergedCandidates,
                 fridgeItemIDs: fridgeItemIDs
             )
-            let candidatesForReranking = hardGatedCandidates.count >= 8 ? hardGatedCandidates : mergedCandidates
+            let candidatesForReranking = shouldRequireHardGate(for: filter) ? hardGatedCandidates : mergedCandidates
+            guard !candidatesForReranking.isEmpty else { return [] }
             let reranked = smartBoostedRanking(
                 for: filter,
                 candidates: candidatesForReranking,
@@ -2311,9 +2312,17 @@ struct HomeView: View {
             trendingRecipes: trendingRecipes,
             backupRecipes: backupRecipes
         )
-        let reranked = smartBoostedRanking(
+        let hardGatedCandidates = applyHardGateCandidates(
             for: filter,
             candidates: mergedCandidates,
+            fridgeItemIDs: fridgeItemIDs
+        )
+        let candidatesForReranking = shouldRequireHardGate(for: filter) ? hardGatedCandidates : mergedCandidates
+        guard !candidatesForReranking.isEmpty else { return [] }
+
+        let reranked = smartBoostedRanking(
+            for: filter,
+            candidates: candidatesForReranking,
             fridgeItemIDs: fridgeItemIDs,
             personalization: personalization
         )
@@ -2338,6 +2347,15 @@ struct HomeView: View {
             HomeFeedItem.recipe(card)
         }
         return guaranteedMiniBlock(from: Array(miniItems))
+    }
+
+    private func shouldRequireHardGate(for filter: HomeQuickFilter) -> Bool {
+        switch filter {
+        case .following, .trending:
+            return false
+        case .readyNow, .under15, .highProtein, .peakSeason:
+            return true
+        }
     }
 
     private func guaranteedMiniBlock(from candidates: [HomeFeedItem]) -> [HomeFeedItem] {
@@ -2599,9 +2617,14 @@ struct HomeView: View {
         let seasonal = Double(ranked.seasonalMatchPercent) / 100.0
         let trending = (0.6 * viewModel.crispyScore(for: recipe)) + (0.4 * viewModel.viewsScore(for: recipe))
         let fridge = fridgeItemIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: recipe, fridgeItemIDs: fridgeItemIDs)
-        let totalMinutes = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0)
-        let convenience = totalMinutes > 0 ? max(0, 1.0 - (Double(totalMinutes) / 45.0)) : 0.35
-        return (0.45 * home) + (0.20 * seasonal) + (0.15 * fridge) + (0.10 * trending) + (0.10 * convenience)
+        let convenience = viewModel.recipeConvenienceScore(for: recipe)
+        let quality = viewModel.homeRecipeScoreBreakdown(for: recipe).quality
+        return (0.36 * home)
+            + (0.18 * seasonal)
+            + (0.14 * fridge)
+            + (0.12 * convenience)
+            + (0.10 * quality)
+            + (0.10 * trending)
     }
 
     private func buildFridgeSection(
@@ -2635,12 +2658,18 @@ struct HomeView: View {
     private func buildSeasonalSpotlight(usageCountByID: [String: Int]) -> [RankedInSeasonItem] {
         viewModel
             .bestPicksToday(limit: 16)
-            .sorted { lhs, rhs in
+            .sorted(by: { (lhs: RankedInSeasonItem, rhs: RankedInSeasonItem) in
                 let lUsage = usageCountByID[lhs.item.id] ?? 0
                 let rUsage = usageCountByID[rhs.item.id] ?? 0
+                let leftUsageSignal = min(1.0, Double(lUsage) / 10.0) * 0.06
+                let rightUsageSignal = min(1.0, Double(rUsage) / 10.0) * 0.06
+                let left = lhs.score + leftUsageSignal
+                let right = rhs.score + rightUsageSignal
+                if left != right { return left > right }
                 if lUsage != rUsage { return lUsage > rUsage }
-                return lhs.score > rhs.score
-            }
+                return lhs.item.displayName(languageCode: viewModel.languageCode)
+                    .localizedCaseInsensitiveCompare(rhs.item.displayName(languageCode: viewModel.languageCode)) == .orderedAscending
+            })
     }
 
     private func mergeCards(
@@ -2682,7 +2711,7 @@ struct HomeView: View {
         var fallbackIndex = 0
 
         while result.count < targetCount {
-            let preferTrendingSlot = result.count.isMultiple(of: 4)
+            let preferTrendingSlot = !trendingPool.isEmpty && (result.count + 1).isMultiple(of: 4)
             let selected: HookedRecipeCard?
             if preferTrendingSlot {
                 selected = pullBestCard(
@@ -2744,8 +2773,12 @@ struct HomeView: View {
         if candidate.hookKind == last.hookKind { return false }
 
         if strict {
-            let recentCreators = current.suffix(3).map { $0.ranked.recipe.author }
-            if recentCreators.contains(candidate.ranked.recipe.author) { return false }
+            let recentCreators = current.suffix(3).map { creatorDiversityKey(for: $0.ranked.recipe) }
+            if recentCreators.contains(creatorDiversityKey(for: candidate.ranked.recipe)) { return false }
+            if let candidateIngredientKey = dominantIngredientKey(for: candidate.ranked.recipe) {
+                let recentIngredientKeys = Set(current.suffix(2).compactMap { dominantIngredientKey(for: $0.ranked.recipe) })
+                if recentIngredientKeys.contains(candidateIngredientKey) { return false }
+            }
             let recentRecipeIDs = current.suffix(8).map { $0.ranked.recipe.id }
             if recentRecipeIDs.contains(candidate.ranked.recipe.id) { return false }
         } else {
@@ -2754,6 +2787,34 @@ struct HomeView: View {
         }
 
         return true
+    }
+
+    private func creatorDiversityKey(for recipe: Recipe) -> String {
+        if let creatorID = recipe.canonicalCreatorID,
+           !creatorID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "creator:\(creatorID)"
+        }
+        if let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !sourceName.isEmpty {
+            return "source:\(sourceName.lowercased())"
+        }
+        return "author:\(recipe.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+    }
+
+    private func dominantIngredientKey(for recipe: Recipe) -> String? {
+        let coreKeys = recipe.ingredients
+            .filter { $0.quality == .coreSeasonal }
+            .flatMap { viewModel.catalogIdentityIDs(for: $0) }
+            .sorted()
+
+        if let key = coreKeys.first {
+            return key
+        }
+
+        return recipe.ingredients
+            .flatMap { viewModel.catalogIdentityIDs(for: $0) }
+            .sorted()
+            .first
     }
 
     private func computeIngredientUsageCount(from recipes: [RankedRecipe]) -> [String: Int] {
