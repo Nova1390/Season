@@ -42,7 +42,7 @@ struct ContentView: View {
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
     @AppStorage("appAppearanceRaw") private var appAppearanceRaw = AppAppearance.system.rawValue
-    @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
+    @StateObject private var viewModel: ProduceViewModel
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
     @StateObject private var fridgeViewModel = FridgeViewModel()
     @State private var selectedTab: MainTab = .home
@@ -58,6 +58,9 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        let storedLanguage = UserDefaults.standard.string(forKey: "selectedLanguage") ?? AppLanguage.english.rawValue
+        let resolvedLanguage = AppLanguage(rawValue: storedLanguage)?.rawValue ?? AppLanguage.english.rawValue
+        _viewModel = StateObject(wrappedValue: ProduceViewModel(languageCode: resolvedLanguage))
         UITabBar.appearance().isHidden = true
     }
 

@@ -29,34 +29,38 @@ struct HomeView: View {
                     fixedHeaderRow(safeAreaTopInset: proxy.safeAreaInsets.top)
                         .zIndex(20)
 
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                            greetingHeroSection
-                                .padding(.horizontal, homeContentGutter)
-                                .padding(.bottom, DS.Spacing.md)
-
-                            cookNowHeroSection
-
-                            freshCreatorStripSection
-
-                            seasonalNowSection
-
-                            Section {
-                                feedHeadingSection
-
-                                mixedFeedSection
-                                    .padding(.top, DS.Spacing.sm)
+                    if viewModel.isInitialHomeFeedHydrating {
+                        initialHomeHydrationView
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                                greetingHeroSection
+                                    .padding(.horizontal, homeContentGutter)
                                     .padding(.bottom, DS.Spacing.md)
-                            } header: {
-                                stickyFilterSection
+
+                                cookNowHeroSection
+
+                                freshCreatorStripSection
+
+                                seasonalNowSection
+
+                                Section {
+                                    feedHeadingSection
+
+                                    mixedFeedSection
+                                        .padding(.top, DS.Spacing.sm)
+                                        .padding(.bottom, DS.Spacing.md)
+                                } header: {
+                                    stickyFilterSection
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.top, DS.Spacing.xs)
+                            .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
                         }
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.top, DS.Spacing.xs)
-                        .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
-                    }
-                    .refreshable {
-                        await viewModel.refreshHomeFeed()
+                        .refreshable {
+                            await viewModel.refreshHomeFeed()
+                        }
                     }
                 }
             }
@@ -76,6 +80,46 @@ struct HomeView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance + DS.Spacing.md)
         }
+    }
+
+    private var initialHomeHydrationView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+                greetingHeroSection
+
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .fill(DS.Color.cardSoft)
+                        .frame(height: 260)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(DS.Color.cardSoft)
+                            .frame(width: 132, height: 16)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(DS.Color.cardSoft)
+                            .frame(width: 228, height: 34)
+                        RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                            .fill(DS.Color.sageSoft.opacity(colorScheme == .dark ? 0.7 : 0.55))
+                            .frame(height: 48)
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .fill(DS.Color.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .stroke(DS.Color.border, lineWidth: 1)
+                )
+                .redacted(reason: .placeholder)
+            }
+            .padding(.horizontal, homeContentGutter)
+            .padding(.top, DS.Spacing.xs)
+            .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
+        }
+        .scrollDisabled(true)
     }
 
     /// Greeting editoriale della home v2.
@@ -1821,11 +1865,12 @@ struct HomeView: View {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
         let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
         // Rebuild feed only on semantic data/version changes, not raw recipe count churn.
-        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)"
+        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)|hydrating:\(viewModel.isInitialHomeFeedHydrating)"
     }
 
     private func refreshHomeFeedCache(for signature: String) async {
         guard appliedCacheSignature != signature else { return }
+        guard !viewModel.isInitialHomeFeedHydrating else { return }
 
         // Let navigation/scroll rendering finish and allow superseded refreshes to cancel
         // before doing the heavier feed assembly.

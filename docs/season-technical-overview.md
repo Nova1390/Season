@@ -249,6 +249,8 @@ Il ranking combina segnali diversi:
 
 La Home usa filtri rapidi con hard gate: `Pronte ora`, `15 min`, `Proteiche` e `Picco stagione` non ricadono piu sul feed generico quando hanno pochi risultati, cosi la promessa del filtro resta coerente. La diversity del feed evita ripetizioni ravvicinate di creator/source, hook editoriale e ingrediente dominante. Lo spotlight stagionale privilegia il punteggio stagionale corrente; la frequenza d'uso nelle ricette e solo un tie-break leggero, per evitare che ingredienti costanti tutto l'anno dominino sempre.
 
+All'avvio, la Home non applica lo snapshot ranking finche il bootstrap iniziale delle ricette remote non e concluso. Durante questa finestra mostra uno skeleton redatto: evita che l'utente veda prima un feed locale/vuoto e poi un secondo feed diverso appena arriva Supabase. Il refresh manuale resta invece intenzionalmente dinamico e puo ruotare lo spotlight.
+
 Classi/aree coinvolte:
 
 - `ProduceViewModel`.

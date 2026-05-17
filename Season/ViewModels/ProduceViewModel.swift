@@ -108,6 +108,7 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var homeFeedDataVersion: Int = 0
     @Published private(set) var rankingDataVersion: Int = 0
     @Published private(set) var didCompleteInitialRemoteRecipeHydration: Bool = false
+    @Published private(set) var isInitialHomeFeedHydrating: Bool = true
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
     @Published private(set) var nutritionPriorities: [NutritionPriorityDimension: Double] = NutritionService.defaultNutritionPriorities
@@ -811,6 +812,7 @@ final class ProduceViewModel: ObservableObject {
     private func beginBootstrap() -> Int {
         bootstrapGeneration &+= 1
         isBootstrapping = true
+        isInitialHomeFeedHydrating = true
         pendingInvalidation = false
         bootstrapRemoteRecipesCompleted = false
         bootstrapIngredientAliasesCompleted = false
@@ -835,6 +837,7 @@ final class ProduceViewModel: ObservableObject {
               bootstrapIngredientAliasesCompleted else { return }
 
         isBootstrapping = false
+        isInitialHomeFeedHydrating = false
         if pendingInvalidation {
             pendingInvalidation = false
             performCacheInvalidation(reason: "bootstrap_coalesced")
