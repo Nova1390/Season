@@ -146,10 +146,13 @@ The Release bundle is expected to exclude:
 - internal docs;
 - local batch input files;
 - Xcode user state.
+- raw runtime diagnostics and catalog admin surfaces.
 
 For TestFlight, staging should contain the selected recipe catalog. Local TheMealDB/seed recipes should not be used as the app's recipe source of truth.
 
 Staging preflight SQL lives in `supabase/devops/staging_testflight_preflight.sql`. If catalog autopilot should run on staging, use the dedicated `staging_catalog_autopilot_v2_*` scripts rather than the dev scheduler.
+
+Runtime logging must go through `SeasonLog`; Release builds should not print user identifiers, callback URLs, storage paths, raw RPC payloads, or catalog admin diagnostics. Catalog governance is operated from `catalog.seasonapp.it`; the legacy iOS catalog diagnostics view is Debug-only.
 
 ## Development Principles
 

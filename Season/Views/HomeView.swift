@@ -1755,9 +1755,9 @@ struct HomeView: View {
         if selectedQuickFilter == .following {
             if SeasonLog.verbose {
                 if cachedFilteredFeeds[selectedQuickFilter] != nil {
-                    print("[SEASON_HOME_FOLLOWING] phase=cache_hit filter=following")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=cache_hit filter=following")
                 } else {
-                    print("[SEASON_HOME_FOLLOWING] phase=cache_miss filter=following")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=cache_miss filter=following")
                 }
             }
             let followingRecipeItems = filtered.flatMap { item -> [HookedRecipeCard] in
@@ -1769,10 +1769,10 @@ struct HomeView: View {
                 }
             }
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
                 for card in followingRecipeItems.prefix(5) {
                     let creatorID = card.ranked.recipe.canonicalCreatorID ?? "nil"
-                    print("[SEASON_HOME_FOLLOWING] phase=feed_item recipe_id=\(card.ranked.recipe.id) creator_id=\(creatorID)")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_item recipe_id=\(card.ranked.recipe.id) creator_id=\(creatorID)")
                 }
             }
         } else {
@@ -1974,7 +1974,7 @@ struct HomeView: View {
                 limit: 60
             )
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
             }
             guard !followingRanked.isEmpty else { return [] }
             let followingCards = enforceFeedDiversity(
@@ -2207,7 +2207,7 @@ struct HomeView: View {
                 limit: 24
             )
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
             }
             guard !followingRanked.isEmpty else { return [] }
             let cards = buildHookedCards(
@@ -2457,7 +2457,7 @@ struct HomeView: View {
 
     private func debugFeedIntelligence(_ message: String) {
         guard isFeedIntelligenceDebugEnabled else { return }
-        print("[SEASON_FEED_INTEL] \(message)")
+        SeasonLog.debug("[SEASON_FEED_INTEL] \(message)")
     }
 
     private func smartSuggestionBoost(
@@ -2747,7 +2747,7 @@ struct HomeView: View {
     private func debugHomeFeed(_ message: String) {
         #if DEBUG
         if SeasonLog.verbose || ProcessInfo.processInfo.environment["SEASON_HOME_DEBUG"] == "1" {
-            print("HOME FEED DEBUG: \(message)")
+            SeasonLog.debug("HOME FEED DEBUG: \(message)")
         }
         #endif
     }
@@ -2760,7 +2760,7 @@ struct HomeView: View {
         withAnimation(quickFilterSelectionAnimation) {
             selectedQuickFilter = selectedQuickFilter == filter ? nil : filter
             if SeasonLog.verbose, selectedQuickFilter == .following {
-                print("[SEASON_HOME_FOLLOWING] phase=filter_selected filter=following")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=filter_selected filter=following")
             }
         }
     }

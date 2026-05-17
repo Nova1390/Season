@@ -39,11 +39,11 @@ Flow iniziale:
 - `FridgeView`: lista frigo e ricette cucinabili dal frigo.
 - `RecipeDetailView`: dettaglio ricetta, ingredienti, nutrizione, CTA, media, follow, save/crispy.
 - `CreateRecipeView`: composer ricette, draft, smart import caption/URL, publish.
-- `AccountView`: profilo, libreria, preferenze, auth tools, diagnostics e admin entry point.
+- `AccountView`: profilo, libreria, preferenze e auth tools. Le diagnostiche catalogo iOS sono disponibili solo in build Debug.
 - `AuthorProfileView`: profilo creator/autore.
 - `ShoppingListView`: lista della spesa.
 - `ProduceDetailView` e `IngredientDetailView`: dettaglio prodotto/ingrediente.
-- `CatalogCandidatesDebugView`: console admin catalogo e reconciliation.
+- `CatalogCandidatesDebugView`: console legacy solo Debug; la governance catalogo operativa vive su `catalog.seasonapp.it`.
 
 Componenti condivisi:
 
@@ -63,7 +63,7 @@ Componenti condivisi:
 
 ### Servizi core
 
-- `SupabaseService`: client unico Supabase, auth, profili, ricette, stati, fridge, shopping, catalog RPC, edge function invoke, storage avatar e logging.
+- `SupabaseService`: facade Supabase temporanea per auth, profili, ricette, stati, fridge, shopping, catalog RPC, edge function invoke e storage avatar. Il logging runtime passa da `SeasonLog`.
 - `RecipeRepository`: layer di accesso remoto per ricette e user recipe states, con fallback per schema drift.
 - `RecipeStore`: persistenza locale ricette create/draft e compatibility loader.
 - `ProduceStore`: loader produce JSON.
@@ -355,9 +355,10 @@ Documentazione design:
 
 Logging:
 
-- Prefix Supabase e auth nei `print`, ad esempio `[SEASON_SUPABASE]` e `[SEASON_AUTH_GATE]`.
-- Trace ID e categorie errore in `SupabaseService`.
-- Failure category: auth session, RLS, network, rate limit, server, validation, unknown.
+- Il codice app non deve usare `print(...)` direttamente, salvo `Swift.print` dentro `SeasonLog`.
+- `SeasonLog.debug(...)` e `SeasonLog.lifecycle(...)` non emettono log in Release e in Debug stampano solo se abilitati da flag.
+- Log con user id, URL callback, path storage, payload RPC raw o identificativi ricetta devono restare disabilitati nelle build esterne.
+- Trace ID e categorie errore restano utili in sviluppo, ma devono passare da logging centralizzato e redatto.
 
 Diagnostiche app:
 
@@ -365,7 +366,7 @@ Diagnostiche app:
 - Outbox processing manuale.
 - Backfill manuale.
 - Reconciliation diagnostics.
-- Catalog admin view per utenti admin.
+- Catalog admin view solo in Debug. Per staging/prod usare la console web `catalog.seasonapp.it`.
 
 ## 16. Sicurezza
 

@@ -73,7 +73,7 @@ final class UserInteractionTracker {
             let data = try JSONEncoder().encode(events)
             storage.set(data, forKey: storageKey)
         } catch {
-            print("[SEASON_FEED_SIGNALS] phase=save_failed error=\(error)")
+            SeasonLog.debug("[SEASON_FEED_SIGNALS] phase=save_failed error=\(error)")
         }
     }
 
@@ -82,7 +82,7 @@ final class UserInteractionTracker {
         do {
             return try JSONDecoder().decode([UserInteractionEvent].self, from: data)
         } catch {
-            print("[SEASON_FEED_SIGNALS] phase=load_failed error=\(error)")
+            SeasonLog.debug("[SEASON_FEED_SIGNALS] phase=load_failed error=\(error)")
             storage.removeObject(forKey: key)
             return []
         }

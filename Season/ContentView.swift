@@ -212,18 +212,18 @@ struct ContentView: View {
         .onAppear {
             selectedLanguage = viewModel.setLanguage(selectedLanguage)
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(nutritionGoalsRaw)
-            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_launch")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_launch")
             Task {
                 await outboxDispatcher.processPendingMutations()
             }
             Task {
-                print("[SEASON_SUPABASE] phase=follow_sync_triggered source=app_launch")
+                SeasonLog.debug("[SEASON_SUPABASE] phase=follow_sync_triggered source=app_launch")
                 await FollowSyncManager.shared.syncFromBackend()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_foreground")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_foreground")
             Task {
                 await outboxDispatcher.processPendingMutations()
             }

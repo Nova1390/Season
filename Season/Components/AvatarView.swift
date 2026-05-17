@@ -25,7 +25,7 @@ struct AvatarView: View {
                             .frame(width: size, height: size)
                             .clipShape(Circle())
                             .onAppear {
-                                print("[SEASON_AVATAR] phase=remote_used creator_id=\(creatorLogID) url=\(remoteURL.absoluteString)")
+                                SeasonLog.debug("[SEASON_AVATAR] phase=remote_used creator_id=\(creatorLogID) url=\(remoteURL.absoluteString)")
                             }
                     case .failure:
                         fallbackAvatar(reason: "failed")
@@ -43,7 +43,7 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .onAppear {
-            print("[SEASON_AVATAR] phase=render_attempt creator_id=\(creatorLogID)")
+            SeasonLog.debug("[SEASON_AVATAR] phase=render_attempt creator_id=\(creatorLogID)")
         }
     }
 
@@ -135,7 +135,7 @@ struct AvatarView: View {
             )
             .frame(width: size, height: size)
             .onAppear {
-                print("[SEASON_AVATAR] phase=fallback_used creator_id=\(creatorLogID) reason=\(reason)")
+                SeasonLog.debug("[SEASON_AVATAR] phase=fallback_used creator_id=\(creatorLogID) reason=\(reason)")
             }
     }
 }

@@ -104,13 +104,13 @@ final class FollowStore: ObservableObject {
             follow(creatorId)
         }
         let isFollowingNow = isFollowing(canonicalFollowingID)
-        print("[SEASON_FOLLOW_IDENTITY] phase=store_toggle follower_id=\(followerID) following_id=\(canonicalFollowingID) was_following=\(wasFollowing) is_following_now=\(isFollowingNow)")
+        SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=store_toggle follower_id=\(followerID) following_id=\(canonicalFollowingID) was_following=\(wasFollowing) is_following_now=\(isFollowingNow)")
     }
 
     private func currentFollowerID() -> String {
         let normalized = normalizeID(CurrentUser.shared.creator.id)
         guard isValidUUID(normalized) else {
-            print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
+            SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
             return ""
         }
         return normalized
@@ -179,7 +179,7 @@ final class FollowStore: ObservableObject {
 
             guard normalizedFollower == followerID else { continue }
             guard isValidUUID(normalizedFollowing) else {
-                print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalizedFollowing)")
+                SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalizedFollowing)")
                 continue
             }
             guard normalizedFollowing != followerID else { continue }
@@ -252,15 +252,15 @@ final class FollowStore: ObservableObject {
         let normalized = normalizeID(rawValue)
         guard !normalized.isEmpty, normalized != "unknown" else {
             if !normalized.isEmpty {
-                print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
+                SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
             }
             return nil
         }
 
         guard isValidUUID(normalized) else {
-            print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
+            SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(normalized)")
             if isLikelyLegacyName(normalized) {
-                print("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(normalized)")
+                SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(normalized)")
             }
             return nil
         }
@@ -277,9 +277,9 @@ final class FollowStore: ObservableObject {
             let followingID = normalizeID(relation.followingId)
 
             guard isValidUUID(followerID), isValidUUID(followingID), followerID != followingID else {
-                print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(followingID)")
+                SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(followingID)")
                 if isLikelyLegacyName(followingID) {
-                    print("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(followingID)")
+                    SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(followingID)")
                 }
                 continue
             }

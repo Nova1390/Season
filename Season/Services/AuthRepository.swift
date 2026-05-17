@@ -129,7 +129,7 @@ final class AuthRepository {
             throw SupabaseServiceError.unauthenticated
         }
 
-        print("[SEASON_AUTH] phase=apple_supabase_exchange_started")
+        SeasonLog.debug("[SEASON_AUTH] phase=apple_supabase_exchange_started")
         let session = try await supabaseClient.auth.signInWithIdToken(
             credentials: OpenIDConnectCredentials(
                 provider: .apple,
@@ -150,7 +150,7 @@ final class AuthRepository {
         )
 
         let userID = session.user.id
-        print("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
+        SeasonLog.debug("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
         return userID
     }
 
@@ -178,9 +178,9 @@ final class AuthRepository {
 
         do {
             _ = try await supabaseClient.auth.update(user: UserAttributes(data: metadata))
-            print("[SEASON_AUTH] phase=apple_user_metadata_updated")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_user_metadata_updated")
         } catch {
-            print("[SEASON_AUTH] phase=apple_user_metadata_update_failed error=\(error.localizedDescription)")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_user_metadata_update_failed error=\(error.localizedDescription)")
         }
     }
 

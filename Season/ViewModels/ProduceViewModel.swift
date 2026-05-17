@@ -379,7 +379,7 @@ final class ProduceViewModel: ObservableObject {
         unifiedEntryNameLookup = entryNameLookup
         markReconciliationInputsChanged()
 
-        print(
+        SeasonLog.debug(
             "[SEASON_UNIFIED_PARITY] phase=parity_cache_ready catalog_count=\(entriesByID.count) alias_count=\(aliasLookup.count) name_lookup_count=\(nameLookup.count)"
         )
     }
@@ -485,7 +485,7 @@ final class ProduceViewModel: ObservableObject {
     private func reconcileRecipeOnRead(_ recipe: Recipe) -> Recipe {
         guard recipeHasPotentialReconciliationWork(recipe) else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
             }
             return recipe
         }
@@ -493,7 +493,7 @@ final class ProduceViewModel: ObservableObject {
         let cacheKey = reconciliationNoMatchCacheKey(for: recipe)
         if reconciliationNoMatchCache.contains(cacheKey) {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=cached_no_match")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=cached_no_match")
             }
             return recipe
         }
@@ -505,7 +505,7 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
         }
 
         var successCount = 0
@@ -559,13 +559,13 @@ final class ProduceViewModel: ObservableObject {
         guard successCount > 0 else {
             reconciliationNoMatchCache.insert(cacheKey)
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
             }
             return recipe
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
         }
         var updated = recipe
         updated = Recipe(
@@ -753,22 +753,22 @@ final class ProduceViewModel: ObservableObject {
                         self.markBootstrapRemoteRecipesCompleted(generation: bootstrapGeneration)
                     }
                 }
-                print("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
             }
         }
     }
 
     private func bumpHomeFeedDataVersion(reason: String) {
         homeFeedDataVersion &+= 1
-        if SeasonLog.lifecycle {
-            print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
+        if SeasonLog.lifecycleEnabled {
+            SeasonLog.debug("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
         }
     }
 
     private func bumpRankingDataVersion(reason: String) {
         rankingDataVersion &+= 1
-        if SeasonLog.lifecycle {
-            print("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
+        if SeasonLog.lifecycleEnabled {
+            SeasonLog.debug("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
         }
     }
 
@@ -782,7 +782,7 @@ final class ProduceViewModel: ObservableObject {
     private func debugLoadTimingIfNeeded(label: String, count: Int, elapsedMs: Int) {
         #if DEBUG
         if ProcessInfo.processInfo.environment["SEASON_LOAD_DEBUG"] == "1" {
-            print("LOAD DEBUG [\(label)] count=\(count) time_ms=\(elapsedMs)")
+            SeasonLog.debug("LOAD DEBUG [\(label)] count=\(count) time_ms=\(elapsedMs)")
         }
         #endif
     }
@@ -1147,14 +1147,14 @@ final class ProduceViewModel: ObservableObject {
             creatorID: recipe.canonicalCreatorID,
             metadata: ["isCrispied": isCrispied ? "true" : "false"]
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
-        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
         Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=service_call")
+            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=service_call")
             do {
                 try await supabaseService.setRecipeCrispiedState(recipeID: recipe.id, isCrispied: isCrispied, traceID: traceID)
             } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=write_failed error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=write_failed error=\(error)")
             }
         }
     }
@@ -1177,15 +1177,15 @@ final class ProduceViewModel: ObservableObject {
             creatorID: recipe.canonicalCreatorID,
             metadata: ["isSaved": isSaved ? "true" : "false"]
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
-        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
 
         Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=service_call")
+            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=service_call")
             do {
                 try await supabaseService.setRecipeSavedState(recipeID: recipe.id, isSaved: isSaved, traceID: traceID)
             } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=write_failed error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=write_failed error=\(error)")
             }
         }
     }
@@ -1390,15 +1390,15 @@ final class ProduceViewModel: ObservableObject {
             ?? resolveUnifiedCatalogMatch(query: normalized)
         if let unified {
             let unifiedKey = parityMatchKey(unified)
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_used path=import query=\(normalized) value=\(unifiedKey)")
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_mapped_to_legacy path=import query=\(normalized) value=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_used path=import query=\(normalized) value=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_mapped_to_legacy path=import query=\(normalized) value=\(unifiedKey)")
             return unified
         }
 
         let legacy = resolveLegacyAliasMatch(query: normalized)
             ?? resolveLegacyCatalogMatch(query: normalized)
         if let legacy {
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_failed_fallback_legacy path=import query=\(normalized) legacy=\(parityMatchKey(legacy))")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_failed_fallback_legacy path=import query=\(normalized) legacy=\(parityMatchKey(legacy))")
         }
         return legacy
     }
@@ -1467,21 +1467,21 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if legacyKey == unifiedKey {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_match_same path=\(path) query=\(query) value=\(legacyKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_match_same path=\(path) query=\(query) value=\(legacyKey)")
             return
         }
 
         if legacyKey == "none" {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_legacy path=\(path) query=\(query) unified=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_missing_legacy path=\(path) query=\(query) unified=\(unifiedKey)")
             return
         }
 
         if unifiedKey == "none" {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_unified path=\(path) query=\(query) legacy=\(legacyKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_missing_unified path=\(path) query=\(query) legacy=\(legacyKey)")
             return
         }
 
-        print("[SEASON_UNIFIED_PARITY] phase=parity_match_diff path=\(path) query=\(query) legacy=\(legacyKey) unified=\(unifiedKey)")
+        SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_match_diff path=\(path) query=\(query) legacy=\(legacyKey) unified=\(unifiedKey)")
     }
 
     func recipe(forID id: String) -> Recipe? {
@@ -1527,7 +1527,7 @@ final class ProduceViewModel: ObservableObject {
         recipes.insert(draft, at: 0)
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(draft)
-        print("[SEASON_RECIPE] phase=draft_created id=\(draft.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_created id=\(draft.id)")
         return draft
     }
 
@@ -1627,7 +1627,7 @@ final class ProduceViewModel: ObservableObject {
         }
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
-        print("[SEASON_RECIPE] phase=draft_saved id=\(recipe.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_saved id=\(recipe.id)")
         return recipe
     }
 
@@ -1855,7 +1855,7 @@ final class ProduceViewModel: ObservableObject {
         let normalizedQuery = normalizedSearchText(sourceText)
         guard !normalizedQuery.isEmpty else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
             }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
@@ -1867,7 +1867,7 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
         }
 
         let match = resolveUnifiedAliasMatch(query: normalizedQuery)
@@ -1876,7 +1876,7 @@ final class ProduceViewModel: ObservableObject {
             ?? resolveCatalogMatchInIngredientText(query: normalizedQuery)
         guard let match else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
             }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
@@ -1897,7 +1897,7 @@ final class ProduceViewModel: ObservableObject {
         switch match {
         case .produce(let item):
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
             }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
@@ -1917,7 +1917,7 @@ final class ProduceViewModel: ObservableObject {
             )
         case .basic(let item):
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
             }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
@@ -2063,9 +2063,9 @@ final class ProduceViewModel: ObservableObject {
 
         if commitLocally {
             commitPublishedRecipeLocally(recipe)
-            print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
         } else {
-            print("[SEASON_RECIPE] phase=publish_recipe_built recipe_id=\(recipe.id) local_commit=false")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_recipe_built recipe_id=\(recipe.id) local_commit=false")
         }
 
         return recipe
@@ -2432,7 +2432,7 @@ final class ProduceViewModel: ObservableObject {
                 if SeasonLog.verbose {
                     let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
                     let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-                    print("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
+                    SeasonLog.debug("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
                 }
                 let seasonality = recipeSeasonalityScore(for: recipe)
                 let resolvedSeasonalPercent = Int((seasonality * 100.0).rounded())
@@ -2632,7 +2632,7 @@ final class ProduceViewModel: ObservableObject {
     ) {
         guard rankingDebugEnabled else { return }
         let fridgePart = fridgeMatch.map { String(format: "%.3f", $0) } ?? "-"
-        print(
+        SeasonLog.debug(
             "RANK DEBUG [\(channel)] recipe=\(recipeName) score=\(String(format: "%.3f", finalScore)) seasonality=\(String(format: "%.3f", seasonality)) fridgeMatch=\(fridgePart) crispy=\(String(format: "%.3f", crispy)) views=\(String(format: "%.3f", views)) nutrition=\(String(format: "%.3f", nutrition))"
         )
     }
@@ -2642,7 +2642,7 @@ final class ProduceViewModel: ObservableObject {
         breakdown: HomeRecipeScoreBreakdown
     ) {
         guard rankingDebugEnabled else { return }
-        print(
+        SeasonLog.debug(
             "RANK DEBUG [home_breakdown] recipe=\(recipeName) seasonality=\(String(format: "%.3f", breakdown.seasonality)) nutrition=\(String(format: "%.3f", breakdown.nutrition)) quality=\(String(format: "%.3f", breakdown.quality)) convenience=\(String(format: "%.3f", breakdown.convenience)) engagement=\(String(format: "%.3f", breakdown.engagement)) freshness=\(String(format: "%.3f", breakdown.freshness)) sourceTrust=\(String(format: "%.3f", breakdown.sourceTrust))"
         )
     }

@@ -1239,16 +1239,16 @@ struct CreateRecipeView: View {
               let initialDraftRecipeID,
               !hasAttemptedInitialDraftLoad else { return }
         hasAttemptedInitialDraftLoad = true
-        print("[SEASON_RECIPE] phase=draft_load_started id=\(initialDraftRecipeID)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_started id=\(initialDraftRecipeID)")
         guard let recipe = viewModel.recipe(forID: initialDraftRecipeID) else {
             draftLoadFailed = true
-            print("[SEASON_RECIPE] phase=draft_load_failed id=\(initialDraftRecipeID)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_failed id=\(initialDraftRecipeID)")
             return
         }
         applyDraftPrefill(Self.prefillDraft(from: recipe))
         currentDraftRecipeID = initialDraftRecipeID
         draftLoadFailed = false
-        print("[SEASON_RECIPE] phase=draft_load_succeeded id=\(initialDraftRecipeID)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_succeeded id=\(initialDraftRecipeID)")
     }
 
     private func applyDraftPrefill(_ prefill: PrefillDraft) {
@@ -1339,16 +1339,16 @@ struct CreateRecipeView: View {
         defer { isPublishing = false }
 
         let currentAuthUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased()
-        print("[SEASON_RECIPE] phase=publish_auth_check current_auth_user_id=\(currentAuthUserID ?? "nil")")
+        SeasonLog.debug("[SEASON_RECIPE] phase=publish_auth_check current_auth_user_id=\(currentAuthUserID ?? "nil")")
         guard currentAuthUserID != nil else {
-            print("[SEASON_RECIPE] phase=publish_blocked reason=unauthenticated")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_blocked reason=unauthenticated")
             publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
             showPublishError = true
             return
         }
 
         guard recipeLinksAreAllowedForPublish else {
-            print("[SEASON_RECIPE] phase=publish_blocked reason=disallowed_external_link")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_blocked reason=disallowed_external_link")
             publishErrorMessage = localizer.text(.invalidRecipeLinkMessage)
             showPublishError = true
             return
@@ -1368,13 +1368,13 @@ struct CreateRecipeView: View {
                     imageData: jpegData,
                     recipeID: recipeID
                 )
-                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_ok recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_ok recipe_id=\(recipeID)")
             } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
-                print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
-                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_timeout recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_timeout recipe_id=\(recipeID)")
             } catch {
-                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_failed recipe_id=\(recipeID) error=\(error)")
-                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_failed recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_failed recipe_id=\(recipeID) error=\(error)")
+                SeasonLog.debug("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_failed recipe_id=\(recipeID)")
             }
         }
 
@@ -1412,14 +1412,14 @@ struct CreateRecipeView: View {
             return
         }
 
-        print("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
         do {
             try await SupabaseService.shared.createRecipe(published)
             viewModel.commitPublishedRecipeLocally(published)
-            print("[SEASON_RECIPE] phase=local_publish_committed_after_remote recipe_id=\(published.id)")
-            print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=local_publish_committed_after_remote recipe_id=\(published.id)")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
         } catch {
-            print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
             if case SupabaseServiceError.unauthenticated = error {
                 publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
             } else {
@@ -1483,7 +1483,7 @@ struct CreateRecipeView: View {
         let sourceURL = normalizedImportSourceURL ?? ""
         if !sourceURL.isEmpty, !isAllowedRecipeURL(sourceURL, context: .importSource) {
             importFeedbackText = localizer.text(.invalidRecipeLinkMessage)
-            print("[SEASON_IMPORT] phase=blocked reason=disallowed_external_link source_url=\(sourceURL)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=blocked reason=disallowed_external_link source_url=\(sourceURL)")
             return
         }
 
@@ -1499,10 +1499,10 @@ struct CreateRecipeView: View {
         let candidatesRequiringLLM = smartImportCandidates.filter(\.requiresLLM).count
         let smartImportAudit = SocialImportParser.computeAuditMetrics(candidates: smartImportCandidates)
 
-        print("[SEASON_IMPORT] phase=local_parse_done source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
-        print("[SEASON_IMPORT] phase=smart_import_decision candidates=\(smartImportCandidates.count) requires_llm=\(candidatesRequiringLLM)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=local_parse_done source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=smart_import_decision candidates=\(smartImportCandidates.count) requires_llm=\(candidatesRequiringLLM)")
         if SeasonLog.verbose {
-            print(
+            SeasonLog.debug(
                 "[SEASON_SMART_IMPORT_AUDIT] phase=client_preparse " +
                 "total=\(smartImportAudit.totalCandidates) " +
                 "exact=\(smartImportAudit.exactMatches) " +
@@ -1525,14 +1525,14 @@ struct CreateRecipeView: View {
             || refinement.needsRefinement
             || completenessFallback
         let refinementReasonsLog = refinement.reasons.isEmpty ? "[]" : "[\(refinement.reasons.joined(separator: ","))]"
-        print("[SEASON_IMPORT] phase=refinement_check needs_refinement=\(refinement.needsRefinement) reasons=\(refinementReasonsLog)")
-        print(
+        SeasonLog.debug("[SEASON_IMPORT] phase=refinement_check needs_refinement=\(refinement.needsRefinement) reasons=\(refinementReasonsLog)")
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=fallback_completeness_gate " +
             "trigger=\(completenessFallback) candidates=\(smartImportCandidates.count) " +
             "final_drafts=\(localDraftsForFallbackGate.count)"
         )
         if refinement.reasons.contains("unit_prefix_in_name") {
-            print("[SEASON_IMPORT] phase=refinement_check reason=unit_prefix_in_name")
+            SeasonLog.debug("[SEASON_IMPORT] phase=refinement_check reason=unit_prefix_in_name")
         }
 
         if shouldAttemptServerFallback {
@@ -1543,7 +1543,7 @@ struct CreateRecipeView: View {
             let fallbackTrigger = localSuggestion.confidence == .low
                 ? "low_confidence"
                 : (completenessFallback ? "completeness_gate" : "refinement_gate")
-            print("[SEASON_IMPORT] phase=server_fallback_attempted source_url=\(sourceURL) trigger=\(fallbackTrigger) reasons=\(refinementReasonsLog)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_attempted source_url=\(sourceURL) trigger=\(fallbackTrigger) reasons=\(refinementReasonsLog)")
             do {
                 let serverResponse = try await SupabaseService.shared.parseRecipeCaption(
                     caption: cleanedCaption,
@@ -1563,26 +1563,26 @@ struct CreateRecipeView: View {
                         caption: cleanedCaption
                     )
                     importServerNoticeText = ""
-                    print("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(protectedSuggestion.confidence.rawValue)")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(protectedSuggestion.confidence.rawValue)")
                     applyImportedSuggestion(protectedSuggestion, sourceURL: sourceURL)
                     return
                 }
-                print("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
             } catch let rateLimitError as ParseRecipeCaptionInvokeError {
                 switch rateLimitError {
                 case .tooFrequent(let retryAfterSeconds):
-                    print("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=TOO_FREQUENT_REQUESTS retry_after_seconds=\(retryAfterSeconds ?? -1)")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=TOO_FREQUENT_REQUESTS retry_after_seconds=\(retryAfterSeconds ?? -1)")
                     importServerNoticeText = localizer.text(.importRateLimitCooldown)
                 case .dailyLimitReached:
-                    print("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=RATE_LIMIT_EXCEEDED retry_after_seconds=-1")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=RATE_LIMIT_EXCEEDED retry_after_seconds=-1")
                     importServerNoticeText = localizer.text(.importRateLimitDaily)
                 }
             } catch {
-                print("[SEASON_IMPORT] phase=server_fallback_failed source_url=\(sourceURL) error=\(error)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_failed source_url=\(sourceURL) error=\(error)")
             }
         }
 
-        print("[SEASON_IMPORT] phase=kept_local_result source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=kept_local_result source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
         applyImportedSuggestion(localSuggestion, sourceURL: sourceURL)
     }
 
@@ -1788,7 +1788,7 @@ struct CreateRecipeView: View {
             ingredientDrafts = mappedIngredientDrafts
             for draft in mappedIngredientDrafts {
                 let displayName = ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[SEASON_IMPORT] phase=draft_ingredient_mapped name=\(displayName) quantity_value=\(draft.quantityValue) quantity_unit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=draft_ingredient_mapped name=\(displayName) quantity_value=\(draft.quantityValue) quantity_unit=\(draft.quantityUnit.rawValue)")
             }
             importFeedbackText = importQualityFeedbackText(for: suggestion.confidence)
             showCaptionImportHint = suggestion.confidence == .low
@@ -1798,7 +1798,7 @@ struct CreateRecipeView: View {
             showCaptionImportHint = true
         }
 
-        print("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
     }
 
     private func socialImportSuggestionFromServerResponse(
@@ -1811,7 +1811,7 @@ struct CreateRecipeView: View {
         let mappedIngredients: [RecipeIngredient] = result.ingredients.compactMap { item in
             let cleanedName = removingEmojis(from: item.name).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleanedName.isEmpty else { return nil }
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] stage=A_raw_imported " +
                 "name=\(cleanedName) quantity=\(item.quantity.map { String($0) } ?? "nil") unit=\(item.unit ?? "nil")"
             )
@@ -1836,7 +1836,7 @@ struct CreateRecipeView: View {
                 ingredientName: cleanedName,
                 caption: fallbackCaption
             ) {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_recovered_from_raw " +
                     "name=\(cleanedName) recovered_name=\(recovered.cleanedName) " +
                     "quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
@@ -1856,7 +1856,7 @@ struct CreateRecipeView: View {
                     recovery: recovered
                 )
                 if shouldOverride {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=server_quantity_overridden_from_raw " +
                         "name=\(cleanedName) old_quantity=\(quantityValueString(quantity)) old_unit=\(unit.rawValue) " +
                         "new_quantity=\(quantityValueString(recovered.quantityValue)) new_unit=\(recovered.quantityUnit.rawValue)"
@@ -1961,7 +1961,7 @@ struct CreateRecipeView: View {
             ? localSuggestion.confidence
             : serverSuggestion.confidence
 
-        print(
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=server_quality_gate " +
             "preserve_local_ingredients=\(shouldPreserveLocalIngredients) " +
             "local_lost=\(localLost.count) server_lost=\(serverLost.count) " +
@@ -2097,7 +2097,7 @@ struct CreateRecipeView: View {
         from ingredient: RecipeIngredient,
         sourceCaptionRaw: String? = nil
     ) -> CreateIngredientDraft {
-        print("[SEASON_IMPORT] stage=A_raw_imported name=\(ingredient.name) quantity=\(ingredient.quantityValue) unit=\(ingredient.quantityUnit.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] stage=A_raw_imported name=\(ingredient.name) quantity=\(ingredient.quantityValue) unit=\(ingredient.quantityUnit.rawValue)")
         let trimmedName = removingEmojis(from: ingredient.name).trimmingCharacters(in: .whitespacesAndNewlines)
         let rawSourceLine = ingredient.rawIngredientLine?
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
@@ -2126,8 +2126,8 @@ struct CreateRecipeView: View {
                     quantityUnit: mappedQuantityUnit,
                     importedSurfaceName: mappedSurfaceName
                 )
-                print("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
             if let basicIngredientID = ingredient.basicIngredientID,
@@ -2138,8 +2138,8 @@ struct CreateRecipeView: View {
                     quantityUnit: mappedQuantityUnit,
                     importedSurfaceName: mappedSurfaceName
                 )
-                print("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
         }
@@ -2157,7 +2157,7 @@ struct CreateRecipeView: View {
             // Preserve natural "q.b." lines without forcing numeric measurement semantics.
             let cleanedName = normalizedCommonIngredientPhrase(cleanedQuantoBastaName(from: trimmedName))
             if let resolved = resolveImportedIngredientMatch(query: cleanedName) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
                 return catalogMatchedImportedDraft(
                     from: resolved,
                     quantityValue: 1,
@@ -2170,24 +2170,24 @@ struct CreateRecipeView: View {
         if let recovered = explicitRecovery,
            shouldOverrideServerQuantityWithRaw(ingredient: ingredient, recovery: recovered) {
             let recoveredQuery = normalizedCommonIngredientPhrase(recovered.cleanedName)
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_from_raw " +
                 "name=\(trimmedName) recovered_name=\(recoveredQuery) " +
                 "quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
             )
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=server_quantity_overridden_from_raw " +
                 "name=\(trimmedName) old_quantity=\(quantityValueString(ingredient.quantityValue)) old_unit=\(ingredient.quantityUnit.rawValue) " +
                 "new_quantity=\(quantityValueString(recovered.quantityValue)) new_unit=\(recovered.quantityUnit.rawValue)"
             )
 
             if let resolved = resolveImportedIngredientMatch(query: recoveredQuery) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(recoveredQuery) match=\(resolvedDecisionLabel(resolved))")
-                print(
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(recoveredQuery) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                     "name=\(recoveredQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                 )
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                     "name=\(recoveredQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                 )
@@ -2199,7 +2199,7 @@ struct CreateRecipeView: View {
                 )
             }
 
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(recoveredQuery)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(recoveredQuery)")
             return CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2217,13 +2217,13 @@ struct CreateRecipeView: View {
                 normalizedImportedNameWithoutLeadingUnit(trimmedName, unit: ingredient.quantityUnit)
             )
             if let resolved = resolveImportedIngredientMatch(query: cleanedName) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
                 if let recovered = explicitRecovery {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                         "name=\(cleanedName) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                         "name=\(cleanedName) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
@@ -2255,13 +2255,13 @@ struct CreateRecipeView: View {
                         quantityUnit: ingredient.quantityUnit
                     )
                 }
-                print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
-                print("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
 
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(cleanedName)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(cleanedName)")
             let draft = CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2270,9 +2270,9 @@ struct CreateRecipeView: View {
                 quantityValue: "",
                 quantityUnit: ingredient.quantityUnit
             )
-            print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
-            print("[SEASON_IMPORT] stage=C_match_decision decision=custom")
-            print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=custom")
+            SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
             return draft
         }
 
@@ -2289,17 +2289,17 @@ struct CreateRecipeView: View {
             let preservedQuantity = normalizedMeasured.quantityValue
             let cleanedName = normalizedMeasured.cleanedName
             let matchQuery = normalizedCommonIngredientPhrase(cleanedName.isEmpty ? trimmedName : cleanedName)
-            print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(matchQuery) quantityValue=\(quantityValueString(preservedQuantity)) quantityUnit=\(preservedUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(matchQuery) quantityValue=\(quantityValueString(preservedQuantity)) quantityUnit=\(preservedUnit.rawValue)")
             if let resolved = resolveImportedIngredientMatch(query: matchQuery) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(matchQuery) match=\(resolvedDecisionLabel(resolved))")
-                print("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(matchQuery) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
                 if let recovered = explicitRecovery,
                    shouldOverrideServerQuantityWithRaw(ingredient: ingredient, recovery: recovered) {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                         "name=\(matchQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                         "name=\(matchQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
@@ -2309,7 +2309,7 @@ struct CreateRecipeView: View {
                         quantityUnit: recovered.quantityUnit,
                         importedSurfaceName: recovered.sourceLine
                     )
-                    print("[SEASON_IMPORT] stage=D_final_draft searchText=\(recoveredDraft.searchText) customName=\(recoveredDraft.customName) quantityValue=\(recoveredDraft.quantityValue) quantityUnit=\(recoveredDraft.quantityUnit.rawValue)")
+                    SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(recoveredDraft.searchText) customName=\(recoveredDraft.customName) quantityValue=\(recoveredDraft.quantityValue) quantityUnit=\(recoveredDraft.quantityUnit.rawValue)")
                     return recoveredDraft
                 }
                 let draft = catalogMatchedImportedDraft(
@@ -2318,11 +2318,11 @@ struct CreateRecipeView: View {
                     quantityUnit: preservedUnit,
                     importedSurfaceName: explicitRecovery?.sourceLine ?? rawSourceLine
                 )
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(matchQuery)")
-            print("[SEASON_IMPORT] stage=C_match_decision decision=custom")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(matchQuery)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=custom")
             let draft = CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2331,14 +2331,14 @@ struct CreateRecipeView: View {
                 quantityValue: quantityValueString(preservedQuantity),
                 quantityUnit: preservedUnit
             )
-            print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
             return draft
         }
 
         if let fractional = parsedFractionalPieceIngredient(from: trimmedName) {
             let normalizedFractionalCore = normalizedCommonIngredientPhrase(fractional.coreName)
             if let resolved = resolveImportedIngredientMatch(query: normalizedFractionalCore) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFractionalCore) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFractionalCore) match=\(resolvedDecisionLabel(resolved))")
                 return catalogMatchedImportedDraft(
                     from: resolved,
                     quantityValue: fractional.quantity,
@@ -2346,7 +2346,7 @@ struct CreateRecipeView: View {
                     importedSurfaceName: fractional.coreName
                 )
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFractionalCore)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFractionalCore)")
             return CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2363,11 +2363,11 @@ struct CreateRecipeView: View {
             let normalizedBare = normalizedCommonIngredientPhrase(trimmedName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: trimmedName, normalized: normalizedBare)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedBare) {
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
                 }
                 let recoveredQuantity = explicitRecovery?.quantityValue ?? max(1, ingredient.quantityValue)
                 let recoveredUnit = explicitRecovery?.quantityUnit ?? ingredient.quantityUnit
@@ -2379,7 +2379,7 @@ struct CreateRecipeView: View {
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
             }
             return customImportedIngredientDraft(name: normalizedBare)
         }
@@ -2390,11 +2390,11 @@ struct CreateRecipeView: View {
             let normalizedBare = normalizedCommonIngredientPhrase(trimmedName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: trimmedName, normalized: normalizedBare)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedBare) {
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
                 }
                 let recoveredQuantity = explicitRecovery?.quantityValue ?? max(1, ingredient.quantityValue)
                 let recoveredUnit = explicitRecovery?.quantityUnit ?? ingredient.quantityUnit
@@ -2406,7 +2406,7 @@ struct CreateRecipeView: View {
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
             }
             return customImportedIngredientDraft(name: normalizedBare)
         }
@@ -2429,12 +2429,12 @@ struct CreateRecipeView: View {
             let normalizedFallback = normalizedCommonIngredientPhrase(fallbackName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: fallbackName, normalized: normalizedFallback)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(fallbackName) normalized=\(normalizedFallback)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(fallbackName) normalized=\(normalizedFallback)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedFallback) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
                 }
                 return catalogMatchedImportedDraft(
                     from: resolved,
@@ -2444,9 +2444,9 @@ struct CreateRecipeView: View {
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedFallback)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedFallback)")
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallback)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallback)")
             return customImportedIngredientDraft(name: trimmedName)
         }
 
@@ -2470,7 +2470,7 @@ struct CreateRecipeView: View {
 
         let normalizedFallbackName = normalizedCommonIngredientPhrase(fallbackName)
         if let resolved = resolveImportedIngredientMatch(query: normalizedFallbackName) {
-            print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallbackName) match=\(resolvedDecisionLabel(resolved))")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallbackName) match=\(resolvedDecisionLabel(resolved))")
             return catalogMatchedImportedDraft(
                 from: resolved,
                 quantityValue: quantityValue,
@@ -2479,7 +2479,7 @@ struct CreateRecipeView: View {
             )
         }
 
-        print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallbackName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallbackName)")
         return CreateIngredientDraft(
             produceID: "",
             basicIngredientID: "",
@@ -2624,7 +2624,7 @@ struct CreateRecipeView: View {
             canonicalName: canonicalName
         )
         let finalDisplayName = preservedSurfaceName ?? canonicalName
-        print(
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=specificity_status " +
             "raw=\(surface) matched_entity_id=\(matchedEntityID(for: resolved)) " +
             "final_display_name=\(finalDisplayName) status=\(status.rawValue)"
@@ -2923,10 +2923,10 @@ struct CreateRecipeView: View {
             || abs(parsedQuantityValue(draft.quantityValue) - 100) < 0.001 else { return draft }
         guard isNonCountableIngredientName(ingredientName) else { return draft }
 
-        print("[SEASON_IMPORT] phase=non_countable_detected ingredient=\(ingredientName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=non_countable_detected ingredient=\(ingredientName)")
         var updated = draft
         updated.quantityValue = ""
-        print("[SEASON_IMPORT] phase=non_countable_quantity_removed ingredient=\(ingredientName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=non_countable_quantity_removed ingredient=\(ingredientName)")
         return updated
     }
 
@@ -3141,7 +3141,7 @@ struct CreateRecipeView: View {
             guard !recoveredName.isEmpty,
                   let mapped = mappedUnitAndQuantity(quantityRaw, unitRawValue: unitRaw) else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_reversed_format " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(mapped.value)) unit=\(mapped.unit.rawValue)"
@@ -3165,7 +3165,7 @@ struct CreateRecipeView: View {
                   !isNonCountableIngredientName(recoveredName),
                   resolveImportedIngredientMatch(query: recoveredName) != nil else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_fractional_piece " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(0.5)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3187,7 +3187,7 @@ struct CreateRecipeView: View {
                   !isNonCountableIngredientName(recoveredName),
                   resolveImportedIngredientMatch(query: recoveredName) != nil else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_fractional_piece " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(0.5)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3214,7 +3214,7 @@ struct CreateRecipeView: View {
                   let quantityValue = Double(quantityRaw),
                   quantityValue > 0 else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_tomato_bare_count " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(quantityValue)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3244,7 +3244,7 @@ struct CreateRecipeView: View {
                   let quantityValue = Double(quantityRaw),
                   quantityValue > 0 else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_bare_count " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(quantityValue)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3276,38 +3276,38 @@ struct CreateRecipeView: View {
         caption: String
     ) -> ExplicitQuantityRecovery? {
         let normalizedIngredient = normalizedIngredientMatchText(ingredientName)
-        print(
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=explicit_quantity_recovery_start " +
             "ingredient=\(ingredientName) normalized=\(normalizedIngredient) raw_source=\(rawSourceLine)"
         )
 
         // Prioritize exact line match (raw source line) before caption-wide scan.
         if let direct = parsedExplicitQuantityRecovery(from: rawSourceLine) {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_found " +
                 "source=raw_line line=\(direct.sourceLine) name=\(direct.cleanedName) " +
                 "quantity=\(quantityValueString(direct.quantityValue)) unit=\(direct.quantityUnit.rawValue)"
             )
             return direct
         } else {
-            print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=raw_line reason=regex_no_match line=\(rawSourceLine)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=raw_line reason=regex_no_match line=\(rawSourceLine)")
         }
 
         let lines = caption
             .components(separatedBy: CharacterSet(charactersIn: "\n,;:."))
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        print("[SEASON_IMPORT] phase=explicit_quantity_caption_scan line_count=\(lines.count)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_caption_scan line_count=\(lines.count)")
 
         for line in lines {
             if let candidate = parsedExplicitQuantityRecovery(from: line) {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_candidate_found " +
                     "source=caption_line line=\(candidate.sourceLine) name=\(candidate.cleanedName) " +
                     "quantity=\(quantityValueString(candidate.quantityValue)) unit=\(candidate.quantityUnit.rawValue)"
                 )
             } else {
-                print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption_line reason=regex_no_match line=\(line)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption_line reason=regex_no_match line=\(line)")
             }
         }
 
@@ -3318,7 +3318,7 @@ struct CreateRecipeView: View {
             return fromCaption
         }
 
-        print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption reason=no_candidate_accepted")
+        SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption reason=no_candidate_accepted")
         return nil
     }
 
@@ -3330,7 +3330,7 @@ struct CreateRecipeView: View {
             recovery.cleanedName,
             isCompatibleWith: ingredient.name
         ) else {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected " +
                 "source=caption reason=target_mismatch target=\(ingredient.name) recovered=\(recovery.cleanedName)"
             )
@@ -3401,7 +3401,7 @@ struct CreateRecipeView: View {
             }
 
             guard score > 0 else {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected " +
                     "source=caption_line reason=name_mismatch line=\(recovery.sourceLine) " +
                     "target=\(target) recovered=\(recoveredName)"
@@ -3414,7 +3414,7 @@ struct CreateRecipeView: View {
         }
 
         if let best {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_accepted " +
                 "line=\(best.recovery.sourceLine) name=\(best.recovery.cleanedName) " +
                 "quantity=\(quantityValueString(best.recovery.quantityValue)) unit=\(best.recovery.quantityUnit.rawValue)"
@@ -3735,7 +3735,7 @@ struct CreateRecipeView: View {
 
     private func observeUnresolvedCustomIngredients(latestRecipeID: String?) {
         let ingredients = recipeIngredientsForPublish
-        print("[SEASON_OBSERVATION] phase=observation_pipeline_stage=final_draft ingredient_count=\(ingredients.count)")
+        SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_pipeline_stage=final_draft ingredient_count=\(ingredients.count)")
         let observations = unresolvedCustomIngredientObservations(
             from: ingredients,
             latestRecipeID: latestRecipeID
@@ -3767,10 +3767,10 @@ struct CreateRecipeView: View {
                 ingredientType = "custom"
             }
 
-            print("[SEASON_OBSERVATION] phase=observation_evaluated_final ingredient=\(finalName) type=\(ingredientType)")
+            SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_evaluated_final ingredient=\(finalName) type=\(ingredientType)")
 
             if ingredientType != "custom" {
-                print("[SEASON_OBSERVATION] phase=observation_skipped_final_resolved ingredient=\(finalName) type=\(ingredientType)")
+                SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_skipped_final_resolved ingredient=\(finalName) type=\(ingredientType)")
                 continue
             }
 
@@ -3788,7 +3788,7 @@ struct CreateRecipeView: View {
                     latestRecipeID: latestRecipeID
                 )
             )
-            print("[SEASON_OBSERVATION] phase=observation_logged_final_unresolved ingredient=\(finalName)")
+            SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_logged_final_unresolved ingredient=\(finalName)")
         }
 
         return observations
@@ -4105,7 +4105,7 @@ struct CreateRecipeView: View {
 
         for entry in replacements {
             if normalized.range(of: entry.pattern, options: .regularExpression) != nil {
-                print("[SEASON_IMPORT] phase=normalized_common_phrase raw=\(normalized) normalized=\(entry.replacement)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_common_phrase raw=\(normalized) normalized=\(entry.replacement)")
                 return entry.replacement
             }
         }
@@ -5107,14 +5107,14 @@ extension CreateRecipeView {
         do {
             let data = try encoder.encode(report)
             try data.write(to: outputURL, options: [.atomic])
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=\(phase) path=\(outputURL.path) samples=\(sampleReports.count)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=\(phase) path=\(outputURL.path) samples=\(sampleReports.count)")
             if phase == "wrote_report",
                let summaryData = try? encoder.encode(report.summary),
                let summary = String(data: summaryData, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_CAPTION_HARNESS_SUMMARY] \(summary)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS_SUMMARY] \(summary)")
             }
         } catch {
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=write_failed error=\(error)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=write_failed error=\(error)")
         }
     }
 
@@ -5128,24 +5128,24 @@ extension CreateRecipeView {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
-        print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=begin samples=\(report.samples.count)")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=begin samples=\(report.samples.count)")
         for sample in report.samples {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_ROW] \(json)")
             }
         }
         for sample in smartImportStructuredDifficultAuditReport() {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_CREATOR_DIFFICULT_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_CREATOR_DIFFICULT_AUDIT_ROW] \(json)")
             }
         }
         if let data = try? encoder.encode(report.summary),
            let json = String(data: data, encoding: .utf8) {
-            print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_SUMMARY] \(json)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_SUMMARY] \(json)")
         }
-        print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=end")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=end")
     }
 
     @MainActor
@@ -5168,20 +5168,20 @@ extension CreateRecipeView {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
-        print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=begin samples=\(samples.count)")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=begin samples=\(samples.count)")
         for sample in samples {
             let degradedRow = auditView.smartImportDegradingServerFallbackAuditRow(for: sample)
             if let data = try? encoder.encode(degradedRow),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_DEGRADE_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_DEGRADE_AUDIT_ROW] \(json)")
             }
             let row = await auditView.smartImportServerFallbackAuditRow(for: sample)
             if let data = try? encoder.encode(row),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT_ROW] \(json)")
             }
         }
-        print("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=end")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=end")
     }
 
     private func smartImportDegradingServerFallbackAuditRow(
@@ -5418,7 +5418,7 @@ extension CreateRecipeView {
             let report = try decoder.decode(SmartImportCaptionHarnessInput.self, from: data)
             return (report.samples, inputURL.path)
         } catch {
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=input_decode_failed path=\(inputURL.path) error=\(error)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=input_decode_failed path=\(inputURL.path) error=\(error)")
             return ([], "built_in_default_samples")
         }
     }
@@ -6329,30 +6329,30 @@ extension CreateRecipeView {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
-        print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=begin samples=\(report.samples.count)")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=begin samples=\(report.samples.count)")
         var jsonLines: [String] = []
         for sample in report.samples {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
                 jsonLines.append(json)
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_ROW] \(json)")
             }
         }
         if let data = try? encoder.encode(report.summary),
            let json = String(data: data, encoding: .utf8) {
             jsonLines.append(json)
-            print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_SUMMARY] \(json)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_SUMMARY] \(json)")
         }
         if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             let outputURL = documentsURL.appendingPathComponent("smart-import-specificity-audit.jsonl")
             do {
                 try jsonLines.joined(separator: "\n").write(to: outputURL, atomically: true, encoding: .utf8)
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_written path=\(outputURL.path)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_written path=\(outputURL.path)")
             } catch {
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_write_failed error=\(error)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_write_failed error=\(error)")
             }
         }
-        print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=end")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=end")
     }
 
     @MainActor

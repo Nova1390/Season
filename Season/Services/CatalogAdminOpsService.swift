@@ -100,7 +100,7 @@ final class CatalogAdminOpsService {
                 failureCount: result.summary.failed
             )
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=bulk_approve_alias_batch_failed fallback=sequential error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=bulk_approve_alias_batch_failed fallback=sequential error=\(error)")
         }
 
         var successCount = 0
@@ -112,7 +112,7 @@ final class CatalogAdminOpsService {
                 successCount += 1
             } catch {
                 failureCount += 1
-                print("[SEASON_CATALOG_ADMIN] phase=bulk_approve_alias_failed normalized_text=\(normalizedText) error=\(error)")
+                SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=bulk_approve_alias_failed normalized_text=\(normalizedText) error=\(error)")
             }
         }
 
@@ -163,7 +163,7 @@ final class CatalogAdminOpsService {
                 }
             } catch {
                 failureCount += 1
-                print("[SEASON_CATALOG_ADMIN] phase=bulk_add_localization_failed normalized_text=\(request.normalizedText) error=\(error)")
+                SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=bulk_add_localization_failed normalized_text=\(request.normalizedText) error=\(error)")
             }
         }
 

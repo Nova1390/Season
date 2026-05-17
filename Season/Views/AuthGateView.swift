@@ -159,7 +159,7 @@ struct AuthGateView: View {
             if phase == .authenticated {
                 contentSessionID = UUID()
             }
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) state=unauthenticated")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) state=unauthenticated")
             phase = .unauthenticated
             return
         }
@@ -168,18 +168,18 @@ struct AuthGateView: View {
             let profile = try await supabaseService.fetchMyProfile()
             let username = profile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if username.isEmpty || !UsernameValidation.isValid(username) {
-                print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username")
                 phase = .needsUsername
                 return
             }
 
             accountUsername = username
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=authenticated")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=authenticated")
             phase = .authenticated
         } catch {
             // Keep authenticated session users in a recoverable onboarding state when profile read fails.
             // Do not route to unauthenticated unless the session itself is missing.
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username reason=profile_unavailable error=\(error.localizedDescription)")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username reason=profile_unavailable error=\(error.localizedDescription)")
             phase = .needsUsername
         }
     }
@@ -422,10 +422,10 @@ private struct AuthEntryScreen: View {
             defer { isLoading = false }
             do {
                 _ = try await socialAuthService.authenticate(with: .apple)
-                print("[SEASON_AUTH_GATE] phase=apple_sign_in_success")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=apple_sign_in_success")
                 await onAuthCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=apple_sign_in_failed error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=apple_sign_in_failed error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: .apple)
                     isError = true
@@ -463,7 +463,7 @@ private struct AuthEntryScreen: View {
                             password = ""
                             mode = .logIn
                         }
-                        print("[SEASON_AUTH_GATE] phase=email_sign_up_confirmation_required")
+                        SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_up_confirmation_required")
                         return
                     }
                     let available = try await supabaseService.isUsernameAvailable(normalizedUsername, excludingUserID: userID)
@@ -472,15 +472,15 @@ private struct AuthEntryScreen: View {
                     }
                     try await supabaseService.upsertMyProfileIdentity(username: normalizedUsername, displayName: normalizedUsername)
                     accountUsername = normalizedUsername
-                    print("[SEASON_AUTH_GATE] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
                 } else {
                     let userID = try await supabaseService.signInWithEmail(email: normalizedEmail, password: normalizedPassword)
-                    print("[SEASON_AUTH_GATE] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
                 }
 
                 await onAuthCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=email_auth_failed mode=\(mode == .signUp ? "sign_up" : "log_in") error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_auth_failed mode=\(mode == .signUp ? "sign_up" : "log_in") error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: mode == .signUp ? .signUp : .logIn)
                     isError = true
@@ -650,10 +650,10 @@ private struct UsernameCompletionScreen: View {
                 }
                 try await supabaseService.upsertMyProfileIdentity(username: normalizedUsername, displayName: normalizedUsername)
                 accountUsername = normalizedUsername
-                print("[SEASON_AUTH_GATE] phase=username_saved_success username=\(normalizedUsername)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=username_saved_success username=\(normalizedUsername)")
                 await onCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=username_saved_failed error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=username_saved_failed error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: .username)
                     isError = true

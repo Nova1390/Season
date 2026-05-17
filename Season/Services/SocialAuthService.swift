@@ -126,16 +126,16 @@ private struct OAuthProviderAuthenticator {
             codeChallenge: codeChallenge
         )
 
-        print("[SEASON_AUTH] phase=oauth_started provider=\(provider.rawValue)")
+        SeasonLog.debug("[SEASON_AUTH] phase=oauth_started provider=\(provider.rawValue)")
         let callbackURL: URL
         do {
             callbackURL = try await runWebAuthenticationSession(
                 url: authorizeURL,
                 callbackURLScheme: redirectURL.scheme ?? "https"
             )
-            print("[SEASON_AUTH] phase=oauth_callback_received provider=\(provider.rawValue)")
+            SeasonLog.debug("[SEASON_AUTH] phase=oauth_callback_received provider=\(provider.rawValue)")
         } catch {
-            print("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
+            SeasonLog.debug("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
             throw mapOAuthError(error)
         }
 
@@ -153,7 +153,7 @@ private struct OAuthProviderAuthenticator {
                 refreshToken: tokenResponse.refresh_token
             )
         } catch {
-            print("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
+            SeasonLog.debug("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
             throw SocialAuthError.oauthFlowFailed(
                 provider: provider,
                 details: "\(provider.rawValue.capitalized) OAuth session setup failed."
@@ -172,7 +172,7 @@ private struct OAuthProviderAuthenticator {
         let profileImageURL = cloudAccount?.profile_image_url
             ?? profile?.avatar_url
 
-        print("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
+        SeasonLog.debug("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
         return SocialAuthResult(
             provider: provider,
             providerUserID: cloudAccount?.provider_user_id ?? userID,
@@ -463,11 +463,11 @@ private struct AppleSignInAuthenticator {
         let result = try await AppleSignInCoordinator().signIn()
         let idToken = result.accessToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !idToken.isEmpty else {
-            print("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_identity_token")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_identity_token")
             throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In did not return an identity token.")
         }
         guard let rawNonce = result.appleRawNonce?.trimmingCharacters(in: .whitespacesAndNewlines), !rawNonce.isEmpty else {
-            print("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_nonce")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_sign_in_failed reason=missing_nonce")
             throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In did not return a nonce.")
         }
 
@@ -479,11 +479,11 @@ private struct AppleSignInAuthenticator {
                 givenName: result.appleGivenName,
                 familyName: result.appleFamilyName
             )
-            print("[SEASON_AUTH] phase=apple_session_established has_session=true user_id=\(userID.uuidString.lowercased())")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_session_established has_session=true user_id=\(userID.uuidString.lowercased())")
             return result
         } catch {
             let currentUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased() ?? "nil"
-            print("[SEASON_AUTH] phase=apple_session_established has_session=false user_id=\(currentUserID) error=\(error)")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_session_established has_session=false user_id=\(currentUserID) error=\(error)")
             throw SocialAuthError.appleAuthorizationFailed(details: "Apple Sign In succeeded, but Supabase session could not be established.")
         }
     }

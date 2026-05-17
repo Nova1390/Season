@@ -258,7 +258,7 @@ struct SeasonTopBar: View {
             .buttonStyle(.plain)
 
             Button {
-                print("[SEASON_TOPBAR] phase=notifications_stub action=tap")
+                SeasonLog.debug("[SEASON_TOPBAR] phase=notifications_stub action=tap")
             } label: {
                 topBarIcon(
                     systemName: "bell",

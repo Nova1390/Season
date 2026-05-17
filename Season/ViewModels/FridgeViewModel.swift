@@ -231,7 +231,7 @@ final class FridgeViewModel: ObservableObject {
     private func writeThroughCreateProduce(_ produceID: String) {
         let localItemID = "produce:\(produceID)"
         let traceID = String(UUID().uuidString.prefix(8))
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -250,13 +250,13 @@ final class FridgeViewModel: ObservableObject {
                 unit: nil
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughCreateBasic(_ basicID: String) {
         let localItemID = "basic:\(basicID)"
         let traceID = String(UUID().uuidString.prefix(8))
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -275,13 +275,13 @@ final class FridgeViewModel: ObservableObject {
                 unit: nil
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughCreateCustom(_ item: FridgeCustomItem) {
         let traceID = String(UUID().uuidString.prefix(8))
         let parsed = parseQuantityAndUnit(item.quantity)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -300,13 +300,13 @@ final class FridgeViewModel: ObservableObject {
                 unit: parsed.unit
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughCreateCatalog(_ item: FridgeCatalogItem) {
         let traceID = String(UUID().uuidString.prefix(8))
         let parsed = parseQuantityAndUnit(item.quantity)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -325,12 +325,12 @@ final class FridgeViewModel: ObservableObject {
                 unit: parsed.unit
             )
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(item.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughDelete(localItemID: String) {
         let traceID = String(UUID().uuidString.prefix(8))
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -344,7 +344,7 @@ final class FridgeViewModel: ObservableObject {
             // we rely on the local state as the source of truth.
             payload: FridgeOutboxDeletePayload(localItemID: localItemID)
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=outbox_only_write_enqueued")
     }
 
     private func parseQuantityAndUnit(_ rawQuantity: String?) -> (quantity: Double?, unit: String?) {
@@ -379,7 +379,7 @@ final class FridgeViewModel: ObservableObject {
         payload: T
     ) {
         guard let payloadData = try? JSONEncoder().encode(payload) else {
-            print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
+            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
             return
         }
 
@@ -399,7 +399,7 @@ final class FridgeViewModel: ObservableObject {
             updatedAt: now
         )
         outboxStore.append(record)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
     }
 }
 
