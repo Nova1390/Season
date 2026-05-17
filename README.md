@@ -91,6 +91,10 @@ Season/
   ViewModels/          Feature view models
   Views/               SwiftUI screens and design system
 
+android-app/
+  app/                 Native Android Kotlin/Compose MVP foundation
+  README.md            Android setup and build notes
+
 supabase/
   functions/           Supabase Edge Functions
   migrations/          Database schema, policies, RPCs, and catalog automation

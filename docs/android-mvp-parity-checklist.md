@@ -148,6 +148,11 @@ It is not a full feature parity list. It is the minimum real Season experience f
 | Light/dark mode readable on main screens. |
 | Android README documents setup and build commands. |
 
+Current foundation note:
+
+- `android-app/` has the initial Compose shell and environment build types.
+- Local build verification is pending Android Studio/JDK/SDK setup.
+
 ## 13. Regression Caption Set
 
 These captions should be reused when Android Smart Import starts:
@@ -171,4 +176,3 @@ Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, l
 ```text
 Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.
 ```
-

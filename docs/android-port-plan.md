@@ -13,6 +13,8 @@ This means:
 - Supabase remains part of the MVP from day one.
 - The Android app is not a prototype, offline demo, or separate product.
 - The Android app must use the same backend source of truth as iOS.
+- Package name is `it.seasonapp.season`.
+- The first MVP includes Smart Import draft creation and publishing.
 
 The first Android milestone should be intentionally smaller than iOS, but production-shaped: real auth, real recipes, real catalog data, real Smart Import, and real user state sync.
 
@@ -246,6 +248,14 @@ Design parity should be intentional:
 - Add design tokens baseline.
 - Add CI/build command notes.
 
+Initial foundation status:
+
+- `android-app/` exists.
+- Kotlin + Jetpack Compose Gradle project files exist.
+- Build types are declared: `debugDev`, `internalStaging`, `release`.
+- A placeholder consumer shell exists for Home, Search, Create, Today, and Profile.
+- Local Android build verification still requires JDK/Android SDK setup on the workstation.
+
 ### Phase 2: Auth and Session
 
 - Google Sign-In dev.
@@ -298,7 +308,7 @@ Design parity should be intentional:
 
 ## 13. Acceptance Criteria For Starting Code
 
-Do not start Android implementation until:
+Before feature implementation beyond the skeleton:
 
 - MVP scope is accepted.
 - Package name is chosen.
@@ -308,3 +318,9 @@ Do not start Android implementation until:
 - First implementation branch is created from the chosen base.
 - `android-app/` ownership and README are agreed.
 
+Current defaults chosen:
+
+- MVP scope: core complete.
+- Package: `it.seasonapp.season`.
+- Auth: native Google Sign-In plus Supabase Auth.
+- Android source ownership: `android-app/`.

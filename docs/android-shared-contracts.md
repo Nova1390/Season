@@ -262,13 +262,20 @@ Android must follow the same privacy posture as iOS:
 - No recipe/user state debug surfaces in public builds.
 - Debug logs gated by build type or explicit internal flag.
 
-## 13. Open Questions Before Coding
+## 13. Decisions And Remaining Setup
 
-- Android package name: likely `com.roccodaffuso.season` or `it.seasonapp.season`.
+- Android package name: `it.seasonapp.season`.
+- MVP scope: core complete.
+- Smart Import scope: draft creation plus publish.
 - Google Play account/package ownership.
 - Debug and release signing setup.
 - Whether Android should share staging with iOS TestFlight or use a separate staging project later.
 - Minimum Android version.
 - Push notification timing.
-- Whether first Android MVP should include recipe publishing or stop at draft creation.
+- Release/prod Supabase project strategy.
 
+Current implementation foundation:
+
+- Android app source lives in `android-app/`.
+- Build types map to dev, staging, and future production.
+- Client config must never include service-role keys.
