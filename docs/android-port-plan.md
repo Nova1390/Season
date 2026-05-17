@@ -254,7 +254,8 @@ Initial foundation status:
 - Kotlin + Jetpack Compose Gradle project files exist.
 - Build types are declared: `debugDev`, `internalStaging`, `release`.
 - A placeholder consumer shell exists for Home, Search, Create, Today, and Profile.
-- Local Android build verification still requires JDK/Android SDK setup on the workstation.
+- Gradle wrapper exists.
+- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR.
 
 ### Phase 2: Auth and Session
 

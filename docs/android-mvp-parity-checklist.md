@@ -151,7 +151,8 @@ It is not a full feature parity list. It is the minimum real Season experience f
 Current foundation note:
 
 - `android-app/` has the initial Compose shell and environment build types.
-- Local build verification is pending Android Studio/JDK/SDK setup.
+- Gradle wrapper exists.
+- `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR.
 
 ## 13. Regression Caption Set
 

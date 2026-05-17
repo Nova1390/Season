@@ -15,6 +15,9 @@ Current implementation:
 - Consumer shell tabs: Home, Scopri, Crea, Oggi, Io.
 - Environment wiring for Supabase dev/staging URLs.
 - No service-role secrets and no catalog admin surfaces.
+- Gradle wrapper is available.
+- `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
+- `:app:assembleInternalStaging` has been validated locally with Android Studio JBR.
 
 Not implemented yet:
 
@@ -29,7 +32,7 @@ Not implemented yet:
 Install:
 
 - Android Studio
-- JDK compatible with the Android Gradle Plugin
+- JDK compatible with the Android Gradle Plugin, or Android Studio's bundled JBR
 - Android SDK with API 36
 
 Optional local Gradle properties:
@@ -46,11 +49,16 @@ Prefer `~/.gradle/gradle.properties` or CI secrets. Do not commit keys into the 
 From `android-app/`:
 
 ```bash
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleDebugDev
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleInternalStaging
+```
+
+If `JAVA_HOME` is already configured, the shorter commands are:
+
+```bash
 ./gradlew :app:assembleDebugDev
 ./gradlew :app:assembleInternalStaging
 ```
-
-This repository currently does not include a Gradle wrapper jar. If Android Studio creates/updates the wrapper, commit the wrapper files together in a dedicated Android tooling commit.
 
 ## Implementation Order
 
@@ -59,4 +67,3 @@ Follow:
 - `../docs/android-port-plan.md`
 - `../docs/android-mvp-parity-checklist.md`
 - `../docs/android-shared-contracts.md`
-
