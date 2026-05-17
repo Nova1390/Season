@@ -2,6 +2,8 @@ package it.seasonapp.season.features.auth
 
 import android.content.Context
 import androidx.credentials.CredentialManager
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.seasonapp.season.core.backend.SeasonSupabaseClient
@@ -167,6 +169,12 @@ class AuthViewModel(
     }
 
     private fun Throwable.userSafeMessage(fallback: String): String {
+        if (this is NoCredentialException) {
+            return "Nessun account Google trovato sull'emulatore. Aggiungine uno da Settings > Passwords & accounts, oppure usa email/password."
+        }
+        if (this is GetCredentialCancellationException) {
+            return "Accesso Google annullato."
+        }
         return message
             ?.takeIf { it.isNotBlank() && !it.contains("eyJ") && !it.contains("http") }
             ?: fallback
