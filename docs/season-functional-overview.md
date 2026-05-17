@@ -203,14 +203,14 @@ Funzionalita principali:
 - Preferenze nutrizionali.
 - Logout con reset dati sessione locali.
 
-Funzionalita diagnostiche/admin:
+Funzionalita diagnostiche e operative:
 
 - Test auth Supabase.
 - Fetch profilo, stati ricette, shopping list e fridge remoti.
 - Esecuzione outbox.
 - Backfill.
 - Reconciliation diagnostics.
-- Accesso Catalog Admin se l'utente ha permessi admin.
+- Catalog Admin non e una superficie consumer: in app resta solo in build Debug, mentre la governance operativa vive su `catalog.seasonapp.it`.
 
 ## 12. Creator e Social
 
@@ -312,6 +312,7 @@ Metriche da tenere sotto controllo prima/dopo TestFlight:
 - Success rate smart import.
 - Errori auth/sync/outbox.
 - Tempo percepito di caricamento Home/Search/Recipe detail.
+- Log Release privi di dati sensibili e diagnostiche catalog/admin non raggiungibili dai tester esterni.
 
 ## 18. Funzionalita non completamente mature
 

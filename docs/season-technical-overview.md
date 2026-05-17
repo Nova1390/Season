@@ -34,16 +34,16 @@ Flow iniziale:
 ## 3. Moduli UI principali
 
 - `HomeView`: feed editoriale, hero ricetta, ranking, creator strip e sezioni stagionali.
-- `SearchView`: ricerca ricette/ingredienti, filtri, sezioni discover e quick add.
+- `SearchView`: ricerca ricette/ingredienti, filtri, sezioni discover e quick add; query state, debounce e rendering restano nella view, mentre ranking/filtering stanno in `SearchResultsService`.
 - `InSeasonTodayView`: classifica ingredienti stagionali e insight mensili.
 - `FridgeView`: lista frigo e ricette cucinabili dal frigo.
 - `RecipeDetailView`: dettaglio ricetta, ingredienti, nutrizione, CTA, media, follow, save/crispy.
 - `CreateRecipeView`: composer ricette, draft, smart import caption/URL, publish.
-- `AccountView`: profilo, libreria, preferenze, auth tools, diagnostics e admin entry point.
+- `AccountView`: profilo, libreria, preferenze e auth tools. Le diagnostiche catalogo iOS sono disponibili solo in build Debug.
 - `AuthorProfileView`: profilo creator/autore.
 - `ShoppingListView`: lista della spesa.
 - `ProduceDetailView` e `IngredientDetailView`: dettaglio prodotto/ingrediente.
-- `CatalogCandidatesDebugView`: console admin catalogo e reconciliation.
+- `CatalogCandidatesDebugView`: console legacy solo Debug; la governance catalogo operativa vive su `catalog.seasonapp.it`.
 
 Componenti condivisi:
 
@@ -52,6 +52,12 @@ Componenti condivisi:
 - `Season/Views/HomeFeedAtoms.swift`: componenti feed Home.
 - `Season/Components/RemoteImageView.swift`: rendering immagini remote.
 - `Season/Components/AvatarView.swift`: avatar.
+
+Nota dark mode:
+
+- I token in `Assets.xcassets/DesignSystem` sono la fonte primaria per light/dark.
+- I reason badge (`Di stagione`, `Dal frigo`, `Di tendenza`, ecc.) devono avere varianti dark dedicate di background/foreground, non semplici opacity della palette light, per mantenere contrasto premium sulle card scure.
+- La schermata auth usa un pannello di contrasto leggero nella entry state per evitare che la foto di sfondo renda poco leggibili CTA e copy.
 
 ## 4. View model e servizi client
 
@@ -63,16 +69,18 @@ Componenti condivisi:
 
 ### Servizi core
 
-- `SupabaseService`: client unico Supabase, auth, profili, ricette, stati, fridge, shopping, catalog RPC, edge function invoke, storage avatar e logging.
+- `SupabaseService`: facade Supabase temporanea per auth, profili, ricette, stati, fridge, shopping, catalog RPC, edge function invoke e storage avatar. Il logging runtime passa da `SeasonLog`.
+- `SmartImportRemoteDataSource`: datasource interno per la edge function `parse-recipe-caption`; `SupabaseService` resta facade retrocompatibile.
 - `RecipeRepository`: layer di accesso remoto per ricette e user recipe states, con fallback per schema drift.
 - `RecipeStore`: persistenza locale ricette create/draft e compatibility loader.
 - `ProduceStore`: loader produce JSON.
 - `BasicIngredientCatalog`: catalogo ingredienti base locale.
 - `NutritionService`: calcolo score e riepiloghi nutrizionali.
+- `SearchResultsService`: ranking/filtering search puro e testabile, separato dalla UI.
 - `RecipeTranslationService`: traduzione runtime dove supportata.
 - `SocialAuthService`: Apple/OAuth helper.
 - `FollowStore` e `FollowSyncManager`: follow locale e sync delta.
-- `OutboxStore`, `OutboxDispatcher`, `OutboxMutationEnqueuer`: coda mutazioni locali e replay remoto.
+- `OutboxStore`, `OutboxDispatcher`, `OutboxMutationEnqueuer`: coda mutazioni locali e replay remoto per fridge, shopping list e stati ricetta saved/crispy.
 - `BackfillService`: convergenza frigo/shopping verso outbox.
 - `CatalogAdminOpsService`: wrapper operativo per admin catalogo.
 - `ReconciliationDiagnosticsService`: diagnostiche reconciliation.
@@ -237,12 +245,17 @@ Il ranking combina segnali diversi:
 - stagionalità ingrediente;
 - nutrizione e preferenze utente;
 - match frigo;
-- crispy score;
-- view score;
-- trend/freshness;
+- qualita della ricetta: titolo, ingredienti, passaggi, media e metadati;
+- convenienza: tempo totale e affidabilita del tempo;
+- engagement calmierato: crispy score e view score pesati senza dominare il feed;
+- freshness;
 - creator/follow;
 - disponibilità ingredienti;
 - eligibility/presentability della ricetta.
+
+La Home usa filtri rapidi con hard gate: `Pronte ora`, `15 min`, `Proteiche` e `Picco stagione` non ricadono piu sul feed generico quando hanno pochi risultati, cosi la promessa del filtro resta coerente. La diversity del feed evita ripetizioni ravvicinate di creator/source, hook editoriale e ingrediente dominante. Lo spotlight stagionale privilegia il punteggio stagionale corrente; la frequenza d'uso nelle ricette e solo un tie-break leggero, per evitare che ingredienti costanti tutto l'anno dominino sempre.
+
+All'avvio, la Home non applica lo snapshot ranking finche il bootstrap iniziale delle ricette remote non e concluso. Durante questa finestra mostra uno skeleton redatto: evita che l'utente veda prima un feed locale/vuoto e poi un secondo feed diverso appena arriva Supabase. Il refresh manuale resta invece intenzionalmente dinamico e puo ruotare lo spotlight.
 
 Classi/aree coinvolte:
 
@@ -306,10 +319,14 @@ Configurazione in Xcode:
 
 Stato TestFlight:
 
-- `CURRENT_PROJECT_VERSION = 4`.
+- `CURRENT_PROJECT_VERSION = 10`.
 - `MARKETING_VERSION = 1.0.1`.
 - Release compila contro staging.
-- TestFlight candidate `1.0.1 (4)` e contesto storico della release-line bugfix; il branch `agent/catalog-governance` resta dev-only finche non viene approvata una promotion separata.
+- TestFlight candidate `1.0.1 (10)` e stato caricato come app-polish/stabilization candidate dopo i gate Smart Import e Home refresh.
+- I gate Smart Import devono restare verdi prima di ogni upload firmato. Vedi `docs/smart-import-creator-validation-pack.md`.
+- Ultimo pass simulator Smart Import: 100 caption, 72 pass, 28 partial da gap catalogo/specificita, 0 fail, 0 title failure, 0 missing expected ingredients, 0 invented quantities. Vedi `docs/smart-import-creator-validation-pack.md`.
+- Supabase staging preflight del 17 maggio 2026: `supabase db lint --linked` senza errori, `supabase db push --linked --dry-run` aggiornato, ricette staging solo Giallo Zafferano, e ingredienti Giallo Zafferano fully canonical/reconciled.
+- Il branch `agent/catalog-governance` resta dev-only finche non viene approvata una promotion separata.
 - Bundle Release esclude debug JSON e docs tecnici; le ricette arrivano da Supabase staging.
 
 ## 13. Build e verifica
@@ -326,7 +343,9 @@ plutil -lint Season-Info.plist
 Nota:
 
 - `CODE_SIGNING_ALLOWED=NO` valida compilazione e bundle, non firma App Store/TestFlight.
-- Per TestFlight serve Archive firmato da Xcode o pipeline export/upload configurata; il candidato corrente e gia stato caricato e resta soggetto a processing/review su App Store Connect.
+- Per TestFlight serve Archive firmato da Xcode o pipeline export/upload configurata; non usare una build caricata come proxy di qualita finche non sono stati eseguiti i gate utente.
+- Per modifiche Smart Import, non caricare TestFlight solo dopo build verde. Devono passare audit reale locale, audit server-fallback e verifica manuale UI sulle regression caption `REG-20260516-*`.
+- Il parser locale deve restare utile anche quando il fallback remoto e limitato da quota o non disponibile.
 
 ## 14. Asset e design system
 
@@ -346,9 +365,10 @@ Documentazione design:
 
 Logging:
 
-- Prefix Supabase e auth nei `print`, ad esempio `[SEASON_SUPABASE]` e `[SEASON_AUTH_GATE]`.
-- Trace ID e categorie errore in `SupabaseService`.
-- Failure category: auth session, RLS, network, rate limit, server, validation, unknown.
+- Il codice app non deve usare `print(...)` direttamente, salvo `Swift.print` dentro `SeasonLog`.
+- `SeasonLog.debug(...)` e `SeasonLog.lifecycle(...)` non emettono log in Release e in Debug stampano solo se abilitati da flag.
+- Log con user id, URL callback, path storage, payload RPC raw o identificativi ricetta devono restare disabilitati nelle build esterne.
+- Trace ID e categorie errore restano utili in sviluppo, ma devono passare da logging centralizzato e redatto.
 
 Diagnostiche app:
 
@@ -356,7 +376,8 @@ Diagnostiche app:
 - Outbox processing manuale.
 - Backfill manuale.
 - Reconciliation diagnostics.
-- Catalog admin view per utenti admin.
+- Catalog admin view solo in Debug. Per staging/prod usare la console web `catalog.seasonapp.it`.
+- Home/Search performance logs sono dev-only (`SEASON_HOME_DEBUG`, `SEASON_SEARCH_DEBUG`) e passano sempre da `SeasonLog`.
 
 ## 16. Sicurezza
 

@@ -159,7 +159,7 @@ struct AuthGateView: View {
             if phase == .authenticated {
                 contentSessionID = UUID()
             }
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) state=unauthenticated")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) state=unauthenticated")
             phase = .unauthenticated
             return
         }
@@ -168,18 +168,18 @@ struct AuthGateView: View {
             let profile = try await supabaseService.fetchMyProfile()
             let username = profile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if username.isEmpty || !UsernameValidation.isValid(username) {
-                print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username")
                 phase = .needsUsername
                 return
             }
 
             accountUsername = username
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=authenticated")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=authenticated")
             phase = .authenticated
         } catch {
             // Keep authenticated session users in a recoverable onboarding state when profile read fails.
             // Do not route to unauthenticated unless the session itself is missing.
-            print("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username reason=profile_unavailable error=\(error.localizedDescription)")
+            SeasonLog.debug("[SEASON_AUTH_GATE] phase=state_update reason=\(reason) user_id=\(userID.uuidString.lowercased()) state=needs_username reason=profile_unavailable error=\(error.localizedDescription)")
             phase = .needsUsername
         }
     }
@@ -187,6 +187,7 @@ struct AuthGateView: View {
 
 private struct AuthEntryScreen: View {
     @AppStorage("accountUsername") private var accountUsername = "You"
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var mode: AuthEntryMode = .entry
     @State private var email = ""
@@ -209,13 +210,24 @@ private struct AuthEntryScreen: View {
 
             LinearGradient(
                 stops: [
-                    .init(color: DS.Color.ink.opacity(0.18), location: 0.0),
-                    .init(color: DS.Color.ink.opacity(0.24), location: 0.28),
-                    .init(color: DS.Color.ink.opacity(0.56), location: 0.62),
-                    .init(color: DS.Color.ink.opacity(0.90), location: 1.0)
+                    .init(color: Color.black.opacity(0.12), location: 0.0),
+                    .init(color: Color.black.opacity(0.28), location: 0.30),
+                    .init(color: DS.Color.bg.opacity(0.72), location: 0.66),
+                    .init(color: DS.Color.bg.opacity(0.96), location: 1.0)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [
+                    DS.Color.sage.opacity(0.20),
+                    Color.clear
+                ],
+                center: .bottomLeading,
+                startRadius: 16,
+                endRadius: 360
             )
             .ignoresSafeArea()
 
@@ -243,6 +255,7 @@ private struct AuthEntryScreen: View {
                         Text("Cook with the\nland, not\nagainst it.")
                             .font(DS.Font.serif(46, weight: .medium, italic: true))
                             .foregroundStyle(Color.white)
+                            .shadow(color: Color.black.opacity(0.28), radius: 18, x: 0, y: 10)
                             .lineSpacing(-4)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.leading)
@@ -251,6 +264,7 @@ private struct AuthEntryScreen: View {
                         Text("A field guide to seasonal cooking, built around what’s growing near you right now.")
                             .font(DS.Font.serif(16, weight: .regular, italic: true))
                             .foregroundStyle(Color.white.opacity(0.72))
+                            .shadow(color: Color.black.opacity(0.22), radius: 12, x: 0, y: 6)
                             .lineSpacing(2)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -332,11 +346,11 @@ private struct AuthEntryScreen: View {
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(DS.Color.card.opacity(0.86))
+                                    .fill(DS.Color.card.opacity(0.94))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.white.opacity(0.20), lineWidth: 0.8)
+                                    .stroke(DS.Color.borderM, lineWidth: 0.8)
                             )
 
                             Button {
@@ -385,6 +399,17 @@ private struct AuthEntryScreen: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(mode == .entry ? 12 : 0)
+                    .background {
+                        if mode == .entry {
+                            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                .fill(authEntryPanelFill)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.24), lineWidth: 0.8)
+                                )
+                        }
+                    }
                 }
                 .frame(maxWidth: 390)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -393,6 +418,10 @@ private struct AuthEntryScreen: View {
             .safeAreaPadding(.top, 16)
             .safeAreaPadding(.bottom, 24)
         }
+    }
+
+    private var authEntryPanelFill: Color {
+        colorScheme == .dark ? Color.black.opacity(0.32) : Color.black.opacity(0.18)
     }
 
     private func clearStatus() {
@@ -409,10 +438,10 @@ private struct AuthEntryScreen: View {
             defer { isLoading = false }
             do {
                 _ = try await socialAuthService.authenticate(with: .apple)
-                print("[SEASON_AUTH_GATE] phase=apple_sign_in_success")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=apple_sign_in_success")
                 await onAuthCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=apple_sign_in_failed error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=apple_sign_in_failed error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: .apple)
                     isError = true
@@ -450,7 +479,7 @@ private struct AuthEntryScreen: View {
                             password = ""
                             mode = .logIn
                         }
-                        print("[SEASON_AUTH_GATE] phase=email_sign_up_confirmation_required")
+                        SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_up_confirmation_required")
                         return
                     }
                     let available = try await supabaseService.isUsernameAvailable(normalizedUsername, excludingUserID: userID)
@@ -459,15 +488,15 @@ private struct AuthEntryScreen: View {
                     }
                     try await supabaseService.upsertMyProfileIdentity(username: normalizedUsername, displayName: normalizedUsername)
                     accountUsername = normalizedUsername
-                    print("[SEASON_AUTH_GATE] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
                 } else {
                     let userID = try await supabaseService.signInWithEmail(email: normalizedEmail, password: normalizedPassword)
-                    print("[SEASON_AUTH_GATE] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
                 }
 
                 await onAuthCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=email_auth_failed mode=\(mode == .signUp ? "sign_up" : "log_in") error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=email_auth_failed mode=\(mode == .signUp ? "sign_up" : "log_in") error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: mode == .signUp ? .signUp : .logIn)
                     isError = true
@@ -480,7 +509,7 @@ private struct AuthEntryScreen: View {
 private struct AuthGateAppleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(DS.Color.ink)
+            .foregroundStyle(Color.black.opacity(configuration.isPressed ? 0.72 : 0.92))
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color.white.opacity(configuration.isPressed ? 0.88 : 0.96))
@@ -496,11 +525,11 @@ private struct AuthGateOutlineButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white.opacity(0.96))
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color.white.opacity(configuration.isPressed ? 0.12 : 0.06))
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.16 : 0.10))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.28), lineWidth: 0.9)
+                    .stroke(Color.white.opacity(0.34), lineWidth: 0.9)
             )
             .opacity(configuration.isPressed ? 0.92 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
@@ -637,10 +666,10 @@ private struct UsernameCompletionScreen: View {
                 }
                 try await supabaseService.upsertMyProfileIdentity(username: normalizedUsername, displayName: normalizedUsername)
                 accountUsername = normalizedUsername
-                print("[SEASON_AUTH_GATE] phase=username_saved_success username=\(normalizedUsername)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=username_saved_success username=\(normalizedUsername)")
                 await onCompleted()
             } catch {
-                print("[SEASON_AUTH_GATE] phase=username_saved_failed error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH_GATE] phase=username_saved_failed error=\(error.localizedDescription)")
                 await MainActor.run {
                     statusMessage = mappedAuthMessage(error, action: .username)
                     isError = true

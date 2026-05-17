@@ -29,7 +29,7 @@ final class ReconciliationDiagnosticsService {
         }
 
         let fridgeEntries = mapFridgeEntries(fridgeViewModel)
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=reconciliation_local_state_counts " +
             "shopping_local_count=\(shoppingEntries.count) " +
             "fridge_local_count=\(fridgeEntries.count)"
@@ -44,20 +44,20 @@ final class ReconciliationDiagnosticsService {
         shoppingEntries: [ShoppingListEntry],
         fridgeViewModel: FridgeViewModel
     ) async throws -> ReconciliationDiagnosticsResult {
-        print("[SEASON_SUPABASE] phase=soft_sync_started domain=shopping_list_items")
-        print("[SEASON_SUPABASE] phase=soft_sync_started domain=fridge_items")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=soft_sync_started domain=shopping_list_items")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=soft_sync_started domain=fridge_items")
 
         let result = try await runDiagnostics(
             shoppingEntries: shoppingEntries,
             fridgeViewModel: fridgeViewModel
         )
 
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=soft_sync_completed domain=shopping_list_items " +
             "local_only=\(result.shopping.localOnly) backend_only=\(result.shopping.backendOnly) " +
             "shared_same=\(result.shopping.sharedSame) shared_different=\(result.shopping.sharedDifferent)"
         )
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=soft_sync_completed domain=fridge_items " +
             "local_only=\(result.fridge.localOnly) backend_only=\(result.fridge.backendOnly) " +
             "shared_same=\(result.fridge.sharedSame) shared_different=\(result.fridge.sharedDifferent)"
@@ -71,7 +71,7 @@ final class ReconciliationDiagnosticsService {
         localEntries: [ShoppingListEntry]
     ) async throws -> ReconciliationSummary {
         let domain = "shopping_list_items"
-        print("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
 
         let backendEntries = try await supabaseService.fetchMyShoppingListItems()
 
@@ -86,7 +86,7 @@ final class ReconciliationDiagnosticsService {
         })
 
         let summary = summarize(local: localMap, backend: backendMap)
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=reconciliation_completed domain=\(domain) " +
             "local_only=\(summary.localOnly) backend_only=\(summary.backendOnly) " +
             "shared_same=\(summary.sharedSame) shared_different=\(summary.sharedDifferent)"
@@ -99,7 +99,7 @@ final class ReconciliationDiagnosticsService {
         localEntries: [FridgeLocalComparable]
     ) async throws -> ReconciliationSummary {
         let domain = "fridge_items"
-        print("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=reconciliation_started domain=\(domain)")
 
         let backendEntries = try await supabaseService.fetchMyFridgeItems()
 
@@ -113,7 +113,7 @@ final class ReconciliationDiagnosticsService {
         })
 
         let summary = summarize(local: localMap, backend: backendMap)
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=reconciliation_completed domain=\(domain) " +
             "local_only=\(summary.localOnly) backend_only=\(summary.backendOnly) " +
             "shared_same=\(summary.sharedSame) shared_different=\(summary.sharedDifferent)"

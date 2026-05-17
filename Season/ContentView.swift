@@ -42,7 +42,7 @@ struct ContentView: View {
     @AppStorage("selectedLanguage") private var selectedLanguage = AppLanguage.english.rawValue
     @AppStorage("nutritionGoalsRaw") private var nutritionGoalsRaw = ""
     @AppStorage("appAppearanceRaw") private var appAppearanceRaw = AppAppearance.system.rawValue
-    @StateObject private var viewModel = ProduceViewModel(languageCode: AppLanguage.english.rawValue)
+    @StateObject private var viewModel: ProduceViewModel
     @StateObject private var shoppingListViewModel = ShoppingListViewModel()
     @StateObject private var fridgeViewModel = FridgeViewModel()
     @State private var selectedTab: MainTab = .home
@@ -58,6 +58,9 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        let storedLanguage = UserDefaults.standard.string(forKey: "selectedLanguage") ?? AppLanguage.english.rawValue
+        let resolvedLanguage = AppLanguage(rawValue: storedLanguage)?.rawValue ?? AppLanguage.english.rawValue
+        _viewModel = StateObject(wrappedValue: ProduceViewModel(languageCode: resolvedLanguage))
         UITabBar.appearance().isHidden = true
     }
 
@@ -189,6 +192,7 @@ struct ContentView: View {
             }
             .padding(8)
             .background(.ultraThinMaterial)
+            .background(tabBarSurfaceColor)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -211,18 +215,18 @@ struct ContentView: View {
         .onAppear {
             selectedLanguage = viewModel.setLanguage(selectedLanguage)
             nutritionGoalsRaw = viewModel.setNutritionGoalsRaw(nutritionGoalsRaw)
-            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_launch")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_launch")
             Task {
                 await outboxDispatcher.processPendingMutations()
             }
             Task {
-                print("[SEASON_SUPABASE] phase=follow_sync_triggered source=app_launch")
+                SeasonLog.debug("[SEASON_SUPABASE] phase=follow_sync_triggered source=app_launch")
                 await FollowSyncManager.shared.syncFromBackend()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            print("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_foreground")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_triggered source=app_foreground")
             Task {
                 await outboxDispatcher.processPendingMutations()
             }
@@ -251,11 +255,15 @@ struct ContentView: View {
     }
 
     private var tabBarBorderColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.22) : Color.white.opacity(0.75)
+        colorScheme == .dark ? DS.Color.borderS : Color.white.opacity(0.75)
     }
 
     private var activeTabBackgroundColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.38)
+        colorScheme == .dark ? DS.Color.sageSoft.opacity(0.72) : Color.white.opacity(0.38)
+    }
+
+    private var tabBarSurfaceColor: Color {
+        colorScheme == .dark ? DS.Color.card.opacity(0.86) : Color.white.opacity(0.36)
     }
 
     private func tabBarButton(tab: MainTab, title: String, imageName: String) -> some View {

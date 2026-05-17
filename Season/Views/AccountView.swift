@@ -83,9 +83,11 @@ struct AccountView: View {
                 profileHeaderSection
                 librarySection
                 preferencesSection
+                #if DEBUG
                 if hasCatalogAdminAccess {
                     diagnosticsSection
                 }
+                #endif
                 Color.clear.frame(height: 8)
             }
             .padding(.horizontal, SeasonSpacing.md)
@@ -140,19 +142,25 @@ struct AccountView: View {
             loadCloudProfileForReadOnlyDisplayIfNeeded()
             loadCloudLinkedAccountsForReadOnlyDisplayIfNeeded()
             applyCloudProfileSocialLinksToInputs(cloudProfile)
+            #if DEBUG
             Task {
                 await refreshCatalogAdminAccess()
             }
+            #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .seasonAuthStateDidChange)) { _ in
+            #if DEBUG
             Task {
                 await refreshCatalogAdminAccess()
             }
+            #endif
         }
         .onChange(of: currentAuthenticatedUserID) { _, _ in
+            #if DEBUG
             Task {
                 await refreshCatalogAdminAccess()
             }
+            #endif
         }
         .onChange(of: selectedAvatarPhotoItem) { _, newItem in
             guard let newItem else { return }
@@ -713,6 +721,7 @@ struct AccountView: View {
         }
     }
 
+    #if DEBUG
     private var diagnosticsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("System Diagnostics")
@@ -1012,6 +1021,7 @@ struct AccountView: View {
         }
         .tint(.secondary)
     }
+    #endif
 
     private enum ManagementMode {
         case active
@@ -1029,7 +1039,7 @@ struct AccountView: View {
         Group {
             if managementMode == .draft {
                 Button {
-                    print("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
+                    SeasonLog.debug("[SEASON_RECIPE] phase=draft_reopened id=\(recipe.id)")
                     selectedDraftEditorRoute = DraftEditorRoute(id: recipe.id)
                 } label: {
                     recipeRowContent(recipe: recipe)
@@ -1309,11 +1319,15 @@ struct AccountView: View {
 
     @MainActor
     private func refreshCatalogAdminAccess() async {
-        print("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_started current_user_id=\(currentAuthenticatedUserID ?? "nil")")
+        #if DEBUG
+        SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_started current_user_id=\(currentAuthenticatedUserID ?? "nil")")
         hasCatalogAdminAccess = await AdminAccessControl.fetchIsCurrentUserAdmin(
             supabaseService: supabaseService
         )
-        print("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_completed has_access=\(hasCatalogAdminAccess)")
+        SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=account_admin_refresh_completed has_access=\(hasCatalogAdminAccess)")
+        #else
+        hasCatalogAdminAccess = false
+        #endif
     }
 
     private func validateUsernameForAuth(_ raw: String) -> String? {
@@ -1490,11 +1504,11 @@ struct AccountView: View {
                             authPassword = ""
                             authModeIsSignUp = false
                         }
-                        print("[SEASON_AUTH] phase=email_sign_up_confirmation_required")
+                        SeasonLog.debug("[SEASON_AUTH] phase=email_sign_up_confirmation_required")
                         return
                     }
                     userID = signedUpUserID
-                    print("[SEASON_AUTH] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH] phase=email_sign_up_success user_id=\(userID.uuidString.lowercased())")
                     let available = try await supabaseService.isUsernameAvailable(username, excludingUserID: userID)
                     guard available else {
                         throw NSError(
@@ -1504,10 +1518,10 @@ struct AccountView: View {
                         )
                     }
                     try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
-                    print("[SEASON_AUTH] phase=username_saved_success user_id=\(userID.uuidString.lowercased()) username=\(username)")
+                    SeasonLog.debug("[SEASON_AUTH] phase=username_saved_success user_id=\(userID.uuidString.lowercased()) username=\(username)")
                 } else {
                     userID = try await supabaseService.signInWithEmail(email: email, password: password)
-                    print("[SEASON_AUTH] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
+                    SeasonLog.debug("[SEASON_AUTH] phase=email_sign_in_success user_id=\(userID.uuidString.lowercased())")
                 }
 
                 let refreshedProfile = try await supabaseService.fetchMyProfile()
@@ -1515,7 +1529,7 @@ struct AccountView: View {
                     cloudProfile = refreshedProfile
                     applyCloudProfileSocialLinksToInputs(refreshedProfile)
                     let hasUsername = !(refreshedProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-                    print("[SEASON_AUTH] phase=username_check user_id=\(userID.uuidString.lowercased()) exists=\(hasUsername)")
+                    SeasonLog.debug("[SEASON_AUTH] phase=username_check user_id=\(userID.uuidString.lowercased()) exists=\(hasUsername)")
                     authStatusMessage = authModeIsSignUp
                         ? viewModel.localizer.localized("account.auth.status.account_created")
                         : viewModel.localizer.localized("account.auth.status.signed_in")
@@ -1527,9 +1541,9 @@ struct AccountView: View {
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 if authModeIsSignUp {
-                    print("[SEASON_AUTH] phase=email_sign_up_failed error=\(details)")
+                    SeasonLog.debug("[SEASON_AUTH] phase=email_sign_up_failed error=\(details)")
                 } else {
-                    print("[SEASON_AUTH] phase=email_sign_in_failed error=\(details)")
+                    SeasonLog.debug("[SEASON_AUTH] phase=email_sign_in_failed error=\(details)")
                 }
                 await MainActor.run {
                     authStatusMessage = details
@@ -1566,7 +1580,7 @@ struct AccountView: View {
                     )
                 }
                 try await supabaseService.upsertMyProfileIdentity(username: username, displayName: username)
-                print("[SEASON_AUTH] phase=username_saved_success user_id=\(currentAuthenticatedUserID ?? "nil") username=\(username)")
+                SeasonLog.debug("[SEASON_AUTH] phase=username_saved_success user_id=\(currentAuthenticatedUserID ?? "nil") username=\(username)")
                 let refreshedProfile = try await supabaseService.fetchMyProfile()
                 await MainActor.run {
                     cloudProfile = refreshedProfile
@@ -1576,7 +1590,7 @@ struct AccountView: View {
                 }
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                print("[SEASON_AUTH] phase=username_saved_failed error=\(details)")
+                SeasonLog.debug("[SEASON_AUTH] phase=username_saved_failed error=\(details)")
                 await MainActor.run {
                     authStatusMessage = details
                     authStatusIsError = true
@@ -1587,7 +1601,7 @@ struct AccountView: View {
 
     private func logout() {
         guard !authActionRunning else { return }
-        print("[SEASON_AUTH] phase=logout_started")
+        SeasonLog.debug("[SEASON_AUTH] phase=logout_started")
         authActionRunning = true
         authStatusMessage = ""
         authStatusIsError = false
@@ -1596,7 +1610,7 @@ struct AccountView: View {
             defer { authActionRunning = false }
             do {
                 try await supabaseService.signOut()
-                print("[SEASON_AUTH] phase=supabase_logout_succeeded")
+                SeasonLog.debug("[SEASON_AUTH] phase=supabase_logout_succeeded")
                 await MainActor.run {
                     viewModel.resetForLogout()
                     shoppingListViewModel.resetForLogout()
@@ -1616,14 +1630,14 @@ struct AccountView: View {
                     hasCatalogAdminAccess = false
                     socialLinkStatusMessage = ""
                     socialLinkStatusIsError = false
-                    print("[SEASON_AUTH] phase=local_state_cleared")
+                    SeasonLog.debug("[SEASON_AUTH] phase=local_state_cleared")
                     authStatusMessage = viewModel.localizer.localized("account.auth.status.logged_out")
                     authStatusIsError = false
-                    print("[SEASON_AUTH] phase=ui_reset_completed")
+                    SeasonLog.debug("[SEASON_AUTH] phase=ui_reset_completed")
                 }
             } catch {
                 let details = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                print("[SEASON_AUTH] phase=logout_failed error=\(details)")
+                SeasonLog.debug("[SEASON_AUTH] phase=logout_failed error=\(details)")
                 await MainActor.run {
                     authStatusMessage = details
                     authStatusIsError = true
@@ -1639,7 +1653,7 @@ struct AccountView: View {
         socialLinkStatusIsError = false
         linkingInProgressProvider = provider
         let attemptID = UUID().uuidString
-        print("[SEASON_AUTH] phase=oauth_started provider=\(provider.rawValue)")
+        SeasonLog.debug("[SEASON_AUTH] phase=oauth_started provider=\(provider.rawValue)")
         authLogger.debug("[\(attemptID, privacy: .public)] UI tap provider=\(provider.rawValue, privacy: .public)")
 
         Task {
@@ -1649,7 +1663,7 @@ struct AccountView: View {
                 let result = try await socialAuthService.authenticate(with: provider)
                 authLogger.debug("[\(attemptID, privacy: .public)] Auth success provider=\(result.provider.rawValue, privacy: .public) userID=\(result.providerUserID, privacy: .public)")
                 let currentAuthUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased() ?? "nil"
-                print("[SEASON_AUTH] phase=auth_flow_completed provider=\(provider.rawValue) has_session=\(currentAuthUserID != "nil") current_user_id=\(currentAuthUserID)")
+                SeasonLog.debug("[SEASON_AUTH] phase=auth_flow_completed provider=\(provider.rawValue) has_session=\(currentAuthUserID != "nil") current_user_id=\(currentAuthUserID)")
                 let account = LinkedSocialAccount(
                     provider: provider,
                     providerUserID: result.providerUserID,
@@ -1668,7 +1682,7 @@ struct AccountView: View {
                 cloudProfile = refreshedProfile
                 applyCloudProfileSocialLinksToInputs(refreshedProfile)
                 let hasUsername = !(refreshedProfile?.season_username?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-                print("[SEASON_AUTH] phase=username_check provider=\(provider.rawValue) exists=\(hasUsername)")
+                SeasonLog.debug("[SEASON_AUTH] phase=username_check provider=\(provider.rawValue) exists=\(hasUsername)")
                 if !hasUsername {
                     let fallback = accountUsername.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                     if !fallback.isEmpty {
@@ -1677,7 +1691,7 @@ struct AccountView: View {
                     authStatusMessage = viewModel.localizer.localized("account.auth.required_username_prompt")
                     authStatusIsError = false
                 }
-                print("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
+                SeasonLog.debug("[SEASON_AUTH] phase=oauth_succeeded provider=\(provider.rawValue)")
                 socialLinkStatusMessage = String(
                     format: viewModel.localizer.localized("account.social.link.connected_format"),
                     providerTitle(provider)
@@ -1688,7 +1702,7 @@ struct AccountView: View {
                 authLogger.error("[\(attemptID, privacy: .public)] Auth failure provider=\(provider.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)")
                 authLogger.error("[\(attemptID, privacy: .public)] Assigning authErrorMessage='\(scopedMessage, privacy: .public)'")
                 authErrorMessage = scopedMessage
-                print("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_AUTH] phase=oauth_failed provider=\(provider.rawValue) error=\(error)")
                 socialLinkStatusMessage = scopedMessage
                 socialLinkStatusIsError = true
             }

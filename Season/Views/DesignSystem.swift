@@ -193,9 +193,9 @@ enum DS {
             ]
             let missing = expected.filter { UIFont(name: $0, size: 12) == nil }
             if missing.isEmpty {
-                print("[SEASON_DS_FONT] phase=registered count=\(expected.count)")
+                SeasonLog.debug("[SEASON_DS_FONT] phase=registered count=\(expected.count)")
             } else {
-                print("[SEASON_DS_FONT] phase=partial loaded=\(expected.count - missing.count) missing=\(missing.count) names=\(missing.joined(separator: ","))")
+                SeasonLog.debug("[SEASON_DS_FONT] phase=partial loaded=\(expected.count - missing.count) missing=\(missing.count) names=\(missing.joined(separator: ","))")
             }
         }
     }

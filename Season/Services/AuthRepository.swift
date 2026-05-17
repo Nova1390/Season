@@ -63,11 +63,12 @@ final class AuthRepository {
             throw SupabaseServiceError.unauthenticated
         }
 
-        _ = try await supabaseClient.auth.signIn(email: normalizedEmail, password: normalizedPassword)
-        guard let userID = supabaseClient.auth.currentUser?.id else {
-            throw SupabaseServiceError.unauthenticated
-        }
-        return userID
+        let session = try await supabaseClient.auth.signIn(email: normalizedEmail, password: normalizedPassword)
+        _ = try await supabaseClient.auth.setSession(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken
+        )
+        return session.user.id
     }
 
     func signUpWithEmail(email: String, password: String) async throws -> EmailSignUpResult {
@@ -87,6 +88,10 @@ final class AuthRepository {
             redirectTo: Self.emailConfirmationRedirectURL
         )
         if let session = response.session {
+            _ = try await supabaseClient.auth.setSession(
+                accessToken: session.accessToken,
+                refreshToken: session.refreshToken
+            )
             return .signedIn(session.user.id)
         }
 
@@ -124,19 +129,18 @@ final class AuthRepository {
             throw SupabaseServiceError.unauthenticated
         }
 
-        print("[SEASON_AUTH] phase=apple_supabase_exchange_started")
-        _ = try await supabaseClient.auth.signInWithIdToken(
+        SeasonLog.debug("[SEASON_AUTH] phase=apple_supabase_exchange_started")
+        let session = try await supabaseClient.auth.signInWithIdToken(
             credentials: OpenIDConnectCredentials(
                 provider: .apple,
                 idToken: trimmedToken,
                 nonce: trimmedNonce
             )
         )
-
-        guard let userID = supabaseClient.auth.currentUser?.id else {
-            print("[SEASON_AUTH] phase=apple_supabase_exchange_failed reason=missing_current_user_after_exchange")
-            throw SupabaseServiceError.unauthenticated
-        }
+        _ = try await supabaseClient.auth.setSession(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken
+        )
 
         await updateAppleUserMetadataIfNeeded(
             client: supabaseClient,
@@ -145,7 +149,8 @@ final class AuthRepository {
             familyName: familyName
         )
 
-        print("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
+        let userID = session.user.id
+        SeasonLog.debug("[SEASON_AUTH] phase=apple_supabase_exchange_succeeded user_id=\(userID.uuidString.lowercased())")
         return userID
     }
 
@@ -173,9 +178,9 @@ final class AuthRepository {
 
         do {
             _ = try await supabaseClient.auth.update(user: UserAttributes(data: metadata))
-            print("[SEASON_AUTH] phase=apple_user_metadata_updated")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_user_metadata_updated")
         } catch {
-            print("[SEASON_AUTH] phase=apple_user_metadata_update_failed error=\(error.localizedDescription)")
+            SeasonLog.debug("[SEASON_AUTH] phase=apple_user_metadata_update_failed error=\(error.localizedDescription)")
         }
     }
 
@@ -200,14 +205,17 @@ final class AuthRepository {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
 
-        guard let user = supabaseClient.auth.currentUser else {
-            return nil
+        let userID: UUID
+        if let user = supabaseClient.auth.currentUser {
+            userID = user.id
+        } else {
+            userID = try await supabaseClient.auth.session.user.id
         }
 
         let response = try await supabaseClient
             .from("profiles")
             .select()
-            .eq("id", value: user.id.uuidString)
+            .eq("id", value: userID.uuidString)
             .single()
             .execute()
 

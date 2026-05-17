@@ -1,5 +1,6 @@
 import SwiftUI
 
+#if DEBUG
 struct CatalogCandidatesDebugView: View {
     private struct MetricCardView: View {
         let value: String
@@ -424,7 +425,7 @@ struct CatalogCandidatesDebugView: View {
             coverageBlockers = snapshot.coverageBlockers
             readyEnrichmentDrafts = snapshot.readyEnrichmentDrafts
             observationCoverage = snapshot.observationCoverage
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_DEBUG] phase=ops_snapshot_consumed " +
                 "generated_at=\(snapshot.metadata.generatedAt?.description ?? "nil") " +
                 "candidates=\(snapshot.metadata.candidatesCount) " +
@@ -465,7 +466,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Failed to approve alias. Please try again."
-            print("[SEASON_CATALOG_ADMIN] phase=approve_alias_failed normalized_text=\(candidate.normalizedText) error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=approve_alias_failed normalized_text=\(candidate.normalizedText) error=\(error)")
         }
     }
 
@@ -483,7 +484,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Failed to create ingredient from enrichment draft."
-            print("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_failed normalized_text=\(draft.normalizedText) error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_failed normalized_text=\(draft.normalizedText) error=\(error)")
         }
     }
 
@@ -842,7 +843,7 @@ struct CatalogCandidatesDebugView: View {
             actionMessage =
                 "Auto-alias done. total=\(summary.total), " +
                 "succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=auto_alias_ui_done " +
                 "total=\(summary.total) succeeded=\(summary.succeeded) " +
                 "skipped=\(summary.skipped) failed=\(summary.failed)"
@@ -850,7 +851,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Auto-alias run failed."
-            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_alias_ui_failed error=\(error)")
         }
     }
 
@@ -865,7 +866,7 @@ struct CatalogCandidatesDebugView: View {
         }
 
         let draftCandidates = draftIngredientSuggestionCandidates
-        print("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_started candidate_count=\(draftCandidates.count)")
+        SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_started candidate_count=\(draftCandidates.count)")
         let items: [CatalogCandidateBatchTriageItem] = draftCandidates.map {
             CatalogCandidateBatchTriageItem(
                 normalizedText: $0.normalizedText,
@@ -890,7 +891,7 @@ struct CatalogCandidatesDebugView: View {
                 reviewerNote: "dynamic_prepare_draft_suggestions_v1"
             )
             actionMessage = "Draft ingredient suggestions done. total=\(result.summary.total), succeeded=\(result.summary.succeeded), failed=\(result.summary.failed), skipped=\(result.summary.skipped)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_done " +
                 "submitted=\(items.count) total=\(result.summary.total) " +
                 "succeeded=\(result.summary.succeeded) failed=\(result.summary.failed) skipped=\(result.summary.skipped)"
@@ -898,7 +899,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Draft ingredient suggestions failed. Please try again."
-            print("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=run_draft_ingredient_suggestions_failed error=\(error)")
         }
     }
 
@@ -917,7 +918,7 @@ struct CatalogCandidatesDebugView: View {
         } catch {
             importedRecipePreview = nil
             errorMessage = (error as NSError).localizedDescription
-            print("[SEASON_URL_IMPORT_UI] phase=parse_failed error=\(error)")
+            SeasonLog.debug("[SEASON_URL_IMPORT_UI] phase=parse_failed error=\(error)")
         }
     }
 
@@ -1004,7 +1005,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = (error as NSError).localizedDescription
-            print("[SEASON_URL_IMPORT_UI] phase=save_failed error=\(error)")
+            SeasonLog.debug("[SEASON_URL_IMPORT_UI] phase=save_failed error=\(error)")
         }
     }
 
@@ -1832,7 +1833,7 @@ struct CatalogCandidatesDebugView: View {
             actionMessage =
                 "Observation recovery done. total=\(summary.totalProcessed), " +
                 "observed=\(summary.observedCount), skipped=\(summary.skippedCount), failed=\(summary.failedCount)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_done " +
                 "total=\(summary.totalProcessed) observed=\(summary.observedCount) " +
                 "skipped=\(summary.skippedCount) failed=\(summary.failedCount)"
@@ -1840,7 +1841,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Observation recovery failed."
-            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=observation_recovery_ui_failed error=\(error)")
         }
     }
 
@@ -1859,7 +1860,7 @@ struct CatalogCandidatesDebugView: View {
             actionMessage =
                 "Auto-localization done. total=\(summary.total), " +
                 "succeeded=\(summary.succeeded), skipped=\(summary.skipped), failed=\(summary.failed)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=auto_localization_ui_done " +
                 "total=\(summary.total) succeeded=\(summary.succeeded) " +
                 "skipped=\(summary.skipped) failed=\(summary.failed)"
@@ -1867,7 +1868,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Auto-localization run failed."
-            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_localization_ui_failed error=\(error)")
         }
     }
 
@@ -1881,10 +1882,10 @@ struct CatalogCandidatesDebugView: View {
             let rows = try await catalogAdminOpsService.previewSafeRecipeReconciliation(limit: 20)
             reconciliationPreviewRows = rows
             actionMessage = "Safe reconciliation preview loaded: \(rows.count) rows."
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_done rows=\(rows.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_done rows=\(rows.count)")
         } catch {
             errorMessage = "Safe reconciliation preview failed."
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ui_failed error=\(error)")
         }
     }
 
@@ -1907,7 +1908,7 @@ struct CatalogCandidatesDebugView: View {
             actionMessage =
                 "Safe reconciliation apply done. total=\(summary.total), " +
                 "applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)\(eligibilityNote)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_done " +
                 "total=\(summary.total) applied=\(summary.applied) skipped=\(summary.skipped) failed=\(summary.failed) preview_count=\(previewCount)"
             )
@@ -1916,7 +1917,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Safe reconciliation apply failed."
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ui_failed error=\(error)")
         }
     }
 
@@ -1932,7 +1933,7 @@ struct CatalogCandidatesDebugView: View {
             actionMessage =
                 "Modern safe reconciliation apply done. total=\(summary.total), " +
                 "applied=\(summary.applied), skipped=\(summary.skipped), failed=\(summary.failed)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ui_done " +
                 "total=\(summary.total) applied=\(summary.applied) skipped=\(summary.skipped) failed=\(summary.failed)"
             )
@@ -1941,7 +1942,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Modern safe reconciliation apply failed."
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ui_failed error=\(error)")
         }
     }
 
@@ -1961,7 +1962,7 @@ struct CatalogCandidatesDebugView: View {
                 "Enrichment-only run (\(safeLimit)) done. total=\(summary.total), " +
                 "succeeded=\(summary.succeeded), failed=\(summary.failed), skipped=\(summary.skipped), " +
                 "ready=\(summary.ready), pending=\(summary.pending)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_done " +
                 "limit=\(safeLimit) " +
                 "debug=\(enableDebugInstrumentation) " +
@@ -1971,7 +1972,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Pending draft enrichment batch failed."
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_ui_failed error=\(error)")
         }
     }
 
@@ -1988,7 +1989,7 @@ struct CatalogCandidatesDebugView: View {
                 "Ingredient creation batch done. total=\(summary.total), " +
                 "created=\(summary.created), skipped_existing=\(summary.skippedExisting), " +
                 "skipped_invalid=\(summary.skippedInvalid), failed=\(summary.failed)"
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_ui_done " +
                 "total=\(summary.total) created=\(summary.created) " +
                 "skipped_existing=\(summary.skippedExisting) skipped_invalid=\(summary.skippedInvalid) failed=\(summary.failed)"
@@ -1996,7 +1997,7 @@ struct CatalogCandidatesDebugView: View {
             await loadCandidates()
         } catch {
             errorMessage = "Ingredient creation batch failed."
-            print("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_ui_failed error=\(error)")
         }
     }
 
@@ -2045,7 +2046,7 @@ struct CatalogCandidatesDebugView: View {
                     "failed_items=\(aliasSample)."
             }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_done " +
                 "debug=\(enableDebugInstrumentation) " +
                 "run_status=\(result.runStatus) " +
@@ -2076,7 +2077,7 @@ struct CatalogCandidatesDebugView: View {
         } catch {
             errorMessage = "Catalog automation cycle failed."
             showAutomationSuccessFlash = false
-            print("[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=automation_cycle_ui_failed error=\(error)")
         }
     }
 
@@ -2681,6 +2682,7 @@ struct CatalogCandidatesDebugView: View {
         return nil
     }
 }
+#endif
 
 private struct CatalogEnrichmentDraftEditorView: View {
     struct FormState {

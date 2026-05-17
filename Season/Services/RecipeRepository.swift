@@ -20,15 +20,15 @@ final class RecipeRepository {
         }
 
         let currentAuthUserID = supabaseClient.auth.currentUser?.id.uuidString.lowercased() ?? "nil"
-        print("[SEASON_SUPABASE] phase=create_recipe_auth_context recipe_id=\(recipe.id) current_auth_user_id=\(currentAuthUserID)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_auth_context recipe_id=\(recipe.id) current_auth_user_id=\(currentAuthUserID)")
         guard let user = supabaseClient.auth.currentUser else {
-            print("[SEASON_SUPABASE] phase=create_recipe_blocked recipe_id=\(recipe.id) reason=unauthenticated")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_blocked recipe_id=\(recipe.id) reason=unauthenticated")
             throw SupabaseServiceError.unauthenticated
         }
 
         let publishUserID = user.id.uuidString.lowercased()
         let payloadHasUserID = !publishUserID.isEmpty
-        print("[SEASON_SUPABASE] phase=create_recipe_payload_check recipe_id=\(recipe.id) payload_includes_user_id=\(payloadHasUserID) user_id=\(payloadHasUserID ? publishUserID : "nil")")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_payload_check recipe_id=\(recipe.id) payload_includes_user_id=\(payloadHasUserID) user_id=\(payloadHasUserID ? publishUserID : "nil")")
 
         let ingredientPayloads = recipe.ingredients.map {
             RecipeIngredientInsertPayload(
@@ -44,7 +44,7 @@ final class RecipeRepository {
         let capabilities = try await resolveRecipeOptionalColumnCapabilities(using: supabaseClient)
 
         if capabilities.supportsImageURL && capabilities.supportsSourceColumns {
-            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=full_schema")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=full_schema")
             _ = try await supabaseClient
                 .from("recipes")
                 .upsert(
@@ -66,12 +66,12 @@ final class RecipeRepository {
                     onConflict: "id"
                 )
                 .execute()
-            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=full_schema")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=full_schema")
             return
         }
 
         if !capabilities.supportsImageURL && capabilities.supportsSourceColumns {
-            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_image_column")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_image_column")
             _ = try await supabaseClient
                 .from("recipes")
                 .upsert(
@@ -92,12 +92,12 @@ final class RecipeRepository {
                     onConflict: "id"
                 )
                 .execute()
-            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_image_column")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_image_column")
             return
         }
 
         if capabilities.supportsImageURL && !capabilities.supportsSourceColumns {
-            print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_source_columns")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=without_source_columns")
             _ = try await supabaseClient
                 .from("recipes")
                 .upsert(
@@ -116,11 +116,11 @@ final class RecipeRepository {
                     onConflict: "id"
                 )
                 .execute()
-            print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=without_source_columns")
             return
         }
 
-        print("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=legacy_columns_only")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_started recipe_id=\(recipe.id) path=legacy_columns_only")
         _ = try await supabaseClient
             .from("recipes")
             .upsert(
@@ -138,7 +138,7 @@ final class RecipeRepository {
                 onConflict: "id"
             )
             .execute()
-        print("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=create_recipe_write_succeeded recipe_id=\(recipe.id) path=legacy_columns_only")
     }
 
     func fetchRecipes(limit: Int = 40, offset: Int = 0) async throws -> [Recipe] {
@@ -248,7 +248,7 @@ final class RecipeRepository {
             if SeasonLog.verbose {
                 let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
                 let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-                print("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=supabase_fetch recipe_id=\(recipe.id) title=\(recipe.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
+                SeasonLog.debug("[SEASON_CREATOR_CHAIN] phase=recipe_identity source=supabase_fetch recipe_id=\(recipe.id) title=\(recipe.title) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
             }
             return recipe
         }

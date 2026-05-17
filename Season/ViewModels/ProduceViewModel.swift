@@ -61,6 +61,26 @@ struct RecipeTimingInsight: Hashable {
     let label: RecipeTimingLabel
 }
 
+struct HomeRecipeScoreBreakdown: Hashable {
+    let seasonality: Double
+    let nutrition: Double
+    let quality: Double
+    let convenience: Double
+    let engagement: Double
+    let freshness: Double
+    let sourceTrust: Double
+
+    var score: Double {
+        (0.30 * seasonality)
+        + (0.10 * nutrition)
+        + (0.18 * quality)
+        + (0.13 * convenience)
+        + (0.12 * engagement)
+        + (0.07 * freshness)
+        + (0.10 * sourceTrust)
+    }
+}
+
 final class ProduceViewModel: ObservableObject {
     private struct UnifiedIngredientParityEntry {
         let ingredientID: String
@@ -88,6 +108,7 @@ final class ProduceViewModel: ObservableObject {
     @Published private(set) var homeFeedDataVersion: Int = 0
     @Published private(set) var rankingDataVersion: Int = 0
     @Published private(set) var didCompleteInitialRemoteRecipeHydration: Bool = false
+    @Published private(set) var isInitialHomeFeedHydrating: Bool = true
     @Published private(set) var languageCode: String
     @Published private(set) var nutritionGoals: Set<NutritionGoal> = []
     @Published private(set) var nutritionPriorities: [NutritionPriorityDimension: Double] = NutritionService.defaultNutritionPriorities
@@ -102,6 +123,8 @@ final class ProduceViewModel: ObservableObject {
     private let produceByNormalizedName: [String: ProduceItem]
     private let basicByID: [String: BasicIngredient]
     private let basicByNormalizedName: [String: BasicIngredient]
+    private let recipeStateOutboxEnqueuer = OutboxMutationEnqueuer()
+    private let recipeStateOutboxDispatcher = OutboxDispatcher()
     private var remoteIngredientAliasLookup: [String: IngredientAliasRecord] = [:]
     private var unifiedIngredientByID: [String: UnifiedIngredientParityEntry] = [:]
     private var unifiedAliasLookup: [String: IngredientAliasMatch] = [:]
@@ -359,7 +382,7 @@ final class ProduceViewModel: ObservableObject {
         unifiedEntryNameLookup = entryNameLookup
         markReconciliationInputsChanged()
 
-        print(
+        SeasonLog.debug(
             "[SEASON_UNIFIED_PARITY] phase=parity_cache_ready catalog_count=\(entriesByID.count) alias_count=\(aliasLookup.count) name_lookup_count=\(nameLookup.count)"
         )
     }
@@ -465,7 +488,7 @@ final class ProduceViewModel: ObservableObject {
     private func reconcileRecipeOnRead(_ recipe: Recipe) -> Recipe {
         guard recipeHasPotentialReconciliationWork(recipe) else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_unresolved_custom")
             }
             return recipe
         }
@@ -473,7 +496,7 @@ final class ProduceViewModel: ObservableObject {
         let cacheKey = reconciliationNoMatchCacheKey(for: recipe)
         if reconciliationNoMatchCache.contains(cacheKey) {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=cached_no_match")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=cached_no_match")
             }
             return recipe
         }
@@ -485,7 +508,7 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_attempt recipe_id=\(recipe.id) unresolved_count=\(unresolvedCount)")
         }
 
         var successCount = 0
@@ -539,13 +562,13 @@ final class ProduceViewModel: ObservableObject {
         guard successCount > 0 else {
             reconciliationNoMatchCache.insert(cacheKey)
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_skipped recipe_id=\(recipe.id) reason=no_match_found")
             }
             return recipe
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_succeeded recipe_id=\(recipe.id) reconciled_count=\(successCount)")
         }
         var updated = recipe
         updated = Recipe(
@@ -733,22 +756,22 @@ final class ProduceViewModel: ObservableObject {
                         self.markBootstrapRemoteRecipesCompleted(generation: bootstrapGeneration)
                     }
                 }
-                print("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=fetchRecipes phase=request_failed local_fallback=true error=\(error)")
             }
         }
     }
 
     private func bumpHomeFeedDataVersion(reason: String) {
         homeFeedDataVersion &+= 1
-        if SeasonLog.lifecycle {
-            print("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
+        if SeasonLog.lifecycleEnabled {
+            SeasonLog.debug("[SEASON_HOME_FEED] phase=data_version_bumped reason=\(reason) value=\(homeFeedDataVersion)")
         }
     }
 
     private func bumpRankingDataVersion(reason: String) {
         rankingDataVersion &+= 1
-        if SeasonLog.lifecycle {
-            print("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
+        if SeasonLog.lifecycleEnabled {
+            SeasonLog.debug("[SEASON_HOME_FEED] phase=ranking_version_bumped reason=\(reason) value=\(rankingDataVersion)")
         }
     }
 
@@ -762,7 +785,7 @@ final class ProduceViewModel: ObservableObject {
     private func debugLoadTimingIfNeeded(label: String, count: Int, elapsedMs: Int) {
         #if DEBUG
         if ProcessInfo.processInfo.environment["SEASON_LOAD_DEBUG"] == "1" {
-            print("LOAD DEBUG [\(label)] count=\(count) time_ms=\(elapsedMs)")
+            SeasonLog.debug("LOAD DEBUG [\(label)] count=\(count) time_ms=\(elapsedMs)")
         }
         #endif
     }
@@ -789,6 +812,7 @@ final class ProduceViewModel: ObservableObject {
     private func beginBootstrap() -> Int {
         bootstrapGeneration &+= 1
         isBootstrapping = true
+        isInitialHomeFeedHydrating = true
         pendingInvalidation = false
         bootstrapRemoteRecipesCompleted = false
         bootstrapIngredientAliasesCompleted = false
@@ -813,6 +837,7 @@ final class ProduceViewModel: ObservableObject {
               bootstrapIngredientAliasesCompleted else { return }
 
         isBootstrapping = false
+        isInitialHomeFeedHydrating = false
         if pendingInvalidation {
             pendingInvalidation = false
             performCacheInvalidation(reason: "bootstrap_coalesced")
@@ -982,7 +1007,7 @@ final class ProduceViewModel: ObservableObject {
 
         return inSeasonItems
             .map { item in
-                let score = bestPickScore(for: item) * 100.0
+                let score = todayPickScore(for: item) * 100.0
                 let reasons = rankingReasons(for: item)
                 return RankedInSeasonItem(item: item, score: score, reasons: reasons)
             }
@@ -1127,15 +1152,15 @@ final class ProduceViewModel: ObservableObject {
             creatorID: recipe.canonicalCreatorID,
             metadata: ["isCrispied": isCrispied ? "true" : "false"]
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
-        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=task_started")
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=service_call")
-            do {
-                try await supabaseService.setRecipeCrispiedState(recipeID: recipe.id, isCrispied: isCrispied, traceID: traceID)
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=write_failed error=\(error)")
-            }
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=local_update_done")
+        let didEnqueue = recipeStateOutboxEnqueuer.enqueueRecipeCrispiedState(
+            userID: SupabaseService.shared.currentAuthenticatedUserID(),
+            recipeID: recipe.id,
+            isCrispied: isCrispied
+        )
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipe.id) target=\(isCrispied) phase=outbox_enqueued success=\(didEnqueue)")
+        Task { [recipeStateOutboxDispatcher] in
+            await recipeStateOutboxDispatcher.processPendingMutations()
         }
     }
 
@@ -1157,16 +1182,15 @@ final class ProduceViewModel: ObservableObject {
             creatorID: recipe.canonicalCreatorID,
             metadata: ["isSaved": isSaved ? "true" : "false"]
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
-        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=task_started")
-
-        Task { [supabaseService] in
-            print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=service_call")
-            do {
-                try await supabaseService.setRecipeSavedState(recipeID: recipe.id, isSaved: isSaved, traceID: traceID)
-            } catch {
-                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=write_failed error=\(error)")
-            }
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=local_update_done")
+        let didEnqueue = recipeStateOutboxEnqueuer.enqueueRecipeSavedState(
+            userID: SupabaseService.shared.currentAuthenticatedUserID(),
+            recipeID: recipe.id,
+            isSaved: isSaved
+        )
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipe.id) target=\(isSaved) phase=outbox_enqueued success=\(didEnqueue)")
+        Task { [recipeStateOutboxDispatcher] in
+            await recipeStateOutboxDispatcher.processPendingMutations()
         }
     }
 
@@ -1370,15 +1394,15 @@ final class ProduceViewModel: ObservableObject {
             ?? resolveUnifiedCatalogMatch(query: normalized)
         if let unified {
             let unifiedKey = parityMatchKey(unified)
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_used path=import query=\(normalized) value=\(unifiedKey)")
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_mapped_to_legacy path=import query=\(normalized) value=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_used path=import query=\(normalized) value=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_mapped_to_legacy path=import query=\(normalized) value=\(unifiedKey)")
             return unified
         }
 
         let legacy = resolveLegacyAliasMatch(query: normalized)
             ?? resolveLegacyCatalogMatch(query: normalized)
         if let legacy {
-            print("[SEASON_UNIFIED_PARITY] phase=unified_resolution_failed_fallback_legacy path=import query=\(normalized) legacy=\(parityMatchKey(legacy))")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=unified_resolution_failed_fallback_legacy path=import query=\(normalized) legacy=\(parityMatchKey(legacy))")
         }
         return legacy
     }
@@ -1447,21 +1471,21 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if legacyKey == unifiedKey {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_match_same path=\(path) query=\(query) value=\(legacyKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_match_same path=\(path) query=\(query) value=\(legacyKey)")
             return
         }
 
         if legacyKey == "none" {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_legacy path=\(path) query=\(query) unified=\(unifiedKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_missing_legacy path=\(path) query=\(query) unified=\(unifiedKey)")
             return
         }
 
         if unifiedKey == "none" {
-            print("[SEASON_UNIFIED_PARITY] phase=parity_missing_unified path=\(path) query=\(query) legacy=\(legacyKey)")
+            SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_missing_unified path=\(path) query=\(query) legacy=\(legacyKey)")
             return
         }
 
-        print("[SEASON_UNIFIED_PARITY] phase=parity_match_diff path=\(path) query=\(query) legacy=\(legacyKey) unified=\(unifiedKey)")
+        SeasonLog.debug("[SEASON_UNIFIED_PARITY] phase=parity_match_diff path=\(path) query=\(query) legacy=\(legacyKey) unified=\(unifiedKey)")
     }
 
     func recipe(forID id: String) -> Recipe? {
@@ -1507,7 +1531,7 @@ final class ProduceViewModel: ObservableObject {
         recipes.insert(draft, at: 0)
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(draft)
-        print("[SEASON_RECIPE] phase=draft_created id=\(draft.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_created id=\(draft.id)")
         return draft
     }
 
@@ -1607,7 +1631,7 @@ final class ProduceViewModel: ObservableObject {
         }
         invalidateRecipeCaches()
         RecipeStore.upsertUserRecipe(recipe)
-        print("[SEASON_RECIPE] phase=draft_saved id=\(recipe.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_saved id=\(recipe.id)")
         return recipe
     }
 
@@ -1835,7 +1859,7 @@ final class ProduceViewModel: ObservableObject {
         let normalizedQuery = normalizedSearchText(sourceText)
         guard !normalizedQuery.isEmpty else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=empty_query")
             }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
@@ -1847,7 +1871,7 @@ final class ProduceViewModel: ObservableObject {
         }
 
         if SeasonLog.verbose {
-            print("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
+            SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_attempt name=\(ingredient.name)")
         }
 
         let match = resolveUnifiedAliasMatch(query: normalizedQuery)
@@ -1856,7 +1880,7 @@ final class ProduceViewModel: ObservableObject {
             ?? resolveCatalogMatchInIngredientText(query: normalizedQuery)
         guard let match else {
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_kept_original name=\(ingredient.name) reason=no_match")
             }
             return ResolvedIngredient(
                 recipeIngredient: ingredient,
@@ -1877,7 +1901,7 @@ final class ProduceViewModel: ObservableObject {
         switch match {
         case .produce(let item):
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=produce name=\(ingredient.name) produce_id=\(item.id)")
             }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
@@ -1897,7 +1921,7 @@ final class ProduceViewModel: ObservableObject {
             )
         case .basic(let item):
             if SeasonLog.verbose {
-                print("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
+                SeasonLog.debug("[SEASON_RECONCILE] phase=reconciliation_upgraded from=custom to=basic name=\(ingredient.name) basic_id=\(item.id)")
             }
             return ResolvedIngredient(
                 recipeIngredient: RecipeIngredient(
@@ -2043,9 +2067,9 @@ final class ProduceViewModel: ObservableObject {
 
         if commitLocally {
             commitPublishedRecipeLocally(recipe)
-            print("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=local_publish_succeeded recipe_id=\(recipe.id)")
         } else {
-            print("[SEASON_RECIPE] phase=publish_recipe_built recipe_id=\(recipe.id) local_commit=false")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_recipe_built recipe_id=\(recipe.id) local_commit=false")
         }
 
         return recipe
@@ -2332,13 +2356,87 @@ final class ProduceViewModel: ObservableObject {
         return (seasonality * 0.85) + (nutrition * 0.15)
     }
 
+    private func todayPickScore(for item: ProduceItem) -> Double {
+        let currentSeasonality = seasonalityScore(for: item)
+        let amplitude = item.seasonalityAmplitude()
+        let peakDistance = Double(min(6, item.seasonalityPeakDistance(month: currentMonth)))
+        let peakProximity = max(0, 1.0 - (peakDistance / 6.0))
+        let trend = min(1.0, max(0.0, 0.5 + (item.seasonalityDelta(month: currentMonth) * 1.8)))
+        let freshnessPriority = todayFreshnessPriority(for: item)
+        let nutrition = nutritionScore(for: item)
+
+        var score =
+            (currentSeasonality * 0.34)
+            + (amplitude * 0.26)
+            + (peakProximity * 0.20)
+            + (freshnessPriority * 0.10)
+            + (trend * 0.06)
+            + (nutrition * 0.04)
+
+        if item.isYearRoundSeasonal() {
+            score -= 0.22
+        }
+        if isAromaticOrSpice(item) {
+            score *= 0.58
+        }
+        if isMostlyImportedTropical(item) {
+            score *= 0.72
+        }
+        if item.category == .legume {
+            score *= 0.90
+        }
+
+        return min(1.0, max(0.0, score))
+    }
+
+    private func todayFreshnessPriority(for item: ProduceItem) -> Double {
+        switch item.category {
+        case .fruit:
+            return 1.0
+        case .vegetable:
+            return 0.95
+        case .tuber:
+            return 0.72
+        case .legume:
+            return 0.58
+        }
+    }
+
+    private func isAromaticOrSpice(_ item: ProduceItem) -> Bool {
+        let searchText = ([item.id] + Array(item.localizedNames.values))
+            .joined(separator: " ")
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+        let aromaticTerms = [
+            "basil", "basilico", "thyme", "timo", "oregano", "origano",
+            "rosemary", "rosmarino", "sage", "salvia", "mint", "menta",
+            "parsley", "prezzemolo", "bay leaf", "alloro", "marjoram",
+            "maggiorana", "chives", "erba cipollina", "dill", "aneto",
+            "coriander", "coriandolo"
+        ]
+        return aromaticTerms.contains { searchText.contains($0) }
+    }
+
+    private func isMostlyImportedTropical(_ item: ProduceItem) -> Bool {
+        let searchText = ([item.id] + Array(item.localizedNames.values))
+            .joined(separator: " ")
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+        let tropicalTerms = [
+            "pineapple", "ananas", "mango", "avocado", "lime",
+            "banana", "coconut", "cocco", "papaya", "passion fruit",
+            "frutto della passione"
+        ]
+        return tropicalTerms.contains { searchText.contains($0) }
+    }
+
     private func rankedHomeRecipes(from source: [Recipe]) -> [RankedRecipe] {
         source
             .map { recipe in
                 if SeasonLog.verbose {
                     let creatorIDForLog = recipe.creatorId.trimmingCharacters(in: .whitespacesAndNewlines)
                     let creatorDisplayForLog = recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "nil"
-                    print("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
+                    SeasonLog.debug("[SEASON_CREATOR_CHAIN] phase=ranked_identity recipe_id=\(recipe.id) creator_id=\(creatorIDForLog.isEmpty ? "nil" : creatorIDForLog) creator_display_name=\(creatorDisplayForLog) author=\(recipe.author)")
                 }
                 let seasonality = recipeSeasonalityScore(for: recipe)
                 let resolvedSeasonalPercent = Int((seasonality * 100.0).rounded())
@@ -2385,26 +2483,36 @@ final class ProduceViewModel: ObservableObject {
     }
 
     func homeRankingScore(for recipe: Recipe) -> Double {
-        let seasonality = recipeSeasonalityScore(for: recipe)
-        let crispy = crispyScore(for: recipe)
-        let views = viewsScore(for: recipe)
-        let nutrition = nutritionPreferenceScore(for: recipe)
-        let score =
-            (0.50 * seasonality)
-            + (0.20 * crispy)
-            + (0.15 * views)
-            + (0.15 * nutrition)
+        let breakdown = homeRecipeScoreBreakdown(for: recipe)
+        let score = breakdown.score
         debugRankingIfNeeded(
             recipeName: recipe.title,
             channel: "home",
             finalScore: score,
-            seasonality: seasonality,
+            seasonality: breakdown.seasonality,
             fridgeMatch: nil,
-            crispy: crispy,
-            views: views,
-            nutrition: nutrition
+            crispy: crispyScore(for: recipe),
+            views: viewsScore(for: recipe),
+            nutrition: breakdown.nutrition
         )
+        debugHomeScoreBreakdownIfNeeded(recipeName: recipe.title, breakdown: breakdown)
         return score
+    }
+
+    func homeRecipeScoreBreakdown(for recipe: Recipe) -> HomeRecipeScoreBreakdown {
+        let crispy = crispyScore(for: recipe)
+        let views = viewsScore(for: recipe)
+        let engagement = min(1.0, max(0.0, (0.55 * crispy) + (0.45 * views)))
+
+        return HomeRecipeScoreBreakdown(
+            seasonality: recipeSeasonalityScore(for: recipe),
+            nutrition: nutritionPreferenceScore(for: recipe),
+            quality: recipeQualityScore(for: recipe),
+            convenience: recipeConvenienceScore(for: recipe),
+            engagement: engagement,
+            freshness: recipeFreshnessScore(for: recipe),
+            sourceTrust: recipeSourceTrustScore(for: recipe)
+        )
     }
 
     func fridgeRankingScore(for recipe: Recipe, fridgeItemIDs: Set<String>) -> Double {
@@ -2480,6 +2588,19 @@ final class ProduceViewModel: ObservableObject {
         )
     }
 
+    func recipeConvenienceScore(for recipe: Recipe) -> Double {
+        let prep = recipe.prepTimeMinutes ?? 0
+        let cook = recipe.cookTimeMinutes ?? 0
+        let total = prep + cook
+
+        guard total > 0 else { return 0.45 }
+        if total <= 15 { return 1.0 }
+        if total <= 30 { return 0.78 }
+        if total <= 45 { return 0.58 }
+        if total <= 75 { return 0.40 }
+        return 0.25
+    }
+
     func fridgeMatchScore(for recipe: Recipe, fridgeItemIDs: Set<String>) -> Double {
         weightedFridgeMatch(for: recipe, fridgeItemIDs: fridgeItemIDs).score
     }
@@ -2515,8 +2636,18 @@ final class ProduceViewModel: ObservableObject {
     ) {
         guard rankingDebugEnabled else { return }
         let fridgePart = fridgeMatch.map { String(format: "%.3f", $0) } ?? "-"
-        print(
+        SeasonLog.debug(
             "RANK DEBUG [\(channel)] recipe=\(recipeName) score=\(String(format: "%.3f", finalScore)) seasonality=\(String(format: "%.3f", seasonality)) fridgeMatch=\(fridgePart) crispy=\(String(format: "%.3f", crispy)) views=\(String(format: "%.3f", views)) nutrition=\(String(format: "%.3f", nutrition))"
+        )
+    }
+
+    private func debugHomeScoreBreakdownIfNeeded(
+        recipeName: String,
+        breakdown: HomeRecipeScoreBreakdown
+    ) {
+        guard rankingDebugEnabled else { return }
+        SeasonLog.debug(
+            "RANK DEBUG [home_breakdown] recipe=\(recipeName) seasonality=\(String(format: "%.3f", breakdown.seasonality)) nutrition=\(String(format: "%.3f", breakdown.nutrition)) quality=\(String(format: "%.3f", breakdown.quality)) convenience=\(String(format: "%.3f", breakdown.convenience)) engagement=\(String(format: "%.3f", breakdown.engagement)) freshness=\(String(format: "%.3f", breakdown.freshness)) sourceTrust=\(String(format: "%.3f", breakdown.sourceTrust))"
         )
     }
 
@@ -2532,16 +2663,25 @@ final class ProduceViewModel: ObservableObject {
     ) -> RecipeTimingInsight {
         let nextMonth = currentMonth == 12 ? 1 : (currentMonth + 1)
 
-        let perIngredientSignals: [(score: Double, trend: Double)] = recipe.ingredients.map { ingredient in
+        let perIngredientSignals: [(score: Double, trend: Double, weight: Double)] = recipe.ingredients.compactMap { ingredient in
             guard let produceID = ingredient.produceID,
                   let item = produceItem(forID: produceID) else {
-                // Non-seasonal/basic ingredients stay neutral in recipe timing.
-                return (score: 0.5, trend: 0.0)
+                // Non-seasonal/basic ingredients stay neutral and light-touch in recipe timing.
+                return (score: 0.5, trend: 0.0, weight: max(0.15, ingredientWeight(for: ingredient) * 0.35))
             }
 
             let currentScore = item.seasonalityScore(month: currentMonth)
             let nextScore = item.seasonalityScore(month: nextMonth)
-            return (score: currentScore, trend: nextScore - currentScore)
+            let baseWeight = ingredientWeight(for: ingredient)
+            let adjustedWeight: Double
+            if isAromaticOrSpice(item) {
+                adjustedWeight = baseWeight * 0.45
+            } else if isMostlyImportedTropical(item) {
+                adjustedWeight = baseWeight * 0.65
+            } else {
+                adjustedWeight = baseWeight
+            }
+            return (score: currentScore, trend: nextScore - currentScore, weight: adjustedWeight)
         }
 
         if perIngredientSignals.isEmpty {
@@ -2553,8 +2693,18 @@ final class ProduceViewModel: ObservableObject {
             )
         }
 
-        let score = perIngredientSignals.map(\.score).reduce(0, +) / Double(perIngredientSignals.count)
-        let trend = perIngredientSignals.map(\.trend).reduce(0, +) / Double(perIngredientSignals.count)
+        let totalWeight = perIngredientSignals.map(\.weight).reduce(0, +)
+        guard totalWeight > 0 else {
+            let fallbackScore = Double(fallbackSeasonalPercent ?? recipe.seasonalMatchPercent) / 100.0
+            return RecipeTimingInsight(
+                score: fallbackScore,
+                trend: 0.0,
+                label: recipeTimingLabel(score: fallbackScore, trend: 0.0)
+            )
+        }
+
+        let score = perIngredientSignals.reduce(0.0) { $0 + ($1.score * $1.weight) } / totalWeight
+        let trend = perIngredientSignals.reduce(0.0) { $0 + ($1.trend * $1.weight) } / totalWeight
 
         return RecipeTimingInsight(
             score: score,
@@ -2579,6 +2729,60 @@ final class ProduceViewModel: ObservableObject {
     private func recipeSeasonalityScore(for recipe: Recipe) -> Double {
         let insight = recipeTimingInsight(for: recipe, fallbackSeasonalPercent: recipe.seasonalMatchPercent)
         return min(1.0, max(0.0, insight.score))
+    }
+
+    private func recipeQualityScore(for recipe: Recipe) -> Double {
+        let titleScore = recipe.title.trimmingCharacters(in: .whitespacesAndNewlines).count >= 8 ? 1.0 : 0.65
+        let ingredientScore = min(1.0, Double(recipe.ingredients.count) / 6.0)
+        let nonEmptySteps = recipe.preparationSteps.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let stepScore = min(1.0, Double(nonEmptySteps.count) / 4.0)
+        let hasVisual = (recipe.coverImageName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || (recipe.imageURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            || recipe.images.contains {
+                ($0.localPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+                    || ($0.remoteURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            }
+        let visualScore = hasVisual ? 1.0 : 0.55
+        let hasTiming = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0) > 0
+        let metadataScore = (hasTiming ? 0.55 : 0.25) + (recipe.servings > 0 ? 0.45 : 0.20)
+
+        return min(
+            1.0,
+            max(
+                0.0,
+                (0.18 * titleScore)
+                + (0.24 * ingredientScore)
+                + (0.24 * stepScore)
+                + (0.20 * visualScore)
+                + (0.14 * metadataScore)
+            )
+        )
+    }
+
+    private func recipeFreshnessScore(for recipe: Recipe) -> Double {
+        let age = max(0, Calendar.current.dateComponents([.day], from: recipe.createdAt, to: Date()).day ?? 0)
+        if age <= 7 { return 0.90 }
+        if age <= 30 { return 0.74 }
+        if age <= 90 { return 0.58 }
+        if age <= 180 { return 0.46 }
+        return 0.38
+    }
+
+    private func recipeSourceTrustScore(for recipe: Recipe) -> Double {
+        let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if sourceName?.isEmpty == false {
+            return 0.72
+        }
+        if recipe.sourceURL?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return 0.68
+        }
+        if recipe.creatorDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return 0.64
+        }
+        if recipe.isUserGenerated {
+            return 0.58
+        }
+        return 0.52
     }
 
     private func ingredientWeight(for ingredient: RecipeIngredient) -> Double {

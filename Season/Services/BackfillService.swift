@@ -38,7 +38,7 @@ final class BackfillService {
 
     private func backfillShoppingList(userID: UUID) async throws -> Int {
         let domain = "shopping_list_items"
-        print("[SEASON_SUPABASE] phase=backfill_started domain=\(domain)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_started domain=\(domain)")
 
         let localEntries = ShoppingListViewModel().items
         let backendEntries = try await supabaseService.fetchMyShoppingListItems()
@@ -51,7 +51,7 @@ final class BackfillService {
             return mapped
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
 
         var enqueued = 0
         for mapped in missing {
@@ -69,17 +69,17 @@ final class BackfillService {
             if didEnqueue {
                 enqueued += 1
             } else {
-                print("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
+                SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
             }
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
         return enqueued
     }
 
     private func backfillFridge(userID: UUID) async throws -> Int {
         let domain = "fridge_items"
-        print("[SEASON_SUPABASE] phase=backfill_started domain=\(domain)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_started domain=\(domain)")
 
         let fridgeViewModel = FridgeViewModel()
         let localEntries = mapFridgeEntries(fridgeViewModel)
@@ -91,7 +91,7 @@ final class BackfillService {
             return !backendIDs.contains(rowID)
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_missing_detected domain=\(domain) count=\(missing.count)")
 
         var enqueued = 0
         for mapped in missing {
@@ -107,11 +107,11 @@ final class BackfillService {
             if didEnqueue {
                 enqueued += 1
             } else {
-                print("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
+                SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_enqueue_failed domain=\(domain) item=\(mapped.localItemID)")
             }
         }
 
-        print("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=backfill_completed domain=\(domain) enqueued=\(enqueued)")
         return enqueued
     }
 

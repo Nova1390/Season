@@ -218,6 +218,11 @@ struct CreateRecipeView: View {
         case draft
     }
 
+    private enum ComposerScrollTarget {
+        static let importSection = "create_import_section"
+        static let importActions = "create_import_actions"
+    }
+
     struct PrefillDraft {
         let title: String
         let imageAssetName: String?
@@ -355,23 +360,31 @@ struct CreateRecipeView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            composerStateSummary
-                            heroComposerSection
-                            importFromLinkSection
-                            titleSection
-                            servingsSection
-                            smartImportReviewSummary
-                            ingredientsSection
-                            stepsSection
-                            socialLinksSection
-                            previewSection
-                            Color.clear.frame(height: 12)
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 24) {
+                                composerStateSummary
+                                heroComposerSection
+                                importFromLinkSection
+                                    .id(ComposerScrollTarget.importSection)
+                                titleSection
+                                servingsSection
+                                smartImportReviewSummary
+                                ingredientsSection
+                                stepsSection
+                                socialLinksSection
+                                previewSection
+                                Color.clear.frame(height: 132)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 14)
+                            .padding(.bottom, 24)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 24)
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: showImportTools) { _, isExpanded in
+                            guard isExpanded else { return }
+                            scrollImportActionsIntoView(using: scrollProxy)
+                        }
                     }
                 }
             }
@@ -496,7 +509,8 @@ struct CreateRecipeView: View {
 
                     TextField(localizer.text(.socialCaptionImportPrompt), text: $importCaptionRaw, axis: .vertical)
                         .lineLimit(3...5)
-                        .textInputAutocapitalization(.sentences)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         .textFieldStyle(.plain)
                         .createInputField(minHeight: 86, alignment: .topLeading)
                         .overlay {
@@ -525,6 +539,7 @@ struct CreateRecipeView: View {
                     }
                     .buttonStyle(SeasonSecondaryButtonStyle())
                     .disabled(!canRunSmartImport || isImportAnalyzing)
+                    .id(ComposerScrollTarget.importActions)
 
                     if let importConfidence {
                         ImportQualityBadge(confidence: importConfidence, localizer: localizer)
@@ -944,6 +959,15 @@ struct CreateRecipeView: View {
             onSaveDraft: { persistDraftIfNeeded(showFeedback: true) },
             onPublish: publish
         )
+    }
+
+    private func scrollImportActionsIntoView(using proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.88)) {
+                proxy.scrollTo(ComposerScrollTarget.importActions, anchor: .center)
+            }
+        }
     }
 
     private var composerStateSummary: some View {
@@ -1416,16 +1440,16 @@ struct CreateRecipeView: View {
               let initialDraftRecipeID,
               !hasAttemptedInitialDraftLoad else { return }
         hasAttemptedInitialDraftLoad = true
-        print("[SEASON_RECIPE] phase=draft_load_started id=\(initialDraftRecipeID)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_started id=\(initialDraftRecipeID)")
         guard let recipe = viewModel.recipe(forID: initialDraftRecipeID) else {
             draftLoadFailed = true
-            print("[SEASON_RECIPE] phase=draft_load_failed id=\(initialDraftRecipeID)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_failed id=\(initialDraftRecipeID)")
             return
         }
         applyDraftPrefill(Self.prefillDraft(from: recipe))
         currentDraftRecipeID = initialDraftRecipeID
         draftLoadFailed = false
-        print("[SEASON_RECIPE] phase=draft_load_succeeded id=\(initialDraftRecipeID)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=draft_load_succeeded id=\(initialDraftRecipeID)")
     }
 
     private func applyDraftPrefill(_ prefill: PrefillDraft) {
@@ -1516,16 +1540,16 @@ struct CreateRecipeView: View {
         defer { isPublishing = false }
 
         let currentAuthUserID = SupabaseService.shared.currentAuthenticatedUserID()?.uuidString.lowercased()
-        print("[SEASON_RECIPE] phase=publish_auth_check current_auth_user_id=\(currentAuthUserID ?? "nil")")
+        SeasonLog.debug("[SEASON_RECIPE] phase=publish_auth_check current_auth_user_id=\(currentAuthUserID ?? "nil")")
         guard currentAuthUserID != nil else {
-            print("[SEASON_RECIPE] phase=publish_blocked reason=unauthenticated")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_blocked reason=unauthenticated")
             publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
             showPublishError = true
             return
         }
 
         guard recipeLinksAreAllowedForPublish else {
-            print("[SEASON_RECIPE] phase=publish_blocked reason=disallowed_external_link")
+            SeasonLog.debug("[SEASON_RECIPE] phase=publish_blocked reason=disallowed_external_link")
             publishErrorMessage = localizer.text(.invalidRecipeLinkMessage)
             showPublishError = true
             return
@@ -1545,13 +1569,13 @@ struct CreateRecipeView: View {
                     imageData: jpegData,
                     recipeID: recipeID
                 )
-                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_ok recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_ok recipe_id=\(recipeID)")
             } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
-                print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
-                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_timeout recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_timeout recipe_id=\(recipeID)")
             } catch {
-                print("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_failed recipe_id=\(recipeID) error=\(error)")
-                print("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_failed recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=uploadRecipeImage phase=request_failed recipe_id=\(recipeID) error=\(error)")
+                SeasonLog.debug("[SEASON_RECIPE] phase=publish_continue_without_image reason=upload_failed recipe_id=\(recipeID)")
             }
         }
 
@@ -1589,14 +1613,14 @@ struct CreateRecipeView: View {
             return
         }
 
-        print("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
+        SeasonLog.debug("[SEASON_RECIPE] phase=publish_tap_remote_persist_started recipe_id=\(published.id)")
         do {
             try await SupabaseService.shared.createRecipe(published)
             viewModel.commitPublishedRecipeLocally(published)
-            print("[SEASON_RECIPE] phase=local_publish_committed_after_remote recipe_id=\(published.id)")
-            print("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
+            SeasonLog.debug("[SEASON_RECIPE] phase=local_publish_committed_after_remote recipe_id=\(published.id)")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=remote_publish_succeeded recipe_id=\(published.id)")
         } catch {
-            print("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=remote_publish_failed recipe_id=\(published.id) error=\(error)")
             if case SupabaseServiceError.unauthenticated = error {
                 publishErrorMessage = localizer.text(.publishAuthRequiredMessage)
             } else {
@@ -1662,7 +1686,7 @@ struct CreateRecipeView: View {
         let sourceURL = normalizedImportSourceURL ?? ""
         if !sourceURL.isEmpty, !isAllowedRecipeURL(sourceURL, context: .importSource) {
             importFeedbackText = localizer.text(.invalidRecipeLinkMessage)
-            print("[SEASON_IMPORT] phase=blocked reason=disallowed_external_link source_url=\(sourceURL)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=blocked reason=disallowed_external_link source_url=\(sourceURL)")
             return
         }
 
@@ -1678,10 +1702,10 @@ struct CreateRecipeView: View {
         let candidatesRequiringLLM = smartImportCandidates.filter(\.requiresLLM).count
         let smartImportAudit = SocialImportParser.computeAuditMetrics(candidates: smartImportCandidates)
 
-        print("[SEASON_IMPORT] phase=local_parse_done source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
-        print("[SEASON_IMPORT] phase=smart_import_decision candidates=\(smartImportCandidates.count) requires_llm=\(candidatesRequiringLLM)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=local_parse_done source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=smart_import_decision candidates=\(smartImportCandidates.count) requires_llm=\(candidatesRequiringLLM)")
         if SeasonLog.verbose {
-            print(
+            SeasonLog.debug(
                 "[SEASON_SMART_IMPORT_AUDIT] phase=client_preparse " +
                 "total=\(smartImportAudit.totalCandidates) " +
                 "exact=\(smartImportAudit.exactMatches) " +
@@ -1704,14 +1728,14 @@ struct CreateRecipeView: View {
             || refinement.needsRefinement
             || completenessFallback
         let refinementReasonsLog = refinement.reasons.isEmpty ? "[]" : "[\(refinement.reasons.joined(separator: ","))]"
-        print("[SEASON_IMPORT] phase=refinement_check needs_refinement=\(refinement.needsRefinement) reasons=\(refinementReasonsLog)")
-        print(
+        SeasonLog.debug("[SEASON_IMPORT] phase=refinement_check needs_refinement=\(refinement.needsRefinement) reasons=\(refinementReasonsLog)")
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=fallback_completeness_gate " +
             "trigger=\(completenessFallback) candidates=\(smartImportCandidates.count) " +
             "final_drafts=\(localDraftsForFallbackGate.count)"
         )
         if refinement.reasons.contains("unit_prefix_in_name") {
-            print("[SEASON_IMPORT] phase=refinement_check reason=unit_prefix_in_name")
+            SeasonLog.debug("[SEASON_IMPORT] phase=refinement_check reason=unit_prefix_in_name")
         }
 
         if shouldAttemptServerFallback {
@@ -1722,7 +1746,7 @@ struct CreateRecipeView: View {
             let fallbackTrigger = localSuggestion.confidence == .low
                 ? "low_confidence"
                 : (completenessFallback ? "completeness_gate" : "refinement_gate")
-            print("[SEASON_IMPORT] phase=server_fallback_attempted source_url=\(sourceURL) trigger=\(fallbackTrigger) reasons=\(refinementReasonsLog)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_attempted source_url=\(sourceURL) trigger=\(fallbackTrigger) reasons=\(refinementReasonsLog)")
             do {
                 let serverResponse = try await SupabaseService.shared.parseRecipeCaption(
                     caption: cleanedCaption,
@@ -1735,27 +1759,33 @@ struct CreateRecipeView: View {
                     sourceURL: sourceURL,
                     fallbackCaption: cleanedCaption
                 ), isServerSuggestionUseful(serverSuggestion) {
+                    let protectedSuggestion = serverSuggestionPreservingLocalGuarantees(
+                        serverSuggestion,
+                        localSuggestion: localSuggestion,
+                        parserCandidates: smartImportCandidates,
+                        caption: cleanedCaption
+                    )
                     importServerNoticeText = ""
-                    print("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(serverSuggestion.confidence.rawValue)")
-                    applyImportedSuggestion(serverSuggestion, sourceURL: sourceURL)
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_succeeded source_url=\(sourceURL) confidence=\(protectedSuggestion.confidence.rawValue)")
+                    applyImportedSuggestion(protectedSuggestion, sourceURL: sourceURL)
                     return
                 }
-                print("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_not_useful source_url=\(sourceURL)")
             } catch let rateLimitError as ParseRecipeCaptionInvokeError {
                 switch rateLimitError {
                 case .tooFrequent(let retryAfterSeconds):
-                    print("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=TOO_FREQUENT_REQUESTS retry_after_seconds=\(retryAfterSeconds ?? -1)")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=TOO_FREQUENT_REQUESTS retry_after_seconds=\(retryAfterSeconds ?? -1)")
                     importServerNoticeText = localizer.text(.importRateLimitCooldown)
                 case .dailyLimitReached:
-                    print("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=RATE_LIMIT_EXCEEDED retry_after_seconds=-1")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_rate_limited error_code=RATE_LIMIT_EXCEEDED retry_after_seconds=-1")
                     importServerNoticeText = localizer.text(.importRateLimitDaily)
                 }
             } catch {
-                print("[SEASON_IMPORT] phase=server_fallback_failed source_url=\(sourceURL) error=\(error)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=server_fallback_failed source_url=\(sourceURL) error=\(error)")
             }
         }
 
-        print("[SEASON_IMPORT] phase=kept_local_result source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=kept_local_result source_url=\(sourceURL) confidence=\(localSuggestion.confidence.rawValue)")
         applyImportedSuggestion(localSuggestion, sourceURL: sourceURL)
     }
 
@@ -1955,13 +1985,14 @@ struct CreateRecipeView: View {
         stepDrafts = mappedSteps.isEmpty ? [CreateStepDraft()] : mappedSteps
 
         if !suggestion.suggestedIngredients.isEmpty {
+            let sourceCaptionRaw = suggestion.sourceCaptionRaw ?? importCaptionRaw
             let mappedIngredientDrafts = dedupedImportedIngredientDrafts(suggestion.suggestedIngredients.map {
-                normalizedImportedIngredientDraft(from: $0)
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: sourceCaptionRaw)
             })
             ingredientDrafts = mappedIngredientDrafts
             for draft in mappedIngredientDrafts {
                 let displayName = ingredientDraftDisplayName(draft).trimmingCharacters(in: .whitespacesAndNewlines)
-                print("[SEASON_IMPORT] phase=draft_ingredient_mapped name=\(displayName) quantity_value=\(draft.quantityValue) quantity_unit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=draft_ingredient_mapped name=\(displayName) quantity_value=\(draft.quantityValue) quantity_unit=\(draft.quantityUnit.rawValue)")
             }
             importFeedbackText = importQualityFeedbackText(for: suggestion.confidence)
             showCaptionImportHint = suggestion.confidence == .low
@@ -1971,7 +2002,7 @@ struct CreateRecipeView: View {
             showCaptionImportHint = true
         }
 
-        print("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=import_applied source_url=\(sourceURL) extracted_ingredients=\(suggestion.suggestedIngredients.count) extracted_steps=\(mappedSteps.count) confidence=\(suggestion.confidence.rawValue)")
     }
 
     private func dedupedImportedIngredientDrafts(_ drafts: [CreateIngredientDraft]) -> [CreateIngredientDraft] {
@@ -2069,7 +2100,7 @@ struct CreateRecipeView: View {
         let mappedIngredients: [RecipeIngredient] = result.ingredients.compactMap { item in
             let cleanedName = removingEmojis(from: item.name).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleanedName.isEmpty else { return nil }
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] stage=A_raw_imported " +
                 "name=\(cleanedName) quantity=\(item.quantity.map { String($0) } ?? "nil") unit=\(item.unit ?? "nil")"
             )
@@ -2094,7 +2125,7 @@ struct CreateRecipeView: View {
                 ingredientName: cleanedName,
                 caption: fallbackCaption
             ) {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_recovered_from_raw " +
                     "name=\(cleanedName) recovered_name=\(recovered.cleanedName) " +
                     "quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
@@ -2114,7 +2145,7 @@ struct CreateRecipeView: View {
                     recovery: recovered
                 )
                 if shouldOverride {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=server_quantity_overridden_from_raw " +
                         "name=\(cleanedName) old_quantity=\(quantityValueString(quantity)) old_unit=\(unit.rawValue) " +
                         "new_quantity=\(quantityValueString(recovered.quantityValue)) new_unit=\(recovered.quantityUnit.rawValue)"
@@ -2212,6 +2243,180 @@ struct CreateRecipeView: View {
         return !titleCandidate.isEmpty && titleCandidate != "untitled recipe"
     }
 
+    private func serverSuggestionPreservingLocalGuarantees(
+        _ serverSuggestion: SocialImportSuggestion,
+        localSuggestion: SocialImportSuggestion,
+        parserCandidates: [SmartImportIngredientCandidate],
+        caption: String
+    ) -> SocialImportSuggestion {
+        let localDrafts = localSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: caption)
+        }
+        let serverDrafts = serverSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: caption)
+        }
+
+        let localLost = lostCandidateTexts(candidates: parserCandidates, drafts: localDrafts)
+        let serverLost = lostCandidateTexts(candidates: parserCandidates, drafts: serverDrafts)
+        let localDrifts = quantityUnitDrifts(candidates: parserCandidates, drafts: localDrafts)
+        let serverDrifts = quantityUnitDrifts(candidates: parserCandidates, drafts: serverDrafts)
+        let localDuplicates = duplicateDraftKeys(in: localDrafts)
+        let serverDuplicates = duplicateDraftKeys(in: serverDrafts)
+
+        let shouldPreserveLocalIngredients = !localSuggestion.suggestedIngredients.isEmpty && (
+            serverDrafts.isEmpty
+                || serverLost.count > localLost.count
+                || serverDrifts.count > localDrifts.count
+                || serverDuplicates.count > localDuplicates.count
+                || serverDrafts.count < localDrafts.count
+        )
+
+        let serverTitle = serverSuggestion.suggestedTitle?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let localTitle = localSuggestion.suggestedTitle?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let selectedTitle: String? = {
+            if isUsableImportedTitle(serverTitle) {
+                return serverTitle
+            }
+            if isUsableImportedTitle(localTitle) {
+                return localTitle
+            }
+            return serverTitle ?? localTitle
+        }()
+
+        let selectedIngredients = shouldPreserveLocalIngredients
+            ? localSuggestion.suggestedIngredients
+            : serverSuggestion.suggestedIngredients
+        let selectedSteps = serverSuggestion.suggestedSteps.isEmpty
+            ? localSuggestion.suggestedSteps
+            : serverSuggestion.suggestedSteps
+        let selectedConfidence = shouldPreserveLocalIngredients
+            ? localSuggestion.confidence
+            : serverSuggestion.confidence
+
+        SeasonLog.debug(
+            "[SEASON_IMPORT] phase=server_quality_gate " +
+            "preserve_local_ingredients=\(shouldPreserveLocalIngredients) " +
+            "local_lost=\(localLost.count) server_lost=\(serverLost.count) " +
+            "local_drifts=\(localDrifts.count) server_drifts=\(serverDrifts.count) " +
+            "local_duplicates=\(localDuplicates.count) server_duplicates=\(serverDuplicates.count) " +
+            "selected_title=\(selectedTitle ?? "nil") " +
+            "selected_steps=\(selectedSteps.count)"
+        )
+
+        return SocialImportSuggestion(
+            sourceURL: serverSuggestion.sourceURL ?? localSuggestion.sourceURL,
+            sourcePlatform: serverSuggestion.sourcePlatform ?? localSuggestion.sourcePlatform,
+            sourceCaptionRaw: serverSuggestion.sourceCaptionRaw ?? localSuggestion.sourceCaptionRaw,
+            suggestedTitle: selectedTitle,
+            suggestedIngredients: selectedIngredients,
+            suggestedSteps: selectedSteps,
+            confidence: selectedConfidence,
+            smartImportAgent: serverSuggestion.smartImportAgent ?? localSuggestion.smartImportAgent
+        )
+    }
+
+    private func isUsableImportedTitle(_ raw: String?) -> Bool {
+        let cleaned = raw?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        return !cleaned.isEmpty && cleaned != "untitled recipe"
+    }
+
+    private func lostCandidateTexts(
+        candidates: [SmartImportIngredientCandidate],
+        drafts: [CreateIngredientDraft]
+    ) -> [String] {
+        candidates
+            .filter { matchedDraftIndex(for: $0, drafts: drafts) == nil }
+            .map(\.rawText)
+    }
+
+    private func matchedDraftIndex(
+        for candidate: SmartImportIngredientCandidate,
+        drafts: [CreateIngredientDraft]
+    ) -> Int? {
+        if let matchedIngredientID = candidate.catalogMatch.matchedIngredientId {
+            for (index, draft) in drafts.enumerated() {
+                if !draft.produceID.isEmpty && matchedIngredientID == "produce:\(draft.produceID)" {
+                    return index
+                }
+                if !draft.basicIngredientID.isEmpty && matchedIngredientID == "basic:\(draft.basicIngredientID)" {
+                    return index
+                }
+            }
+        }
+
+        let normalizedCandidate = normalizedIngredientMatchText(candidate.normalizedText)
+        guard !normalizedCandidate.isEmpty else { return nil }
+        for (index, draft) in drafts.enumerated() {
+            let normalizedDraft = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
+            guard !normalizedDraft.isEmpty else { continue }
+            let draftQueries = Set(importedIngredientMatchQueries(from: ingredientDraftDisplayName(draft)))
+            if normalizedDraft == normalizedCandidate
+                || draftQueries.contains(normalizedCandidate)
+                || queryContainsPhrase(normalizedDraft, phrase: normalizedCandidate)
+                || queryContainsPhrase(normalizedCandidate, phrase: normalizedDraft) {
+                return index
+            }
+        }
+        return nil
+    }
+
+    private func quantityUnitDrifts(
+        candidates: [SmartImportIngredientCandidate],
+        drafts: [CreateIngredientDraft]
+    ) -> [String] {
+        candidates.compactMap { candidate in
+            guard let draftIndex = matchedDraftIndex(for: candidate, drafts: drafts),
+                  drafts.indices.contains(draftIndex) else { return nil }
+            let draft = drafts[draftIndex]
+            var drifts: [String] = []
+
+            if let candidateQuantity = candidate.possibleQuantity {
+                let draftQuantity = parsedQuantityValue(draft.quantityValue)
+                if draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || abs(candidateQuantity - draftQuantity) > 0.001 {
+                    drifts.append("quantity \(candidateQuantity)->\(draft.quantityValue.isEmpty ? "empty" : draft.quantityValue)")
+                }
+            }
+
+            if let candidateUnit = candidate.possibleUnit,
+               candidateUnit != draft.quantityUnit.rawValue {
+                drifts.append("unit \(candidateUnit)->\(draft.quantityUnit.rawValue)")
+            }
+
+            guard !drifts.isEmpty else { return nil }
+            return "\(candidate.rawText): \(drifts.joined(separator: ", "))"
+        }
+    }
+
+    private func duplicateDraftKeys(in drafts: [CreateIngredientDraft]) -> [String] {
+        var counts: [String: Int] = [:]
+        for draft in drafts {
+            let key = qualityGateEntityID(for: draft)
+            if !key.isEmpty {
+                counts[key, default: 0] += 1
+                continue
+            }
+            let normalizedName = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
+            if !normalizedName.isEmpty {
+                counts["name:\(normalizedName)", default: 0] += 1
+            }
+        }
+        return counts
+            .filter { $0.value > 1 }
+            .map(\.key)
+            .sorted()
+    }
+
+    private func qualityGateEntityID(for draft: CreateIngredientDraft) -> String {
+        if !draft.produceID.isEmpty { return "produce:\(draft.produceID)" }
+        if !draft.basicIngredientID.isEmpty { return "basic:\(draft.basicIngredientID)" }
+        return draft.customName.isEmpty ? draft.searchText : draft.customName
+    }
+
     private func importQualityFeedbackText(for confidence: SocialImportConfidence) -> String {
         switch confidence {
         case .high:
@@ -2227,36 +2432,53 @@ struct CreateRecipeView: View {
         from ingredient: RecipeIngredient,
         sourceCaptionRaw: String? = nil
     ) -> CreateIngredientDraft {
-        print("[SEASON_IMPORT] stage=A_raw_imported name=\(ingredient.name) quantity=\(ingredient.quantityValue) unit=\(ingredient.quantityUnit.rawValue)")
+        SeasonLog.debug("[SEASON_IMPORT] stage=A_raw_imported name=\(ingredient.name) quantity=\(ingredient.quantityValue) unit=\(ingredient.quantityUnit.rawValue)")
+        let trimmedName = removingEmojis(from: ingredient.name).trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawSourceLine = ingredient.rawIngredientLine?
+            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
+            : trimmedName
+        let explicitRecovery = explicitQuantityRecoveryCandidate(
+            ingredientName: trimmedName.isEmpty ? ingredient.name : trimmedName,
+            rawSourceLine: rawSourceLine,
+            caption: sourceCaptionRaw ?? importCaptionRaw
+        )
+
         let hasCatalogMapping = ingredient.produceID != nil || ingredient.basicIngredientID != nil
         if hasCatalogMapping {
+            let mappedRecovery = explicitRecovery.flatMap { recovery in
+                shouldOverrideServerQuantityWithRaw(ingredient: ingredient, recovery: recovery) ? recovery : nil
+            }
+            let mappedQuantityValue = mappedRecovery?.quantityValue ?? ingredient.quantityValue
+            let mappedQuantityUnit = mappedRecovery?.quantityUnit ?? ingredient.quantityUnit
+            let mappedSurfaceName = explicitRecovery?.sourceLine ?? ingredient.rawIngredientLine ?? ingredient.name
+
             if let produceID = ingredient.produceID,
                let item = viewModel.produceItem(forID: produceID) {
                 let draft = catalogMatchedImportedDraft(
                     from: .produce(item),
-                    quantityValue: ingredient.quantityValue,
-                    quantityUnit: ingredient.quantityUnit,
-                    importedSurfaceName: ingredient.rawIngredientLine ?? ingredient.name
+                    quantityValue: mappedQuantityValue,
+                    quantityUnit: mappedQuantityUnit,
+                    importedSurfaceName: mappedSurfaceName
                 )
-                print("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
             if let basicIngredientID = ingredient.basicIngredientID,
                let item = viewModel.basicIngredient(forID: basicIngredientID) {
                 let draft = catalogMatchedImportedDraft(
                     from: .basic(item),
-                    quantityValue: ingredient.quantityValue,
-                    quantityUnit: ingredient.quantityUnit,
-                    importedSurfaceName: ingredient.rawIngredientLine ?? ingredient.name
+                    quantityValue: mappedQuantityValue,
+                    quantityUnit: mappedQuantityUnit,
+                    importedSurfaceName: mappedSurfaceName
                 )
-                print("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=pre_mapped")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
         }
 
-        let trimmedName = removingEmojis(from: ingredient.name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
             return customImportedIngredientDraft(name: "")
         }
@@ -2270,7 +2492,7 @@ struct CreateRecipeView: View {
             // Preserve natural "q.b." lines without forcing numeric measurement semantics.
             let cleanedName = normalizedCommonIngredientPhrase(cleanedQuantoBastaName(from: trimmedName))
             if let resolved = resolveImportedIngredientMatch(query: cleanedName) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
                 return catalogMatchedImportedDraft(
                     from: resolved,
                     quantityValue: 1,
@@ -2280,37 +2502,27 @@ struct CreateRecipeView: View {
             return customImportedIngredientDraft(name: cleanedName)
         }
 
-        let rawSourceLine = ingredient.rawIngredientLine?
-            .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-            ? ingredient.rawIngredientLine!.trimmingCharacters(in: .whitespacesAndNewlines)
-            : trimmedName
-        let explicitRecovery = explicitQuantityRecoveryCandidate(
-            ingredientName: trimmedName,
-            rawSourceLine: rawSourceLine,
-            caption: sourceCaptionRaw ?? importCaptionRaw
-        )
-
         if let recovered = explicitRecovery,
            shouldOverrideServerQuantityWithRaw(ingredient: ingredient, recovery: recovered) {
             let recoveredQuery = normalizedCommonIngredientPhrase(recovered.cleanedName)
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_from_raw " +
                 "name=\(trimmedName) recovered_name=\(recoveredQuery) " +
                 "quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
             )
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=server_quantity_overridden_from_raw " +
                 "name=\(trimmedName) old_quantity=\(quantityValueString(ingredient.quantityValue)) old_unit=\(ingredient.quantityUnit.rawValue) " +
                 "new_quantity=\(quantityValueString(recovered.quantityValue)) new_unit=\(recovered.quantityUnit.rawValue)"
             )
 
             if let resolved = resolveImportedIngredientMatch(query: recoveredQuery) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(recoveredQuery) match=\(resolvedDecisionLabel(resolved))")
-                print(
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(recoveredQuery) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                     "name=\(recoveredQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                 )
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                     "name=\(recoveredQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                 )
@@ -2318,11 +2530,11 @@ struct CreateRecipeView: View {
                     from: resolved,
                     quantityValue: recovered.quantityValue,
                     quantityUnit: recovered.quantityUnit,
-                    importedSurfaceName: trimmedName
+                    importedSurfaceName: recovered.sourceLine
                 )
             }
 
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(recoveredQuery)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(recoveredQuery)")
             return CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2340,13 +2552,13 @@ struct CreateRecipeView: View {
                 normalizedImportedNameWithoutLeadingUnit(trimmedName, unit: ingredient.quantityUnit)
             )
             if let resolved = resolveImportedIngredientMatch(query: cleanedName) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(cleanedName) match=\(resolvedDecisionLabel(resolved))")
                 if let recovered = explicitRecovery {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                         "name=\(cleanedName) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                         "name=\(cleanedName) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
@@ -2354,7 +2566,7 @@ struct CreateRecipeView: View {
                         from: resolved,
                         quantityValue: recovered.quantityValue,
                         quantityUnit: recovered.quantityUnit,
-                        importedSurfaceName: trimmedName
+                        importedSurfaceName: recovered.sourceLine
                     )
                 }
                 let draft: CreateIngredientDraft
@@ -2378,13 +2590,13 @@ struct CreateRecipeView: View {
                         quantityUnit: ingredient.quantityUnit
                     )
                 }
-                print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
-                print("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
 
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(cleanedName)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(cleanedName)")
             let draft = CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2393,9 +2605,9 @@ struct CreateRecipeView: View {
                 quantityValue: "",
                 quantityUnit: ingredient.quantityUnit
             )
-            print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
-            print("[SEASON_IMPORT] stage=C_match_decision decision=custom")
-            print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(cleanedName) quantityValue=empty quantityUnit=\(ingredient.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=custom")
+            SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
             return draft
         }
 
@@ -2412,17 +2624,17 @@ struct CreateRecipeView: View {
             let preservedQuantity = normalizedMeasured.quantityValue
             let cleanedName = normalizedMeasured.cleanedName
             let matchQuery = normalizedCommonIngredientPhrase(cleanedName.isEmpty ? trimmedName : cleanedName)
-            print("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(matchQuery) quantityValue=\(quantityValueString(preservedQuantity)) quantityUnit=\(preservedUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=B_after_normalization cleanedName=\(matchQuery) quantityValue=\(quantityValueString(preservedQuantity)) quantityUnit=\(preservedUnit.rawValue)")
             if let resolved = resolveImportedIngredientMatch(query: matchQuery) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(matchQuery) match=\(resolvedDecisionLabel(resolved))")
-                print("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(matchQuery) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=\(resolvedDecisionLabel(resolved))")
                 if let recovered = explicitRecovery,
                    shouldOverrideServerQuantityWithRaw(ingredient: ingredient, recovery: recovered) {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=explicit_quantity_applied_to_final_draft " +
                         "name=\(matchQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_IMPORT] phase=final_measured_quantity_value " +
                         "name=\(matchQuery) quantity=\(quantityValueString(recovered.quantityValue)) unit=\(recovered.quantityUnit.rawValue)"
                     )
@@ -2430,22 +2642,22 @@ struct CreateRecipeView: View {
                         from: resolved,
                         quantityValue: recovered.quantityValue,
                         quantityUnit: recovered.quantityUnit,
-                        importedSurfaceName: trimmedName
+                        importedSurfaceName: recovered.sourceLine
                     )
-                    print("[SEASON_IMPORT] stage=D_final_draft searchText=\(recoveredDraft.searchText) customName=\(recoveredDraft.customName) quantityValue=\(recoveredDraft.quantityValue) quantityUnit=\(recoveredDraft.quantityUnit.rawValue)")
+                    SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(recoveredDraft.searchText) customName=\(recoveredDraft.customName) quantityValue=\(recoveredDraft.quantityValue) quantityUnit=\(recoveredDraft.quantityUnit.rawValue)")
                     return recoveredDraft
                 }
                 let draft = catalogMatchedImportedDraft(
                     from: resolved,
                     quantityValue: preservedQuantity,
                     quantityUnit: preservedUnit,
-                    importedSurfaceName: trimmedName
+                    importedSurfaceName: explicitRecovery?.sourceLine ?? rawSourceLine
                 )
-                print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+                SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
                 return draft
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(matchQuery)")
-            print("[SEASON_IMPORT] stage=C_match_decision decision=custom")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(matchQuery)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=C_match_decision decision=custom")
             let draft = CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2454,14 +2666,14 @@ struct CreateRecipeView: View {
                 quantityValue: quantityValueString(preservedQuantity),
                 quantityUnit: preservedUnit
             )
-            print("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
+            SeasonLog.debug("[SEASON_IMPORT] stage=D_final_draft searchText=\(draft.searchText) customName=\(draft.customName) quantityValue=\(draft.quantityValue) quantityUnit=\(draft.quantityUnit.rawValue)")
             return draft
         }
 
         if let fractional = parsedFractionalPieceIngredient(from: trimmedName) {
             let normalizedFractionalCore = normalizedCommonIngredientPhrase(fractional.coreName)
             if let resolved = resolveImportedIngredientMatch(query: normalizedFractionalCore) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFractionalCore) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFractionalCore) match=\(resolvedDecisionLabel(resolved))")
                 return catalogMatchedImportedDraft(
                     from: resolved,
                     quantityValue: fractional.quantity,
@@ -2469,7 +2681,7 @@ struct CreateRecipeView: View {
                     importedSurfaceName: fractional.coreName
                 )
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFractionalCore)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFractionalCore)")
             return CreateIngredientDraft(
                 produceID: "",
                 basicIngredientID: "",
@@ -2486,21 +2698,23 @@ struct CreateRecipeView: View {
             let normalizedBare = normalizedCommonIngredientPhrase(trimmedName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: trimmedName, normalized: normalizedBare)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedBare) {
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
                 }
+                let recoveredQuantity = explicitRecovery?.quantityValue ?? max(1, ingredient.quantityValue)
+                let recoveredUnit = explicitRecovery?.quantityUnit ?? ingredient.quantityUnit
                 return catalogMatchedImportedDraft(
                     from: resolved,
-                    quantityValue: max(1, ingredient.quantityValue),
-                    quantityUnit: ingredient.quantityUnit,
-                    importedSurfaceName: trimmedName
+                    quantityValue: recoveredQuantity,
+                    quantityUnit: recoveredUnit,
+                    importedSurfaceName: explicitRecovery?.sourceLine ?? trimmedName
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
             }
             return customImportedIngredientDraft(name: normalizedBare)
         }
@@ -2511,21 +2725,23 @@ struct CreateRecipeView: View {
             let normalizedBare = normalizedCommonIngredientPhrase(trimmedName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: trimmedName, normalized: normalizedBare)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(trimmedName) normalized=\(normalizedBare)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedBare) {
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedBare) match=\(resolvedDecisionLabel(resolved))")
                 }
+                let recoveredQuantity = explicitRecovery?.quantityValue ?? max(1, ingredient.quantityValue)
+                let recoveredUnit = explicitRecovery?.quantityUnit ?? ingredient.quantityUnit
                 return catalogMatchedImportedDraft(
                     from: resolved,
-                    quantityValue: max(1, ingredient.quantityValue),
-                    quantityUnit: ingredient.quantityUnit,
-                    importedSurfaceName: trimmedName
+                    quantityValue: recoveredQuantity,
+                    quantityUnit: recoveredUnit,
+                    importedSurfaceName: explicitRecovery?.sourceLine ?? trimmedName
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedBare)")
             }
             return customImportedIngredientDraft(name: normalizedBare)
         }
@@ -2548,12 +2764,12 @@ struct CreateRecipeView: View {
             let normalizedFallback = normalizedCommonIngredientPhrase(fallbackName)
             let logPieceFlow = isNormalizedPiecePhraseCandidate(original: fallbackName, normalized: normalizedFallback)
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(fallbackName) normalized=\(normalizedFallback)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_sent_to_unified raw=\(fallbackName) normalized=\(normalizedFallback)")
             }
             if let resolved = resolveImportedIngredientMatch(query: normalizedFallback) {
-                print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
+                SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
                 if logPieceFlow {
-                    print("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
+                    SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_matched_unified normalized=\(normalizedFallback) match=\(resolvedDecisionLabel(resolved))")
                 }
                 return catalogMatchedImportedDraft(
                     from: resolved,
@@ -2563,9 +2779,9 @@ struct CreateRecipeView: View {
                 )
             }
             if logPieceFlow {
-                print("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedFallback)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_piece_phrase_fell_back_custom normalized=\(normalizedFallback)")
             }
-            print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallback)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallback)")
             return customImportedIngredientDraft(name: trimmedName)
         }
 
@@ -2589,7 +2805,7 @@ struct CreateRecipeView: View {
 
         let normalizedFallbackName = normalizedCommonIngredientPhrase(fallbackName)
         if let resolved = resolveImportedIngredientMatch(query: normalizedFallbackName) {
-            print("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallbackName) match=\(resolvedDecisionLabel(resolved))")
+            SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_matched_to_catalog raw=\(trimmedName) normalized=\(normalizedFallbackName) match=\(resolvedDecisionLabel(resolved))")
             return catalogMatchedImportedDraft(
                 from: resolved,
                 quantityValue: quantityValue,
@@ -2598,7 +2814,7 @@ struct CreateRecipeView: View {
             )
         }
 
-        print("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallbackName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=ingredient_kept_custom raw=\(trimmedName) normalized=\(normalizedFallbackName)")
         return CreateIngredientDraft(
             produceID: "",
             basicIngredientID: "",
@@ -2721,6 +2937,8 @@ struct CreateRecipeView: View {
         switch resolved {
         case .basic(let item) where item.id == "capers":
             return normalized == "capperi sotto sale"
+        case .basic(let item) where item.id == "oats":
+            return normalized == "fiocchi d avena"
         default:
             return false
         }
@@ -2741,7 +2959,7 @@ struct CreateRecipeView: View {
             canonicalName: canonicalName
         )
         let finalDisplayName = preservedSurfaceName ?? canonicalName
-        print(
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=specificity_status " +
             "raw=\(surface) matched_entity_id=\(matchedEntityID(for: resolved)) " +
             "final_display_name=\(finalDisplayName) status=\(status.rawValue)"
@@ -2798,6 +3016,11 @@ struct CreateRecipeView: View {
         }
         cleaned = cleaned.replacingOccurrences(
             of: #"(?i)\bq\s*\.?\s*b\s*\.?\b|\bqb\b|\bquanto basta\b"#,
+            with: "",
+            options: .regularExpression
+        )
+        cleaned = cleaned.replacingOccurrences(
+            of: #"(?i)\bmezzo\b|\bmezza\b|\bhalf\b"#,
             with: "",
             options: .regularExpression
         )
@@ -2935,8 +3158,12 @@ struct CreateRecipeView: View {
         guard !normalized.isEmpty else { return false }
         if isQuantoBastaIngredient(rawSurfaceName) { return false }
 
-        let explicitUnitPattern = #"(?i)\b\d+(?:[.,]\d+)?\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi)\b"#
+        let explicitUnitPattern = #"(?i)\b\d+(?:[.,]\d+)?\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi|fetta|fette|slice|slices)\b"#
         if rawSurfaceName.range(of: explicitUnitPattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        if rawSurfaceName.range(of: #"(?i)\bmezzo\b|\bmezza\b|\bhalf\b"#, options: .regularExpression) != nil {
             return true
         }
 
@@ -3031,10 +3258,10 @@ struct CreateRecipeView: View {
             || abs(parsedQuantityValue(draft.quantityValue) - 100) < 0.001 else { return draft }
         guard isNonCountableIngredientName(ingredientName) else { return draft }
 
-        print("[SEASON_IMPORT] phase=non_countable_detected ingredient=\(ingredientName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=non_countable_detected ingredient=\(ingredientName)")
         var updated = draft
         updated.quantityValue = ""
-        print("[SEASON_IMPORT] phase=non_countable_quantity_removed ingredient=\(ingredientName)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=non_countable_quantity_removed ingredient=\(ingredientName)")
         return updated
     }
 
@@ -3159,10 +3386,12 @@ struct CreateRecipeView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedLine.isEmpty else { return nil }
         guard !isQuantoBastaIngredient(cleanedLine) else { return nil }
-        let forwardPattern = #"(?i)(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi)\s+([^,;\n]+)"#
-        let reversedPattern = #"(?i)^([^,;\n]+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi)\s*$"#
+        let forwardPattern = #"(?i)(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi|fetta|fette|slice|slices)\s+([^,;\n]+)"#
+        let reversedPattern = #"(?i)^([^,;\n]+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|tbsp|tsp|cucchiaio|cucchiai|cucchiaino|cucchiaini|spicchio|spicchi|clove|cloves|piece|pieces|pezzo|pezzi|fetta|fette|slice|slices)\s*$"#
         let tomatoBareCountPattern = #"(?i)^((?:pomodoro|pomodori|pomodorino|pomodorini)(?:\s+san\s+marzano)?)\s+(\d+(?:[.,]\d+)?)\s*$"#
         let bareCountPattern = #"(?i)^([[:alpha:]'’ ]+?)\s+(\d+(?:[.,]\d+)?)\s*$"#
+        let trailingHalfPattern = #"(?i)^([[:alpha:]'’ ]+?)\s+(mezzo|mezza|half)\s*$"#
+        let leadingHalfPattern = #"(?i)^(mezzo|mezza|half)\s+([[:alpha:]'’ ]+?)\s*$"#
 
         func mappedUnitAndQuantity(_ quantityRawValue: String, unitRawValue: String) -> (value: Double, unit: RecipeQuantityUnit)? {
             let normalizedQuantity = quantityRawValue
@@ -3193,6 +3422,8 @@ struct CreateRecipeView: View {
                 return (baseQuantity, .tsp)
             case "spicchio", "spicchi", "clove", "cloves":
                 return (baseQuantity, .clove)
+            case "fetta", "fette", "slice", "slices":
+                return (baseQuantity, .slice)
             case "piece", "pieces", "pezzo", "pezzi":
                 return (baseQuantity, .piece)
             default:
@@ -3245,7 +3476,7 @@ struct CreateRecipeView: View {
             guard !recoveredName.isEmpty,
                   let mapped = mappedUnitAndQuantity(quantityRaw, unitRawValue: unitRaw) else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_reversed_format " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(mapped.value)) unit=\(mapped.unit.rawValue)"
@@ -3254,6 +3485,52 @@ struct CreateRecipeView: View {
             return ExplicitQuantityRecovery(
                 quantityValue: mapped.value,
                 quantityUnit: mapped.unit,
+                cleanedName: recoveredName,
+                sourceLine: cleanedLine
+            )
+        }
+
+        // Natural language counts such as "limone mezzo" or "mezza cipolla" are
+        // common in creator captions and must remain explicit piece quantities.
+        if let regex = try? NSRegularExpression(pattern: trailingHalfPattern, options: [.caseInsensitive]),
+           let match = regex.firstMatch(in: cleanedLine, options: [], range: fullRange),
+           match.numberOfRanges == 3 {
+            let recoveredName = normalizedRecoveredName(nsRangeString(match.range(at: 1), in: cleanedLine))
+            guard !recoveredName.isEmpty,
+                  !isNonCountableIngredientName(recoveredName),
+                  resolveImportedIngredientMatch(query: recoveredName) != nil else { return nil }
+
+            SeasonLog.debug(
+                "[SEASON_IMPORT] phase=explicit_quantity_recovered_fractional_piece " +
+                "line=\(cleanedLine) name=\(recoveredName) " +
+                "quantity=\(quantityValueString(0.5)) unit=\(RecipeQuantityUnit.piece.rawValue)"
+            )
+
+            return ExplicitQuantityRecovery(
+                quantityValue: 0.5,
+                quantityUnit: .piece,
+                cleanedName: recoveredName,
+                sourceLine: cleanedLine
+            )
+        }
+
+        if let regex = try? NSRegularExpression(pattern: leadingHalfPattern, options: [.caseInsensitive]),
+           let match = regex.firstMatch(in: cleanedLine, options: [], range: fullRange),
+           match.numberOfRanges == 3 {
+            let recoveredName = normalizedRecoveredName(nsRangeString(match.range(at: 2), in: cleanedLine))
+            guard !recoveredName.isEmpty,
+                  !isNonCountableIngredientName(recoveredName),
+                  resolveImportedIngredientMatch(query: recoveredName) != nil else { return nil }
+
+            SeasonLog.debug(
+                "[SEASON_IMPORT] phase=explicit_quantity_recovered_fractional_piece " +
+                "line=\(cleanedLine) name=\(recoveredName) " +
+                "quantity=\(quantityValueString(0.5)) unit=\(RecipeQuantityUnit.piece.rawValue)"
+            )
+
+            return ExplicitQuantityRecovery(
+                quantityValue: 0.5,
+                quantityUnit: .piece,
                 cleanedName: recoveredName,
                 sourceLine: cleanedLine
             )
@@ -3272,7 +3549,7 @@ struct CreateRecipeView: View {
                   let quantityValue = Double(quantityRaw),
                   quantityValue > 0 else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_tomato_bare_count " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(quantityValue)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3302,7 +3579,7 @@ struct CreateRecipeView: View {
                   let quantityValue = Double(quantityRaw),
                   quantityValue > 0 else { return nil }
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_recovered_bare_count " +
                 "line=\(cleanedLine) name=\(recoveredName) " +
                 "quantity=\(quantityValueString(quantityValue)) unit=\(RecipeQuantityUnit.piece.rawValue)"
@@ -3334,35 +3611,35 @@ struct CreateRecipeView: View {
         caption: String
     ) -> ExplicitQuantityRecovery? {
         let normalizedIngredient = normalizedIngredientMatchText(ingredientName)
-        print(
+        SeasonLog.debug(
             "[SEASON_IMPORT] phase=explicit_quantity_recovery_start " +
             "ingredient=\(ingredientName) normalized=\(normalizedIngredient) raw_source=\(rawSourceLine)"
         )
 
         // Prioritize exact line match (raw source line) before caption-wide scan.
         if let direct = parsedExplicitQuantityRecovery(from: rawSourceLine) {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_found " +
                 "source=raw_line line=\(direct.sourceLine) name=\(direct.cleanedName) " +
                 "quantity=\(quantityValueString(direct.quantityValue)) unit=\(direct.quantityUnit.rawValue)"
             )
             return direct
         } else {
-            print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=raw_line reason=regex_no_match line=\(rawSourceLine)")
+            SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=raw_line reason=regex_no_match line=\(rawSourceLine)")
         }
 
         let lines = explicitQuantityRecoveryScanLines(from: caption)
-        print("[SEASON_IMPORT] phase=explicit_quantity_caption_scan line_count=\(lines.count)")
+        SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_caption_scan line_count=\(lines.count)")
 
         for line in lines {
             if let candidate = parsedExplicitQuantityRecovery(from: line) {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_candidate_found " +
                     "source=caption_line line=\(candidate.sourceLine) name=\(candidate.cleanedName) " +
                     "quantity=\(quantityValueString(candidate.quantityValue)) unit=\(candidate.quantityUnit.rawValue)"
                 )
             } else {
-                print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption_line reason=regex_no_match line=\(line)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption_line reason=regex_no_match line=\(line)")
             }
         }
 
@@ -3373,7 +3650,7 @@ struct CreateRecipeView: View {
             return fromCaption
         }
 
-        print("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption reason=no_candidate_accepted")
+        SeasonLog.debug("[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected source=caption reason=no_candidate_accepted")
         return nil
     }
 
@@ -3385,7 +3662,7 @@ struct CreateRecipeView: View {
             recovery.cleanedName,
             isCompatibleWith: ingredient.name
         ) else {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected " +
                 "source=caption reason=target_mismatch target=\(ingredient.name) recovered=\(recovery.cleanedName)"
             )
@@ -3453,7 +3730,7 @@ struct CreateRecipeView: View {
             }
 
             guard score > 0 else {
-                print(
+                SeasonLog.debug(
                     "[SEASON_IMPORT] phase=explicit_quantity_candidate_rejected " +
                     "source=caption_line reason=name_mismatch line=\(recovery.sourceLine) " +
                     "target=\(target) recovered=\(recoveredName)"
@@ -3466,7 +3743,7 @@ struct CreateRecipeView: View {
         }
 
         if let best {
-            print(
+            SeasonLog.debug(
                 "[SEASON_IMPORT] phase=explicit_quantity_candidate_accepted " +
                 "line=\(best.recovery.sourceLine) name=\(best.recovery.cleanedName) " +
                 "quantity=\(quantityValueString(best.recovery.quantityValue)) unit=\(best.recovery.quantityUnit.rawValue)"
@@ -3692,13 +3969,17 @@ struct CreateRecipeView: View {
     }
 
     private func supportedUnits(for draft: CreateIngredientDraft) -> [RecipeQuantityUnit] {
+        func includingSelectedUnit(_ units: [RecipeQuantityUnit]) -> [RecipeQuantityUnit] {
+            units.contains(draft.quantityUnit) ? units : units + [draft.quantityUnit]
+        }
+
         if !draft.produceID.isEmpty {
-            return viewModel.quantityProfile(forProduceID: draft.produceID).supportedUnits
+            return includingSelectedUnit(viewModel.quantityProfile(forProduceID: draft.produceID).supportedUnits)
         }
         if let basic = viewModel.basicIngredient(forID: draft.basicIngredientID) {
-            return basic.unitProfile.supportedUnits
+            return includingSelectedUnit(basic.unitProfile.supportedUnits)
         }
-        return [.g, .piece]
+        return includingSelectedUnit([.g, .piece])
     }
 
     private func ingredientReviewBadges(for draft: CreateIngredientDraft) -> [String] {
@@ -3840,7 +4121,7 @@ struct CreateRecipeView: View {
 
     private func observeUnresolvedCustomIngredients(latestRecipeID: String?) {
         let ingredients = recipeIngredientsForPublish
-        print("[SEASON_OBSERVATION] phase=observation_pipeline_stage=final_draft ingredient_count=\(ingredients.count)")
+        SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_pipeline_stage=final_draft ingredient_count=\(ingredients.count)")
         let observations = unresolvedCustomIngredientObservations(
             from: ingredients,
             latestRecipeID: latestRecipeID
@@ -3872,10 +4153,10 @@ struct CreateRecipeView: View {
                 ingredientType = "custom"
             }
 
-            print("[SEASON_OBSERVATION] phase=observation_evaluated_final ingredient=\(finalName) type=\(ingredientType)")
+            SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_evaluated_final ingredient=\(finalName) type=\(ingredientType)")
 
             if ingredientType != "custom" {
-                print("[SEASON_OBSERVATION] phase=observation_skipped_final_resolved ingredient=\(finalName) type=\(ingredientType)")
+                SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_skipped_final_resolved ingredient=\(finalName) type=\(ingredientType)")
                 continue
             }
 
@@ -3893,7 +4174,7 @@ struct CreateRecipeView: View {
                     latestRecipeID: latestRecipeID
                 )
             )
-            print("[SEASON_OBSERVATION] phase=observation_logged_final_unresolved ingredient=\(finalName)")
+            SeasonLog.debug("[SEASON_OBSERVATION] phase=observation_logged_final_unresolved ingredient=\(finalName)")
         }
 
         return observations
@@ -3960,8 +4241,14 @@ struct CreateRecipeView: View {
         if let forcedMeat = forcedMeatMatch(for: query) {
             return forcedMeat
         }
+        if let forcedCorn = forcedCornMatch(for: query) {
+            return forcedCorn
+        }
         if let forcedPastaMatch = forcedPastaOverCondimentMatch(for: query) {
             return forcedPastaMatch
+        }
+        if let forcedPreservedPantryMatch = forcedPreservedPantryMatch(for: query) {
+            return forcedPreservedPantryMatch
         }
 
         let normalizedQueries = importedIngredientMatchQueries(from: query)
@@ -4208,7 +4495,7 @@ struct CreateRecipeView: View {
 
         for entry in replacements {
             if normalized.range(of: entry.pattern, options: .regularExpression) != nil {
-                print("[SEASON_IMPORT] phase=normalized_common_phrase raw=\(normalized) normalized=\(entry.replacement)")
+                SeasonLog.debug("[SEASON_IMPORT] phase=normalized_common_phrase raw=\(normalized) normalized=\(entry.replacement)")
                 return entry.replacement
             }
         }
@@ -4306,13 +4593,47 @@ struct CreateRecipeView: View {
         if query == term {
             return 3
         }
-        if query.hasPrefix(term) || term.hasPrefix(query) {
+        if query.hasPrefix("\(term) ") || term.hasPrefix("\(query) ") {
             return 2
         }
-        if term.count >= 4 && query.contains(term) {
+        if term.count >= 4 && queryContainsPhrase(query, phrase: term) {
             return 1
         }
         return nil
+    }
+
+    private func forcedCornMatch(for raw: String) -> ImportedIngredientMatch? {
+        let normalized = normalizedImportSurfaceWithoutLexical(raw)
+        if queryContainsPhrase(normalized, phrase: "mais in scatola"),
+           let cannedCorn = BasicIngredientCatalog.all.first(where: { $0.id == "canned_corn" }) {
+            return .basic(cannedCorn)
+        }
+        if normalized == "mais" || normalized == "mais dolce",
+           let corn = viewModel.produceItems.first(where: { $0.id == "corn" }) {
+            return .produce(corn)
+        }
+        return nil
+    }
+
+    private func forcedPreservedPantryMatch(for raw: String) -> ImportedIngredientMatch? {
+        let normalized = normalizedImportSurfaceWithoutLexical(raw)
+        let targetID: String?
+
+        if protectedImportSurface(normalized, contains: ["tonno sott olio", "tonno sottolio", "tonno"]) {
+            targetID = "tuna"
+        } else if protectedImportSurface(normalized, contains: ["acciughe sott olio", "acciughe sottolio", "acciughe"]) {
+            targetID = "anchovies"
+        } else if protectedImportSurface(normalized, contains: ["capperi sotto sale", "capperi"]) {
+            targetID = "capers"
+        } else {
+            targetID = nil
+        }
+
+        guard let targetID,
+              let pantryItem = localImportBasicIngredient(forID: targetID) else {
+            return nil
+        }
+        return .basic(pantryItem)
     }
 
     private func normalizedIngredientMatchText(_ raw: String) -> String {
@@ -4369,6 +4690,12 @@ struct CreateRecipeView: View {
         let normalized = normalizedIngredientMatchText(raw)
         guard !normalized.isEmpty else { return "" }
 
+        for protectedPhrase in ["tonno sott olio", "tonno sottolio", "acciughe sott olio", "acciughe sottolio", "capperi sotto sale"] {
+            if queryContainsPhrase(normalized, phrase: protectedPhrase) {
+                return protectedPhrase
+            }
+        }
+
         var working = normalized
         // Drop quantity + common units at line start.
         working = working.replacingOccurrences(
@@ -4414,6 +4741,9 @@ struct CreateRecipeView: View {
             "mushroom": ["fungo", "funghi"],
             "potato": ["patata", "patate"],
             "celery": ["sedano", "costa di sedano"],
+            "apple": ["mela", "mele"],
+            "bread": ["pane", "pane raffermo"],
+            "honey": ["miele"],
             "milk": ["latte", "latte intero"],
             "flour": ["farina", "farina 00", "wheat flour"],
             "butter": ["burro"],
@@ -4423,7 +4753,7 @@ struct CreateRecipeView: View {
             "tomato": ["pomodoro", "pomodori", "pomodorino", "pomodorini", "pomodoro san marzano", "cherry tomato", "cherry tomatoes"],
             "tomato_sauce": ["salsa di pomodoro", "passata di pomodoro", "tomato sauce"],
             "passata": ["passata di pomodoro"],
-            "olive_oil": ["olio evo", "olio extravergine", "olio extra vergine", "extra virgin olive oil", "olive oil"],
+            "olive_oil": ["olio", "olio evo", "olio extravergine", "olio extra vergine", "extra virgin olive oil", "olive oil"],
             "broth": ["brodo", "brodo vegetale", "brodo vegetale caldo", "vegetable broth", "vegetable stock"],
             "beef_broth": ["brodo di manzo", "beef broth", "beef stock"],
             "lemon": ["limone"],
@@ -4456,6 +4786,14 @@ struct CreateRecipeView: View {
             "onion": ["cipolla"],
             "carota": ["carrot"],
             "carrot": ["carota"],
+            "mela": ["apple"],
+            "mele": ["apple"],
+            "apple": ["mela", "mele"],
+            "pane": ["bread"],
+            "pane raffermo": ["bread"],
+            "bread": ["pane"],
+            "miele": ["honey"],
+            "honey": ["miele"],
             "zucchina": ["zucchini"],
             "zucchini": ["zucchina"],
             "fungo": ["mushroom"],
@@ -4489,6 +4827,7 @@ struct CreateRecipeView: View {
             "passata": ["passata di pomodoro", "tomato sauce"],
             "passata di pomodoro": ["passata", "tomato sauce", "salsa di pomodoro"],
             "tomato sauce": ["salsa di pomodoro", "passata di pomodoro"],
+            "olio": ["olive oil", "olio evo", "olio extravergine"],
             "olio evo": ["olive oil", "extra virgin olive oil", "olio extravergine"],
             "olio extravergine": ["olive oil", "extra virgin olive oil", "olio evo"],
             "olio extra vergine": ["olive oil", "extra virgin olive oil", "olio evo"],
@@ -4931,6 +5270,26 @@ struct CreateRecipeView: View {
 private struct SmartImportRealFlowAuditSample {
     let id: String
     let caption: String
+    let expectedTitle: String?
+    let expectedIngredients: [String]
+    let expectedMinimumSteps: Int
+    let forbiddenMatchedIngredientIDs: [String]
+
+    init(
+        id: String,
+        caption: String,
+        expectedTitle: String?,
+        expectedIngredients: [String] = [],
+        expectedMinimumSteps: Int = 0,
+        forbiddenMatchedIngredientIDs: [String] = []
+    ) {
+        self.id = id
+        self.caption = caption
+        self.expectedTitle = expectedTitle
+        self.expectedIngredients = expectedIngredients
+        self.expectedMinimumSteps = expectedMinimumSteps
+        self.forbiddenMatchedIngredientIDs = forbiddenMatchedIngredientIDs
+    }
 }
 
 private struct SmartImportRealFlowCandidateRow: Codable {
@@ -4980,6 +5339,9 @@ private struct SmartImportStructuredDraftRow: Codable {
 private struct SmartImportStructuredDifficultSampleReport: Codable {
     let sampleID: String
     let caption: String
+    let suggestedTitle: String
+    let expectedTitle: String?
+    let titleStatus: String
     let parserCandidatesCount: Int
     let parserCandidates: [SmartImportStructuredCandidateRow]
     let finalDraftIngredientsCount: Int
@@ -4996,6 +5358,7 @@ private struct SmartImportCaptionHarnessSample: Codable {
     let sampleID: String
     let caption: String
     let sourceURL: String?
+    let expectedTitle: String?
     let expectedIngredients: [String]?
 }
 
@@ -5015,6 +5378,8 @@ private struct SmartImportCaptionHarnessSummary: Codable {
     let passCount: Int
     let partialCount: Int
     let failCount: Int
+    let titleFailCount: Int
+    let titleSuspectCount: Int
     let missingIngredientsCount: Int
     let customIngredientsCount: Int
     let wrongMatchRiskCount: Int
@@ -5025,13 +5390,22 @@ private struct SmartImportCaptionHarnessSummary: Codable {
 private struct SmartImportRealFlowAuditSampleReport: Codable {
     let sampleID: String
     let caption: String
+    let suggestedTitle: String
+    let expectedTitle: String?
+    let titleStatus: String
     let localConfidence: String
+    let finalStepsCount: Int
+    let expectedMinimumSteps: Int
+    let stepStatus: String
     let fallbackDecision: String
     let refinementReasons: [String]
     let candidates: [SmartImportRealFlowCandidateRow]
     let finalDraftIngredients: [SmartImportRealFlowDraftRow]
     let lostCandidateTexts: [String]
+    let lostExpectedIngredients: [String]
     let quantityUnitDrifts: [String]
+    let forbiddenMatchedIngredientIDsFound: [String]
+    let duplicateDraftKeys: [String]
     let customDraftNames: [String]
 }
 
@@ -5039,16 +5413,37 @@ private struct SmartImportRealFlowAuditSummary: Codable {
     let sampleCount: Int
     let totalCandidates: Int
     let totalFinalDraftIngredients: Int
+    let titleFailCount: Int
+    let titleSuspectCount: Int
     let lostCandidateCount: Int
+    let lostExpectedIngredientCount: Int
     let quantityUnitDriftCount: Int
+    let stepFailCount: Int
+    let forbiddenMatchCount: Int
+    let duplicateFinalDraftCount: Int
     let customDraftIngredientCount: Int
     let fallbackAttemptCount: Int
     let fallbackSkippedAllResolvedCount: Int
+    let blockingIssueSampleCount: Int
 }
 
 private struct SmartImportRealFlowAuditReport: Codable {
     let samples: [SmartImportRealFlowAuditSampleReport]
     let summary: SmartImportRealFlowAuditSummary
+}
+
+private struct SmartImportServerFallbackAuditRow: Codable {
+    let sampleID: String
+    let serverOK: Bool
+    let serverError: String?
+    let serverTitle: String?
+    let finalTitle: String
+    let finalConfidence: String
+    let finalStepsCount: Int
+    let finalDraftIngredients: [SmartImportRealFlowDraftRow]
+    let lostCandidateTexts: [String]
+    let quantityUnitDrifts: [String]
+    let duplicateDraftKeys: [String]
 }
 
 extension CreateRecipeView {
@@ -5102,14 +5497,14 @@ extension CreateRecipeView {
         do {
             let data = try encoder.encode(report)
             try data.write(to: outputURL, options: [.atomic])
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=\(phase) path=\(outputURL.path) samples=\(sampleReports.count)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=\(phase) path=\(outputURL.path) samples=\(sampleReports.count)")
             if phase == "wrote_report",
                let summaryData = try? encoder.encode(report.summary),
                let summary = String(data: summaryData, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_CAPTION_HARNESS_SUMMARY] \(summary)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS_SUMMARY] \(summary)")
             }
         } catch {
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=write_failed error=\(error)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=write_failed error=\(error)")
         }
     }
 
@@ -5123,24 +5518,232 @@ extension CreateRecipeView {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
-        print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=begin samples=\(report.samples.count)")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=begin samples=\(report.samples.count)")
         for sample in report.samples {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_ROW] \(json)")
             }
         }
         for sample in smartImportStructuredDifficultAuditReport() {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
-                print("[SEASON_SMART_IMPORT_CREATOR_DIFFICULT_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_CREATOR_DIFFICULT_AUDIT_ROW] \(json)")
             }
         }
         if let data = try? encoder.encode(report.summary),
            let json = String(data: data, encoding: .utf8) {
-            print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_SUMMARY] \(json)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT_SUMMARY] \(json)")
         }
-        print("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=end")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_REAL_FLOW_AUDIT] phase=end")
+    }
+
+    @MainActor
+    static func runSmartImportServerFallbackAuditIfRequested() async {
+        guard ProcessInfo.processInfo.environment["SEASON_RUN_SMART_IMPORT_SERVER_FALLBACK_AUDIT"] == "1" else {
+            return
+        }
+
+        let viewModel = ProduceViewModel(languageCode: AppLanguage.italian.rawValue)
+        let auditView = CreateRecipeView(viewModel: viewModel)
+        let samples = smartImportRealFlowAuditSamples.filter {
+            [
+                "risotto_funghi_inline_servings_measured",
+                "insalata_pollo_inline_servings_measured",
+                "pancake_banana_avena_inline_servings_measured",
+                "ingredienti_multiline_title",
+                "pasta_fredda_inline"
+            ].contains($0.id)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=begin samples=\(samples.count)")
+        for sample in samples {
+            let degradedRow = auditView.smartImportDegradingServerFallbackAuditRow(for: sample)
+            if let data = try? encoder.encode(degradedRow),
+               let json = String(data: data, encoding: .utf8) {
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_DEGRADE_AUDIT_ROW] \(json)")
+            }
+            let row = await auditView.smartImportServerFallbackAuditRow(for: sample)
+            if let data = try? encoder.encode(row),
+               let json = String(data: data, encoding: .utf8) {
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT_ROW] \(json)")
+            }
+        }
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SERVER_FALLBACK_AUDIT] phase=end")
+    }
+
+    private func smartImportDegradingServerFallbackAuditRow(
+        for sample: SmartImportRealFlowAuditSample
+    ) -> SmartImportServerFallbackAuditRow {
+        let cleanedCaption = removingEmojis(from: sample.caption)
+        let localSuggestion = SocialImportParser.parse(
+            sourceURLRaw: "",
+            captionRaw: cleanedCaption,
+            produceItems: viewModel.produceItems,
+            basicIngredients: BasicIngredientCatalog.all,
+            languageCode: localizer.languageCode
+        )
+        let candidates = smartImportIngredientCandidates(from: cleanedCaption)
+        let degradedIngredients = localSuggestion.suggestedIngredients.map { ingredient in
+            RecipeIngredient(
+                ingredientID: ingredient.ingredientID,
+                produceID: ingredient.produceID,
+                basicIngredientID: ingredient.basicIngredientID,
+                quality: ingredient.quality,
+                name: ingredient.name,
+                quantityValue: 0,
+                quantityUnit: .piece,
+                rawIngredientLine: ingredient.rawIngredientLine,
+                mappingConfidence: ingredient.mappingConfidence
+            )
+        }
+        let degradingServerSuggestion = SocialImportSuggestion(
+            sourceURL: localSuggestion.sourceURL,
+            sourcePlatform: localSuggestion.sourcePlatform,
+            sourceCaptionRaw: localSuggestion.sourceCaptionRaw,
+            suggestedTitle: "Untitled recipe",
+            suggestedIngredients: degradedIngredients,
+            suggestedSteps: localSuggestion.suggestedSteps,
+            confidence: .high,
+            smartImportAgent: localSuggestion.smartImportAgent
+        )
+        let finalSuggestion = serverSuggestionPreservingLocalGuarantees(
+            degradingServerSuggestion,
+            localSuggestion: localSuggestion,
+            parserCandidates: candidates,
+            caption: cleanedCaption
+        )
+        let drafts = finalSuggestion.suggestedIngredients.map {
+            normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+        }
+        return SmartImportServerFallbackAuditRow(
+            sampleID: sample.id,
+            serverOK: true,
+            serverError: "simulated_degrading_server_output",
+            serverTitle: degradingServerSuggestion.suggestedTitle,
+            finalTitle: finalSuggestion.suggestedTitle ?? "",
+            finalConfidence: finalSuggestion.confidence.rawValue,
+            finalStepsCount: finalSuggestion.suggestedSteps.count,
+            finalDraftIngredients: drafts.enumerated().map { index, draft in
+                SmartImportRealFlowDraftRow(
+                    index: index,
+                    name: ingredientDraftDisplayName(draft),
+                    produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                    basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                    quantityValue: draft.quantityValue,
+                    quantityUnit: draft.quantityUnit.rawValue,
+                    isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                )
+            },
+            lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+            quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+            duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+        )
+    }
+
+    private func smartImportServerFallbackAuditRow(
+        for sample: SmartImportRealFlowAuditSample
+    ) async -> SmartImportServerFallbackAuditRow {
+        let cleanedCaption = removingEmojis(from: sample.caption)
+        let localSuggestion = SocialImportParser.parse(
+            sourceURLRaw: "",
+            captionRaw: cleanedCaption,
+            produceItems: viewModel.produceItems,
+            basicIngredients: BasicIngredientCatalog.all,
+            languageCode: localizer.languageCode
+        )
+        let candidates = smartImportIngredientCandidates(from: cleanedCaption)
+
+        do {
+            let serverResponse = try await SupabaseService.shared.parseRecipeCaption(
+                caption: cleanedCaption,
+                url: "",
+                languageCode: localizer.languageCode,
+                ingredientCandidates: candidates.isEmpty ? nil : candidates
+            )
+            guard let serverSuggestion = socialImportSuggestionFromServerResponse(
+                serverResponse,
+                sourceURL: "",
+                fallbackCaption: cleanedCaption
+            ) else {
+                return SmartImportServerFallbackAuditRow(
+                    sampleID: sample.id,
+                    serverOK: false,
+                    serverError: "server_response_not_useful",
+                    serverTitle: nil,
+                    finalTitle: localSuggestion.suggestedTitle ?? "",
+                    finalConfidence: localSuggestion.confidence.rawValue,
+                    finalStepsCount: localSuggestion.suggestedSteps.count,
+                    finalDraftIngredients: [],
+                    lostCandidateTexts: candidates.map(\.rawText),
+                    quantityUnitDrifts: [],
+                    duplicateDraftKeys: []
+                )
+            }
+
+            let finalSuggestion = serverSuggestionPreservingLocalGuarantees(
+                serverSuggestion,
+                localSuggestion: localSuggestion,
+                parserCandidates: candidates,
+                caption: cleanedCaption
+            )
+            let drafts = finalSuggestion.suggestedIngredients.map {
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+            }
+
+            return SmartImportServerFallbackAuditRow(
+                sampleID: sample.id,
+                serverOK: true,
+                serverError: nil,
+                serverTitle: serverSuggestion.suggestedTitle,
+                finalTitle: finalSuggestion.suggestedTitle ?? "",
+                finalConfidence: finalSuggestion.confidence.rawValue,
+                finalStepsCount: finalSuggestion.suggestedSteps.count,
+                finalDraftIngredients: drafts.enumerated().map { index, draft in
+                    SmartImportRealFlowDraftRow(
+                        index: index,
+                        name: ingredientDraftDisplayName(draft),
+                        produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                        basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                        quantityValue: draft.quantityValue,
+                        quantityUnit: draft.quantityUnit.rawValue,
+                        isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                    )
+                },
+                lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+                quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+                duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+            )
+        } catch {
+            let drafts = localSuggestion.suggestedIngredients.map {
+                normalizedImportedIngredientDraft(from: $0, sourceCaptionRaw: cleanedCaption)
+            }
+            return SmartImportServerFallbackAuditRow(
+                sampleID: sample.id,
+                serverOK: false,
+                serverError: String(describing: error),
+                serverTitle: nil,
+                finalTitle: localSuggestion.suggestedTitle ?? "",
+                finalConfidence: localSuggestion.confidence.rawValue,
+                finalStepsCount: localSuggestion.suggestedSteps.count,
+                finalDraftIngredients: drafts.enumerated().map { index, draft in
+                    SmartImportRealFlowDraftRow(
+                        index: index,
+                        name: ingredientDraftDisplayName(draft),
+                        produceID: draft.produceID.isEmpty ? nil : draft.produceID,
+                        basicIngredientID: draft.basicIngredientID.isEmpty ? nil : draft.basicIngredientID,
+                        quantityValue: draft.quantityValue,
+                        quantityUnit: draft.quantityUnit.rawValue,
+                        isCustom: draft.produceID.isEmpty && draft.basicIngredientID.isEmpty
+                    )
+                },
+                lostCandidateTexts: lostCandidateTexts(candidates: candidates, drafts: drafts),
+                quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+                duplicateDraftKeys: duplicateDraftKeys(in: drafts)
+            )
+        }
     }
 
     @MainActor
@@ -5155,11 +5758,27 @@ extension CreateRecipeView {
             sampleCount: reports.count,
             totalCandidates: reports.reduce(0) { $0 + $1.candidates.count },
             totalFinalDraftIngredients: reports.reduce(0) { $0 + $1.finalDraftIngredients.count },
+            titleFailCount: reports.filter { $0.titleStatus == "fail" }.count,
+            titleSuspectCount: reports.filter { $0.titleStatus == "suspect_quantity_in_title" }.count,
             lostCandidateCount: reports.reduce(0) { $0 + $1.lostCandidateTexts.count },
+            lostExpectedIngredientCount: reports.reduce(0) { $0 + $1.lostExpectedIngredients.count },
             quantityUnitDriftCount: reports.reduce(0) { $0 + $1.quantityUnitDrifts.count },
+            stepFailCount: reports.filter { $0.stepStatus == "fail" }.count,
+            forbiddenMatchCount: reports.reduce(0) { $0 + $1.forbiddenMatchedIngredientIDsFound.count },
+            duplicateFinalDraftCount: reports.reduce(0) { $0 + $1.duplicateDraftKeys.count },
             customDraftIngredientCount: reports.reduce(0) { $0 + $1.customDraftNames.count },
             fallbackAttemptCount: reports.filter { $0.fallbackDecision == "attempt_server_fallback" }.count,
-            fallbackSkippedAllResolvedCount: reports.filter { $0.fallbackDecision == "skip_server_fallback_all_candidates_resolved" }.count
+            fallbackSkippedAllResolvedCount: reports.filter { $0.fallbackDecision == "skip_server_fallback_all_candidates_resolved" }.count,
+            blockingIssueSampleCount: reports.filter {
+                $0.titleStatus == "fail"
+                    || $0.titleStatus == "suspect_quantity_in_title"
+                    || !$0.lostCandidateTexts.isEmpty
+                    || !$0.lostExpectedIngredients.isEmpty
+                    || !$0.quantityUnitDrifts.isEmpty
+                    || $0.stepStatus == "fail"
+                    || !$0.forbiddenMatchedIngredientIDsFound.isEmpty
+                    || !$0.duplicateDraftKeys.isEmpty
+            }.count
         )
 
         return SmartImportRealFlowAuditReport(samples: reports, summary: summary)
@@ -5190,7 +5809,7 @@ extension CreateRecipeView {
             let report = try decoder.decode(SmartImportCaptionHarnessInput.self, from: data)
             return (report.samples, inputURL.path)
         } catch {
-            print("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=input_decode_failed path=\(inputURL.path) error=\(error)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_CAPTION_HARNESS] phase=input_decode_failed path=\(inputURL.path) error=\(error)")
             return ([], "built_in_default_samples")
         }
     }
@@ -5203,6 +5822,8 @@ extension CreateRecipeView {
             passCount: reports.filter { $0.verdict == "pass" }.count,
             partialCount: reports.filter { $0.verdict == "partial" }.count,
             failCount: reports.filter { $0.verdict == "fail" }.count,
+            titleFailCount: reports.filter { $0.titleStatus == "fail" }.count,
+            titleSuspectCount: reports.filter { $0.titleStatus == "suspect_quantity_in_title" }.count,
             missingIngredientsCount: reports.reduce(0) { $0 + $1.lostExpectedIngredients.count },
             customIngredientsCount: reports.reduce(0) { $0 + $1.customIngredients.count },
             wrongMatchRiskCount: reports.reduce(0) { total, report in
@@ -5222,10 +5843,44 @@ extension CreateRecipeView {
             guard !draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return false
             }
-            return !report.parserCandidates.contains { candidate in
-                candidate.localMatchID == draft.matchedEntityID
-            }
+            return !smartImportQuantityHasParserEvidence(draft: draft, candidates: report.parserCandidates)
         }.count
+    }
+
+    private static func smartImportQuantityHasParserEvidence(
+        draft: SmartImportStructuredDraftRow,
+        candidates: [SmartImportStructuredCandidateRow]
+    ) -> Bool {
+        let draftEntityID = draft.matchedEntityID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let draftName = smartImportHarnessNormalizedIngredientName(draft.displayName)
+
+        return candidates.contains { candidate in
+            if !draftEntityID.isEmpty, candidate.localMatchID == draftEntityID {
+                return true
+            }
+
+            let candidateNames = [
+                smartImportHarnessNormalizedIngredientName(candidate.normalizedText),
+                smartImportHarnessNormalizedIngredientName(candidate.rawText)
+            ].filter { !$0.isEmpty }
+
+            return candidateNames.contains { candidateName in
+                candidateName == draftName
+                    || candidateName.contains(draftName)
+                    || draftName.contains(candidateName)
+            }
+        }
+    }
+
+    private static func smartImportHarnessNormalizedIngredientName(_ raw: String) -> String {
+        raw
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: #"[^a-z0-9\s]"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func smartImportRealFlowAuditSampleReport(
@@ -5289,7 +5944,19 @@ extension CreateRecipeView {
         return SmartImportRealFlowAuditSampleReport(
             sampleID: sample.id,
             caption: sample.caption,
+            suggestedTitle: localSuggestion.suggestedTitle ?? "",
+            expectedTitle: sample.expectedTitle,
+            titleStatus: smartImportTitleStatus(
+                actual: localSuggestion.suggestedTitle,
+                expected: sample.expectedTitle
+            ),
             localConfidence: localSuggestion.confidence.rawValue,
+            finalStepsCount: localSuggestion.suggestedSteps.count,
+            expectedMinimumSteps: sample.expectedMinimumSteps,
+            stepStatus: smartImportStepStatus(
+                actualCount: localSuggestion.suggestedSteps.count,
+                expectedMinimum: sample.expectedMinimumSteps
+            ),
             fallbackDecision: fallbackDecision,
             refinementReasons: refinement.reasons,
             candidates: candidateRows,
@@ -5297,7 +5964,16 @@ extension CreateRecipeView {
             lostCandidateTexts: candidateRows
                 .filter { $0.matchedDraftIndex == nil }
                 .map(\.rawText),
+            lostExpectedIngredients: lostExpectedIngredients(
+                expectedIngredients: sample.expectedIngredients,
+                drafts: drafts
+            ),
             quantityUnitDrifts: quantityUnitDrifts(candidates: candidates, drafts: drafts),
+            forbiddenMatchedIngredientIDsFound: forbiddenMatchedIngredientIDsFound(
+                forbiddenMatchedIngredientIDs: sample.forbiddenMatchedIngredientIDs,
+                drafts: drafts
+            ),
+            duplicateDraftKeys: duplicateDraftKeys(in: drafts),
             customDraftNames: finalRows
                 .filter(\.isCustom)
                 .map(\.name)
@@ -5345,6 +6021,10 @@ extension CreateRecipeView {
             )
         }
         let finalDraftIngredients = drafts.map { structuredDraftRow(for: $0) }
+        let titleStatus = smartImportTitleStatus(
+            actual: localSuggestion.suggestedTitle,
+            expected: sample.expectedTitle
+        )
         let lostExpectedIngredients = (sample.expectedIngredients ?? []).filter { expected in
             !smartImportExpectedIngredientArrived(expected: expected, drafts: drafts)
         }
@@ -5360,7 +6040,11 @@ extension CreateRecipeView {
             || candidatesRequiringLLM > 0
             || completenessFallback
         let verdict: String
-        if lostExpectedIngredients.isEmpty && customIngredients.isEmpty && contaminationNotes.isEmpty {
+        if titleStatus != "fail"
+            && titleStatus != "suspect_quantity_in_title"
+            && lostExpectedIngredients.isEmpty
+            && customIngredients.isEmpty
+            && contaminationNotes.isEmpty {
             verdict = "pass"
         } else if !finalDraftIngredients.isEmpty {
             verdict = "partial"
@@ -5371,6 +6055,9 @@ extension CreateRecipeView {
         return SmartImportStructuredDifficultSampleReport(
             sampleID: sample.sampleID,
             caption: sample.caption,
+            suggestedTitle: localSuggestion.suggestedTitle ?? "",
+            expectedTitle: sample.expectedTitle,
+            titleStatus: titleStatus,
             parserCandidatesCount: candidates.count,
             parserCandidates: parserCandidates,
             finalDraftIngredientsCount: finalDraftIngredients.count,
@@ -5425,6 +6112,7 @@ extension CreateRecipeView {
             )
         }
         let finalDraftIngredients = drafts.map { structuredDraftRow(for: $0) }
+        let titleStatus = smartImportTitleStatus(actual: localSuggestion.suggestedTitle, expected: nil)
         let lostExpectedIngredients = sample.expectedIngredients.filter { expected in
             !smartImportExpectedIngredientArrived(expected: expected, drafts: drafts)
         }
@@ -5450,6 +6138,9 @@ extension CreateRecipeView {
         return SmartImportStructuredDifficultSampleReport(
             sampleID: sample.id,
             caption: sample.caption,
+            suggestedTitle: localSuggestion.suggestedTitle ?? "",
+            expectedTitle: nil,
+            titleStatus: titleStatus,
             parserCandidatesCount: candidates.count,
             parserCandidates: parserCandidates,
             finalDraftIngredientsCount: finalDraftIngredients.count,
@@ -5558,101 +6249,340 @@ extension CreateRecipeView {
         return notes
     }
 
-    private func matchedDraftIndex(
-        for candidate: SmartImportIngredientCandidate,
-        drafts: [CreateIngredientDraft]
-    ) -> Int? {
-        if let matchedIngredientID = candidate.catalogMatch.matchedIngredientId {
-            for (index, draft) in drafts.enumerated() {
-                if !draft.produceID.isEmpty && matchedIngredientID == "produce:\(draft.produceID)" {
-                    return index
-                }
-                if !draft.basicIngredientID.isEmpty && matchedIngredientID == "basic:\(draft.basicIngredientID)" {
-                    return index
-                }
-            }
-        }
-
-        let normalizedCandidate = normalizedIngredientMatchText(candidate.normalizedText)
-        guard !normalizedCandidate.isEmpty else { return nil }
-        for (index, draft) in drafts.enumerated() {
-            let normalizedDraft = normalizedIngredientMatchText(ingredientDraftDisplayName(draft))
-            let draftQueries = Set(importedIngredientMatchQueries(from: ingredientDraftDisplayName(draft)))
-            if normalizedDraft == normalizedCandidate || draftQueries.contains(normalizedCandidate) {
-                return index
-            }
-        }
-        return nil
-    }
-
-    private func quantityUnitDrifts(
-        candidates: [SmartImportIngredientCandidate],
+    private func lostExpectedIngredients(
+        expectedIngredients: [String],
         drafts: [CreateIngredientDraft]
     ) -> [String] {
-        candidates.compactMap { candidate in
-            guard let draftIndex = matchedDraftIndex(for: candidate, drafts: drafts),
-                  drafts.indices.contains(draftIndex) else { return nil }
-            let draft = drafts[draftIndex]
-            var drifts: [String] = []
-
-            if let candidateQuantity = candidate.possibleQuantity {
-                let draftQuantity = parsedQuantityValue(draft.quantityValue)
-                if draft.quantityValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || abs(candidateQuantity - draftQuantity) > 0.001 {
-                    drifts.append("quantity \(candidateQuantity)->\(draft.quantityValue.isEmpty ? "empty" : draft.quantityValue)")
-                }
-            }
-
-            if let candidateUnit = candidate.possibleUnit,
-               candidateUnit != draft.quantityUnit.rawValue {
-                drifts.append("unit \(candidateUnit)->\(draft.quantityUnit.rawValue)")
-            }
-
-            guard !drifts.isEmpty else { return nil }
-            return "\(candidate.rawText): \(drifts.joined(separator: ", "))"
+        expectedIngredients.filter { expected in
+            !smartImportExpectedIngredientArrived(expected: expected, drafts: drafts)
         }
+    }
+
+    private func forbiddenMatchedIngredientIDsFound(
+        forbiddenMatchedIngredientIDs: [String],
+        drafts: [CreateIngredientDraft]
+    ) -> [String] {
+        guard !forbiddenMatchedIngredientIDs.isEmpty else { return [] }
+        let forbidden = Set(forbiddenMatchedIngredientIDs)
+        return drafts.compactMap { draft -> String? in
+            if !draft.produceID.isEmpty {
+                let id = "produce:\(draft.produceID)"
+                return forbidden.contains(id) ? id : nil
+            }
+            if !draft.basicIngredientID.isEmpty {
+                let id = "basic:\(draft.basicIngredientID)"
+                return forbidden.contains(id) ? id : nil
+            }
+            return nil
+        }
+    }
+
+    private func smartImportTitleStatus(actual: String?, expected: String?) -> String {
+        let actualNormalized = normalizedIngredientMatchText(actual ?? "")
+        guard let expected,
+              !expected.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if actualNormalized.isEmpty || actualNormalized == "untitled recipe" {
+                return "not_required"
+            }
+            return actualNormalized.range(
+                of: #"\b\d+(?:[.,]\d+)?\s*(g|kg|ml|l|spicchio|spicchi)\b"#,
+                options: .regularExpression
+            ) == nil ? "not_required" : "suspect_quantity_in_title"
+        }
+
+        let expectedNormalized = normalizedIngredientMatchText(expected)
+        guard !expectedNormalized.isEmpty else { return "not_required" }
+        if actualNormalized == expectedNormalized {
+            return "pass"
+        }
+        if actualNormalized.contains(expectedNormalized),
+           actualNormalized.range(
+            of: #"\b\d+(?:[.,]\d+)?\s*(g|kg|ml|l|spicchio|spicchi)\b"#,
+            options: .regularExpression
+           ) == nil {
+            return "acceptable_extra_text"
+        }
+        return "fail"
+    }
+
+    private func smartImportStepStatus(actualCount: Int, expectedMinimum: Int) -> String {
+        guard expectedMinimum > 0 else { return "not_required" }
+        return actualCount >= expectedMinimum ? "pass" : "fail"
     }
 
     private static let smartImportRealFlowAuditSamples: [SmartImportRealFlowAuditSample] = [
         SmartImportRealFlowAuditSample(
             id: "inline_pomodoro",
-            caption: "Ingredienti: 200g spaghetti / passata di pomodoro 250g / olio evo q.b. / sale q.b."
+            caption: "Ingredienti: 200g spaghetti / passata di pomodoro 250g / olio evo q.b. / sale q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "bare_count_veg",
-            caption: "zucchine 2 / patate 3 / cipolle dorate 1 / olio evo q.b."
+            caption: "zucchine 2 / patate 3 / cipolle dorate 1 / olio evo q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "frittata_bare_count",
-            caption: "4 uova / zucchine 2 / parmigiano 30g / sale q.b. / pepe q.b."
+            caption: "4 uova / zucchine 2 / parmigiano 30g / sale q.b. / pepe q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "farina_dough",
-            caption: "farina 00 500g / acqua 350 ml / olio evo q.b. / sale q.b."
+            caption: "farina 00 500g / acqua 350 ml / olio evo q.b. / sale q.b.",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "pasta_al_volo",
-            caption: "pasta al volo: 200g pasta, 1 spicchio aglio, olio evo q.b., acciughe sott'olio 2, capperi sotto sale"
+            caption: "pasta al volo: 200g pasta, 1 spicchio aglio, olio evo q.b., acciughe sott'olio 2, capperi sotto sale",
+            expectedTitle: "pasta al volo"
         ),
         SmartImportRealFlowAuditSample(
             id: "carbonara",
-            caption: "Carbonara cremosa: spaghetti 200g / guanciale 80g / 2 uova / pecorino romano 40g / pepe nero q.b."
+            caption: "Carbonara cremosa: spaghetti 200g / guanciale 80g / 2 uova / pecorino romano 40g / pepe nero q.b.",
+            expectedTitle: "Carbonara cremosa"
         ),
         SmartImportRealFlowAuditSample(
             id: "tonno_capperi_acciughe",
-            caption: "Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo"
+            caption: "Pasta tonno e capperi Ingredienti: pasta 200g; tonno sott'olio 120g; capperi sotto sale; acciughe sott'olio 2; prezzemolo",
+            expectedTitle: "Pasta tonno e capperi"
         ),
         SmartImportRealFlowAuditSample(
             id: "risotto_funghi",
-            caption: "Risotto ai funghi Ingredienti: riso 180g, funghi 250g, brodo vegetale, burro, parmigiano reggiano 30g"
+            caption: "Risotto ai funghi Ingredienti: riso 180g, funghi 250g, brodo vegetale, burro, parmigiano reggiano 30g",
+            expectedTitle: "Risotto ai funghi"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "risotto_funghi_inline_servings_measured",
+            caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano",
+            expectedTitle: "Risotto ai funghi",
+            expectedIngredients: ["Riso secco", "Fungo", "Brodo vegetale", "Burro", "Parmigiano"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "insalata_pollo_inline_servings_measured",
+            caption: "Insalata di pollo per 2: pollo grigliato 250g, lattuga 120g, pomodorini 150g, mais 80g, olive 40g, olio 1 cucchiaio, limone mezzo. Taglia tutto, unisci in ciotola e condisci.",
+            expectedTitle: "Insalata di pollo",
+            expectedIngredients: ["pollo", "Lattuga", "pomodorini", "Mais", "Olive", "Olio", "Limone"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pancake_banana_avena_inline_servings_measured",
+            caption: "Pancake banana e avena x2: banana 1, uova 2, fiocchi d’avena 80g, latte 100ml, lievito 1 cucchiaino. Frulla tutto, cuoci in padella antiaderente 2 minuti per lato.",
+            expectedTitle: "Pancake banana e avena",
+            expectedIngredients: ["Banana", "Uova", "Avena", "Latte", "lievito"]
         ),
         SmartImportRealFlowAuditSample(
             id: "noisy_zucchine",
-            caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero"
+            caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero",
+            expectedTitle: nil
         ),
         SmartImportRealFlowAuditSample(
             id: "patate_funghi",
-            caption: "Patate e funghi in padella: patate 3 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b."
+            caption: "Patate e funghi in padella: patate 3 / funghi 200g / aglio 1 spicchio / rosmarino / sale q.b.",
+            expectedTitle: "Patate e funghi in padella"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "spaghetti_pomodoro_inline",
+            caption: "Spaghetti al pomodoro per 2: spaghetti 200g, passata di pomodoro 250g, aglio 1 spicchio, olio evo q.b., basilico. Cuoci la pasta e manteca con il sugo.",
+            expectedTitle: "Spaghetti al pomodoro"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "carbonara_inline_measured",
+            caption: "Carbonara per 2: spaghetti 200g, guanciale 80g, uova 2, pecorino romano 40g, pepe nero q.b. Rosola il guanciale, spegni il fuoco e manteca.",
+            expectedTitle: "Carbonara"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "frittata_zucchine_inline",
+            caption: "Frittata di zucchine x2: uova 4, zucchine 2, parmigiano 30g, sale q.b., pepe q.b. Sbatti le uova, aggiungi le zucchine e cuoci in padella.",
+            expectedTitle: "Frittata di zucchine"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "focaccia_inline",
+            caption: "Focaccia veloce: farina 00 500g, acqua 350ml, lievito 7g, olio evo 30ml, sale 10g. Impasta, lascia riposare e cuoci in forno.",
+            expectedTitle: "Focaccia veloce"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pasta_fredda_inline",
+            caption: "Pasta fredda per 2: pasta 200g, pomodorini 150g, tonno sott'olio 120g, mais 80g, olive 50g, basilico. Cuoci la pasta, raffredda e condisci.",
+            expectedTitle: "Pasta fredda"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pollo_curry_inline",
+            caption: "Pollo al curry per 2: pollo 300g, curry 1 cucchiaino, latte di cocco 200ml, riso basmati 160g, cipolla 1. Rosola la cipolla e cuoci tutto insieme.",
+            expectedTitle: "Pollo al curry"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "orata_patate_inline",
+            caption: "Orata al forno per 2: orata 1, patate 3, pomodorini 120g, olive 40g, olio evo q.b., sale q.b. Inforna fino a doratura.",
+            expectedTitle: "Orata al forno"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "zuppa_ceci_inline",
+            caption: "Zuppa di ceci per 2: ceci 240g, carote 2, sedano 1 costa, cipolla 1, brodo vegetale 600ml, rosmarino. Cuoci lentamente e servi calda.",
+            expectedTitle: "Zuppa di ceci"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "riso_verdure_inline",
+            caption: "Riso con verdure x2: riso 180g, zucchine 2, carote 2, piselli 100g, olio evo q.b., sale q.b. Salta le verdure e unisci il riso.",
+            expectedTitle: "Riso con verdure"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "toast_avocado_inline",
+            caption: "Toast avocado e uova per 1: pane 2 fette, avocado 1, uova 1, limone mezzo, sale q.b., pepe q.b. Tosta il pane e completa.",
+            expectedTitle: "Toast avocado e uova"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "vellutata_zucca_inline",
+            caption: "Vellutata di zucca per 2: zucca 500g, patate 2, cipolla 1, brodo vegetale 500ml, olio evo q.b. Cuoci e frulla tutto.",
+            expectedTitle: "Vellutata di zucca"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "gnocchi_sugo_inline",
+            caption: "Gnocchi al sugo: gnocchi 500g, passata di pomodoro 300g, mozzarella 125g, parmigiano 30g, basilico. Condisci e gratina.",
+            expectedTitle: "Gnocchi al sugo"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "omelette_prosciutto_inline",
+            caption: "Omelette prosciutto e formaggio per 1: uova 2, prosciutto cotto 60g, formaggio 50g, burro 10g, sale q.b. Cuoci in padella.",
+            expectedTitle: "Omelette prosciutto e formaggio"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "smoothie_banana_inline",
+            caption: "Smoothie banana e fragole x2: banana 1, fragole 150g, yogurt greco 150g, latte 100ml, miele 1 cucchiaino. Frulla tutto.",
+            expectedTitle: "Smoothie banana e fragole"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "couscous_verdure_inline",
+            caption: "Cous cous alle verdure per 2: cous cous 160g, zucchine 1, peperoni 1, ceci 120g, olio evo q.b., limone mezzo. Reidrata e condisci.",
+            expectedTitle: "Cous cous alle verdure",
+            expectedIngredients: ["cous cous", "Zucchina", "Peperone", "Ceci", "Olio", "Limone"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "piadina_tacchino_inline",
+            caption: "Piadina tacchino e stracchino: piadina 1, tacchino 80g, stracchino 60g, rucola 30g, pomodorini 80g. Scalda e farcisci.",
+            expectedTitle: "Piadina tacchino e stracchino"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pesto_pasta_inline",
+            caption: "Pasta al pesto per 2: pasta 200g, basilico 40g, pinoli 20g, parmigiano 30g, olio evo 40ml. Frulla il pesto e condisci.",
+            expectedTitle: "Pasta al pesto"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "lenticchie_inline",
+            caption: "Lenticchie in umido: lenticchie 250g, passata 200g, carota 1, sedano 1 costa, cipolla 1, olio evo q.b. Cuoci finche morbide.",
+            expectedTitle: "Lenticchie in umido"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "merluzzo_piselli_inline",
+            caption: "Merluzzo e piselli per 2: merluzzo 300g, piselli 180g, pomodorini 100g, olio evo q.b., sale q.b. Cuoci in padella.",
+            expectedTitle: "Merluzzo e piselli"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "riso_basmati_pollo_inline",
+            caption: "Bowl pollo e riso basmati: riso basmati 160g, pollo 250g, avocado 1, mais 80g, yogurt greco 80g. Cuoci e componi la bowl.",
+            expectedTitle: "Bowl pollo e riso basmati"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pane_raffermo_pappa_inline",
+            caption: "Pappa al pomodoro: pane raffermo 200g, passata di pomodoro 400g, brodo vegetale 300ml, aglio 1 spicchio, basilico. Cuoci e mescola.",
+            expectedTitle: "Pappa al pomodoro"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "melanzane_forno_inline",
+            caption: "Melanzane al forno per 2: melanzane 2, pomodorini 150g, mozzarella 125g, parmigiano 30g, olio evo q.b. Cuoci in forno.",
+            expectedTitle: "Melanzane al forno"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "porridge_inline",
+            caption: "Porridge mela e cannella x1: fiocchi d'avena 50g, latte 200ml, mela 1, cannella q.b., miele 1 cucchiaino. Cuoci mescolando.",
+            expectedTitle: "Porridge mela e cannella"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "insalata_greca_inline",
+            caption: "Insalata greca per 2: pomodori 2, cetriolo 1, feta 120g, olive 60g, cipolla rossa 1, olio evo q.b. Taglia e condisci.",
+            expectedTitle: "Insalata greca"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "uova_pomodoro_inline",
+            caption: "Uova al pomodoro: uova 2, passata di pomodoro 250g, pane 2 fette, olio evo q.b., basilico. Cuoci le uova nel sugo.",
+            expectedTitle: "Uova al pomodoro"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "crepes_inline",
+            caption: "Crepes base per 4: farina 00 120g, latte 250ml, uova 2, burro 20g, sale q.b. Mescola e cuoci in padella.",
+            expectedTitle: "Crepes base"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "ravioli_burro_salvia_inline",
+            caption: "Ravioli burro e salvia: ravioli 250g, burro 30g, salvia 6 foglie, parmigiano 20g. Sciogli il burro e condisci.",
+            expectedTitle: "Ravioli burro e salvia"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "polpette_inline",
+            caption: "Polpette al sugo per 2: carne macinata 300g, uova 1, pangrattato 40g, passata 300g, parmigiano 30g. Forma le polpette e cuoci.",
+            expectedTitle: "Polpette al sugo"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "torta_mele_inline",
+            caption: "Torta di mele: mele 3, farina 00 250g, uova 2, zucchero 120g, latte 100ml, lievito 1 bustina. Mescola e inforna.",
+            expectedTitle: "Torta di mele",
+            expectedIngredients: ["Mela", "farina 00", "Uova", "Zucchero", "Latte", "lievito"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "torta_mele_keyboard_colon_fallback",
+            caption: "Torta di meleç mele 3, farina 00 250g, uova 2, zucchero 120g, latte 100ml, lievito 1 bustina. Mescola e inforna.",
+            expectedTitle: "Torta di mele",
+            expectedIngredients: ["Mela", "farina 00", "Uova", "Zucchero", "Latte", "lievito"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "muffin_chocolate_chips_not_cola",
+            caption: "Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, latte 80ml, lievito 1 bustina, gocce di cioccolato 70g. Mescola tutto, versa negli stampi e cuoci a 180 gradi per 20 minuti.",
+            expectedTitle: "Muffin banana e cioccolato",
+            expectedIngredients: ["Banana", "Farina", "Uova", "Zucchero", "Latte", "lievito", "gocce di cioccolato"],
+            expectedMinimumSteps: 1,
+            forbiddenMatchedIngredientIDs: ["basic:cola"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "frittata_infinitive_steps",
+            caption: "Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.",
+            expectedTitle: "Frittata spinaci e patate",
+            expectedIngredients: ["Uova", "Spinaci", "Patate", "Parmigiano", "Sale", "Olio"],
+            expectedMinimumSteps: 1
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "ingredienti_multiline_title",
+            caption: "Pasta tonno e limone\nIngredienti:\npasta 200g\ntonno sott'olio 120g\nlimone mezzo\nolio evo q.b.\nprezzemolo\nProcedimento: cuoci la pasta e condisci tutto.",
+            expectedTitle: "Pasta tonno e limone",
+            expectedIngredients: ["Pasta", "Tonno", "Limone", "Olio", "Prezzemolo"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "pasta_tonno_keyboard_injection",
+            caption: "Pasta tonno e limone per 2ç pasta 180g, tonno sottàolio 120g, limone 1, prezzemolo q.b., olio 1 cucchiaio, sale q.b. Cuoci la pasta, condisci con tonno e scorza di limone, completa con prezzemolo.",
+            expectedTitle: "Pasta tonno e limone",
+            expectedIngredients: ["Pasta", "Tonno", "Limone", "Prezzemolo", "Olio", "Sale"]
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "procedure_first_zucchine_patate",
+            caption: "Taglia zucchine 2 e patate 3, aggiungi cipolla dorata 1 e olio evo q.b., poi in forno fino a doratura.",
+            expectedTitle: nil
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "weak_pasta_no_quantities",
+            caption: "Questa pasta nasce con quello che avevo: spaghetti, pomodoro, olio buono, aglio e basilico. Fine.",
+            expectedTitle: nil
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "tiktok_noise_inline",
+            caption: "SALVA questa cena facile: riso 180g, tonno 120g, zucchine 2, olio evo q.b., limone mezzo. Seguimi per altre idee.",
+            expectedTitle: nil
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "no_colon_servings_measured",
+            caption: "Insalata ceci per 2 ceci 240g, pomodorini 150g, cetriolo 1, feta 100g, olive 40g. Taglia e condisci.",
+            expectedTitle: "Insalata ceci"
+        ),
+        SmartImportRealFlowAuditSample(
+            id: "semicolon_measured",
+            caption: "Pasta salmone e zucchine: pasta 200g; salmone 150g; zucchine 2; panna fresca 100ml; pepe q.b. Cuoci e manteca.",
+            expectedTitle: "Pasta salmone e zucchine"
         )
     ]
 
@@ -5674,31 +6604,50 @@ extension CreateRecipeView {
             sampleID: "harness_001_structured_easy",
             caption: "Ingredienti: 200g spaghetti / passata di pomodoro 250g / olio evo q.b. / sale q.b.",
             sourceURL: nil,
+            expectedTitle: nil,
             expectedIngredients: ["spaghetti", "passata", "olio evo", "sale"]
         ),
         SmartImportCaptionHarnessSample(
             sampleID: "harness_002_quantityless",
             caption: "Ingredienti: riso 180g / funghi 250g / brodo vegetale / burro / parmigiano reggiano 30g",
             sourceURL: nil,
+            expectedTitle: nil,
             expectedIngredients: ["riso", "funghi", "brodo vegetale", "burro", "parmigiano reggiano"]
         ),
         SmartImportCaptionHarnessSample(
             sampleID: "harness_003_noisy",
             caption: "SALVA il video! In 5 min: zucchine 2, pasta 200g, olio evo q.b., pepe nero",
             sourceURL: nil,
+            expectedTitle: nil,
             expectedIngredients: ["zucchine", "pasta", "olio evo", "pepe nero"]
         ),
         SmartImportCaptionHarnessSample(
             sampleID: "SI-CVP-019",
             caption: "Taglia zucchine 2 e patate 3, aggiungi cipolla dorata 1 e olio evo q.b., poi in forno fino a doratura.",
             sourceURL: nil,
+            expectedTitle: nil,
             expectedIngredients: ["zucchine", "patate", "cipolla dorata", "olio evo"]
         ),
         SmartImportCaptionHarnessSample(
             sampleID: "SI-CVP-025",
             caption: "Questa pasta nasce con quello che avevo: spaghetti, pomodoro, olio buono, aglio e basilico. Fine.",
             sourceURL: nil,
+            expectedTitle: nil,
             expectedIngredients: ["spaghetti", "pomodoro", "olio", "aglio", "basilico"]
+        ),
+        SmartImportCaptionHarnessSample(
+            sampleID: "REG-20260516-005",
+            caption: "Muffin banana e cioccolato per 6: banana 2, farina 180g, uova 2, zucchero 80g, latte 80ml, lievito 1 bustina, gocce di cioccolato 70g. Mescola tutto, versa negli stampi e cuoci a 180 gradi per 20 minuti.",
+            sourceURL: nil,
+            expectedTitle: "Muffin banana e cioccolato",
+            expectedIngredients: ["banana", "farina", "uova", "zucchero", "latte", "lievito", "gocce di cioccolato"]
+        ),
+        SmartImportCaptionHarnessSample(
+            sampleID: "REG-20260516-006",
+            caption: "Frittata spinaci e patate per 2: uova 4, spinaci 150g, patate 250g, parmigiano 30g, sale q.b., olio 1 cucchiaio. Lessare le patate, saltare gli spinaci, unire con le uova e cuocere in padella.",
+            sourceURL: nil,
+            expectedTitle: "Frittata spinaci e patate",
+            expectedIngredients: ["uova", "spinaci", "patate", "parmigiano", "sale", "olio"]
         )
     ]
 }
@@ -5771,30 +6720,30 @@ extension CreateRecipeView {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
 
-        print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=begin samples=\(report.samples.count)")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=begin samples=\(report.samples.count)")
         var jsonLines: [String] = []
         for sample in report.samples {
             if let data = try? encoder.encode(sample),
                let json = String(data: data, encoding: .utf8) {
                 jsonLines.append(json)
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_ROW] \(json)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_ROW] \(json)")
             }
         }
         if let data = try? encoder.encode(report.summary),
            let json = String(data: data, encoding: .utf8) {
             jsonLines.append(json)
-            print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_SUMMARY] \(json)")
+            SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT_SUMMARY] \(json)")
         }
         if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             let outputURL = documentsURL.appendingPathComponent("smart-import-specificity-audit.jsonl")
             do {
                 try jsonLines.joined(separator: "\n").write(to: outputURL, atomically: true, encoding: .utf8)
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_written path=\(outputURL.path)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_written path=\(outputURL.path)")
             } catch {
-                print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_write_failed error=\(error)")
+                SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=file_write_failed error=\(error)")
             }
         }
-        print("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=end")
+        SeasonLog.debug("[SEASON_SMART_IMPORT_SPECIFICITY_AUDIT] phase=end")
     }
 
     @MainActor
@@ -6157,6 +7106,13 @@ extension CreateRecipeView {
             expect("brodo vegetale", needle: "brodo vegetale", target: "brodo vegetale", exact: "basic:broth"),
             expect("burro", needle: "burro", target: "burro", exact: "basic:butter"),
             expect("parmigiano reggiano 30g", needle: "parmigiano reggiano", target: "parmigiano reggiano", exact: "basic:parmesan", wrong: ["basic:pecorino"])
+        ]),
+        SmartImportSpecificitySample(id: "spec_034b_inline_servings_risotto", caption: "Risotto ai funghi per 2: riso 180g, funghi 250g, brodo vegetale caldo 700ml, burro 20g, parmigiano 30g. Tosta il riso, aggiungi i funghi, cuoci con il brodo poco alla volta e manteca con burro e parmigiano", expected: [
+            expect("riso 180g", needle: "riso", target: "riso", exact: "basic:rice"),
+            expect("funghi 250g", needle: "funghi", target: "funghi", exact: "produce:mushroom", parents: ["produce:mushroom"], allowParent: true),
+            expect("brodo vegetale caldo 700ml", needle: "brodo vegetale", target: "brodo vegetale", exact: "basic:broth"),
+            expect("burro 20g", needle: "burro", target: "burro", exact: "basic:butter"),
+            expect("parmigiano 30g", needle: "parmigiano", target: "parmigiano", exact: "basic:parmesan", wrong: ["basic:pecorino"])
         ]),
         SmartImportSpecificitySample(id: "spec_035_quantityless_pasta_fredda", caption: "Pasta fredda: pasta 200g, pomodori 3, tonno sott'olio 120g, capperi, basilico. Raffredda e condisci.", expected: [
             expect("pasta 200g", needle: "pasta", target: "pasta", exact: "basic:pasta", parents: ["basic:pasta"], allowParent: true),

@@ -30,7 +30,7 @@ private actor CatalogEnrichmentRemoteMetrics {
             .sorted { $0.key < $1.key }
             .map { "\($0.key)=\($0.value)" }
             .joined(separator: ",")
-        print(
+        SeasonLog.debug(
             "[SEASON_CATALOG_ENRICH_METRICS] " +
             "event=\(event) " +
             "total=\(totalCalls) " +
@@ -95,19 +95,19 @@ struct EdgeFunctionRemoteCatalogEnrichmentProvider: RemoteCatalogEnrichmentPropo
                     )
                 }
                 guard let proposal = mapFromEdgeFunctionResponse(response, normalizedText: normalized) else {
-                    print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=unusable_payload normalized_text=\(normalized) attempt=\(attempt)")
+                    SeasonLog.debug("[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed reason=unusable_payload normalized_text=\(normalized) attempt=\(attempt)")
                     await CatalogEnrichmentRemoteMetrics.shared.recordFallback(errorType: "unusable_payload")
                     return nil
                 }
 
-                print("[SEASON_CATALOG_ENRICH] phase=remote_proposal_ok source=edge_function normalized_text=\(normalized) attempt=\(attempt)")
+                SeasonLog.debug("[SEASON_CATALOG_ENRICH] phase=remote_proposal_ok source=edge_function normalized_text=\(normalized) attempt=\(attempt)")
                 await CatalogEnrichmentRemoteMetrics.shared.recordSuccess()
                 return proposal
             } catch {
                 let errorType = classifyErrorType(error)
                 let retryable = isRetryable(error)
                 let isLastAttempt = attempt == maxAttempts
-                print(
+                SeasonLog.debug(
                     "[SEASON_CATALOG_ENRICH] phase=remote_proposal_failed " +
                     "reason=rpc_error normalized_text=\(normalized) " +
                     "attempt=\(attempt) retryable=\(retryable) " +
@@ -408,7 +408,7 @@ struct CatalogEnrichmentProposalProviderPipeline: CatalogEnrichmentProposalProvi
            let remoteProposal = await remoteProvider.proposeRemotely(for: normalizedText) {
             return remoteProposal
         }
-        print("[SEASON_CATALOG_ENRICH] phase=provider_fallback_used normalized_text=\(normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) fallback=deterministic")
+        SeasonLog.debug("[SEASON_CATALOG_ENRICH] phase=provider_fallback_used normalized_text=\(normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) fallback=deterministic")
         return await fallbackProvider.propose(for: normalizedText)
     }
 }

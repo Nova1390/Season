@@ -86,7 +86,7 @@
 "home.section.more_ideas" = "Altre idee";
 "home.section.seasonal.cta" = "Vedi tutti";
 "home.section.seasonal.subtitle" = "In questo momento";
-"home.section.seasonal.title" = "Al picco questa settimana";
+"home.section.seasonal.title" = "Al meglio questa settimana";
 "home.section.weekly.label" = "Scelto per te";
 "home.section.weekly.title" = "Ricette per il tuo momento";
 "home.smart_suggestions.filter_hint" = "Filtra le ricette qui sotto";
@@ -126,7 +126,7 @@
 "search.discovery.empty_fridge.subtitle" = "Aggiungi ingredienti per ottenere suggerimenti dal frigo.";
 "search.discovery.empty_fridge.title" = "Il tuo frigo è vuoto";
 "search.discovery.from_fridge" = "Dal tuo frigo";
-"search.discovery.peak_season_now" = "Picco di stagione";
+"search.discovery.peak_season_now" = "Al meglio di stagione";
 "search.discovery.recipes_count_format" = "%d ricette";
 "search.discovery.season_pick" = "Scelta di stagione";
 "search.filter.fridge_ready" = "Pronte dal frigo";
@@ -225,8 +225,8 @@
 "account.appearance.hint" = "Scegli se seguire il telefono o forzare la modalita chiara/scura.";
 "detail.seasonality" = "Stagionalità";
 "detail.seasonality.unavailable" = "Stagionalità non disponibile";
-"home.band.peak.kicker" = "Al picco questa settimana";
-"home.band.peak.title" = "È il momento della stagione.";
+"home.band.peak.kicker" = "Al meglio questa settimana";
+"home.band.peak.title" = "Il momento giusto della stagione.";
 "home.band.peak.title_em" = "Ecco cosa cucinare";
 "home.band.peak.card_meta_format" = "Settimana %d";
 "home.tip.kicker" = "Consiglio della settimana";

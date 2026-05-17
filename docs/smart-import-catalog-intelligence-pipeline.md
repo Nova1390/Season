@@ -225,6 +225,10 @@ Training signals are intentionally weaker than learning memory:
 - The proposal quality gate also enforces this: alias-candidate training evidence with no safe target blocks `create_canonical` persistence, even if the LLM suggests it.
 - A training signal must be promoted through a governed review path before it becomes learning memory or catalog mutation.
 
+Operational invariant for creator import quality:
+
+The server parser and LLM are assistants, not final authority over a better local draft. If Swift parsing has already recovered a clean title, explicit quantities, unique ingredient rows, or catalog matches, a server fallback must not overwrite those fields with a weaker result.
+
 ## 2. System Overview
 
 ```mermaid
@@ -303,10 +307,22 @@ Does:
 - Accepts caption-only, URL-only, or caption+URL input.
 - Extracts candidate ingredient lines deterministically.
 - Recovers basic quantity/unit patterns.
+- For inline captions such as `Recipe per 2: ingredient 100g, ingredient 200ml. Cook...`, treats text before `:` as the title, keeps only the ingredient-list sentence for candidates, and stops before procedural verbs.
+- For social captions such as `Recipe title Ingredienti: ingredient 100g...`, strips the `Ingredienti:` marker from the title while preserving the measured ingredient block.
+- Avoids recovering standalone sub-ingredients from measured preparation-state phrases, for example it must not create a separate oil ingredient from `tonno sott'olio 120g`.
+- Normalizes simulator/user-input separator noise before parsing, for example `per 2ç` as `per 2:` and intra-word `sottàolio` as `sott'olio`, while keeping the displayed creator draft human-readable.
+- Splits dense one-line captions into ingredient-like fragments instead of falling back to one large block when there are many comma-separated terms.
+- Keeps q.b. tokens sentence-safe so `prezzemolo q.b., olio...` does not prematurely end extraction or contaminate the next ingredient with procedure text.
+- Preserves natural half quantities such as `limone mezzo`, `mezza cipolla`, and `half lemon` as `0.5 piece` when the matched catalog item is not a countable ingredient where the half token would be misleading.
+- Rejects unsafe substring-only catalog matches. A catalog candidate must match as a normalized token/phrase, not as letters hidden inside another word; for example `gocce di cioccolato` must not resolve to `cola` just because `cioccolato` contains that substring.
+- Treats common Italian infinitive cooking verbs as procedural evidence, including `lessare`, `saltare`, `unire`, `cuocere`, `mescolare`, and `versare`, so creator captions written in recipe shorthand still produce steps.
 - Attempts local matching against loaded produce, basic ingredients, unified catalog names, and approved aliases.
 - Produces `SmartImportIngredientCandidate` values with `matchType`, optional matched ingredient id, and confidence.
 - Preserves trusted server-returned catalog matches (`produce:*` or `basic:*`) in the final draft instead of rematching by text only.
 - Builds draft recipe ingredients in the existing Swift-compatible recipe model.
+- Applies a server quality gate before accepting `parse-recipe-caption` fallback output. The gate compares local and server drafts for lost candidates, quantity/unit drift, duplicate ingredient keys, draft count, and usable title.
+- Preserves local ingredients/title when the server fallback degrades the local result, while still allowing useful server steps to enrich the final draft.
+- Test harnesses must assert title quality, missing expected ingredients, duplicate keys, invented quantities, and quantity/unit drift. A single risotto smoke test is not enough for release confidence.
 - Emits unresolved custom ingredient observations after publish/save when final ingredients remain custom.
 
 Must not:
@@ -323,6 +339,11 @@ Does:
 - Requires authenticated user context.
 - Accepts `caption`, optional `url`, `languageCode`, and optional `ingredientCandidates`.
 - If candidates are present, calls LLM only for candidates that require it: ambiguous or none, plus low-confidence alias when applicable.
+- Normalizes title extraction for inline `Ingredienti:`/`Ingredients:` captions before any model fallback.
+- Normalizes title extraction for one-line captions such as `Insalata di pollo per 2: pollo 250g...` before rejecting a line as ingredient-like.
+- Extracts simple inline procedure sentences such as `Taglia tutto...`, `Frulla tutto...`, `Tosta il riso...`, and `Manteca...` without inventing missing steps.
+- Preserves explicit candidate quantities/units over LLM-resolved names so the model can rename an ingredient but cannot move a dose to another ingredient.
+- Deduplicates identical resolved ingredient candidates conservatively, preferring entries with explicit quantity/unit.
 - Returns existing-compatible recipe parse output plus optional metadata per ingredient: `status`, `confidence`, `matchType`, and `matchedIngredientId`.
 - Lets Swift preserve trusted catalog identity when the server confirms a known candidate.
 - Adds `smartImportAgent` metadata to the result with draft quality, review hints, unresolved ingredients, and executed passes.

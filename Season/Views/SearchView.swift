@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchView: View {
     @ObservedObject var viewModel: ProduceViewModel
     @ObservedObject var shoppingListViewModel: ShoppingListViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var fridgeViewModel: FridgeViewModel
     @State private var searchQuery = ""
     @State private var selectedMode: SearchMode = .recipes
@@ -156,12 +157,12 @@ struct SearchView: View {
                 Text(title)
                     .font(DS.Font.sans(13, weight: .semibold))
             }
-            .foregroundStyle(isSelected ? DS.Color.sageDeep : DS.Color.inkSoft)
+            .foregroundStyle(isSelected ? selectedControlForeground : DS.Color.inkSoft)
             .frame(maxWidth: .infinity)
             .frame(height: 38)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? DS.Color.sageSoft.opacity(0.82) : DS.Color.cardSoft)
+                    .fill(isSelected ? selectedControlBackground : DS.Color.cardSoft)
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -207,7 +208,7 @@ struct SearchView: View {
         guard searchResultsCache[key] == nil else { return }
 
         do {
-            try await Task.sleep(nanoseconds: 250_000_000)
+            try await Task.sleep(nanoseconds: searchDebounceNanoseconds)
         } catch {
             return
         }
@@ -215,11 +216,15 @@ struct SearchView: View {
         guard !Task.isCancelled, key == searchRequestKey else { return }
         await Task.yield()
 
+        let start = Date()
         let snapshot = buildSearchSnapshot(for: key)
         guard !Task.isCancelled, key == searchRequestKey else { return }
 
         searchResultsCache[key] = snapshot
         pruneSearchResultsCache(keeping: key)
+        debugSearchResults(
+            "phase=snapshot_built mode=\(key.mode.rawValue) filter=\(key.filter?.rawValue ?? "none") results=\(snapshot.totalResults) duration_ms=\(Int(Date().timeIntervalSince(start) * 1000))"
+        )
     }
 
     private func buildSearchSnapshot(for key: SearchResultsCacheKey) -> SearchResultsSnapshot {
@@ -242,6 +247,14 @@ struct SearchView: View {
     private func pruneSearchResultsCache(keeping activeKey: SearchResultsCacheKey) {
         guard searchResultsCache.count > 8 else { return }
         searchResultsCache = searchResultsCache.filter { key, _ in key == activeKey }
+    }
+
+    private func debugSearchResults(_ message: String) {
+        #if DEBUG
+        if SeasonLog.verbose || ProcessInfo.processInfo.environment["SEASON_SEARCH_DEBUG"] == "1" {
+            SeasonLog.debug("SEARCH DEBUG: \(message)")
+        }
+        #endif
     }
 
     private func activeResultsContainer<Content: View>(
@@ -314,11 +327,11 @@ struct SearchView: View {
         } label: {
             Text(title)
                 .font(DS.Font.sans(12, weight: .semibold))
-                .foregroundStyle(isSelected ? DS.Color.sageDeep : DS.Color.inkSoft)
+                .foregroundStyle(isSelected ? selectedControlForeground : DS.Color.inkSoft)
                 .seasonCapsuleChipStyle(
                     horizontalPadding: 12,
                     verticalPadding: 8,
-                    background: isSelected ? DS.Color.sageSoft.opacity(0.78) : DS.Color.card
+                    background: isSelected ? selectedControlBackground : DS.Color.card
                 )
                 .overlay(
                     Capsule(style: .continuous)
@@ -335,6 +348,14 @@ struct SearchView: View {
         case .ingredients:
             return [.seasonal]
         }
+    }
+
+    private var selectedControlForeground: Color {
+        colorScheme == .dark ? DS.Color.ink : DS.Color.sageDeep
+    }
+
+    private var selectedControlBackground: Color {
+        colorScheme == .dark ? DS.Color.sageSoft.opacity(0.96) : DS.Color.sageSoft.opacity(0.82)
     }
 
     private func filterTitle(for filter: SearchFilterChip) -> String {
@@ -528,11 +549,11 @@ struct SearchView: View {
                 } label: {
                     Text(viewModel.localizer.localized("search.action.clear_query"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkSoft)
                         .seasonCapsuleChipStyle(
                             horizontalPadding: 10,
                             verticalPadding: 6,
-                            background: SeasonColors.subtleSurface
+                            background: DS.Color.cardSoft
                         )
                 }
                 .buttonStyle(.plain)
@@ -545,11 +566,11 @@ struct SearchView: View {
                         : viewModel.localizer.localized("search.action.switch_to_recipes")
                     )
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkSoft)
                         .seasonCapsuleChipStyle(
                             horizontalPadding: 10,
                             verticalPadding: 6,
-                            background: SeasonColors.subtleSurface
+                            background: DS.Color.cardSoft
                         )
                 }
                 .buttonStyle(.plain)
@@ -560,11 +581,11 @@ struct SearchView: View {
                     } label: {
                         Text(viewModel.localizer.localized("search.action.clear_filter"))
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DS.Color.inkSoft)
                             .seasonCapsuleChipStyle(
                                 horizontalPadding: 10,
                                 verticalPadding: 6,
-                                background: SeasonColors.subtleSurface
+                                background: DS.Color.cardSoft
                             )
                     }
                     .buttonStyle(.plain)
@@ -588,74 +609,43 @@ struct SearchView: View {
         guard !baseResults.isEmpty else { return [] }
 
         let fridgeIDs = fridgeViewModel.allIngredientIDSet
-        let personalizationProfile = FeedPersonalizationService.shared.buildProfile(
-            from: viewModel.homeRankedRecipes(limit: 120)
-        )
-        let denominator = Double(max(1, baseResults.count - 1))
-
-        return baseResults.enumerated()
-            .map { index, ranked in
-                let textScore = denominator == 0 ? 1.0 : max(0.0, 1.0 - (Double(index) / denominator))
-                let seasonalScore = Double(ranked.seasonalMatchPercent) / 100.0
-                let popularityScore = (0.6 * viewModel.crispyScore(for: ranked.recipe)) + (0.4 * viewModel.viewsScore(for: ranked.recipe))
-                let fridgeScore = fridgeIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: ranked.recipe, fridgeItemIDs: fridgeIDs)
-                let personalization = personalizationProfile.evaluation(for: ranked, fridgeMatchScore: fridgeScore).adjustment
-
-                // Text relevance remains dominant.
-                let score = (0.72 * textScore)
-                    + (0.10 * seasonalScore)
-                    + (0.10 * popularityScore)
-                    + (0.06 * fridgeScore)
-                    + (0.06 * personalization)
-                return (ranked: ranked, score: score)
-            }
-            .sorted { lhs, rhs in
-                if lhs.score != rhs.score {
-                    return lhs.score > rhs.score
+        return SearchResultsService.rankRecipes(
+            baseResults,
+            context: SearchResultsService.RecipeRankingContext(
+                fridgeIngredientIDs: fridgeIDs,
+                personalizationProfile: FeedPersonalizationService.shared.buildProfile(
+                    from: viewModel.homeRankedRecipes(limit: 120)
+                ),
+                crispyScore: { viewModel.crispyScore(for: $0) },
+                viewsScore: { viewModel.viewsScore(for: $0) },
+                fridgeMatchScore: { recipe, fridgeIDs in
+                    viewModel.fridgeMatchScore(for: recipe, fridgeItemIDs: fridgeIDs)
                 }
-                return lhs.ranked.recipe.title.localizedCaseInsensitiveCompare(rhs.ranked.recipe.title) == .orderedAscending
-            }
-            .map(\.ranked)
+            )
+        )
     }
 
     private func filteredRecipeSearchResults(query: String, filter: SearchFilterChip?) -> [RankedRecipe] {
         let base = smartRankedRecipeResults(query: query)
-        guard let filter else { return base }
-
-        let fridgeIDs = fridgeViewModel.allIngredientIDSet
-        switch filter {
-        case .seasonal:
-            return base.filter { $0.seasonalMatchPercent >= 80 }
-        case .fridgeReady:
-            guard !fridgeIDs.isEmpty else { return [] }
-            return base.filter { viewModel.fridgeMatchScore(for: $0.recipe, fridgeItemIDs: fridgeIDs) >= 0.50 }
-        }
+        return SearchResultsService.filterRecipes(
+            base,
+            filter: filter?.serviceFilter,
+            fridgeIngredientIDs: fridgeViewModel.allIngredientIDSet,
+            fridgeMatchScore: { recipe, fridgeIDs in
+                viewModel.fridgeMatchScore(for: recipe, fridgeItemIDs: fridgeIDs)
+            }
+        )
     }
 
     private func filteredIngredientSearchResults(query: String, filter: SearchFilterChip?) -> [IngredientSearchResult] {
         let base = viewModel.searchIngredientResults(query: query)
-        guard let filter else { return base }
-
-        switch filter {
-        case .fridgeReady:
-            return base.filter { result in
-                switch result.source {
-                case .produce(let item):
-                    return fridgeViewModel.contains(item)
-                case .basic(let basic):
-                    return fridgeViewModel.contains(basic)
-                }
-            }
-        case .seasonal:
-            return base.filter { result in
-                switch result.source {
-                case .produce(let item):
-                    return item.seasonalityScore(month: viewModel.currentMonth) >= 0.22
-                case .basic:
-                    return false
-                }
-            }
-        }
+        return SearchResultsService.filterIngredients(
+            base,
+            filter: filter?.serviceFilter,
+            currentMonth: viewModel.currentMonth,
+            containsProduce: { fridgeViewModel.contains($0) },
+            containsBasic: { fridgeViewModel.contains($0) }
+        )
     }
 
     private func recipesFromFridge(limit: Int) -> [RankedRecipe] {
@@ -842,9 +832,7 @@ struct SearchView: View {
                 semantic: .positive,
                 horizontalPadding: 7,
                 verticalPadding: 4,
-                cornerRadius: 8,
-                foreground: DS.Color.sageDeep,
-                background: DS.Color.sageSoft.opacity(0.58)
+                cornerRadius: 8
             )
             .fixedSize(horizontal: true, vertical: false)
         }
@@ -927,6 +915,8 @@ struct SearchView: View {
 
 }
 
+private let searchDebounceNanoseconds: UInt64 = 280_000_000
+
 private struct SearchResultsCacheKey: Hashable {
     let query: String
     let mode: SearchMode
@@ -944,6 +934,7 @@ private struct SearchResultsSnapshot {
 
     var query: String { key.query }
     var mode: SearchMode { key.mode }
+    var totalResults: Int { recipeResults.count + ingredientResults.count }
 }
 
 private enum SearchMode: String, CaseIterable, Identifiable, Hashable {
@@ -958,6 +949,15 @@ private enum SearchFilterChip: String, CaseIterable, Identifiable, Hashable {
     case seasonal
 
     var id: String { rawValue }
+
+    var serviceFilter: SearchResultFilter {
+        switch self {
+        case .fridgeReady:
+            return .fridgeReady
+        case .seasonal:
+            return .seasonal
+        }
+    }
 }
 
 private struct SearchDietaryTagMiniPill: View {

@@ -1,7 +1,8 @@
 # Current Status
 
 ## Working Today
-- Release/TestFlight work remains on the staging-backed release line; the last documented fast bugfix candidate is `1.0.1 (4)`.
+- The app is in TestFlight rollout for an iOS 26+ release.
+- TestFlight build `1.0.1 (10)` is the current staging-backed app-polish candidate.
 - This branch, `agent/catalog-governance`, is a dev-only branch for Catalog Governance Agent and Smart Import Agent work.
 - Debug builds target the development Supabase environment; Release builds target the staging Supabase environment.
 - `Season/PrivacyInfo.xcprivacy` is present and lint-clean for app-level privacy manifest coverage.

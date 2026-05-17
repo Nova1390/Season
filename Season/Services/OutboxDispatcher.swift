@@ -28,7 +28,7 @@ final class OutboxDispatcher {
         }
 
         guard canStart else {
-            print("[SEASON_SUPABASE] phase=dispatcher_skipped reason=already_processing")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_skipped reason=already_processing")
             return
         }
 
@@ -49,7 +49,7 @@ final class OutboxDispatcher {
                 return lhs.id.uuidString < rhs.id.uuidString
             }
 
-        print("[SEASON_SUPABASE] phase=dispatcher_started pending_count=\(pending.count)")
+        SeasonLog.debug("[SEASON_SUPABASE] phase=dispatcher_started pending_count=\(pending.count)")
 
         for mutation in pending {
             await process(mutation)
@@ -64,7 +64,7 @@ final class OutboxDispatcher {
         inProgress.updatedAt = Date()
         outboxStore.update(inProgress)
 
-        print(
+        SeasonLog.debug(
             "[SEASON_SUPABASE] phase=mutation_started mutation_id=\(inProgress.mutationID) " +
             "entity_type=\(inProgress.entityType) operation_type=\(inProgress.operationType)"
         )
@@ -79,7 +79,7 @@ final class OutboxDispatcher {
             completed.updatedAt = Date()
             outboxStore.update(completed)
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_SUPABASE] phase=mutation_completed mutation_id=\(completed.mutationID) " +
                 "entity_type=\(completed.entityType) operation_type=\(completed.operationType)"
             )
@@ -96,7 +96,7 @@ final class OutboxDispatcher {
                 retried.updatedAt = Date()
                 outboxStore.update(retried)
 
-                print(
+                SeasonLog.debug(
                     "[SEASON_SUPABASE] phase=mutation_retry_scheduled mutation_id=\(retried.mutationID) " +
                     "entity_type=\(retried.entityType) operation_type=\(retried.operationType) " +
                     "attempt=\(retried.attemptCount) next_retry_in_seconds=\(Int(backoffSeconds)) error=\(error)"
@@ -109,7 +109,7 @@ final class OutboxDispatcher {
                 failed.updatedAt = Date()
                 outboxStore.update(failed)
 
-                print(
+                SeasonLog.debug(
                     "[SEASON_SUPABASE] phase=mutation_failed mutation_id=\(failed.mutationID) " +
                     "entity_type=\(failed.entityType) operation_type=\(failed.operationType) " +
                     "attempt=\(failed.attemptCount) error=\(error)"
@@ -186,6 +186,22 @@ final class OutboxDispatcher {
                 traceID: mutation.mutationID
             )
 
+        case ("recipe_state", "saved"):
+            let payload = try decoder.decode(RecipeSavedStateOutboxPayload.self, from: mutation.payload)
+            try await supabaseService.setRecipeSavedState(
+                recipeID: payload.recipeID,
+                isSaved: payload.isSaved,
+                traceID: mutation.mutationID
+            )
+
+        case ("recipe_state", "crispied"):
+            let payload = try decoder.decode(RecipeCrispiedStateOutboxPayload.self, from: mutation.payload)
+            try await supabaseService.setRecipeCrispiedState(
+                recipeID: payload.recipeID,
+                isCrispied: payload.isCrispied,
+                traceID: mutation.mutationID
+            )
+
         default:
             throw OutboxDispatcherError.unsupportedMutation(
                 entityType: mutation.entityType,
@@ -232,4 +248,14 @@ private struct FridgeOutboxCreatePayload: Codable {
 
 private struct FridgeOutboxDeletePayload: Codable {
     let localItemID: String
+}
+
+private struct RecipeSavedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isSaved: Bool
+}
+
+private struct RecipeCrispiedStateOutboxPayload: Codable {
+    let recipeID: String
+    let isCrispied: Bool
 }

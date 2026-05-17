@@ -54,7 +54,7 @@ struct AuthorProfileView: View {
             leading: .back
         )
         .onAppear {
-            print("[SEASON_FOLLOW_IDENTITY] phase=profile_appear creator_id=\(canonicalCreatorID ?? "nil") creator_name=\(authorName) was_following=\(isFollowing)")
+            SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=profile_appear creator_id=\(canonicalCreatorID ?? "nil") creator_name=\(authorName) was_following=\(isFollowing)")
         }
     }
 
@@ -384,10 +384,10 @@ struct AuthorProfileView: View {
             .lowercased()
         guard !cleaned.isEmpty, cleaned != "unknown" else { return nil }
         guard UUID(uuidString: cleaned) != nil else {
-            print("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(cleaned)")
+            SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=invalid_follow_identifier value=\(cleaned)")
             if cleaned.range(of: "^[a-z0-9_\\-.]+$", options: .regularExpression) != nil &&
                 !cleaned.contains("-") {
-                print("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(cleaned)")
+                SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=legacy_name_rejected value=\(cleaned)")
             }
             return nil
         }
@@ -481,7 +481,7 @@ struct AuthorProfileView: View {
     private func toggleFollow() {
         guard let canonicalCreatorID else { return }
         let wasFollowing = followStore.isFollowing(canonicalCreatorID)
-        print("[SEASON_FOLLOW_IDENTITY] phase=profile_toggle creator_id=\(canonicalCreatorID) creator_name=\(authorName) was_following=\(wasFollowing)")
+        SeasonLog.debug("[SEASON_FOLLOW_IDENTITY] phase=profile_toggle creator_id=\(canonicalCreatorID) creator_name=\(authorName) was_following=\(wasFollowing)")
         followStore.toggleFollow(canonicalCreatorID)
     }
 }

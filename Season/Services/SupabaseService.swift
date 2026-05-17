@@ -21,6 +21,30 @@ struct SupabaseConfiguration {
     let anonKey: String
 }
 
+private struct SeasonSupabaseAuthStorage: AuthLocalStorage {
+    private let prefix: String
+
+    init(projectHost: String) {
+        self.prefix = "season.supabase.auth.\(projectHost)."
+    }
+
+    func store(key: String, value: Data) throws {
+        UserDefaults.standard.set(value, forKey: prefixedKey(key))
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        UserDefaults.standard.data(forKey: prefixedKey(key))
+    }
+
+    func remove(key: String) throws {
+        UserDefaults.standard.removeObject(forKey: prefixedKey(key))
+    }
+
+    private func prefixedKey(_ key: String) -> String {
+        prefix + key
+    }
+}
+
 enum SupabaseServiceError: LocalizedError {
     case missingConfiguration(String)
     case invalidURL
@@ -1167,7 +1191,7 @@ struct CustomIngredientObservation: Sendable {
     let latestRecipeID: String?
 }
 
-private struct ParseRecipeCaptionFunctionRequest: Encodable {
+struct ParseRecipeCaptionFunctionRequest: Encodable {
     let caption: String?
     let url: String?
     let languageCode: String
@@ -1196,7 +1220,7 @@ private struct ImportRecipeFromURLFunctionRequest: Encodable {
     let url: String
 }
 
-private struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
+struct ParseRecipeCaptionFunctionErrorEnvelope: Decodable {
     struct ErrorBody: Decodable {
         let code: String
         let message: String
@@ -1303,6 +1327,10 @@ final class SupabaseService {
     private let client: SupabaseClient?
     private let authRepository: AuthRepository
     private let recipeRepository: RecipeRepository
+    private let smartImportRemoteDataSource: SmartImportRemoteDataSource
+    private let authStateQueue = DispatchQueue(label: "season.supabase.auth_state")
+    private var cachedAuthenticatedUserID: UUID?
+    private var cachedAuthenticatedEmail: String?
     private let currentProfileCacheQueue = DispatchQueue(label: "season.supabase.current_profile_cache")
     private var cachedCurrentProfileUserID: UUID?
     private var cachedCurrentProfile: Profile?
@@ -1316,9 +1344,18 @@ final class SupabaseService {
             let configuration = try SupabaseService.loadConfiguration(from: bundle)
             self.configuration = configuration
             self.configurationIssue = nil
+            let projectHost = configuration.url.host ?? "default"
+            let options = SupabaseClientOptions(
+                auth: .init(
+                    storage: SeasonSupabaseAuthStorage(projectHost: projectHost),
+                    storageKey: "season-\(projectHost)-auth-token",
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
             self.client = SupabaseClient(
                 supabaseURL: configuration.url,
-                supabaseKey: configuration.anonKey
+                supabaseKey: configuration.anonKey,
+                options: options
             )
         } catch {
             self.configuration = nil
@@ -1334,31 +1371,40 @@ final class SupabaseService {
             client: self.client,
             configurationIssue: self.configurationIssue
         )
+        self.smartImportRemoteDataSource = SmartImportRemoteDataSource(
+            client: self.client,
+            configuration: self.configuration,
+            configurationIssue: self.configurationIssue
+        )
     }
 
     func currentAuthenticatedUserID() -> UUID? {
-        authRepository.currentAuthenticatedUserID()
+        authRepository.currentAuthenticatedUserID() ?? authStateQueue.sync {
+            cachedAuthenticatedUserID
+        }
     }
 
     func currentAuthenticatedEmail() -> String? {
-        authRepository.currentAuthenticatedEmail()
+        authRepository.currentAuthenticatedEmail() ?? authStateQueue.sync {
+            cachedAuthenticatedEmail
+        }
     }
 
     func isCurrentUserCatalogAdmin() async -> Bool {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed reason=missing_configuration")
             return false
         }
 
         let currentUserID = supabaseClient.auth.currentUser?.id.uuidString.lowercased()
-        print("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_called current_user_id=\(currentUserID ?? "nil")")
+        SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_called current_user_id=\(currentUserID ?? "nil")")
 
         if currentUserID == nil {
             do {
                 let sessionUserID = try await supabaseClient.auth.session.user.id.uuidString.lowercased()
-                print("[SEASON_CATALOG_ADMIN] phase=admin_status_session_restored user_id=\(sessionUserID)")
+                SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_session_restored user_id=\(sessionUserID)")
             } catch {
-                print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_skipped reason=unauthenticated error=\(error)")
+                SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_check_skipped reason=unauthenticated error=\(error)")
                 return false
             }
         }
@@ -1368,13 +1414,13 @@ final class SupabaseService {
                 .rpc("is_current_user_catalog_admin")
                 .execute()
             let rawResponse = String(data: response.data, encoding: .utf8) ?? "<non_utf8>"
-            print("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_response raw=\(rawResponse)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_rpc_response raw=\(rawResponse)")
             let isAdmin = decodeRPCBoolean(response.data, key: "is_current_user_catalog_admin")
             let payloadDescription = describeRPCPayload(response.data)
-            print("[SEASON_CATALOG_ADMIN] phase=admin_status_decode payload=\(payloadDescription) decoded_is_admin=\(isAdmin)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_decode payload=\(payloadDescription) decoded_is_admin=\(isAdmin)")
             return isAdmin
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=admin_status_check_failed error=\(error)")
             return false
         }
     }
@@ -1389,10 +1435,10 @@ final class SupabaseService {
         let normalizedFollowerID = normalizeFollowID(followerId)
         guard !normalizedFollowerID.isEmpty else { return [] }
 
-        print("[SEASON_SUPABASE] request=fetchFollows phase=request_started follower_id=\(normalizedFollowerID)")
+        SeasonLog.debug("[SEASON_SUPABASE] request=fetchFollows phase=request_started follower_id=\(normalizedFollowerID)")
 
         guard let client else {
-            print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=missing_configuration")
             return []
         }
 
@@ -1413,14 +1459,14 @@ final class SupabaseService {
                 return FollowRelation(followerId: follower, followingId: following, createdAt: createdAt)
             }
 
-            print("[SEASON_SUPABASE] request=fetchFollows phase=request_ok follower_id=\(normalizedFollowerID) count=\(relations.count)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchFollows phase=request_ok follower_id=\(normalizedFollowerID) count=\(relations.count)")
             return relations
         } catch {
             if isMissingFollowsTableError(error) {
-                print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=fetchFollows phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) error=\(error)")
                 return []
             }
-            print("[SEASON_SUPABASE] request=fetchFollows phase=request_failed follower_id=\(normalizedFollowerID) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=fetchFollows phase=request_failed follower_id=\(normalizedFollowerID) error=\(error)")
             return []
         }
     }
@@ -1430,10 +1476,10 @@ final class SupabaseService {
         let followingID = normalizeFollowID(relation.followingId)
         guard !followerID.isEmpty, !followingID.isEmpty, followingID != "unknown" else { return false }
 
-        print("[SEASON_SUPABASE] request=createFollow phase=request_started follower_id=\(followerID) following_id=\(followingID)")
+        SeasonLog.debug("[SEASON_SUPABASE] request=createFollow phase=request_started follower_id=\(followerID) following_id=\(followingID)")
 
         guard let client else {
-            print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=missing_configuration")
             return false
         }
 
@@ -1448,14 +1494,14 @@ final class SupabaseService {
                 .from("follows")
                 .upsert(payload, onConflict: "follower_id,following_id")
                 .execute()
-            print("[SEASON_SUPABASE] request=createFollow phase=request_ok follower_id=\(followerID) following_id=\(followingID)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=createFollow phase=request_ok follower_id=\(followerID) following_id=\(followingID)")
             return true
         } catch {
             if isMissingFollowsTableError(error) {
-                print("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=table_missing follower_id=\(followerID) following_id=\(followingID) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=createFollow phase=request_failed reason=table_missing follower_id=\(followerID) following_id=\(followingID) error=\(error)")
                 return false
             }
-            print("[SEASON_SUPABASE] request=createFollow phase=request_failed follower_id=\(followerID) following_id=\(followingID) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=createFollow phase=request_failed follower_id=\(followerID) following_id=\(followingID) error=\(error)")
             return false
         }
     }
@@ -1465,10 +1511,10 @@ final class SupabaseService {
         let normalizedFollowingID = normalizeFollowID(followingId)
         guard !normalizedFollowerID.isEmpty, !normalizedFollowingID.isEmpty else { return false }
 
-        print("[SEASON_SUPABASE] request=deleteFollow phase=request_started follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
+        SeasonLog.debug("[SEASON_SUPABASE] request=deleteFollow phase=request_started follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
 
         guard let client else {
-            print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=missing_configuration")
             return false
         }
 
@@ -1479,14 +1525,14 @@ final class SupabaseService {
                 .eq("follower_id", value: normalizedFollowerID)
                 .eq("following_id", value: normalizedFollowingID)
                 .execute()
-            print("[SEASON_SUPABASE] request=deleteFollow phase=request_ok follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=deleteFollow phase=request_ok follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID)")
             return true
         } catch {
             if isMissingFollowsTableError(error) {
-                print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=deleteFollow phase=request_failed reason=table_missing follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
                 return false
             }
-            print("[SEASON_SUPABASE] request=deleteFollow phase=request_failed follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=deleteFollow phase=request_failed follower_id=\(normalizedFollowerID) following_id=\(normalizedFollowingID) error=\(error)")
             return false
         }
     }
@@ -1495,25 +1541,27 @@ final class SupabaseService {
         guard let client else {
             throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
         }
-        _ = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+        let session = try await client.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
+        rememberAuthenticatedUser(id: session.user.id, email: session.user.email)
         invalidateCurrentProfileCache()
         notifyAuthStateDidChange()
     }
 
     func handleAuthCallbackURL(_ url: URL) {
         guard let client else {
-            print("[SEASON_AUTH] phase=callback_ignored reason=missing_configuration url=\(url.absoluteString)")
+            SeasonLog.debug("[SEASON_AUTH] phase=callback_ignored reason=missing_configuration url=\(url.absoluteString)")
             return
         }
 
         Task {
             do {
-                _ = try await client.auth.session(from: url)
+                let session = try await client.auth.session(from: url)
+                rememberAuthenticatedUser(id: session.user.id, email: session.user.email)
                 invalidateCurrentProfileCache()
                 notifyAuthStateDidChange()
-                print("[SEASON_AUTH] phase=callback_session_loaded")
+                SeasonLog.debug("[SEASON_AUTH] phase=callback_session_loaded")
             } catch {
-                print("[SEASON_AUTH] phase=callback_session_failed error=\(error.localizedDescription)")
+                SeasonLog.debug("[SEASON_AUTH] phase=callback_session_failed error=\(error.localizedDescription)")
             }
         }
     }
@@ -1521,6 +1569,7 @@ final class SupabaseService {
     func signInWithEmail(email: String, password: String) async throws -> UUID {
         try await instrumentedRequest(name: "signInWithEmail") {
             let userID = try await authRepository.signInWithEmail(email: email, password: password)
+            rememberAuthenticatedUser(id: userID, email: email)
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
@@ -1530,7 +1579,8 @@ final class SupabaseService {
     func signUpWithEmail(email: String, password: String) async throws -> EmailSignUpResult {
         try await instrumentedRequest(name: "signUpWithEmail") {
             let result = try await authRepository.signUpWithEmail(email: email, password: password)
-            if case .signedIn = result {
+            if case .signedIn(let userID) = result {
+                rememberAuthenticatedUser(id: userID, email: email)
                 invalidateCurrentProfileCache()
                 notifyAuthStateDidChange()
             }
@@ -1541,6 +1591,7 @@ final class SupabaseService {
     func signOut() async throws {
         try await instrumentedRequest(name: "signOut") {
             try await authRepository.signOut()
+            clearRememberedAuthenticatedUser()
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
         }
@@ -1561,6 +1612,7 @@ final class SupabaseService {
                 givenName: givenName,
                 familyName: familyName
             )
+            rememberAuthenticatedUser(id: userID, email: nil)
             invalidateCurrentProfileCache()
             notifyAuthStateDidChange()
             return userID
@@ -1670,8 +1722,8 @@ final class SupabaseService {
             let fileSegment = pathSegments.indices.contains(2) ? pathSegments[2] : "nil"
             let timeoutSeconds: TimeInterval = 10
 
-            print("[SEASON_SUPABASE] phase=upload_context bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) has_authenticated_user=\(hasAuthenticatedUser) current_user_id=\(currentUserID) path_first_segment=\(firstFolderSegment) path_uid_segment=\(uidPathSegment) path_file_segment=\(fileSegment)")
-            print("[SEASON_SUPABASE] phase=upload_started bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased())")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=upload_context bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) has_authenticated_user=\(hasAuthenticatedUser) current_user_id=\(currentUserID) path_first_segment=\(firstFolderSegment) path_uid_segment=\(uidPathSegment) path_file_segment=\(fileSegment)")
+            SeasonLog.debug("[SEASON_SUPABASE] phase=upload_started bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased())")
 
             do {
                 try await withThrowingTaskGroup(of: Void.self) { group in
@@ -1702,10 +1754,10 @@ final class SupabaseService {
                     .getPublicURL(path: path)
                     .absoluteString
             } catch let SupabaseServiceError.requestTimedOut(requestName, seconds) {
-                print("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
+                SeasonLog.debug("[SEASON_SUPABASE] request=\(requestName) phase=request_timeout duration_s=\(Int(seconds)) recipe_id=\(recipeID)")
                 throw SupabaseServiceError.requestTimedOut(requestName, seconds)
             } catch {
-                print("[SEASON_SUPABASE] phase=upload_failed bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased()) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] phase=upload_failed bucket=\(bucketName) path=\(path) recipe_id=\(recipeID) expected_auth_uid=\(user.id.uuidString.lowercased()) error=\(error)")
                 throw error
             }
         }
@@ -1718,72 +1770,12 @@ final class SupabaseService {
         ingredientCandidates: [SmartImportIngredientCandidate]? = nil
     ) async throws -> ParseRecipeCaptionFunctionResponse {
         try await instrumentedRequest(name: "parseRecipeCaption") {
-            guard let supabaseClient = self.client else {
-                throw SupabaseServiceError.missingConfiguration(configurationIssue ?? "SUPABASE_URL / SUPABASE_ANON_KEY")
-            }
-
-            guard let authenticatedUser = supabaseClient.auth.currentUser else {
-                print("[SEASON_IMPORT_AUTH] phase=missing_current_user has_session=false invoke_with_authenticated_context=false")
-                throw SupabaseServiceError.unauthenticated
-            }
-
-            let accessToken: String
-            do {
-                accessToken = try await supabaseClient.auth.session.accessToken
-            } catch {
-                print("[SEASON_IMPORT_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=false invoke_with_authenticated_context=false error=\(error)")
-                throw SupabaseServiceError.unauthenticated
-            }
-            guard let anonKey = self.configuration?.anonKey,
-                  !anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw SupabaseServiceError.missingConfiguration("SUPABASE_ANON_KEY")
-            }
-
-            supabaseClient.functions.setAuth(token: accessToken)
-            print("[SEASON_IMPORT_AUTH] phase=session_ready user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=true invoke_with_authenticated_context=true")
-
-            let normalizedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let normalizedURL = url?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let payload = ParseRecipeCaptionFunctionRequest(
-                caption: normalizedCaption?.isEmpty == true ? nil : normalizedCaption,
-                url: normalizedURL?.isEmpty == true ? nil : normalizedURL,
+            try await smartImportRemoteDataSource.parseRecipeCaption(
+                caption: caption,
+                url: url,
                 languageCode: languageCode,
-                ingredientCandidates: ingredientCandidates?.isEmpty == true ? nil : ingredientCandidates
+                ingredientCandidates: ingredientCandidates
             )
-
-            print("[SEASON_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased()) authenticated_context=true")
-            do {
-                return try await supabaseClient.functions.invoke(
-                    "parse-recipe-caption",
-                    options: FunctionInvokeOptions(
-                        method: .post,
-                        headers: [
-                            "Authorization": "Bearer \(accessToken)",
-                            "apikey": anonKey
-                        ],
-                        body: payload
-                    )
-                )
-            } catch let functionsError as FunctionsError {
-                switch functionsError {
-                case .httpError(let code, let data):
-                    if code == 429,
-                       let parsed = try? JSONDecoder().decode(ParseRecipeCaptionFunctionErrorEnvelope.self, from: data),
-                       let errorCode = parsed.error?.code {
-                        if errorCode == "TOO_FREQUENT_REQUESTS" {
-                            throw ParseRecipeCaptionInvokeError.tooFrequent(
-                                retryAfterSeconds: parsed.meta?.retryAfterSeconds
-                            )
-                        }
-                        if errorCode == "RATE_LIMIT_EXCEEDED" {
-                            throw ParseRecipeCaptionInvokeError.dailyLimitReached
-                        }
-                    }
-                    throw functionsError
-                case .relayError:
-                    throw functionsError
-                }
-            }
         }
     }
 
@@ -1794,7 +1786,7 @@ final class SupabaseService {
             }
 
             guard let authenticatedUser = supabaseClient.auth.currentUser else {
-                print("[SEASON_URL_IMPORT_AUTH] phase=missing_current_user has_session=false")
+                SeasonLog.debug("[SEASON_URL_IMPORT_AUTH] phase=missing_current_user has_session=false")
                 throw SupabaseServiceError.unauthenticated
             }
 
@@ -1802,7 +1794,7 @@ final class SupabaseService {
             do {
                 accessToken = try await supabaseClient.auth.session.accessToken
             } catch {
-                print("[SEASON_URL_IMPORT_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)")
+                SeasonLog.debug("[SEASON_URL_IMPORT_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)")
                 throw SupabaseServiceError.unauthenticated
             }
 
@@ -1817,7 +1809,7 @@ final class SupabaseService {
             }
 
             supabaseClient.functions.setAuth(token: accessToken)
-            print("[SEASON_URL_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased())")
+            SeasonLog.debug("[SEASON_URL_IMPORT_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased())")
 
             do {
                 return try await supabaseClient.functions.invoke(
@@ -1860,7 +1852,7 @@ final class SupabaseService {
             }
 
             guard let authenticatedUser = supabaseClient.auth.currentUser else {
-                print("[SEASON_CATALOG_ENRICH_AUTH] phase=missing_current_user has_session=false invoke_with_authenticated_context=false")
+                SeasonLog.debug("[SEASON_CATALOG_ENRICH_AUTH] phase=missing_current_user has_session=false invoke_with_authenticated_context=false")
                 throw SupabaseServiceError.unauthenticated
             }
 
@@ -1868,7 +1860,7 @@ final class SupabaseService {
             do {
                 accessToken = try await supabaseClient.auth.session.accessToken
             } catch {
-                print("[SEASON_CATALOG_ENRICH_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=false invoke_with_authenticated_context=false error=\(error)")
+                SeasonLog.debug("[SEASON_CATALOG_ENRICH_AUTH] phase=missing_access_token user_id=\(authenticatedUser.id.uuidString.lowercased()) has_session=false invoke_with_authenticated_context=false error=\(error)")
                 throw SupabaseServiceError.unauthenticated
             }
 
@@ -1883,7 +1875,7 @@ final class SupabaseService {
                 normalized_text: normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             )
 
-            print("[SEASON_CATALOG_ENRICH_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased()) authenticated_context=true")
+            SeasonLog.debug("[SEASON_CATALOG_ENRICH_AUTH] phase=invoke_started user_id=\(authenticatedUser.id.uuidString.lowercased()) authenticated_context=true")
 
             return try await supabaseClient.functions.invoke(
                 "catalog-enrichment-proposal",
@@ -1959,7 +1951,7 @@ final class SupabaseService {
 
     func fetchActiveIngredientAliases() async -> [IngredientAliasRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_ALIAS] phase=fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_ALIAS] phase=fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -1994,21 +1986,21 @@ final class SupabaseService {
                     isActive: row.is_active ?? true
                 )
             }
-            print("[SEASON_ALIAS] phase=fetch_ok count=\(records.count)")
+            SeasonLog.debug("[SEASON_ALIAS] phase=fetch_ok count=\(records.count)")
             return records
         } catch {
             if isMissingIngredientAliasesTableError(error) {
-                print("[SEASON_ALIAS] phase=fetch_failed reason=table_missing error=\(error)")
+                SeasonLog.debug("[SEASON_ALIAS] phase=fetch_failed reason=table_missing error=\(error)")
                 return []
             }
-            print("[SEASON_ALIAS] phase=fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_ALIAS] phase=fetch_failed error=\(error)")
             return []
         }
     }
 
     func fetchUnifiedIngredientCatalogSummary() async -> [UnifiedIngredientCatalogSummaryRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -2044,21 +2036,21 @@ final class SupabaseService {
                     potassiumPer100g: row.potassium_per_100g
                 )
             }
-            print("[SEASON_UNIFIED] phase=catalog_fetch_ok count=\(records.count)")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=catalog_fetch_ok count=\(records.count)")
             return records
         } catch {
             if isMissingUnifiedIngredientSummaryRelationError(error) {
-                print("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=relation_missing error=\(error)")
+                SeasonLog.debug("[SEASON_UNIFIED] phase=catalog_fetch_failed reason=relation_missing error=\(error)")
                 return []
             }
-            print("[SEASON_UNIFIED] phase=catalog_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=catalog_fetch_failed error=\(error)")
             return []
         }
     }
 
     func fetchUnifiedIngredientAliases() async -> [UnifiedIngredientAliasRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -2089,14 +2081,14 @@ final class SupabaseService {
                     isActive: row.is_active ?? true
                 )
             }
-            print("[SEASON_UNIFIED] phase=alias_v2_fetch_ok count=\(records.count)")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=alias_v2_fetch_ok count=\(records.count)")
             return records
         } catch {
             if isMissingUnifiedIngredientAliasesRelationError(error) {
-                print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=relation_missing error=\(error)")
+                SeasonLog.debug("[SEASON_UNIFIED] phase=alias_v2_fetch_failed reason=relation_missing error=\(error)")
                 return []
             }
-            print("[SEASON_UNIFIED] phase=alias_v2_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_UNIFIED] phase=alias_v2_fetch_failed error=\(error)")
             return []
         }
     }
@@ -2104,16 +2096,16 @@ final class SupabaseService {
     func observeCustomIngredientObservations(_ observations: [CustomIngredientObservation]) async {
         guard !observations.isEmpty else { return }
         guard let supabaseClient = self.client else {
-            print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed reason=missing_configuration count=\(observations.count)")
+            SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed reason=missing_configuration count=\(observations.count)")
             return
         }
         guard supabaseClient.auth.currentUser != nil else {
-            print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_skipped reason=unauthenticated count=\(observations.count)")
+            SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=upsert_skipped reason=unauthenticated count=\(observations.count)")
             return
         }
 
         for observation in observations {
-            print("[SEASON_CUSTOM_INGREDIENT] phase=observed normalized_text=\(observation.normalizedText) source=\(observation.source)")
+            SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=observed normalized_text=\(observation.normalizedText) source=\(observation.source)")
             var params: [String: String] = [
                 "p_normalized_text": observation.normalizedText,
                 "p_raw_example": observation.rawExample,
@@ -2130,9 +2122,9 @@ final class SupabaseService {
                 _ = try await supabaseClient
                     .rpc("observe_custom_ingredient", params: params)
                     .execute()
-                print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_succeeded normalized_text=\(observation.normalizedText)")
+                SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=upsert_succeeded normalized_text=\(observation.normalizedText)")
             } catch {
-                print("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed normalized_text=\(observation.normalizedText) error=\(error)")
+                SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=upsert_failed normalized_text=\(observation.normalizedText) error=\(error)")
             }
         }
     }
@@ -2178,11 +2170,11 @@ final class SupabaseService {
     private func observeUnresolvedCustomIngredientsForRecipeIfNeeded(_ recipe: Recipe) {
         let observations = unresolvedCustomIngredientObservationsForRecipe(recipe)
         guard !observations.isEmpty else {
-            print("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_skipped reason=no_unresolved recipe_id=\(recipe.id)")
+            SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_skipped reason=no_unresolved recipe_id=\(recipe.id)")
             return
         }
 
-        print("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_started recipe_id=\(recipe.id) count=\(observations.count)")
+        SeasonLog.debug("[SEASON_CUSTOM_INGREDIENT] phase=post_publish_observation_started recipe_id=\(recipe.id) count=\(observations.count)")
         Task {
             await observeCustomIngredientObservations(observations)
         }
@@ -2195,7 +2187,7 @@ final class SupabaseService {
         focusAliasLocalization: Bool = true
     ) async -> CatalogAdminOpsSnapshot? {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed reason=missing_configuration")
             return nil
         }
 
@@ -2228,7 +2220,7 @@ final class SupabaseService {
                 source: cleanedOptional(payload.metadata?.source) ?? "catalog_admin_ops_snapshot_v2"
             )
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_ok " +
                 "candidates=\(candidates.count) " +
                 "coverage_blockers=\(coverageBlockers.count) " +
@@ -2244,7 +2236,7 @@ final class SupabaseService {
                 metadata: metadata
             )
         } catch {
-            print("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=ops_snapshot_fetch_failed error=\(error)")
             return nil
         }
     }
@@ -2324,7 +2316,7 @@ final class SupabaseService {
                 source: cleanedOptional(payload.metadata?.source) ?? "catalog_candidate_batch_triage_v1"
             )
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=batch_triage_ok " +
                 "total=\(result.summary.total) " +
                 "succeeded=\(result.summary.succeeded) " +
@@ -2333,7 +2325,7 @@ final class SupabaseService {
             )
             if result.summary.failed > 0 {
                 for item in result.items where item.resultStatus == "failed" {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_CATALOG_ADMIN] phase=batch_triage_item_failed " +
                         "action=\(item.intendedAction) normalized_text=\(item.normalizedText) " +
                         "error=\(item.errorMessage ?? item.detail ?? "unknown_error")"
@@ -2371,7 +2363,7 @@ final class SupabaseService {
                 "p_source": .string(source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "import_recovery" : source.trimmingCharacters(in: .whitespacesAndNewlines))
             ]
 
-            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_started limit=\(max(1, limit)) recipe_ids=\(cleanedRecipeIDs.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_started limit=\(max(1, limit)) recipe_ids=\(cleanedRecipeIDs.count)")
             let response = try await supabaseClient
                 .rpc("recover_unresolved_recipe_ingredient_observations", params: params)
                 .execute()
@@ -2387,7 +2379,7 @@ final class SupabaseService {
                     detail: cleanedOptional(row.detail)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=observation_recovery_rpc_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2417,7 +2409,7 @@ final class SupabaseService {
                 "p_language_code": .string(safeLanguage)
             ]
 
-            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
             let response = try await supabaseClient
                 .rpc("auto_apply_safe_localizations", params: params)
                 .execute()
@@ -2437,7 +2429,7 @@ final class SupabaseService {
                     errorMessage: cleanedOptional(row.error_message)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_localization_rpc_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2467,7 +2459,7 @@ final class SupabaseService {
                 "p_language_code": .string(safeLanguage)
             ]
 
-            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_started limit=\(safeLimit) language_code=\(safeLanguage)")
             let response = try await supabaseClient
                 .rpc("auto_apply_safe_aliases", params: params)
                 .execute()
@@ -2488,7 +2480,7 @@ final class SupabaseService {
                     errorMessage: cleanedOptional(row.error_message)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=auto_alias_rpc_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2534,7 +2526,7 @@ final class SupabaseService {
                     safetyReason: cleanedOrUnknown(row.safety_reason)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_preview_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2580,7 +2572,7 @@ final class SupabaseService {
                     applyStatus: cleanedOrUnknown(row.apply_status)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2626,7 +2618,7 @@ final class SupabaseService {
                     applyStatus: cleanedOrUnknown(row.apply_status)
                 )
             }
-            print("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ok rows=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=recipe_reconciliation_apply_modern_ok rows=\(mapped.count)")
             return mapped
         }
     }
@@ -2650,7 +2642,7 @@ final class SupabaseService {
             do {
                 accessToken = try await supabaseClient.auth.session.accessToken
             } catch {
-                print(
+                SeasonLog.debug(
                     "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_missing_access_token " +
                     "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
                 )
@@ -2663,7 +2655,7 @@ final class SupabaseService {
             }
 
             let safeLimit = max(1, min(100, limit))
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_started limit=\(safeLimit) debug=\(debug)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_started limit=\(safeLimit) debug=\(debug)")
 
             supabaseClient.functions.setAuth(token: accessToken)
             let response: CloudCatalogEnrichmentDraftBatchResponse = try await supabaseClient.functions.invoke(
@@ -2707,14 +2699,14 @@ final class SupabaseService {
                 mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
             )
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_invoke_ok " +
                 "total=\(summary.total) succeeded=\(summary.succeeded) " +
                 "failed=\(summary.failed) skipped=\(summary.skipped) ready=\(summary.ready)"
             )
             if summary.failed > 0 {
                 for item in items where item.resultStatus == "failed" {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_CATALOG_ADMIN] phase=enrichment_batch_item_failed " +
                         "normalized_text=\(item.normalizedText) error=\(item.errorMessage ?? "unknown_error")"
                     )
@@ -2738,7 +2730,7 @@ final class SupabaseService {
             do {
                 accessToken = try await supabaseClient.auth.session.accessToken
             } catch {
-                print(
+                SeasonLog.debug(
                     "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_missing_access_token " +
                     "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
                 )
@@ -2751,7 +2743,7 @@ final class SupabaseService {
             }
 
             let safeLimit = max(1, min(100, limit))
-            print("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_invoke_started limit=\(safeLimit)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_invoke_started limit=\(safeLimit)")
 
             supabaseClient.functions.setAuth(token: accessToken)
             let response: CloudCatalogIngredientCreationBatchResponse = try await supabaseClient.functions.invoke(
@@ -2791,7 +2783,7 @@ final class SupabaseService {
                 mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
             )
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_invoke_ok " +
                 "total=\(summary.total) created=\(summary.created) " +
                 "skipped_existing=\(summary.skippedExisting) skipped_invalid=\(summary.skippedInvalid) failed=\(summary.failed)"
@@ -2799,7 +2791,7 @@ final class SupabaseService {
 
             if summary.failed > 0 {
                 for item in items where item.resultStatus == "failed" {
-                    print(
+                    SeasonLog.debug(
                         "[SEASON_CATALOG_ADMIN] phase=ingredient_create_batch_item_failed " +
                         "normalized_text=\(item.normalizedText) error=\(item.errorMessage ?? "unknown_error")"
                     )
@@ -2831,7 +2823,7 @@ final class SupabaseService {
             do {
                 accessToken = try await supabaseClient.auth.session.accessToken
             } catch {
-                print(
+                SeasonLog.debug(
                     "[SEASON_CATALOG_ADMIN] phase=automation_cycle_missing_access_token " +
                     "user_id=\(authenticatedUser.id.uuidString.lowercased()) error=\(error)"
                 )
@@ -2846,7 +2838,7 @@ final class SupabaseService {
             let safeRecoveryLimit = max(1, min(5000, recoveryLimit))
             let safeEnrichLimit = max(1, min(100, enrichLimit))
             let safeCreateLimit = max(1, min(100, createLimit))
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_started " +
                 "recovery_limit=\(safeRecoveryLimit) enrich_limit=\(safeEnrichLimit) create_limit=\(safeCreateLimit) debug=\(debug)"
             )
@@ -2993,7 +2985,7 @@ final class SupabaseService {
                 mode: cleanedOptional(response.metadata?.mode) ?? "unknown"
             )
 
-            print(
+            SeasonLog.debug(
                 "[SEASON_CATALOG_ADMIN] phase=automation_cycle_invoke_ok " +
                 "run_status=\(runStatus) mode=\(result.mode) " +
                 "recovery_total=\(recovery.total) recovery_failed=\(recovery.failed) recovery_status=\(recovery.status) " +
@@ -3013,7 +3005,7 @@ final class SupabaseService {
                     let errorMessage = item.errorMessage ?? "none"
                     return "\(normalizedText)|\(detail)|\(errorMessage)"
                 }.joined(separator: ";")
-                print(
+                SeasonLog.debug(
                     "[SEASON_CATALOG_ADMIN] phase=automation_cycle_alias_diagnostics " +
                     "failed_items_total=\(aliasAutoApply.failedItemsTotal) " +
                     "rpc_error_message=\(aliasAutoApply.rpcError?.message ?? "none") " +
@@ -3030,7 +3022,7 @@ final class SupabaseService {
 
     func fetchCatalogResolutionCandidates(limit: Int = 50) async -> [CatalogResolutionCandidateRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -3047,10 +3039,10 @@ final class SupabaseService {
             let rows = try JSONDecoder().decode([CloudCatalogResolutionCandidateRow].self, from: response.data)
             let mapped = mapCatalogResolutionCandidates(rows)
 
-            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_ok count=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_ok count=\(mapped.count)")
             return mapped
         } catch {
-            print("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=candidate_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3060,7 +3052,7 @@ final class SupabaseService {
         focusAliasLocalization: Bool = true
     ) async -> [CatalogCoverageBlockerRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -3079,10 +3071,10 @@ final class SupabaseService {
             let rows = try JSONDecoder().decode([CloudCatalogCoverageBlockerRow].self, from: response.data)
             let mapped = mapCatalogCoverageBlockers(rows)
 
-            print("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_ok count=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_ok count=\(mapped.count)")
             return mapped
         } catch {
-            print("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_DEBUG] phase=coverage_blocker_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3091,7 +3083,7 @@ final class SupabaseService {
         limit: Int = 200
     ) async -> [PendingCatalogEnrichmentDraftReviewRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -3102,10 +3094,10 @@ final class SupabaseService {
 
             let rows = try JSONDecoder().decode([CloudPendingCatalogEnrichmentDraftReviewRow].self, from: response.data)
             let mapped = mapPendingCatalogEnrichmentDraftReview(rows)
-            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_ok count=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_ok count=\(mapped.count)")
             return mapped
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=pending_draft_review_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3114,7 +3106,7 @@ final class SupabaseService {
         limit: Int = 200
     ) async -> [CatalogIngredientHierarchyRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -3128,10 +3120,10 @@ final class SupabaseService {
 
             let rows = try JSONDecoder().decode([CloudCatalogIngredientHierarchyRow].self, from: response.data)
             let mapped = mapCatalogIngredientHierarchy(rows)
-            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_ok count=\(mapped.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_ok count=\(mapped.count)")
             return mapped
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ingredient_hierarchy_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3149,7 +3141,7 @@ final class SupabaseService {
             let targetIngredientID = ingredientID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !normalized.isEmpty, !targetIngredientID.isEmpty else { return }
 
-            print("[SEASON_CATALOG_ADMIN] phase=approve_alias_started normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=approve_alias_started normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
             let payload: [String: String] = [
                 "p_normalized_text": normalized,
                 "p_ingredient_id": targetIngredientID
@@ -3159,7 +3151,7 @@ final class SupabaseService {
                 .rpc("approve_reconciliation_alias", params: payload)
                 .execute()
 
-            print("[SEASON_CATALOG_ADMIN] phase=approve_alias_succeeded normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=approve_alias_succeeded normalized_text=\(normalized) ingredient_id=\(targetIngredientID)")
         }
     }
 
@@ -3196,14 +3188,14 @@ final class SupabaseService {
             let status = rows.first?.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "unknown"
             let applied = rows.first?.applied ?? false
 
-            print("[SEASON_CATALOG_ADMIN] phase=add_localization_result ingredient_id=\(cleanedIngredientID) status=\(status) applied=\(applied)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=add_localization_result ingredient_id=\(cleanedIngredientID) status=\(status) applied=\(applied)")
             return status
         }
     }
 
     func fetchReadyCatalogEnrichmentDrafts(limit: Int = 50) async -> [ReadyCatalogEnrichmentDraftRecord] {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed reason=missing_configuration")
             return []
         }
 
@@ -3228,10 +3220,10 @@ final class SupabaseService {
                 }
                 return lhs.normalizedText < rhs.normalizedText
             }
-            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_ok count=\(sorted.count)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_ok count=\(sorted.count)")
             return sorted
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=ready_enrichment_fetch_failed error=\(error)")
             return []
         }
     }
@@ -3248,17 +3240,17 @@ final class SupabaseService {
             let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !normalized.isEmpty else { return }
 
-            print("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_started normalized_text=\(normalized)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_started normalized_text=\(normalized)")
             _ = try await supabaseClient
                 .rpc("create_catalog_ingredient_from_enrichment_draft", params: ["p_normalized_text": normalized])
                 .execute()
-            print("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_succeeded normalized_text=\(normalized)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=create_from_enrichment_succeeded normalized_text=\(normalized)")
         }
     }
 
     func fetchCatalogEnrichmentDraft(normalizedText: String) async -> CatalogEnrichmentDraftRecord? {
         guard let supabaseClient = self.client else {
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed reason=missing_configuration")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed reason=missing_configuration")
             return nil
         }
         let normalized = normalizedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -3291,10 +3283,10 @@ final class SupabaseService {
                 validationErrors: row.validation_errors ?? [],
                 updatedAt: row.updated_at.flatMap { iso8601.date(from: $0) }
             )
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_ok normalized_text=\(normalized) status=\(mapped.status)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_ok normalized_text=\(normalized) status=\(mapped.status)")
             return mapped
         } catch {
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed normalized_text=\(normalized) error=\(error)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_fetch_failed normalized_text=\(normalized) error=\(error)")
             return nil
         }
     }
@@ -3370,7 +3362,7 @@ final class SupabaseService {
                 validatedReady: row.validated_ready ?? row.is_ready ?? false,
                 validationErrors: row.validation_errors ?? []
             )
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_upsert_ok normalized_text=\(result.normalizedText) status=\(result.status) validated_ready=\(result.validatedReady)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_upsert_ok normalized_text=\(result.normalizedText) status=\(result.status) validated_ready=\(result.validatedReady)")
             return result
         }
     }
@@ -3406,7 +3398,7 @@ final class SupabaseService {
                 validatedReady: row.validated_ready ?? row.is_ready ?? false,
                 validationErrors: row.validation_errors ?? []
             )
-            print("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_validate_ok normalized_text=\(result.normalizedText) validated_ready=\(result.validatedReady)")
+            SeasonLog.debug("[SEASON_CATALOG_ADMIN] phase=enrichment_draft_validate_ok normalized_text=\(result.normalizedText) validated_ready=\(result.validatedReady)")
             return result
         }
     }
@@ -3428,7 +3420,7 @@ final class SupabaseService {
     }
 
     func setRecipeSavedState(recipeID: String, isSaved: Bool, traceID: String) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=service_entered")
         try await instrumentedRequest(
             name: "setRecipeSavedState",
             traceID: traceID,
@@ -3438,17 +3430,17 @@ final class SupabaseService {
                 try await performWithRetry {
                     try await recipeRepository.upsertRecipeSavedState(recipeID: recipeID, isSaved: isSaved)
                 }
-                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_ok")
             } catch {
                 let category = classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=saved recipe=\(recipeID) target=\(isSaved) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
     }
 
     func setRecipeCrispiedState(recipeID: String, isCrispied: Bool, traceID: String) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=service_entered")
         try await instrumentedRequest(
             name: "setRecipeCrispiedState",
             traceID: traceID,
@@ -3458,10 +3450,10 @@ final class SupabaseService {
                 try await performWithRetry {
                     try await recipeRepository.upsertRecipeCrispiedState(recipeID: recipeID, isCrispied: isCrispied)
                 }
-                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_ok")
             } catch {
                 let category = classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=crispied recipe=\(recipeID) target=\(isCrispied) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
@@ -3478,7 +3470,7 @@ final class SupabaseService {
         isChecked: Bool,
         traceID: String
     ) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "createShoppingListItem",
             traceID: traceID,
@@ -3512,11 +3504,11 @@ final class SupabaseService {
                     .from("shopping_list_items")
                     .insert(payload)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_ok")
             } catch {
                 if self.isDuplicateKeyPostgresError(error) {
-                    print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_detected error=\(error)")
-                    print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update")
+                    SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_detected error=\(error)")
+                    SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update")
 
                     let fallbackPayload = ShoppingListItemUpdatePayload(
                         ingredient_type: ingredientType,
@@ -3536,17 +3528,17 @@ final class SupabaseService {
                             .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
                             .eq("user_id", value: user.id.uuidString)
                             .execute()
-                        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_ok")
+                        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_ok")
                         return
                     } catch {
                         let fallbackCategory = self.classifyNetworkError(error)
-                        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_failed category=\(fallbackCategory.rawValue) error=\(error)")
+                        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=duplicate_fallback_update_failed category=\(fallbackCategory.rawValue) error=\(error)")
                         throw error
                     }
                 }
 
                 let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
@@ -3563,7 +3555,7 @@ final class SupabaseService {
         isChecked: Bool,
         traceID: String
     ) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "updateShoppingListItem",
             traceID: traceID,
@@ -3595,17 +3587,17 @@ final class SupabaseService {
                     .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
                     .eq("user_id", value: user.id.uuidString)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_ok")
             } catch {
                 let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
     }
 
     func deleteShoppingListItem(localItemID: String, traceID: String) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "deleteShoppingListItem",
             traceID: traceID,
@@ -3626,10 +3618,10 @@ final class SupabaseService {
                     .eq("id", value: self.shoppingListRowID(localItemID: localItemID, userID: user.id.uuidString))
                     .eq("user_id", value: user.id.uuidString)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_ok")
             } catch {
                 let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
@@ -3644,7 +3636,7 @@ final class SupabaseService {
         unit: String?,
         traceID: String
     ) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "createFridgeItem",
             traceID: traceID,
@@ -3676,11 +3668,11 @@ final class SupabaseService {
                     .from("fridge_items")
                     .insert(payload)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
             } catch {
                 if self.isDuplicateKeyPostgresError(error) {
-                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_detected error=\(error)")
-                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_fallback_update")
+                    SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_detected error=\(error)")
+                    SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=duplicate_fallback_update")
 
                     let fallbackPayload = FridgeItemUpdatePayload(
                         ingredient_type: ingredientType,
@@ -3698,15 +3690,15 @@ final class SupabaseService {
                             .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
                             .eq("user_id", value: user.id.uuidString)
                             .execute()
-                        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
+                        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_ok")
                     } catch {
                         let category = self.classifyNetworkError(error)
-                        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                         throw error
                     }
                 } else {
                     let category = self.classifyNetworkError(error)
-                    print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                    SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_create item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                     throw error
                 }
             }
@@ -3722,7 +3714,7 @@ final class SupabaseService {
         unit: String?,
         traceID: String
     ) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "updateFridgeItem",
             traceID: traceID,
@@ -3752,17 +3744,17 @@ final class SupabaseService {
                     .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
                     .eq("user_id", value: user.id.uuidString)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_ok")
             } catch {
                 let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_update item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
     }
 
     func deleteFridgeItem(localItemID: String, traceID: String) async throws {
-        print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_entered")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=service_entered")
         try await instrumentedRequest(
             name: "deleteFridgeItem",
             traceID: traceID,
@@ -3783,10 +3775,10 @@ final class SupabaseService {
                     .eq("id", value: self.fridgeRowID(localItemID: localItemID, userID: user.id.uuidString))
                     .eq("user_id", value: user.id.uuidString)
                     .execute()
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_ok")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_ok")
             } catch {
                 let category = self.classifyNetworkError(error)
-                print("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
+                SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=fridge_delete item=\(localItemID) phase=write_failed category=\(category.rawValue) error=\(error)")
                 throw error
             }
         }
@@ -3801,17 +3793,17 @@ final class SupabaseService {
         let startedAt = CFAbsoluteTimeGetCurrent()
         let tracePart = traceID.map { " trace=\($0)" } ?? ""
         let metadataPart = metadata.map { " \($0)" } ?? ""
-        print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_started")
+        SeasonLog.debug("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_started")
 
         do {
             let result = try await operation()
             let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000).rounded())
-            print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_ok duration_ms=\(elapsedMs)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_ok duration_ms=\(elapsedMs)")
             return result
         } catch {
             let elapsedMs = Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1000).rounded())
             let category = classifyNetworkError(error)
-            print("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_failed duration_ms=\(elapsedMs) category=\(category.rawValue) error=\(error)")
+            SeasonLog.debug("[SEASON_SUPABASE] request=\(name)\(tracePart)\(metadataPart) phase=request_failed duration_ms=\(elapsedMs) category=\(category.rawValue) error=\(error)")
             throw error
         }
     }
@@ -3823,7 +3815,7 @@ final class SupabaseService {
             try await operation()
         } catch {
             if isTransientNetworkError(error) {
-                print("[SEASON_SUPABASE] retrying operation after transient error...")
+                SeasonLog.debug("[SEASON_SUPABASE] retrying operation after transient error...")
                 try await Task.sleep(nanoseconds: 300_000_000)
                 try await operation()
             } else {
@@ -4044,6 +4036,23 @@ final class SupabaseService {
 
     private func notifyAuthStateDidChange() {
         NotificationCenter.default.post(name: .seasonAuthStateDidChange, object: nil)
+    }
+
+    private func rememberAuthenticatedUser(id: UUID, email: String?) {
+        authStateQueue.sync {
+            cachedAuthenticatedUserID = id
+            let normalizedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalizedEmail?.isEmpty == false {
+                cachedAuthenticatedEmail = normalizedEmail
+            }
+        }
+    }
+
+    private func clearRememberedAuthenticatedUser() {
+        authStateQueue.sync {
+            cachedAuthenticatedUserID = nil
+            cachedAuthenticatedEmail = nil
+        }
     }
 
     private enum CurrentProfileFetchState {

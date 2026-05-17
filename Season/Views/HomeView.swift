@@ -29,34 +29,38 @@ struct HomeView: View {
                     fixedHeaderRow(safeAreaTopInset: proxy.safeAreaInsets.top)
                         .zIndex(20)
 
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                            greetingHeroSection
-                                .padding(.horizontal, homeContentGutter)
-                                .padding(.bottom, DS.Spacing.md)
-
-                            cookNowHeroSection
-
-                            freshCreatorStripSection
-
-                            seasonalNowSection
-
-                            Section {
-                                feedHeadingSection
-
-                                mixedFeedSection
-                                    .padding(.top, DS.Spacing.sm)
+                    if viewModel.isInitialHomeFeedHydrating {
+                        initialHomeHydrationView
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                                greetingHeroSection
+                                    .padding(.horizontal, homeContentGutter)
                                     .padding(.bottom, DS.Spacing.md)
-                            } header: {
-                                stickyFilterSection
+
+                                cookNowHeroSection
+
+                                freshCreatorStripSection
+
+                                seasonalNowSection
+
+                                Section {
+                                    feedHeadingSection
+
+                                    mixedFeedSection
+                                        .padding(.top, DS.Spacing.sm)
+                                        .padding(.bottom, DS.Spacing.md)
+                                } header: {
+                                    stickyFilterSection
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.top, DS.Spacing.xs)
+                            .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
                         }
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.top, DS.Spacing.xs)
-                        .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
-                    }
-                    .refreshable {
-                        await viewModel.refreshHomeFeed()
+                        .refreshable {
+                            await viewModel.refreshHomeFeed()
+                        }
                     }
                 }
             }
@@ -76,6 +80,46 @@ struct HomeView: View {
             Color.clear
                 .frame(height: SeasonLayout.bottomBarContentClearance + DS.Spacing.md)
         }
+    }
+
+    private var initialHomeHydrationView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Spacing.lg) {
+                greetingHeroSection
+
+                VStack(alignment: .leading, spacing: DS.Spacing.md) {
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .fill(DS.Color.cardSoft)
+                        .frame(height: 260)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(DS.Color.cardSoft)
+                            .frame(width: 132, height: 16)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(DS.Color.cardSoft)
+                            .frame(width: 228, height: 34)
+                        RoundedRectangle(cornerRadius: DS.Radius.md, style: .continuous)
+                            .fill(DS.Color.sageSoft.opacity(colorScheme == .dark ? 0.7 : 0.55))
+                            .frame(height: 48)
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .fill(DS.Color.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.xl, style: .continuous)
+                        .stroke(DS.Color.border, lineWidth: 1)
+                )
+                .redacted(reason: .placeholder)
+            }
+            .padding(.horizontal, homeContentGutter)
+            .padding(.top, DS.Spacing.xs)
+            .padding(.bottom, SeasonLayout.bottomBarContentClearance + DS.Spacing.xxxl)
+        }
+        .scrollDisabled(true)
     }
 
     /// Greeting editoriale della home v2.
@@ -1020,12 +1064,12 @@ struct HomeView: View {
                 } label: {
                     Text(localizedAllFilterTitle)
                         .font(DS.Font.chip)
-                        .foregroundStyle(selectedQuickFilter == nil ? Color.white : DS.Color.ink)
+                        .foregroundStyle(selectedQuickFilter == nil ? activeFilterForeground : DS.Color.inkSoft)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(selectedQuickFilter == nil ? DS.Color.ink : DS.Color.card)
+                                .fill(selectedQuickFilter == nil ? activeFilterBackground : DS.Color.card)
                         )
                         .overlay(
                             Capsule(style: .continuous)
@@ -1046,12 +1090,12 @@ struct HomeView: View {
                             Text(filter.title(using: viewModel.localizer))
                                 .font(DS.Font.chip)
                         }
-                        .foregroundStyle(isActive ? Color.white : DS.Color.ink)
+                        .foregroundStyle(isActive ? activeFilterForeground : DS.Color.inkSoft)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(isActive ? DS.Color.ink : DS.Color.card)
+                                .fill(isActive ? activeFilterBackground : DS.Color.card)
                         )
                         .overlay(
                             Capsule(style: .continuous)
@@ -1071,11 +1115,11 @@ struct HomeView: View {
     }
 
     private var activeFilterBackground: Color {
-        colorScheme == .dark ? DS.Color.sageDeep : DS.Color.ink
+        DS.Color.ink
     }
 
     private var activeFilterForeground: Color {
-        colorScheme == .dark ? Color.black.opacity(0.86) : Color.white
+        colorScheme == .dark ? DS.Color.bg : Color.white
     }
 
     @ViewBuilder
@@ -1179,8 +1223,7 @@ struct HomeView: View {
     }
 
     /// Inject each editorial module once, matching the v2b cadence: recipe
-    /// rhythm first, then one seasonal recipe band, one tip, one nudge, one
-    /// collection and one community pulse.
+    /// rhythm first, then seasonal recipe band, tip, nudge and collection.
     private func editorialInjection(afterRecipeAt recipeIndex: Int) -> HomeFeedEditorialInjection? {
         guard recipeIndex >= 0 else { return nil }
         let ordinal = recipeIndex + 1 // "after the Nth recipe"
@@ -1189,7 +1232,6 @@ struct HomeView: View {
         case 4:  return .tipBand
         case 5:  return .nudgeCard
         case 7:  return .collectionTile
-        case 9:  return .pulseBand
         default: return nil
         }
     }
@@ -1390,7 +1432,6 @@ struct HomeView: View {
         case .tipBand:        tipBandView
         case .nudgeCard:      nudgeCardView
         case .collectionTile: collectionTileView
-        case .pulseBand:      pulseBandView
         }
     }
 
@@ -1452,17 +1493,6 @@ struct HomeView: View {
         }
     }
 
-    private var pulseBandView: some View {
-        let context = pulseContext()
-        return CommunityPulseBand(
-            liveLabel: viewModel.localizer.localized("home.pulse.live"),
-            headline: context.headline,
-            emphasis: context.emphasis,
-            subline: context.subline,
-            avatars: context.avatars
-        )
-    }
-
     @ViewBuilder
     private var nudgeCardView: some View {
         if let suggestion = suggestedCreatorNudge() {
@@ -1488,7 +1518,7 @@ struct HomeView: View {
             ("Prima di fare la spesa guarda cosa hai gia in frigo: spesso manca solo un dettaglio.", "cosa hai gia"),
             ("Se una ricetta sembra lunga, prepara prima gli ingredienti: cucinare diventa quasi automatico.", "prepara prima"),
             ("Erbe fresche e agrumi salvano molti piatti semplici: aggiungili alla fine.", "alla fine"),
-            ("Quando un ingrediente e al picco di stagione, lascia che sia lui il protagonista.", "picco di stagione")
+            ("Quando un ingrediente è nel suo momento migliore, lascia che sia lui il protagonista.", "momento migliore")
         ]
         let englishTips: [(String, String?)] = [
             ("Use seasonal vegetables as soon as you can: their flavor fades hour by hour.", "as soon as you can"),
@@ -1553,80 +1583,6 @@ struct HomeView: View {
             }
         }
         return viewModel.rankedRecipe(forID: recipeID)
-    }
-
-    private func pulseAvatarSources() -> [FeedImageSource] {
-        let pool = (activeMiniFeedItems + remainingFeedItems)
-            .compactMap { item -> Recipe? in
-                if case .recipe(let card) = item { return card.ranked.recipe }
-                return nil
-            }
-        var seen: Set<String> = []
-        var sources: [FeedImageSource] = []
-        for recipe in pool {
-            let avatarRaw = recipe.creatorAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            guard !avatarRaw.isEmpty, let url = URL(string: avatarRaw) else { continue }
-            let key = recipe.canonicalCreatorID ?? avatarRaw
-            if seen.contains(key) { continue }
-            seen.insert(key)
-            sources.append(FeedImageSource(url: url, fallbackAssetName: nil))
-            if sources.count == 4 { break }
-        }
-        if !sources.isEmpty {
-            return sources
-        }
-        return creatorStripData.prefix(4).map(\.avatar)
-    }
-
-    private struct PulseContext {
-        let emphasis: String?
-        let headline: String
-        let subline: String
-        let avatars: [FeedImageSource]
-    }
-
-    private func pulseContext() -> PulseContext {
-        let recipes = (activeMiniFeedItems + remainingFeedItems)
-            .compactMap { item -> Recipe? in
-                if case .recipe(let card) = item { return card.ranked.recipe }
-                return nil
-            }
-        let crispyTotal = recipes.prefix(6).reduce(0) { $0 + viewModel.crispyCount(for: $1) }
-        let creatorNames = Array(NSOrderedSet(array: recipes.map(primaryIdentityLabel(for:)).filter { !$0.isEmpty })) as? [String] ?? []
-        let activeCreatorCount = max(creatorNames.count, pulseAvatarSources().count)
-        let headline: String
-        let subline: String
-
-        if viewModel.languageCode == "it" {
-            headline = activeCreatorCount == 1
-                ? "voce attiva su Season"
-                : "voci attive su Season"
-            let names = creatorNames.prefix(3).joined(separator: " · ")
-            let crispyLine = crispyTotal > 0
-                ? "\(crispyTotal.compactFormatted()) crispy oggi"
-                : "Ricette e fonti in movimento oggi"
-            subline = names.isEmpty
-                ? crispyLine
-                : "\(names) — \(crispyLine)"
-        } else {
-            headline = activeCreatorCount == 1
-                ? "active voice on Season"
-                : "active voices on Season"
-            let names = creatorNames.prefix(3).joined(separator: " · ")
-            let crispyLine = crispyTotal > 0
-                ? "\(crispyTotal.compactFormatted()) crispies today"
-                : "Recipes and sources moving today"
-            subline = names.isEmpty
-                ? crispyLine
-                : "\(names) — \(crispyLine)"
-        }
-
-        return PulseContext(
-            emphasis: activeCreatorCount > 0 ? activeCreatorCount.compactFormatted() : nil,
-            headline: headline,
-            subline: subline,
-            avatars: pulseAvatarSources()
-        )
     }
 
     private struct NudgeSuggestion {
@@ -1843,9 +1799,9 @@ struct HomeView: View {
         if selectedQuickFilter == .following {
             if SeasonLog.verbose {
                 if cachedFilteredFeeds[selectedQuickFilter] != nil {
-                    print("[SEASON_HOME_FOLLOWING] phase=cache_hit filter=following")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=cache_hit filter=following")
                 } else {
-                    print("[SEASON_HOME_FOLLOWING] phase=cache_miss filter=following")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=cache_miss filter=following")
                 }
             }
             let followingRecipeItems = filtered.flatMap { item -> [HookedRecipeCard] in
@@ -1857,10 +1813,10 @@ struct HomeView: View {
                 }
             }
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_resolved filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRecipeItems.count)")
                 for card in followingRecipeItems.prefix(5) {
                     let creatorID = card.ranked.recipe.canonicalCreatorID ?? "nil"
-                    print("[SEASON_HOME_FOLLOWING] phase=feed_item recipe_id=\(card.ranked.recipe.id) creator_id=\(creatorID)")
+                    SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_item recipe_id=\(card.ranked.recipe.id) creator_id=\(creatorID)")
                 }
             }
         } else {
@@ -1909,21 +1865,26 @@ struct HomeView: View {
         let fridgeIDs = fridgeViewModel.allIngredientIDSet.sorted().joined(separator: "|")
         let followingIDs = followStore.followingIds.sorted().joined(separator: "|")
         // Rebuild feed only on semantic data/version changes, not raw recipe count churn.
-        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)"
+        return "\(viewModel.languageCode)|\(fridgeIDs)|\(viewModel.currentMonth)|\(viewModel.homeFeedRefreshID)|\(viewModel.homeFeedDataVersion)|\(followingIDs)|hydrating:\(viewModel.isInitialHomeFeedHydrating)"
     }
 
     private func refreshHomeFeedCache(for signature: String) async {
         guard appliedCacheSignature != signature else { return }
+        guard !viewModel.isInitialHomeFeedHydrating else { return }
 
         // Let navigation/scroll rendering finish and allow superseded refreshes to cancel
         // before doing the heavier feed assembly.
         await Task.yield()
         guard !Task.isCancelled, signature == cacheSignature else { return }
 
+        let start = Date()
         let feed = buildHomeFeed()
         guard !Task.isCancelled, signature == cacheSignature else { return }
 
         applyHomeFeedBuild(feed, signature: signature)
+        debugHomeFeed(
+            "phase=cache_applied recipes=\(feed.defaultRecipeCount) mini_filters=\(feed.filteredMiniFeeds.count) duration_ms=\(Int(Date().timeIntervalSince(start) * 1000))"
+        )
     }
 
     private func applyHomeFeedBuild(_ feed: HomeFeedBuild, signature: String) {
@@ -2062,7 +2023,7 @@ struct HomeView: View {
                 limit: 60
             )
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
             }
             guard !followingRanked.isEmpty else { return [] }
             let followingCards = enforceFeedDiversity(
@@ -2124,7 +2085,8 @@ struct HomeView: View {
                 candidates: mergedCandidates,
                 fridgeItemIDs: fridgeItemIDs
             )
-            let candidatesForReranking = hardGatedCandidates.count >= 8 ? hardGatedCandidates : mergedCandidates
+            let candidatesForReranking = shouldRequireHardGate(for: filter) ? hardGatedCandidates : mergedCandidates
+            guard !candidatesForReranking.isEmpty else { return [] }
             let reranked = smartBoostedRanking(
                 for: filter,
                 candidates: candidatesForReranking,
@@ -2294,7 +2256,7 @@ struct HomeView: View {
                 limit: 24
             )
             if SeasonLog.verbose {
-                print("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=feed_computed filter=following followed_count=\(followStore.followingIds.count) result_count=\(followingRanked.count)")
             }
             guard !followingRanked.isEmpty else { return [] }
             let cards = buildHookedCards(
@@ -2311,9 +2273,17 @@ struct HomeView: View {
             trendingRecipes: trendingRecipes,
             backupRecipes: backupRecipes
         )
-        let reranked = smartBoostedRanking(
+        let hardGatedCandidates = applyHardGateCandidates(
             for: filter,
             candidates: mergedCandidates,
+            fridgeItemIDs: fridgeItemIDs
+        )
+        let candidatesForReranking = shouldRequireHardGate(for: filter) ? hardGatedCandidates : mergedCandidates
+        guard !candidatesForReranking.isEmpty else { return [] }
+
+        let reranked = smartBoostedRanking(
+            for: filter,
+            candidates: candidatesForReranking,
             fridgeItemIDs: fridgeItemIDs,
             personalization: personalization
         )
@@ -2338,6 +2308,15 @@ struct HomeView: View {
             HomeFeedItem.recipe(card)
         }
         return guaranteedMiniBlock(from: Array(miniItems))
+    }
+
+    private func shouldRequireHardGate(for filter: HomeQuickFilter) -> Bool {
+        switch filter {
+        case .following, .trending:
+            return false
+        case .readyNow, .under15, .highProtein, .peakSeason:
+            return true
+        }
     }
 
     private func guaranteedMiniBlock(from candidates: [HomeFeedItem]) -> [HomeFeedItem] {
@@ -2527,7 +2506,7 @@ struct HomeView: View {
 
     private func debugFeedIntelligence(_ message: String) {
         guard isFeedIntelligenceDebugEnabled else { return }
-        print("[SEASON_FEED_INTEL] \(message)")
+        SeasonLog.debug("[SEASON_FEED_INTEL] \(message)")
     }
 
     private func smartSuggestionBoost(
@@ -2599,9 +2578,14 @@ struct HomeView: View {
         let seasonal = Double(ranked.seasonalMatchPercent) / 100.0
         let trending = (0.6 * viewModel.crispyScore(for: recipe)) + (0.4 * viewModel.viewsScore(for: recipe))
         let fridge = fridgeItemIDs.isEmpty ? 0.0 : viewModel.fridgeMatchScore(for: recipe, fridgeItemIDs: fridgeItemIDs)
-        let totalMinutes = (recipe.prepTimeMinutes ?? 0) + (recipe.cookTimeMinutes ?? 0)
-        let convenience = totalMinutes > 0 ? max(0, 1.0 - (Double(totalMinutes) / 45.0)) : 0.35
-        return (0.45 * home) + (0.20 * seasonal) + (0.15 * fridge) + (0.10 * trending) + (0.10 * convenience)
+        let convenience = viewModel.recipeConvenienceScore(for: recipe)
+        let quality = viewModel.homeRecipeScoreBreakdown(for: recipe).quality
+        return (0.36 * home)
+            + (0.18 * seasonal)
+            + (0.14 * fridge)
+            + (0.12 * convenience)
+            + (0.10 * quality)
+            + (0.10 * trending)
     }
 
     private func buildFridgeSection(
@@ -2635,12 +2619,18 @@ struct HomeView: View {
     private func buildSeasonalSpotlight(usageCountByID: [String: Int]) -> [RankedInSeasonItem] {
         viewModel
             .bestPicksToday(limit: 16)
-            .sorted { lhs, rhs in
+            .sorted(by: { (lhs: RankedInSeasonItem, rhs: RankedInSeasonItem) in
                 let lUsage = usageCountByID[lhs.item.id] ?? 0
                 let rUsage = usageCountByID[rhs.item.id] ?? 0
+                let leftUsageSignal = min(1.0, Double(lUsage) / 10.0) * 0.06
+                let rightUsageSignal = min(1.0, Double(rUsage) / 10.0) * 0.06
+                let left = lhs.score + leftUsageSignal
+                let right = rhs.score + rightUsageSignal
+                if left != right { return left > right }
                 if lUsage != rUsage { return lUsage > rUsage }
-                return lhs.score > rhs.score
-            }
+                return lhs.item.displayName(languageCode: viewModel.languageCode)
+                    .localizedCaseInsensitiveCompare(rhs.item.displayName(languageCode: viewModel.languageCode)) == .orderedAscending
+            })
     }
 
     private func mergeCards(
@@ -2682,7 +2672,7 @@ struct HomeView: View {
         var fallbackIndex = 0
 
         while result.count < targetCount {
-            let preferTrendingSlot = result.count.isMultiple(of: 4)
+            let preferTrendingSlot = !trendingPool.isEmpty && (result.count + 1).isMultiple(of: 4)
             let selected: HookedRecipeCard?
             if preferTrendingSlot {
                 selected = pullBestCard(
@@ -2744,8 +2734,12 @@ struct HomeView: View {
         if candidate.hookKind == last.hookKind { return false }
 
         if strict {
-            let recentCreators = current.suffix(3).map { $0.ranked.recipe.author }
-            if recentCreators.contains(candidate.ranked.recipe.author) { return false }
+            let recentCreators = current.suffix(3).map { creatorDiversityKey(for: $0.ranked.recipe) }
+            if recentCreators.contains(creatorDiversityKey(for: candidate.ranked.recipe)) { return false }
+            if let candidateIngredientKey = dominantIngredientKey(for: candidate.ranked.recipe) {
+                let recentIngredientKeys = Set(current.suffix(2).compactMap { dominantIngredientKey(for: $0.ranked.recipe) })
+                if recentIngredientKeys.contains(candidateIngredientKey) { return false }
+            }
             let recentRecipeIDs = current.suffix(8).map { $0.ranked.recipe.id }
             if recentRecipeIDs.contains(candidate.ranked.recipe.id) { return false }
         } else {
@@ -2754,6 +2748,34 @@ struct HomeView: View {
         }
 
         return true
+    }
+
+    private func creatorDiversityKey(for recipe: Recipe) -> String {
+        if let creatorID = recipe.canonicalCreatorID,
+           !creatorID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "creator:\(creatorID)"
+        }
+        if let sourceName = recipe.sourceName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !sourceName.isEmpty {
+            return "source:\(sourceName.lowercased())"
+        }
+        return "author:\(recipe.author.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+    }
+
+    private func dominantIngredientKey(for recipe: Recipe) -> String? {
+        let coreKeys = recipe.ingredients
+            .filter { $0.quality == .coreSeasonal }
+            .flatMap { viewModel.catalogIdentityIDs(for: $0) }
+            .sorted()
+
+        if let key = coreKeys.first {
+            return key
+        }
+
+        return recipe.ingredients
+            .flatMap { viewModel.catalogIdentityIDs(for: $0) }
+            .sorted()
+            .first
     }
 
     private func computeIngredientUsageCount(from recipes: [RankedRecipe]) -> [String: Int] {
@@ -2774,7 +2796,7 @@ struct HomeView: View {
     private func debugHomeFeed(_ message: String) {
         #if DEBUG
         if SeasonLog.verbose || ProcessInfo.processInfo.environment["SEASON_HOME_DEBUG"] == "1" {
-            print("HOME FEED DEBUG: \(message)")
+            SeasonLog.debug("HOME FEED DEBUG: \(message)")
         }
         #endif
     }
@@ -2787,7 +2809,7 @@ struct HomeView: View {
         withAnimation(quickFilterSelectionAnimation) {
             selectedQuickFilter = selectedQuickFilter == filter ? nil : filter
             if SeasonLog.verbose, selectedQuickFilter == .following {
-                print("[SEASON_HOME_FOLLOWING] phase=filter_selected filter=following")
+                SeasonLog.debug("[SEASON_HOME_FOLLOWING] phase=filter_selected filter=following")
             }
         }
     }
@@ -3216,6 +3238,14 @@ private struct HomeFeedBuild {
     let filteredMiniFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let filteredFeeds: [HomeQuickFilter: [HomeFeedItem]]
     let ingredientUsageCountByID: [String: Int]
+
+    var defaultRecipeCount: Int {
+        defaultFeedItems.reduce(into: 0) { count, item in
+            if case .recipe = item {
+                count += 1
+            }
+        }
+    }
 }
 private enum HomeFeedItem: Identifiable {
     case recipe(HookedRecipeCard)
@@ -3251,7 +3281,6 @@ private enum HomeFeedEditorialInjection {
     case tipBand
     case nudgeCard
     case collectionTile
-    case pulseBand
 }
 
 private struct HomeRecipeRoute: Identifiable, Hashable {

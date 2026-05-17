@@ -29,13 +29,13 @@ enum SeasonTypography {
 }
 
 enum SeasonColors {
-    static let primarySurface = Color(.systemGroupedBackground)
-    static let secondarySurface = Color(.secondarySystemGroupedBackground)
-    static let subtleSurface = Color(.tertiarySystemGroupedBackground)
-    static let mutedChipSurface = Color(.systemGray6)
-    static let seasonGreen = Color(red: 0.33, green: 0.40, blue: 0.29)
-    static let seasonGreenSoft = Color(red: 0.84, green: 0.90, blue: 0.79)
-    static let warningOrange = Color(red: 0.84, green: 0.58, blue: 0.18)
+    static let primarySurface = DS.Color.bg
+    static let secondarySurface = DS.Color.card
+    static let subtleSurface = DS.Color.cardSoft
+    static let mutedChipSurface = DS.Color.cardSoft
+    static let seasonGreen = DS.Color.sageDeep
+    static let seasonGreenSoft = DS.Color.sageSoft
+    static let warningOrange = DS.Color.ochre
 }
 
 enum SeasonChipSemantic {
@@ -46,33 +46,33 @@ enum SeasonChipSemantic {
     var foreground: Color {
         switch self {
         case .positive:
-            return SeasonColors.seasonGreen.opacity(0.9)
+            return DS.Color.sageDeep
         case .warning:
-            return SeasonColors.warningOrange.opacity(0.9)
+            return DS.Color.ochre
         case .neutral:
-            return Color.primary.opacity(0.68)
+            return DS.Color.inkSoft
         }
     }
 
     var background: Color {
         switch self {
         case .positive:
-            return SeasonColors.seasonGreenSoft.opacity(0.38)
+            return DS.Color.sageSoft.opacity(0.78)
         case .warning:
-            return SeasonColors.warningOrange.opacity(0.14)
+            return DS.Color.ochreSoft.opacity(0.72)
         case .neutral:
-            return SeasonColors.subtleSurface
+            return DS.Color.cardSoft
         }
     }
 
     var borderColor: Color {
         switch self {
         case .positive:
-            return SeasonColors.seasonGreen.opacity(0.14)
+            return DS.Color.sage.opacity(0.28)
         case .warning:
-            return SeasonColors.warningOrange.opacity(0.18)
+            return DS.Color.ochre.opacity(0.26)
         case .neutral:
-            return Color.primary.opacity(0.07)
+            return DS.Color.borderM
         }
     }
 }
@@ -258,7 +258,7 @@ struct SeasonTopBar: View {
             .buttonStyle(.plain)
 
             Button {
-                print("[SEASON_TOPBAR] phase=notifications_stub action=tap")
+                SeasonLog.debug("[SEASON_TOPBAR] phase=notifications_stub action=tap")
             } label: {
                 topBarIcon(
                     systemName: "bell",
@@ -433,26 +433,26 @@ struct SeasonalStatusBadge: View {
     private var foregroundColor: Color {
         switch phase {
         case .inSeason:
-            return Color(red: 0.16, green: 0.65, blue: 0.30)
+            return DS.Color.sageDeep
         case .earlySeason:
-            return Color(red: 0.24, green: 0.58, blue: 0.25)
+            return DS.Color.fresh
         case .endingSoon:
-            return Color(red: 0.84, green: 0.58, blue: 0.18)
+            return DS.Color.ochre
         case .outOfSeason:
-            return Color(red: 0.78, green: 0.36, blue: 0.33)
+            return DS.Color.terracotta
         }
     }
 
     private var backgroundColor: Color {
         switch phase {
         case .inSeason:
-            return Color(red: 0.16, green: 0.65, blue: 0.30).opacity(0.18)
+            return DS.Color.sageSoft.opacity(0.78)
         case .earlySeason:
-            return Color(red: 0.24, green: 0.58, blue: 0.25).opacity(0.15)
+            return DS.Color.sageSoft.opacity(0.66)
         case .endingSoon:
-            return Color(red: 0.84, green: 0.58, blue: 0.18).opacity(0.14)
+            return DS.Color.ochreSoft.opacity(0.72)
         case .outOfSeason:
-            return Color(red: 0.78, green: 0.36, blue: 0.33).opacity(0.13)
+            return DS.Color.terracottaSoft.opacity(0.72)
         }
     }
 }

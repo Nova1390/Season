@@ -557,7 +557,7 @@ final class ShoppingListViewModel: ObservableObject {
     private func writeThroughCreate(_ entry: ShoppingListEntry) {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -579,13 +579,13 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "create",
             payload: createPayload
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_create item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughUpdate(_ entry: ShoppingListEntry) {
         let traceID = String(UUID().uuidString.prefix(8))
         let mapped = mapEntryForCloudWrite(entry)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -607,12 +607,12 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "update",
             payload: updatePayload
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_update item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func writeThroughDelete(_ entry: ShoppingListEntry) {
         let traceID = String(UUID().uuidString.prefix(8))
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=local_update_done")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=local_update_done")
         Task { @MainActor in
             syncFeedback.show(.pending)
         }
@@ -624,7 +624,7 @@ final class ShoppingListViewModel: ObservableObject {
             operationType: "delete",
             payload: ShoppingListDeleteOutboxMutationPayload(localItemID: entry.id)
         )
-        print("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=outbox_only_write_enqueued")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=shopping_list_delete item=\(entry.id) phase=outbox_only_write_enqueued")
     }
 
     private func mapEntryForCloudWrite(_ entry: ShoppingListEntry) -> (
@@ -702,7 +702,7 @@ final class ShoppingListViewModel: ObservableObject {
         payload: T
     ) {
         guard let payloadData = try? JSONEncoder().encode(payload) else {
-            print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
+            SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) phase=outbox_append_failed error=payload_encoding_failed")
             return
         }
 
@@ -722,7 +722,7 @@ final class ShoppingListViewModel: ObservableObject {
             updatedAt: now
         )
         outboxStore.append(record)
-        print("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
+        SeasonLog.debug("[SEASON_SUPABASE] trace=\(traceID) action=\(action) item=\(itemID) mutation_id=\(mutationID) phase=outbox_appended")
     }
 }
 

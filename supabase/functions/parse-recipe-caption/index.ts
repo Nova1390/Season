@@ -665,7 +665,7 @@ Deno.serve(async (request) => {
       });
 
       const recipeOutput = validation.value;
-      const mappedIngredients = dedupeParsedIngredients(recipeOutput.ingredients.map((item) => {
+      const mappedIngredients = dedupedSmartImportIngredients(recipeOutput.ingredients.map((item) => {
         const normalized = recoverExplicitMeasuredIngredient({
           name: item.name.trim(),
           quantity: item.quantity,
@@ -1323,7 +1323,7 @@ function buildSmartImportResult(input: {
   candidates: NormalizedIngredientCandidate[];
   llmResolvedByIndex: Map<number, LLMResolvedIngredient>;
 }): ParseRecipeCaptionResult {
-  const ingredients = input.candidates.map((candidate): ParsedIngredient => {
+  const mappedIngredients = input.candidates.map((candidate): ParsedIngredient => {
     const llmResolved = input.llmResolvedByIndex.get(candidate.index);
     if (llmResolved) {
       const recovered = recoverExplicitMeasuredIngredient({
@@ -1331,8 +1331,14 @@ function buildSmartImportResult(input: {
         quantity: llmResolved.quantity,
         unit: llmResolved.unit,
       });
+      const anchoredQuantity = normalizedPositiveNumber(candidate.possibleQuantity);
+      const anchoredUnit = normalizedAllowedUnit(candidate.possibleUnit);
       return {
-        ...recovered,
+        name: recovered.name,
+        // Quantity written by the creator in the original caption is more reliable than
+        // the resolver. The LLM may rename the ingredient, but it must not move doses.
+        quantity: anchoredQuantity ?? recovered.quantity,
+        unit: anchoredQuantity !== null ? (anchoredUnit ?? recovered.unit) : recovered.unit,
         status: llmResolved.status,
         confidence: clamp01(llmResolved.confidence),
         matchType: candidate.matchType,
@@ -1351,7 +1357,7 @@ function buildSmartImportResult(input: {
       matchedIngredientId: candidate.matchedIngredientId,
     };
   });
-  const dedupedIngredients = dedupeParsedIngredients(ingredients);
+  const dedupedIngredients = dedupedSmartImportIngredients(mappedIngredients);
 
   return {
     title: inferDeterministicTitle(input.caption) || inferTitleFromURL(input.url),
@@ -1365,13 +1371,13 @@ function buildSmartImportResult(input: {
   };
 }
 
-function dedupeParsedIngredients(ingredients: ParsedIngredient[]): ParsedIngredient[] {
+function dedupedSmartImportIngredients(ingredients: ParsedIngredient[]): ParsedIngredient[] {
   const result: ParsedIngredient[] = [];
 
   for (const ingredient of ingredients) {
-    const existingIndex = parsedIngredientDuplicateIndex(ingredient, result);
+    const existingIndex = smartImportIngredientDuplicateIndex(ingredient, result);
     if (existingIndex >= 0) {
-      if (parsedIngredientQualityScore(ingredient) > parsedIngredientQualityScore(result[existingIndex])) {
+      if (smartImportIngredientDedupeScore(ingredient) > smartImportIngredientDedupeScore(result[existingIndex])) {
         result[existingIndex] = ingredient;
       }
       continue;
@@ -1382,7 +1388,7 @@ function dedupeParsedIngredients(ingredients: ParsedIngredient[]): ParsedIngredi
   return result;
 }
 
-function parsedIngredientDuplicateIndex(
+function smartImportIngredientDuplicateIndex(
   ingredient: ParsedIngredient,
   existingIngredients: ParsedIngredient[],
 ): number {
@@ -1405,7 +1411,7 @@ function parsedIngredientDuplicateIndex(
   });
 }
 
-function parsedIngredientQualityScore(ingredient: ParsedIngredient): number {
+function smartImportIngredientDedupeScore(ingredient: ParsedIngredient): number {
   const statusScore = ingredient.status === "resolved" ? 60 : ingredient.status === "inferred" ? 40 : 0;
   return (ingredient.quantity !== null ? 1_000 : 0)
     + (ingredient.unit !== null ? 100 : 0)
@@ -1834,10 +1840,38 @@ function inferDeterministicTitle(caption: string): string | null {
     const lower = cleaned.toLowerCase();
     if (isSectionHeader(lower)) continue;
     if (lower.startsWith("#") || lower.startsWith("http")) continue;
+    const title = cleanedRecipeTitleCandidate(cleaned);
+    if (title) return title;
     if (looksLikeIngredientLine(cleaned)) continue;
-    return cleaned.replace(/[!?.,:\-–—…\s]+$/g, "").trim() || null;
   }
   return null;
+}
+
+function cleanedRecipeTitleCandidate(raw: string): string | null {
+  let candidate = raw.trim();
+  const ingredientMarker = candidate.match(/\b(?:ingredienti|ingredients)\s*:/i);
+  if (ingredientMarker?.index !== undefined && ingredientMarker.index > 0) {
+    const prefix = candidate.slice(0, ingredientMarker.index).trim();
+    if (prefix) candidate = prefix;
+  }
+
+  const colonIndex = candidate.indexOf(":");
+  if (colonIndex > 0) {
+    const prefix = candidate.slice(0, colonIndex).trim();
+    const remainder = candidate.slice(colonIndex + 1).trim();
+    if (prefix && remainder && looksLikeIngredientLine(remainder)) {
+      candidate = prefix;
+    }
+  }
+
+  candidate = candidate
+    .replace(/\s+(?:per|x|dose\s+per)\s*\d+\s*(?:persone|persona|porzioni|porzione)?\s*$/i, "")
+    .replace(/[!?.,:\-–—…\s]+$/g, "")
+    .trim();
+
+  if (!candidate || candidate.length < 3) return null;
+  if (isSectionHeader(candidate.toLowerCase())) return null;
+  return candidate;
 }
 
 function inferTitleFromURL(url: string): string | null {
@@ -1892,10 +1926,19 @@ function extractDeterministicSteps(caption: string): string[] {
   }
   if (steps.length > 0) return steps;
 
-  return lines
+  const lineSteps = lines
     .map(stripListMarker)
-    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|mescola|aggiungi|inforna)\b/i.test(line))
+    .filter((line) => /^(step\s*)?\d+[\).\:-]\s+|^(mix|cook|bake|stir|combine|serve|cuoci|cuocere|mescola|mescolare|aggiungi|aggiungere|inforna|infornare|taglia|tagliare|frulla|frullare|tosta|tostare|unisci|unire|condisci|condire|manteca|mantecare|salta|saltare|lessa|lessare|scola|scolare|versa|versare|impasta|impastare|rosola|rosolare)\b/i.test(line))
     .map((line) => line.replace(/^(step\s*)?\d+[\).\:-]\s+/i, "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  if (lineSteps.length > 0) return lineSteps;
+
+  return caption
+    .split(/[.!?]+/)
+    .map((part) => stripListMarker(part))
+    .filter((part) => /^(mix|cook|bake|stir|combine|serve|cuoci|cuocere|mescola|mescolare|aggiungi|aggiungere|inforna|infornare|taglia|tagliare|frulla|frullare|tosta|tostare|unisci|unire|condisci|condire|manteca|mantecare|salta|saltare|lessa|lessare|scola|scolare|versa|versare|impasta|impastare|rosola|rosolare)\b/i.test(part))
+    .map((part) => part.trim())
     .filter(Boolean)
     .slice(0, 12);
 }
