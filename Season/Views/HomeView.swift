@@ -1488,7 +1488,7 @@ struct HomeView: View {
             ("Prima di fare la spesa guarda cosa hai gia in frigo: spesso manca solo un dettaglio.", "cosa hai gia"),
             ("Se una ricetta sembra lunga, prepara prima gli ingredienti: cucinare diventa quasi automatico.", "prepara prima"),
             ("Erbe fresche e agrumi salvano molti piatti semplici: aggiungili alla fine.", "alla fine"),
-            ("Quando un ingrediente e al picco di stagione, lascia che sia lui il protagonista.", "picco di stagione")
+            ("Quando un ingrediente è nel suo momento migliore, lascia che sia lui il protagonista.", "momento migliore")
         ]
         let englishTips: [(String, String?)] = [
             ("Use seasonal vegetables as soon as you can: their flavor fades hour by hour.", "as soon as you can"),

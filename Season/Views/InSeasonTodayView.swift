@@ -452,7 +452,7 @@ struct InSeasonTodayView: View {
             case .best:
                 return "\(name) è al meglio adesso: \(firstReason.lowercased())."
             case .stable:
-                return "\(name) ha una presenza stabile durante l’anno: utile in cucina, ma meno legato a un picco stagionale."
+                return "\(name) ha una presenza stabile durante l’anno: utile in cucina, ma meno legato a un momento stagionale specifico."
             case .out:
                 return "\(name) è una scelta possibile, ma non è nel suo momento migliore."
             }

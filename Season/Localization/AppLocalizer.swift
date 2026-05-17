@@ -1253,7 +1253,7 @@ struct AppLocalizer {
             .authFailedApple: "Autenticazione Apple non riuscita.",
             .recipeTimingHeading: "Tempistica",
             .recipeTimingExplainPerfectNow: "Questa ricetta è nel suo momento stagionale migliore proprio ora.",
-            .recipeTimingExplainGoodNow: "Questa ricetta è una buona scelta ora, anche se alcuni ingredienti non sono al picco stagionale.",
+            .recipeTimingExplainGoodNow: "Questa ricetta è una buona scelta ora, anche se alcuni ingredienti non sono nel loro momento stagionale migliore.",
             .recipeTimingExplainBetterSoon: "Questa ricetta diventerà più stagionale nelle prossime settimane.",
             .recipeTimingExplainEndingSoon: "Questa ricetta è ancora valida ora, ma alcuni ingredienti stanno uscendo di stagione.",
             .seedAttributionViaFormat: "via %@",

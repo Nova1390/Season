@@ -528,11 +528,11 @@ struct SearchView: View {
                 } label: {
                     Text(viewModel.localizer.localized("search.action.clear_query"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkSoft)
                         .seasonCapsuleChipStyle(
                             horizontalPadding: 10,
                             verticalPadding: 6,
-                            background: SeasonColors.subtleSurface
+                            background: DS.Color.cardSoft
                         )
                 }
                 .buttonStyle(.plain)
@@ -545,11 +545,11 @@ struct SearchView: View {
                         : viewModel.localizer.localized("search.action.switch_to_recipes")
                     )
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkSoft)
                         .seasonCapsuleChipStyle(
                             horizontalPadding: 10,
                             verticalPadding: 6,
-                            background: SeasonColors.subtleSurface
+                            background: DS.Color.cardSoft
                         )
                 }
                 .buttonStyle(.plain)
@@ -560,11 +560,11 @@ struct SearchView: View {
                     } label: {
                         Text(viewModel.localizer.localized("search.action.clear_filter"))
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DS.Color.inkSoft)
                             .seasonCapsuleChipStyle(
                                 horizontalPadding: 10,
                                 verticalPadding: 6,
-                                background: SeasonColors.subtleSurface
+                                background: DS.Color.cardSoft
                             )
                     }
                     .buttonStyle(.plain)
@@ -842,9 +842,7 @@ struct SearchView: View {
                 semantic: .positive,
                 horizontalPadding: 7,
                 verticalPadding: 4,
-                cornerRadius: 8,
-                foreground: DS.Color.sageDeep,
-                background: DS.Color.sageSoft.opacity(0.58)
+                cornerRadius: 8
             )
             .fixedSize(horizontal: true, vertical: false)
         }

@@ -126,7 +126,7 @@
 "search.discovery.empty_fridge.subtitle" = "Add ingredients to get fridge-based suggestions.";
 "search.discovery.empty_fridge.title" = "Your fridge is empty";
 "search.discovery.from_fridge" = "From your fridge";
-"search.discovery.peak_season_now" = "Peak season now";
+"search.discovery.peak_season_now" = "Best of season now";
 "search.discovery.recipes_count_format" = "%d recipes";
 "search.discovery.season_pick" = "Season pick";
 "search.filter.fridge_ready" = "Fridge-ready";
@@ -204,8 +204,8 @@
 "account.appearance.hint" = "Follow your phone settings or force light/dark mode.";
 "detail.seasonality" = "Seasonality";
 "detail.seasonality.unavailable" = "Seasonality unavailable";
-"home.band.peak.kicker" = "At peak this week";
-"home.band.peak.title" = "It's peak season.";
+"home.band.peak.kicker" = "Best of season this week";
+"home.band.peak.title" = "The right seasonal moment.";
 "home.band.peak.title_em" = "Here's what to cook";
 "home.band.peak.card_meta_format" = "Week %d";
 "home.tip.kicker" = "Tip of the week";
@@ -226,6 +226,6 @@
 "home.common.see_all" = "See all";
 "home.filter.ready_now" = "Ready now";
 "home.filter.high_protein" = "Protein";
-"home.filter.peak_season" = "Peak season";
+"home.filter.peak_season" = "Best of season";
 "home.filter.trending" = "Trending";
 "home.meta.recipe" = "Recipe";

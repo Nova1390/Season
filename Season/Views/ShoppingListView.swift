@@ -168,8 +168,7 @@ struct ShoppingListView: View {
         .seasonTopBar(
             produceViewModel: produceViewModel,
             shoppingListViewModel: shoppingListViewModel,
-            leading: .back,
-            trailingAccessory: shoppingSelectionTopBarAction
+            leading: .back
         )
         .onAppear {
             syncExpandedRecipeGroups()
@@ -184,37 +183,53 @@ struct ShoppingListView: View {
         }
     }
 
-    private var shoppingSelectionTopBarAction: AnyView? {
-        guard !shoppingListViewModel.items.isEmpty else { return nil }
-        return AnyView(
-            Button(isSelectionMode ? produceViewModel.localizer.text(.done) : produceViewModel.localizer.text(.select)) {
+    private var shoppingSelectionActionButton: some View {
+        Group {
+            Button(isSelectionMode ? produceViewModel.localizer.text(.done) : shoppingManageLabel) {
                 if isSelectionMode {
                     selectedIngredientIDs.removeAll()
                 }
                 isSelectionMode.toggle()
             }
-            .font(DS.Font.sans(12, weight: .semibold))
-            .foregroundStyle(isSelectionMode ? DS.Color.sageDeep : DS.Color.ink)
-            .padding(.horizontal, 10)
-            .frame(height: 32)
+            .font(DS.Font.sans(13, weight: .semibold))
+            .foregroundStyle(isSelectionMode ? DS.Color.sageDeep : DS.Color.inkSoft)
+            .padding(.horizontal, 12)
+            .frame(height: 34)
             .background(
                 Capsule(style: .continuous)
-                    .fill(DS.Color.card.opacity(0.86))
+                    .fill(isSelectionMode ? DS.Color.sageSoft.opacity(0.78) : DS.Color.cardSoft)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(isSelectionMode ? DS.Color.sage.opacity(0.28) : DS.Color.borderM, lineWidth: 1)
             )
             .buttonStyle(.plain)
-        )
+        }
+    }
+
+    private var shoppingManageLabel: String {
+        produceViewModel.localizer.languageCode.hasPrefix("it") ? "Gestisci" : "Manage"
     }
 
     private var shoppingHeaderSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(produceViewModel.localizer.localized("shopping.header.title"))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .tracking(-0.4)
-                .foregroundStyle(SeasonColors.seasonGreen)
+        HStack(alignment: .top, spacing: SeasonSpacing.sm) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(produceViewModel.localizer.localized("shopping.header.title"))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .tracking(-0.4)
+                    .foregroundStyle(DS.Color.sageDeep)
 
-            Text(shoppingHeaderSummary)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+                Text(shoppingHeaderSummary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(DS.Color.inkMuted)
+            }
+
+            Spacer(minLength: SeasonSpacing.sm)
+
+            if !shoppingListViewModel.items.isEmpty {
+                shoppingSelectionActionButton
+                    .padding(.top, 4)
+            }
         }
     }
 
@@ -227,13 +242,13 @@ struct ShoppingListView: View {
                             .font(.caption2.weight(.bold))
                             .textCase(.uppercase)
                             .tracking(0.8)
-                            .foregroundStyle(SeasonColors.seasonGreen.opacity(0.72))
+                            .foregroundStyle(DS.Color.sageDeep.opacity(0.86))
                         Text(String(totalItemCount))
                             .font(.system(size: 38, weight: .bold, design: .rounded))
-                            .foregroundStyle(SeasonColors.seasonGreen)
+                            .foregroundStyle(DS.Color.sageDeep)
                         Text(produceViewModel.localizer.itemsInSeasonText(inSeasonCount: inSeasonCount, totalCount: seasonalEligibleCount))
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DS.Color.inkMuted)
                     }
 
                     Spacer(minLength: SeasonSpacing.sm)
@@ -250,19 +265,19 @@ struct ShoppingListView: View {
                         HStack(spacing: 5) {
                             Image(systemName: "leaf.fill")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(SeasonColors.seasonGreen.opacity(0.82))
+                                .foregroundStyle(DS.Color.sageDeep.opacity(0.88))
                             Text("\(seasonalScore)%")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DS.Color.inkSoft)
                         }
                     }
                 }
                 .padding(SeasonSpacing.md)
             },
             cornerRadius: SeasonRadius.large,
-            background: SeasonColors.secondarySurface,
-            backgroundOpacity: 0.94,
-            borderOpacity: 0.01,
+            background: DS.Color.card,
+            backgroundOpacity: 1,
+            borderOpacity: 0.08,
             shadowOpacity: 0.002,
             shadowRadius: 1.8,
             shadowY: 1
@@ -329,7 +344,7 @@ struct ShoppingListView: View {
         VStack(alignment: .leading, spacing: SeasonSpacing.sm) {
             HStack(alignment: .top, spacing: SeasonSpacing.sm) {
                 Rectangle()
-                    .fill(SeasonColors.seasonGreen.opacity(0.88))
+                    .fill(DS.Color.sageDeep.opacity(0.88))
                     .frame(width: 3, height: 42)
                     .clipShape(Capsule(style: .continuous))
                     .padding(.top, 2)
@@ -345,11 +360,11 @@ struct ShoppingListView: View {
                                 .font(.caption2.weight(.bold))
                                 .textCase(.uppercase)
                                 .tracking(0.7)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DS.Color.inkMuted)
 
                             Text(group.recipeTitle)
                                 .font(.title3.weight(.semibold))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(DS.Color.ink)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
                                 .allowsTightening(true)
@@ -359,13 +374,11 @@ struct ShoppingListView: View {
                                 SeasonBadge(
                                     text: seasonalStatus,
                                     horizontalPadding: 8,
-                                    verticalPadding: 4,
-                                    foreground: Color.primary.opacity(0.68),
-                                    background: SeasonColors.subtleSurface.opacity(0.9)
+                                    verticalPadding: 4
                                 )
                                 Text("\(produceViewModel.localizer.text(.seasonalMatch)) \(seasonalMatchPercent)%")
                                     .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary.opacity(0.8))
+                                    .foregroundStyle(DS.Color.inkMuted)
                             }
                         }
                     }
@@ -387,7 +400,7 @@ struct ShoppingListView: View {
                     } label: {
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary.opacity(0.62))
+                            .foregroundStyle(DS.Color.inkMuted)
                     }
                     .buttonStyle(.plain)
                     .frame(minWidth: 44, minHeight: 44)
@@ -403,7 +416,7 @@ struct ShoppingListView: View {
                         } label: {
                             Image(systemName: "arrow.up.right.square")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary.opacity(0.58))
+                                .foregroundStyle(DS.Color.inkMuted)
                         }
                         .buttonStyle(.plain)
                         .frame(minWidth: 44, minHeight: 44)
@@ -419,7 +432,7 @@ struct ShoppingListView: View {
         .padding(.vertical, SeasonSpacing.sm)
         .background(
             RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                .fill(SeasonColors.secondarySurface.opacity(0.8))
+                .fill(DS.Color.card.opacity(0.94))
         )
         .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous))
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -445,7 +458,7 @@ struct ShoppingListView: View {
                     } label: {
                         Image(systemName: selectedIngredientIDs.contains(entry.id) ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? Color.accentColor : .secondary)
+                            .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? DS.Color.sageDeep : DS.Color.inkMuted)
                     }
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
@@ -457,20 +470,20 @@ struct ShoppingListView: View {
                 } else if shoppingListViewModel.resolveBasicIngredient(for: entry) != nil {
                     Image(systemName: "leaf")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkMuted)
                         .frame(width: 34, height: 34)
                         .background(
                             RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
-                                .fill(SeasonColors.subtleSurface.opacity(0.7))
+                                .fill(DS.Color.cardSoft)
                         )
                 } else {
                     Image(systemName: "text.badge.plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkMuted)
                         .frame(width: 34, height: 34)
                         .background(
                             RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
-                                .fill(SeasonColors.subtleSurface.opacity(0.7))
+                                .fill(DS.Color.cardSoft)
                         )
                 }
 
@@ -486,13 +499,13 @@ struct ShoppingListView: View {
                         if let quantity = entry.quantity {
                             Text(quantity)
                                 .font(.caption2.weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DS.Color.inkMuted)
                         }
 
                         if let item = produceItem {
                             Text(ingredientSeasonalImpactText(for: item))
                                 .font(.caption2.weight(.medium))
-                                .foregroundStyle(.secondary.opacity(0.82))
+                                .foregroundStyle(DS.Color.inkMuted)
 
                             SeasonalStatusBadge(
                                 score: item.seasonalityScore(month: produceViewModel.currentMonth),
@@ -546,9 +559,9 @@ struct ShoppingListView: View {
                 Button {
                     toggleSelection(for: entry)
                 } label: {
-                    Image(systemName: selectedIngredientIDs.contains(entry.id) ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? Color.accentColor : .secondary)
+                        Image(systemName: selectedIngredientIDs.contains(entry.id) ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(selectedIngredientIDs.contains(entry.id) ? DS.Color.sageDeep : DS.Color.inkMuted)
                 }
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
@@ -560,20 +573,20 @@ struct ShoppingListView: View {
             } else if shoppingListViewModel.resolveBasicIngredient(for: entry) != nil {
                 Image(systemName: "leaf")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.inkMuted)
                     .frame(width: 36, height: 36)
                     .background(
                         RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
-                            .fill(SeasonColors.subtleSurface.opacity(0.7))
+                            .fill(DS.Color.cardSoft)
                     )
             } else {
                 Image(systemName: "text.badge.plus")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DS.Color.inkMuted)
                     .frame(width: 36, height: 36)
                     .background(
                         RoundedRectangle(cornerRadius: SeasonRadius.small, style: .continuous)
-                            .fill(SeasonColors.subtleSurface.opacity(0.7))
+                            .fill(DS.Color.cardSoft)
                     )
             }
 
@@ -588,7 +601,7 @@ struct ShoppingListView: View {
                 if let quantity = entry.quantity {
                     Text(quantity)
                         .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkMuted)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -645,12 +658,12 @@ struct ShoppingListView: View {
                 .clipShape(RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous))
         } else {
             RoundedRectangle(cornerRadius: SeasonRadius.large, style: .continuous)
-                .fill(SeasonColors.subtleSurface.opacity(0.9))
+                .fill(DS.Color.cardSoft)
                 .frame(width: 52, height: 52)
                 .overlay(
                     Image(systemName: "fork.knife")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Color.inkMuted)
                 )
         }
     }
@@ -685,10 +698,10 @@ struct ShoppingListView: View {
                 .font(.caption2.weight(.bold))
                 .textCase(.uppercase)
                 .tracking(0.7)
-                .foregroundStyle(SeasonColors.seasonGreen.opacity(0.72))
+                .foregroundStyle(DS.Color.sageDeep.opacity(0.86))
             Text(value)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(SeasonColors.seasonGreen)
+                .foregroundStyle(DS.Color.sageDeep)
         }
     }
 
@@ -701,7 +714,7 @@ struct ShoppingListView: View {
         .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(DS.Color.inkMuted)
         .accessibilityLabel(produceViewModel.localizer.text(.remove))
     }
 
@@ -746,9 +759,9 @@ struct ShoppingListView: View {
     private func style(for state: ShoppingItemVisualState) -> (background: Color, titleColor: Color) {
         switch state {
         case .missing:
-            return (SeasonColors.subtleSurface.opacity(0.8), .primary)
+            return (DS.Color.cardSoft, DS.Color.ink)
         case .inFridge:
-            return (SeasonColors.seasonGreenSoft.opacity(0.35), Color.primary.opacity(0.84))
+            return (DS.Color.sageSoft.opacity(0.56), DS.Color.ink)
         }
     }
 
