@@ -1,6 +1,6 @@
 # Season Android Port Plan
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## 1. Decision
 
@@ -259,6 +259,8 @@ Initial foundation status:
 - Auth UI now supports Google entry, email login/signup, session restore, username onboarding, and logout.
 - Home now has an initial read-only Supabase recipe repository and renders a remote hero plus recommended rows from `recipes`.
 - Home to recipe detail navigation is wired read-only using the already-loaded `SeasonRecipe` snapshot. No recipe mutations or fetch-by-id are introduced in this phase.
+- Search now has a read-only recipe/catalog repository flow with debounce, normalized query cache, and recipe-result navigation into detail.
+- Today now has a read-only seasonal catalog repository flow with current-month phase labels and basic ingredient detail.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 
 ### Phase 2: Auth and Session
@@ -273,8 +275,8 @@ Initial foundation status:
 
 - Home feed: initial read-only remote snapshot wired; still needs richer ranking, imagery, and filters.
 - Recipe detail: initial Home to detail flow is wired with source, external badge, servings, ingredient quantities, numbered steps, and empty states.
-- Today seasonal list.
-- Search.
+- Search: initial read-only recipe and ingredient search is wired; ingredient deep links and advanced ranking remain later.
+- Today seasonal list: initial current-month catalog view is wired with `Al meglio`, `Primizia`, and `Fine stagione` phases; richer curves/visual polish remain later.
 - Profile basics.
 
 ### Phase 4: Local-First Actions

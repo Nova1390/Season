@@ -55,6 +55,12 @@ Current implementation note:
 | Ingredient detail navigation | MVP | At least basic product detail. |
 | Smooth curve chart | Later | Valuable polish after MVP. |
 
+Current implementation note:
+
+- Today now reads seasonal catalog ingredients from Supabase dev through the app-facing catalog view.
+- The screen distinguishes `Al meglio`, `Primizia`, and `Fine stagione` and opens a basic in-screen ingredient detail without catalog mutations.
+- Ranking is intentionally conservative for MVP: it favors ingredients in the current month and penalizes very long seasonal windows, with richer iOS parity tuning deferred.
+
 ## 4. Search
 
 | Capability | Priority | Notes |
@@ -64,6 +70,12 @@ Current implementation note:
 | Filter chips | MVP | Keep simple and readable. |
 | Debounce/cache | MVP | Avoid janky typing. |
 | Advanced ranking parity | Later | Tune after real Android usage. |
+
+Current implementation note:
+
+- Search now loads the remote recipe snapshot and canonical catalog ingredients, applies a 300ms debounce, and caches normalized query results.
+- Recipe search results are tappable and open the existing read-only recipe detail from the already-loaded `SeasonRecipe` snapshot.
+- Ingredient search is read-only; ingredient detail/deep-link navigation can be added after the core read-only MVP is stable.
 
 ## 5. Recipe Detail
 
@@ -169,6 +181,7 @@ Current foundation note:
 - Gradle wrapper exists.
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
+- Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
 
 ## 13. Regression Caption Set
 

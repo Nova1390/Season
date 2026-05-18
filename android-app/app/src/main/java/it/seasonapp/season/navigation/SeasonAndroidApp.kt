@@ -132,7 +132,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
             } else {
                 when (selectedDestination) {
                     SeasonDestination.Home -> HomeScreen(onRecipeSelected = { selectedRecipe = it })
-                    SeasonDestination.Search -> SearchScreen()
+                    SeasonDestination.Search -> SearchScreen(onRecipeSelected = { selectedRecipe = it })
                     SeasonDestination.Create -> CreateScreen()
                     SeasonDestination.Today -> TodayScreen()
                     SeasonDestination.Profile -> ProfileScreen(profile = profile, onLogout = onLogout)

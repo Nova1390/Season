@@ -21,6 +21,10 @@ Current implementation:
 - Remote recipe domain mapping for title, source, servings, ingredients, steps, and image URL.
 - Recipe detail read-only navigation from the Home hero and remote rows.
 - Recipe detail renders source, external badge, servings, ingredients with quantities, and numbered steps from the already-loaded recipe snapshot.
+- Search read-only for recipes and catalog ingredients, with 300ms debounce and normalized query cache.
+- Search recipe results open the same read-only recipe detail without introducing new mutations.
+- Today read-only seasonal catalog view with current-month ranking and phase labels: peak, early season, and ending season.
+- Today ingredient rows open an in-screen basic ingredient detail using catalog data already loaded from Supabase.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -28,6 +32,7 @@ Current implementation:
 
 Not implemented yet:
 
+- Home imagery/richer feed ranking.
 - Local-first outbox.
 - Save/crispy/shopping actions.
 - Smart Import publish.
