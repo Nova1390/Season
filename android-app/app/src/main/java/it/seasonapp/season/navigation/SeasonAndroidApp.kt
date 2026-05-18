@@ -1,5 +1,6 @@
 package it.seasonapp.season.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -21,6 +23,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +42,8 @@ import it.seasonapp.season.features.auth.SeasonProfile
 import it.seasonapp.season.features.create.CreateScreen
 import it.seasonapp.season.features.home.HomeScreen
 import it.seasonapp.season.features.profile.ProfileScreen
+import it.seasonapp.season.features.recipes.RecipeDetailScreen
+import it.seasonapp.season.features.recipes.SeasonRecipe
 import it.seasonapp.season.features.search.SearchScreen
 import it.seasonapp.season.features.today.TodayScreen
 
@@ -69,13 +74,29 @@ fun SeasonAndroidApp() {
 @Composable
 private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
     var selectedDestination by rememberSaveable { mutableStateOf(SeasonDestination.Home) }
+    var selectedRecipe by remember { mutableStateOf<SeasonRecipe?>(null) }
+    val activeRecipe = selectedRecipe
+
+    BackHandler(enabled = activeRecipe != null) {
+        selectedRecipe = null
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (activeRecipe != null) {
+                        IconButton(onClick = { selectedRecipe = null }) {
+                            Text(
+                                text = "‹",
+                                style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
+                            )
+                        }
+                    }
+                },
                 title = {
                     Text(
-                        text = selectedDestination.title,
+                        text = if (activeRecipe != null) "Ricetta" else selectedDestination.title,
                         style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
                     )
                 },
@@ -89,7 +110,10 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                 SeasonDestination.entries.forEach { destination ->
                     NavigationBarItem(
                         selected = selectedDestination == destination,
-                        onClick = { selectedDestination = destination },
+                        onClick = {
+                            selectedRecipe = null
+                            selectedDestination = destination
+                        },
                         icon = { Text(destination.label.first().toString(), fontWeight = FontWeight.Bold) },
                         label = { Text(destination.label) },
                     )
@@ -103,12 +127,16 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                 .padding(padding),
             color = androidx.compose.material3.MaterialTheme.colorScheme.background,
         ) {
-            when (selectedDestination) {
-                SeasonDestination.Home -> HomeScreen()
-                SeasonDestination.Search -> SearchScreen()
-                SeasonDestination.Create -> CreateScreen()
-                SeasonDestination.Today -> TodayScreen()
-                SeasonDestination.Profile -> ProfileScreen(profile = profile, onLogout = onLogout)
+            if (activeRecipe != null) {
+                RecipeDetailScreen(recipe = activeRecipe)
+            } else {
+                when (selectedDestination) {
+                    SeasonDestination.Home -> HomeScreen(onRecipeSelected = { selectedRecipe = it })
+                    SeasonDestination.Search -> SearchScreen()
+                    SeasonDestination.Create -> CreateScreen()
+                    SeasonDestination.Today -> TodayScreen()
+                    SeasonDestination.Profile -> ProfileScreen(profile = profile, onLogout = onLogout)
+                }
             }
         }
     }

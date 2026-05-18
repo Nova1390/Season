@@ -258,6 +258,7 @@ Initial foundation status:
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager are wired.
 - Auth UI now supports Google entry, email login/signup, session restore, username onboarding, and logout.
 - Home now has an initial read-only Supabase recipe repository and renders a remote hero plus recommended rows from `recipes`.
+- Home to recipe detail navigation is wired read-only using the already-loaded `SeasonRecipe` snapshot. No recipe mutations or fetch-by-id are introduced in this phase.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 
 ### Phase 2: Auth and Session
@@ -270,8 +271,8 @@ Initial foundation status:
 
 ### Phase 3: Read-Only Product Core
 
-- Home feed: initial read-only remote snapshot wired; still needs richer ranking, imagery, filters, and detail navigation.
-- Recipe detail.
+- Home feed: initial read-only remote snapshot wired; still needs richer ranking, imagery, and filters.
+- Recipe detail: initial Home to detail flow is wired with source, external badge, servings, ingredient quantities, numbered steps, and empty states.
 - Today seasonal list.
 - Search.
 - Profile basics.

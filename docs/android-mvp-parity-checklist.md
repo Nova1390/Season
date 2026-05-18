@@ -1,6 +1,6 @@
 # Android MVP Parity Checklist
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 This checklist defines what Android must match from iOS before it can be considered a useful MVP.
 
@@ -42,6 +42,10 @@ Current implementation note:
 | Creator strips | Later | Nice, not essential for first Android validation. |
 | Advanced feed diversity tuning | Later | Keep contract open. |
 
+Current implementation note:
+
+- Home reads published recipes from Supabase dev and opens a read-only detail from the hero or remote recipe rows without refetching.
+
 ## 3. Today / Seasonality
 
 | Capability | Priority | Notes |
@@ -74,6 +78,11 @@ Current implementation note:
 | Add missing to shopping list | MVP | Key conversion action. |
 | Follow creator | Later | Social expansion. |
 | Nutrition summary | Later | Useful, not first MVP blocker. |
+
+Current implementation note:
+
+- Read-only detail is wired from Home with title, source/creator, external recipe badge, servings, ingredient quantities, numbered steps, and empty states for missing structured data.
+- Mutating actions are intentionally deferred: save, crispy, shopping list, and fetch-by-id/deep link are not part of this step.
 
 ## 6. Smart Import
 

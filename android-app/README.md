@@ -19,6 +19,8 @@ Current implementation:
 - Email/password auth, session restore, logout, and username onboarding.
 - Home read-only recipe loading from Supabase dev.
 - Remote recipe domain mapping for title, source, servings, ingredients, steps, and image URL.
+- Recipe detail read-only navigation from the Home hero and remote rows.
+- Recipe detail renders source, external badge, servings, ingredients with quantities, and numbered steps from the already-loaded recipe snapshot.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -26,8 +28,8 @@ Current implementation:
 
 Not implemented yet:
 
-- Recipe detail.
 - Local-first outbox.
+- Save/crispy/shopping actions.
 - Smart Import publish.
 
 ## Setup

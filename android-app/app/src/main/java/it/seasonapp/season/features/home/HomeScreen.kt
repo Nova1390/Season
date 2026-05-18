@@ -1,6 +1,7 @@
 package it.seasonapp.season.features.home
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +34,10 @@ import it.seasonapp.season.navigation.EnvironmentCard
 import it.seasonapp.season.navigation.SeasonStatusCard
 
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    onRecipeSelected: (SeasonRecipe) -> Unit,
+    homeViewModel: HomeViewModel = viewModel(),
+) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     when (val current = state) {
@@ -45,6 +49,7 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel()) {
         is HomeUiState.Content -> HomeContent(
             snapshot = current.snapshot,
             onRefresh = homeViewModel::refresh,
+            onRecipeSelected = onRecipeSelected,
         )
     }
 }
@@ -80,7 +85,11 @@ private fun HomeError(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun HomeContent(snapshot: HomeSnapshot, onRefresh: () -> Unit) {
+private fun HomeContent(
+    snapshot: HomeSnapshot,
+    onRefresh: () -> Unit,
+    onRecipeSelected: (SeasonRecipe) -> Unit,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
@@ -113,7 +122,7 @@ private fun HomeContent(snapshot: HomeSnapshot, onRefresh: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            item { HeroRecipeCard(recipe = hero) }
+            item { HeroRecipeCard(recipe = hero, onClick = { onRecipeSelected(hero) }) }
         }
 
         if (snapshot.recommended.isNotEmpty()) {
@@ -124,7 +133,7 @@ private fun HomeContent(snapshot: HomeSnapshot, onRefresh: () -> Unit) {
                 )
             }
             items(snapshot.recommended, key = { it.id }) { recipe ->
-                RecipeRowCard(recipe = recipe)
+                RecipeRowCard(recipe = recipe, onClick = { onRecipeSelected(recipe) })
             }
         }
     }
@@ -160,9 +169,11 @@ private fun HomeSummaryCard(totalRecipes: Int, externalCount: Int, onRefresh: ()
 }
 
 @Composable
-private fun HeroRecipeCard(recipe: SeasonRecipe) {
+private fun HeroRecipeCard(recipe: SeasonRecipe, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
@@ -190,9 +201,11 @@ private fun HeroRecipeCard(recipe: SeasonRecipe) {
 }
 
 @Composable
-private fun RecipeRowCard(recipe: SeasonRecipe) {
+private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
     ) {
