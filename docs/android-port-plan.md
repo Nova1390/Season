@@ -281,11 +281,11 @@ Initial foundation status:
 
 ### Phase 4: Local-First Actions
 
-- Save/crispy.
+- Save/crispy: initial Recipe Detail flow wired with optimistic UI, Supabase `user_recipe_states`, and a minimal local outbox.
 - Fridge add/remove.
 - Shopping list add/remove.
-- Outbox/retry.
-- Foreground reconciliation.
+- Outbox/retry: recipe state only for now; fridge and shopping still pending.
+- Foreground reconciliation: recipe state only for now.
 
 ### Phase 5: Smart Import
 

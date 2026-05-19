@@ -130,6 +130,15 @@ Semantics:
 
 Android should mirror the iOS outbox idea, not necessarily its storage implementation.
 
+Android MVP implementation:
+
+- Recipe state outbox is intentionally limited to `save/unsave` and `crispy/uncrispy`.
+- Pending intents are keyed by `recipe_id + field`; the newest target value wins.
+- The UI applies the intended value immediately, then Supabase confirms through `user_recipe_states`.
+- Foreground/session restore retries pending intents.
+- Logout clears local user-specific recipe-state cache and pending intents.
+- Fridge and shopping will reuse the same local-first contract later, but are not covered by this recipe-state outbox.
+
 ## 6. Fridge Contract
 
 Shared table:

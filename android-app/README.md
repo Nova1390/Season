@@ -25,6 +25,8 @@ Current implementation:
 - Search recipe results open the same read-only recipe detail without introducing new mutations.
 - Today read-only seasonal catalog view with current-month ranking and phase labels: peak, early season, and ending season.
 - Today ingredient rows open an in-screen basic ingredient detail using catalog data already loaded from Supabase.
+- Recipe detail supports save/unsave and crispy/uncrispy against `user_recipe_states`.
+- Recipe state writes use optimistic UI plus a minimal local SharedPreferences outbox with foreground retry.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -33,9 +35,18 @@ Current implementation:
 Not implemented yet:
 
 - Home imagery/richer feed ranking.
-- Local-first outbox.
-- Save/crispy/shopping actions.
+- Fridge/shopping outbox actions.
 - Smart Import publish.
+
+## Recipe State Sync
+
+The Android MVP has a deliberately small outbox for recipe state actions only:
+
+- `Save` and `Crispy` update the UI immediately.
+- The app writes to Supabase `user_recipe_states` with the authenticated user session.
+- If sync fails, the latest intended value for each `recipe_id + field` is kept locally and retried on foreground/session restore.
+- Logout clears local user-specific recipe state and pending recipe-state intents.
+- This does not cover fridge, shopping, or Smart Import yet.
 
 ## Setup
 

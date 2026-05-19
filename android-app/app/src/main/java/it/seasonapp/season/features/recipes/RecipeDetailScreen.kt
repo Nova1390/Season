@@ -9,24 +9,50 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.seasonapp.season.navigation.SeasonStatusCard
+import it.seasonapp.season.features.recipestate.UserRecipeStateUi
+import it.seasonapp.season.features.recipestate.UserRecipeStateViewModel
 
 @Composable
-fun RecipeDetailScreen(recipe: SeasonRecipe) {
+fun RecipeDetailScreen(
+    recipe: SeasonRecipe,
+    recipeStateViewModel: UserRecipeStateViewModel,
+) {
+    LaunchedEffect(recipe.id) {
+        recipeStateViewModel.ensureLoaded(recipe.id)
+    }
+    val recipeStateFlow = remember(recipe.id, recipeStateViewModel) {
+        recipeStateViewModel.observeRecipeState(recipe.id)
+    }
+    val recipeState by recipeStateFlow.collectAsStateWithLifecycle()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item { RecipeDetailHeader(recipe = recipe) }
+        item {
+            RecipeStateActions(
+                state = recipeState,
+                onToggleSaved = { recipeStateViewModel.toggleSaved(recipe.id) },
+                onToggleCrispy = { recipeStateViewModel.toggleCrispy(recipe.id) },
+            )
+        }
         item { RecipeIngredientSection(recipe = recipe) }
         item { RecipeStepsSection(recipe = recipe) }
     }
@@ -66,6 +92,53 @@ private fun RecipeDetailHeader(recipe: SeasonRecipe) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun RecipeStateActions(
+    state: UserRecipeStateUi,
+    onToggleSaved: () -> Unit,
+    onToggleCrispy: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (state.isSaved) {
+                    Button(onClick = onToggleSaved) {
+                        Text("Salvata")
+                    }
+                } else {
+                    OutlinedButton(onClick = onToggleSaved) {
+                        Text("Salva")
+                    }
+                }
+
+                if (state.isCrispied) {
+                    Button(onClick = onToggleCrispy) {
+                        Text("Crispy")
+                    }
+                } else {
+                    OutlinedButton(onClick = onToggleCrispy) {
+                        Text("Crispy")
+                    }
+                }
+            }
+            if (state.isPending || state.isFailed) {
+                Text(
+                    text = if (state.isFailed) "Da sincronizzare" else "Sincronizzazione…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

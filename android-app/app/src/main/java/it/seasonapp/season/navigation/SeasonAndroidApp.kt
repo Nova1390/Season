@@ -21,6 +21,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,7 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import it.seasonapp.season.core.design.SeasonTheme
 import it.seasonapp.season.core.env.SeasonEnvironment
@@ -44,6 +49,7 @@ import it.seasonapp.season.features.home.HomeScreen
 import it.seasonapp.season.features.profile.ProfileScreen
 import it.seasonapp.season.features.recipes.RecipeDetailScreen
 import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipestate.UserRecipeStateViewModel
 import it.seasonapp.season.features.search.SearchScreen
 import it.seasonapp.season.features.today.TodayScreen
 
@@ -76,6 +82,24 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
     var selectedDestination by rememberSaveable { mutableStateOf(SeasonDestination.Home) }
     var selectedRecipe by remember { mutableStateOf<SeasonRecipe?>(null) }
     val activeRecipe = selectedRecipe
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val recipeStateViewModel: UserRecipeStateViewModel = viewModel()
+
+    LaunchedEffect(profile.id) {
+        recipeStateViewModel.initialize(profile.id)
+    }
+
+    DisposableEffect(lifecycleOwner, recipeStateViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                recipeStateViewModel.flushPendingRecipeStateMutations()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     BackHandler(enabled = activeRecipe != null) {
         selectedRecipe = null
@@ -128,14 +152,20 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
             color = androidx.compose.material3.MaterialTheme.colorScheme.background,
         ) {
             if (activeRecipe != null) {
-                RecipeDetailScreen(recipe = activeRecipe)
+                RecipeDetailScreen(recipe = activeRecipe, recipeStateViewModel = recipeStateViewModel)
             } else {
                 when (selectedDestination) {
                     SeasonDestination.Home -> HomeScreen(onRecipeSelected = { selectedRecipe = it })
                     SeasonDestination.Search -> SearchScreen(onRecipeSelected = { selectedRecipe = it })
                     SeasonDestination.Create -> CreateScreen()
                     SeasonDestination.Today -> TodayScreen()
-                    SeasonDestination.Profile -> ProfileScreen(profile = profile, onLogout = onLogout)
+                    SeasonDestination.Profile -> ProfileScreen(
+                        profile = profile,
+                        onLogout = {
+                            recipeStateViewModel.clearLocalRecipeStateOnLogout()
+                            onLogout()
+                        },
+                    )
                 }
             }
         }

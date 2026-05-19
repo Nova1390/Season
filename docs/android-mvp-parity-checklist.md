@@ -94,7 +94,8 @@ Current implementation note:
 Current implementation note:
 
 - Read-only detail is wired from Home with title, source/creator, external recipe badge, servings, ingredient quantities, numbered steps, and empty states for missing structured data.
-- Mutating actions are intentionally deferred: save, crispy, shopping list, and fetch-by-id/deep link are not part of this step.
+- Save/crispy are wired from Recipe Detail with optimistic UI, Supabase `user_recipe_states`, and a minimal local outbox for retry.
+- Shopping list CTA and fetch-by-id/deep link remain deferred.
 
 ## 6. Smart Import
 
@@ -170,8 +171,8 @@ Current implementation note:
 | Supabase dev and staging environments are switchable. |
 | Logs do not expose emails, user IDs, callback URLs, raw payloads, or secrets. |
 | Smart Import passes the iOS regression caption set. |
-| Fridge/shopping/saved/crispy survive app restart. |
-| Outbox retries after simulated network failure. |
+| Saved/crispy survive app restart through remote state plus pending local outbox. |
+| Fridge/shopping outbox retries after simulated network failure. |
 | Light/dark mode readable on main screens. |
 | Android README documents setup and build commands. |
 
@@ -182,6 +183,7 @@ Current foundation note:
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
+- Save/crispy are the first Android local-first mutation path; fridge, shopping, and Smart Import publish still need their own MVP flows.
 
 ## 13. Regression Caption Set
 
