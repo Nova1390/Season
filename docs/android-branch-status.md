@@ -36,6 +36,7 @@ Done on this branch:
 - Shopping Supabase dev list/add catalog/add custom/check/remove.
 - Recipe Detail CTA to add recipe ingredients to the Shopping List while preserving quantity, unit, source recipe id, and catalog id when available.
 - Fridge “Cosa puoi cucinare” MVP with ready, missing-few, and almost-ready recipe groups.
+- Fridge shows “Cosa puoi cucinare” before add/remove management so the cooking value is visible even with a long inventory.
 - Fridge recipe matching uses catalog `ingredient_id` first and a conservative normalized-name fallback for custom items.
 - Fridge missing-ingredient CTA can send only missing recipe ingredients to Shopping List.
 - Shared JSON outbox store for local-first Android mutation queues.
@@ -84,7 +85,7 @@ Not done yet:
 - Smart Import manual field editing before publish is still minimal; the user currently edits the source caption and re-imports.
 - Smart Import draft still needs broader live caption QA against the live Edge Function on emulator/device before Play internal testing.
 - Profile recipe lists are capped by the current 100-recipe MVP fetch window.
-- Recipes-from-fridge section still needs a dedicated full-scroll QA pass with controlled fridge contents before Play internal testing.
+- Recipes-from-fridge still needs controlled-data QA before Play internal testing.
 - Staging QA and Google Play Internal Testing prep.
 
 ## Next Implementation Order

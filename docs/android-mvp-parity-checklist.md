@@ -224,6 +224,7 @@ Current foundation note:
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
 - Save/crispy are the first Android local-first mutation path.
 - Fridge inventory add/remove, recipes-from-fridge, Shopping List, and Recipe Detail add-to-shopping are wired as MVP flows.
+- Fridge “Cosa puoi cucinare” is now placed before add/remove management, matching the user value hierarchy.
 - Fridge/Shopping outbox exists, but still needs failure-mode QA with forced network/backend errors before Play internal testing.
 - Smart Import draft and publish are wired against `Season-dev`; broader regression-caption QA is still required before Play internal testing.
 - Smart Import draft mapping now has local unit coverage for dedupe, quantity preservation, fallback title, and publish blocking.

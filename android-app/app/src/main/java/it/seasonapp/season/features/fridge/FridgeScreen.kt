@@ -70,6 +70,17 @@ fun FridgeScreen(
         }
 
         item {
+            FridgeRecipesSection(
+                groups = state.recipeGroups,
+                onRecipeSelected = onRecipeSelected,
+                onAddMissingToShopping = { recipe, missing ->
+                    shoppingViewModel.addRecipeIngredients(recipe = recipe, ingredients = missing)
+                    onOpenShopping()
+                },
+            )
+        }
+
+        item {
             CatalogAddSection(
                 query = state.query,
                 candidates = state.filteredCatalogIngredients,
@@ -111,17 +122,6 @@ fun FridgeScreen(
                 )
             }
         }
-
-        item {
-            FridgeRecipesSection(
-                groups = state.recipeGroups,
-                onRecipeSelected = onRecipeSelected,
-                onAddMissingToShopping = { recipe, missing ->
-                    shoppingViewModel.addRecipeIngredients(recipe = recipe, ingredients = missing)
-                    onOpenShopping()
-                },
-            )
-        }
     }
 }
 
@@ -139,7 +139,7 @@ private fun FridgeHeader(total: Int, isLoading: Boolean, onRefresh: () -> Unit) 
         )
         SeasonStatusCard(
             title = "$total ingredienti disponibili",
-            body = "Questo step sincronizza add/remove su Supabase dev. Le ricette cucinabili dal frigo arriveranno nel blocco successivo.",
+            body = "Trova subito cosa puoi cucinare, poi aggiungi o rimuovi ingredienti quando serve.",
             action = "Aggiorna",
             onAction = onRefresh,
         )

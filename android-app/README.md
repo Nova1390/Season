@@ -33,6 +33,7 @@ Current implementation:
 - Shopping can list the authenticated user's `shopping_list_items`, add catalog ingredients, add custom fallback ingredients, check/uncheck items, and remove items on Supabase dev.
 - Recipe Detail can add all recipe ingredients to Shopping List while preserving quantity, unit, source recipe id, and catalog id when present.
 - Fridge includes a first “Cosa puoi cucinare” mode with ready, missing-few, and almost-ready recipe groups.
+- Fridge places “Cosa puoi cucinare” above add/remove management so recipe discovery is visible before inventory maintenance.
 - Fridge recipe matches can add only missing ingredients to Shopping List.
 - Fridge and Shopping use a shared JSON outbox pattern for local-first add/remove/check intents with foreground retry.
 - Smart Import draft is wired behind the `Crea` tab.
