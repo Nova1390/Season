@@ -28,10 +28,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.seasonapp.season.features.recipes.SeasonRecipe
 import it.seasonapp.season.navigation.SeasonStatusCard
 
 @Composable
 fun SmartImportScreen(
+    onRecipePublished: (SeasonRecipe) -> Unit = {},
     smartImportViewModel: SmartImportViewModel = viewModel(),
 ) {
     val state by smartImportViewModel.uiState.collectAsStateWithLifecycle()
@@ -71,7 +73,7 @@ fun SmartImportScreen(
                     isPublishing = state.isPublishing,
                     publishMessage = state.publishMessage,
                     publishErrorMessage = state.publishErrorMessage,
-                    onPublish = smartImportViewModel::publishDraft,
+                    onPublish = { smartImportViewModel.publishDraft(onPublished = onRecipePublished) },
                 )
             }
             item { SmartImportIngredientsCard(draft = draft) }

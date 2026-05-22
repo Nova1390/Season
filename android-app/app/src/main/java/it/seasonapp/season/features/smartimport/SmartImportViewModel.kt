@@ -3,6 +3,7 @@ package it.seasonapp.season.features.smartimport
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.seasonapp.season.core.logging.SeasonLog
+import it.seasonapp.season.features.recipes.SeasonRecipe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -50,21 +51,22 @@ class SmartImportViewModel(
         }
     }
 
-    fun publishDraft() {
+    fun publishDraft(onPublished: (SeasonRecipe) -> Unit = {}) {
         val state = _uiState.value
         val draft = state.draft ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isPublishing = true, publishErrorMessage = null, publishMessage = null) }
             runCatching {
                 repository.publishDraft(draft = draft, sourceUrl = state.sourceUrl)
-            }.onSuccess { recipeId ->
+            }.onSuccess { recipe ->
                 _uiState.update {
                     it.copy(
                         isPublishing = false,
-                        publishMessage = "Ricetta pubblicata. ID: $recipeId",
+                        publishMessage = "Ricetta pubblicata. Apro la scheda…",
                         publishErrorMessage = null,
                     )
                 }
+                onPublished(recipe)
             }.onFailure { error ->
                 SeasonLog.warning("smart_import_publish_failed ${error::class.simpleName}")
                 _uiState.update {

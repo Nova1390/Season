@@ -228,6 +228,7 @@ Current foundation note:
 - Smart Import draft and publish are wired against `Season-dev`; broader regression-caption QA is still required before Play internal testing.
 - Smart Import draft mapping now has local unit coverage for dedupe, quantity preservation, fallback title, and publish blocking.
 - Smart Import Android dedupe now treats same catalog id or same normalized name as one ingredient and keeps the richer quantity/unit payload.
+- Smart Import publish opens the newly created recipe in Recipe Detail without requiring a second backend fetch.
 - Profile MVP now shows username plus saved and published recipe sections from Supabase dev.
 - Dev QA gate on 2026-05-22 smoke-tested Home, Search, Today, Create entry, Profile, Shopping List, and Fridge inventory on emulator with no app-process crash/error logs.
 

@@ -15,6 +15,8 @@ import io.ktor.http.isSuccess
 import it.seasonapp.season.BuildConfig
 import it.seasonapp.season.core.backend.SeasonSupabaseClient
 import it.seasonapp.season.core.env.SeasonEnvironment
+import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipes.SeasonRecipeIngredient
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.Instant
@@ -68,7 +70,7 @@ class SmartImportRepository(
         return checkNotNull(parsed.result) { "Smart Import non ha restituito una bozza." }.toDraft()
     }
 
-    suspend fun publishDraft(draft: SmartImportDraft, sourceUrl: String?): String {
+    suspend fun publishDraft(draft: SmartImportDraft, sourceUrl: String?): SeasonRecipe {
         val blockReason = draft.publishBlockReason
         require(blockReason == null) { blockReason ?: "Bozza non pubblicabile." }
         client.auth.awaitInitialization()
@@ -80,6 +82,7 @@ class SmartImportRepository(
             "Utente richiesto per pubblicare."
         }
         val recipeId = UUID.randomUUID().toString()
+        val createdAt = Instant.now().toString()
         val payload = RecipePublishPayload(
             id = recipeId,
             userId = user.id,
@@ -97,11 +100,30 @@ class SmartImportRepository(
             sourceUrl = sourceUrl?.trim()?.takeIf { it.isNotEmpty() },
             sourceName = "Season Smart Import",
             sourceType = "user_generated",
-            createdAt = Instant.now().toString(),
+            createdAt = createdAt,
         )
         client
             .from("recipes")
             .insert(payload)
-        return recipeId
+        return SeasonRecipe(
+            id = recipeId,
+            userId = user.id,
+            title = draft.title.trim(),
+            creatorName = "Season Smart Import",
+            sourceName = "Season Smart Import",
+            sourceType = "user_generated",
+            imageUrl = null,
+            servings = draft.servings.coerceAtLeast(1),
+            ingredients = draft.ingredients.map { ingredient ->
+                SeasonRecipeIngredient(
+                    ingredientId = ingredient.matchedIngredientId?.trim()?.takeIf { it.isNotEmpty() },
+                    name = ingredient.name.trim(),
+                    quantityValue = ingredient.quantity?.takeIf { it > 0 },
+                    quantityUnit = ingredient.unit?.trim()?.takeIf { it.isNotEmpty() },
+                )
+            },
+            steps = draft.steps.mapNotNull { it.trim().takeIf(String::isNotEmpty) },
+            createdAt = createdAt,
+        )
     }
 }
