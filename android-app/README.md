@@ -46,6 +46,7 @@ Current implementation:
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
 - `:app:assembleInternalStaging` has been validated locally with Android Studio JBR.
+- Dev emulator smoke QA on 2026-05-22 covered Home, Search, Today, Create entry, Profile, Shopping List, and Fridge inventory with clean app-process logcat.
 
 Not implemented yet:
 

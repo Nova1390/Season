@@ -225,7 +225,9 @@ Current foundation note:
 - Save/crispy are the first Android local-first mutation path.
 - Fridge inventory add/remove, recipes-from-fridge, Shopping List, and Recipe Detail add-to-shopping are wired as MVP flows.
 - Fridge/Shopping outbox exists, but still needs failure-mode QA with forced network/backend errors before Play internal testing.
-- Smart Import publish still needs its MVP flow.
+- Smart Import draft and publish are wired against `Season-dev`; broader regression-caption QA is still required before Play internal testing.
+- Profile MVP now shows username plus saved and published recipe sections from Supabase dev.
+- Dev QA gate on 2026-05-22 smoke-tested Home, Search, Today, Create entry, Profile, Shopping List, and Fridge inventory on emulator with no app-process crash/error logs.
 
 ## 13. Regression Caption Set
 

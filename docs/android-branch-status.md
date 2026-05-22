@@ -64,6 +64,8 @@ Latest validated checks:
 - Build validation: Smart Import draft flow compiles on `debugDev` and `internalStaging`.
 - Build validation: Smart Import publish flow compiles on `debugDev` and `internalStaging`.
 - Build validation: Profile saved/published recipe sections compile on `debugDev` and `internalStaging`.
+- Dev QA gate pass, 2026-05-22: installed `debugDev` on emulator and smoke-tested Home, Search, Today, Create/Smart Import entry, Profile, Shopping List, and Fridge inventory.
+- Dev QA log pass, 2026-05-22: process-filtered logcat showed no Season crash, Supabase/PostgREST error, or feature-level error after the smoke flow.
 
 ## Known Limits
 
@@ -78,14 +80,16 @@ Not done yet:
 - Smart Import manual field editing before publish is still minimal; the user currently edits the source caption and re-imports.
 - Smart Import draft still needs broader live caption QA on emulator/device before Play internal testing.
 - Profile recipe lists are capped by the current 100-recipe MVP fetch window.
+- Recipes-from-fridge section still needs a dedicated full-scroll QA pass with controlled fridge contents before Play internal testing.
 - Staging QA and Google Play Internal Testing prep.
 
 ## Next Implementation Order
 
 Recommended next steps:
 
-1. Full dev QA, including Smart Import regression captions and one publish smoke.
-2. Staging configuration and Play Internal Testing prep.
+1. Full Smart Import regression caption pass on emulator/device.
+2. Recipes-from-fridge controlled data QA.
+3. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 
