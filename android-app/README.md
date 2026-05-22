@@ -41,6 +41,7 @@ Current implementation:
 - Smart Import dedupes ingredients by catalog id, normalized name, quantity, and unit before showing the draft.
 - Smart Import blocks publish-ready messaging when title, ingredients, or preparation steps are missing, but keeps the draft visible for correction.
 - Smart Import publish inserts validated drafts into Supabase dev `recipes` with `source_type = user_generated`.
+- Smart Import has local unit coverage for draft mapping, dedupe, quantity preservation, fallback title, and publish blocking.
 - Profile shows username plus saved and published recipe sections from Supabase dev.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
@@ -158,6 +159,7 @@ From `android-app/`:
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleDebugDev
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleInternalStaging
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:signingReport
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:testDebugDevUnitTest
 ```
 
 If `JAVA_HOME` is already configured, the shorter commands are:

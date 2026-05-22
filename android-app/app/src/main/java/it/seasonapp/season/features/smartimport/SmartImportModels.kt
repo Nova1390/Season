@@ -152,18 +152,32 @@ fun ParseRecipeCaptionResult.toDraft(): SmartImportDraft {
 private fun List<SmartImportIngredient>.deduped(): List<SmartImportIngredient> {
     val byKey = linkedMapOf<String, SmartImportIngredient>()
     forEach { ingredient ->
-        val key = listOf(
-            ingredient.matchedIngredientId?.trim()?.lowercase().orEmpty(),
-            ingredient.name.normalized(),
-            ingredient.quantity?.cleanFormat().orEmpty(),
-            ingredient.unit.normalized(),
-        ).joinToString("|")
+        val key = ingredient.dedupeKey()
         val existing = byKey[key]
-        if (existing == null || (existing.quantity == null && ingredient.quantity != null)) {
+        if (existing == null || ingredient.hasRicherDraftDataThan(existing)) {
             byKey[key] = ingredient
         }
     }
     return byKey.values.toList()
+}
+
+private fun SmartImportIngredient.dedupeKey(): String {
+    val catalogId = matchedIngredientId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+    return if (catalogId != null) "catalog:$catalogId" else "name:${name.normalized()}"
+}
+
+private fun SmartImportIngredient.hasRicherDraftDataThan(other: SmartImportIngredient): Boolean {
+    return draftDataScore() > other.draftDataScore()
+}
+
+private fun SmartImportIngredient.draftDataScore(): Int {
+    return listOf(
+        quantity != null,
+        !unit.isNullOrBlank(),
+        !matchedIngredientId.isNullOrBlank(),
+        status == "catalog",
+        matchType == "catalog",
+    ).count { it }
 }
 
 private fun String?.normalized(): String = this?.trim()?.lowercase()?.replace(Regex("\\s+"), " ").orEmpty()

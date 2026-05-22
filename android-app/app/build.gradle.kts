@@ -108,5 +108,7 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
 
+    testImplementation(kotlin("test"))
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

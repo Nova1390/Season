@@ -45,6 +45,8 @@ Done on this branch:
 - Smart Import calls `parse-recipe-caption` with the authenticated Supabase session and maps the response into an editable draft.
 - Smart Import draft dedupes ingredients and preserves title, servings, quantity/unit, steps, confidence, and catalog match hints.
 - Smart Import publish inserts validated drafts into Supabase dev `recipes` as `user_generated` recipes.
+- Smart Import draft mapping has local unit tests for title fallback, dedupe, quantity preservation, and publish blocking.
+- Smart Import dedupe now groups by catalog id first, then normalized ingredient name, and keeps the richer quantity/unit/match payload.
 - Profile MVP shows username plus saved and published recipe sections.
 - Profile recipe rows can open the existing Recipe Detail screen.
 - Documentation for Android contracts, MVP checklist, and porting direction.
@@ -55,6 +57,7 @@ Latest validated checks:
 
 - `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleDebugDev`
 - `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:assembleInternalStaging`
+- `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:testDebugDevUnitTest`
 - Emulator smoke: login/session restore, Home, Recipe Detail, Search, Today.
 - Emulator smoke: save/crispy toggle.
 - Emulator smoke: Fridge open, add/remove custom, add/remove catalog ingredient.
@@ -66,6 +69,7 @@ Latest validated checks:
 - Build validation: Profile saved/published recipe sections compile on `debugDev` and `internalStaging`.
 - Dev QA gate pass, 2026-05-22: installed `debugDev` on emulator and smoke-tested Home, Search, Today, Create/Smart Import entry, Profile, Shopping List, and Fridge inventory.
 - Dev QA log pass, 2026-05-22: process-filtered logcat showed no Season crash, Supabase/PostgREST error, or feature-level error after the smoke flow.
+- Smart Import unit pass, 2026-05-22: `testDebugDevUnitTest` validates risotto quantity preservation, duplicate merge, fallback title, and publish blocking.
 
 ## Known Limits
 
@@ -78,7 +82,7 @@ Not done yet:
 - Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
 - Smart Import direct open-after-publish is deferred until fetch-by-id/deep-link support.
 - Smart Import manual field editing before publish is still minimal; the user currently edits the source caption and re-imports.
-- Smart Import draft still needs broader live caption QA on emulator/device before Play internal testing.
+- Smart Import draft still needs broader live caption QA against the live Edge Function on emulator/device before Play internal testing.
 - Profile recipe lists are capped by the current 100-recipe MVP fetch window.
 - Recipes-from-fridge section still needs a dedicated full-scroll QA pass with controlled fridge contents before Play internal testing.
 - Staging QA and Google Play Internal Testing prep.
