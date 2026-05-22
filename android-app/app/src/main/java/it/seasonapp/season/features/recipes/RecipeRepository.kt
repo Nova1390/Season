@@ -50,6 +50,7 @@ private data class RecipeRow(
 
         return SeasonRecipe(
             id = id,
+            userId = userId.cleanOrNull(),
             title = cleanTitle,
             creatorName = creator,
             sourceName = cleanSource,

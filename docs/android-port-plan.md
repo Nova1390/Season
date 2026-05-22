@@ -338,6 +338,13 @@ Initial foundation status:
 - Publish path: validated drafts insert into Supabase dev `recipes`; direct open-after-publish remains later.
 - Regression captions from iOS.
 
+### Phase 5.5: Profile MVP
+
+- Username and logout are wired.
+- Saved recipes are shown from `user_recipe_states` matched against the current recipe feed window.
+- Published recipes are shown from `recipes.user_id` matched against the current recipe feed window.
+- Profile rows open the existing Recipe Detail screen.
+
 ### Phase 6: QA and Staging
 
 - Dev E2E.

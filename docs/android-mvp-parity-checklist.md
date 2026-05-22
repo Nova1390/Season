@@ -176,6 +176,14 @@ Current implementation note:
 | Follows | Later | Can reuse backend after core stable. |
 | Notifications inbox | Later | Not first MVP blocker. |
 
+Current implementation note:
+
+- Profile shows the authenticated username and keeps logout available.
+- Saved recipes are read from `user_recipe_states` and matched against the current remote recipe window.
+- Published recipes are matched by owner `user_id` against the current remote recipe window.
+- Profile recipe rows open the existing Recipe Detail screen.
+- Dedicated pagination/profile stats remain later polish.
+
 ## 10. Notifications
 
 | Capability | Priority | Notes |

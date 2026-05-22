@@ -2,6 +2,7 @@ package it.seasonapp.season.features.recipes
 
 data class SeasonRecipe(
     val id: String,
+    val userId: String?,
     val title: String,
     val creatorName: String,
     val sourceName: String?,

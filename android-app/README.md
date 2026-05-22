@@ -41,6 +41,7 @@ Current implementation:
 - Smart Import dedupes ingredients by catalog id, normalized name, quantity, and unit before showing the draft.
 - Smart Import blocks publish-ready messaging when title, ingredients, or preparation steps are missing, but keeps the draft visible for correction.
 - Smart Import publish inserts validated drafts into Supabase dev `recipes` with `source_type = user_generated`.
+- Profile shows username plus saved and published recipe sections from Supabase dev.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.

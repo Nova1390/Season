@@ -45,6 +45,8 @@ Done on this branch:
 - Smart Import calls `parse-recipe-caption` with the authenticated Supabase session and maps the response into an editable draft.
 - Smart Import draft dedupes ingredients and preserves title, servings, quantity/unit, steps, confidence, and catalog match hints.
 - Smart Import publish inserts validated drafts into Supabase dev `recipes` as `user_generated` recipes.
+- Profile MVP shows username plus saved and published recipe sections.
+- Profile recipe rows can open the existing Recipe Detail screen.
 - Documentation for Android contracts, MVP checklist, and porting direction.
 
 ## Validated
@@ -61,6 +63,7 @@ Latest validated checks:
 - Build validation: Fridge/Shopping outbox compile on `debugDev` and `internalStaging`.
 - Build validation: Smart Import draft flow compiles on `debugDev` and `internalStaging`.
 - Build validation: Smart Import publish flow compiles on `debugDev` and `internalStaging`.
+- Build validation: Profile saved/published recipe sections compile on `debugDev` and `internalStaging`.
 
 ## Known Limits
 
@@ -74,16 +77,15 @@ Not done yet:
 - Smart Import direct open-after-publish is deferred until fetch-by-id/deep-link support.
 - Smart Import manual field editing before publish is still minimal; the user currently edits the source caption and re-imports.
 - Smart Import draft still needs broader live caption QA on emulator/device before Play internal testing.
-- Profile saved/published recipe lists.
+- Profile recipe lists are capped by the current 100-recipe MVP fetch window.
 - Staging QA and Google Play Internal Testing prep.
 
 ## Next Implementation Order
 
 Recommended next steps:
 
-1. Profile saved/published sections.
-2. Full dev QA, including Smart Import regression captions and one publish smoke.
-3. Staging configuration and Play Internal Testing prep.
+1. Full dev QA, including Smart Import regression captions and one publish smoke.
+2. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 

@@ -240,6 +240,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                     SeasonDestination.Today -> TodayScreen()
                     SeasonDestination.Profile -> ProfileScreen(
                         profile = profile,
+                        onRecipeSelected = { selectedRecipe = it },
                         onLogout = {
                             recipeStateViewModel.clearLocalRecipeStateOnLogout()
                             fridgeViewModel.clearLocalStateOnLogout()

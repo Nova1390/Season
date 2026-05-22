@@ -293,7 +293,17 @@ Catalog governance remains external:
 - `catalog.seasonapp.it`.
 - Audit/learning tables.
 
-## 10. Follow and Social Contract
+## 10. Android Profile Contract
+
+The Android MVP profile is consumer-facing only.
+
+- Read the authenticated user's public profile data already available after onboarding.
+- Read saved recipe ids from `user_recipe_states` where `is_saved = true`.
+- Read published recipes from `recipes.user_id`.
+- Never expose catalog governance/admin controls in the Android app.
+- MVP profile recipe sections may use the current recipe feed window; dedicated pagination can follow before wider beta if the user has many recipes.
+
+## 11. Follow and Social Contract
 
 Shared table:
 
@@ -309,7 +319,7 @@ Rules:
 - Follow sync should use authenticated user ownership.
 - Notifications from follows are later-stage.
 
-## 11. Notifications Contract
+## 12. Notifications Contract
 
 Android MVP can defer notifications.
 
@@ -320,7 +330,7 @@ When implemented:
 - backend notification table should be designed before cross-device notification state is expected;
 - follow/crispy notifications should be derived or event-driven, not hardcoded.
 
-## 12. Logging and Privacy Contract
+## 13. Logging and Privacy Contract
 
 Android must follow the same privacy posture as iOS:
 
@@ -332,7 +342,7 @@ Android must follow the same privacy posture as iOS:
 - Debug logs gated by build type or explicit internal flag.
 - Supabase SDK logging is disabled at client creation; domain logs must go through the redacted app logger.
 
-## 13. Decisions And Remaining Setup
+## 14. Decisions And Remaining Setup
 
 - Android package name: `it.seasonapp.season`.
 - MVP scope: core complete.
