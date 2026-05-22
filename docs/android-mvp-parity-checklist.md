@@ -122,7 +122,8 @@ Current implementation note:
 - The draft view shows title, servings, quality, ingredients with quantity/unit, catalog match hints, and numbered steps.
 - The mapper dedupes ingredients by catalog id, normalized name, quantity, and unit.
 - Missing title, ingredients, or steps keep the draft visible but block publish-ready messaging.
-- Publish and manual field editing are still deferred to the next Smart Import task.
+- Publish now writes validated drafts to Supabase dev `recipes` using the authenticated user session.
+- Direct open-after-publish and richer manual draft field editing are deferred.
 
 ## 7. Fridge
 

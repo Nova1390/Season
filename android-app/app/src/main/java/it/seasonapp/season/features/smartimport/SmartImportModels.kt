@@ -50,8 +50,38 @@ data class SmartImportUiState(
     val caption: String = "",
     val sourceUrl: String = "",
     val isLoading: Boolean = false,
+    val isPublishing: Boolean = false,
     val draft: SmartImportDraft? = null,
     val errorMessage: String? = null,
+    val publishMessage: String? = null,
+    val publishErrorMessage: String? = null,
+)
+
+@Serializable
+data class RecipeIngredientPublishPayload(
+    @SerialName("ingredient_id") val ingredientId: String? = null,
+    @SerialName("produce_id") val produceId: String? = null,
+    @SerialName("basic_ingredient_id") val basicIngredientId: String? = null,
+    val name: String,
+    @SerialName("quantity_value") val quantityValue: Double? = null,
+    @SerialName("quantity_unit") val quantityUnit: String? = null,
+)
+
+@Serializable
+data class RecipePublishPayload(
+    val id: String,
+    @SerialName("user_id") val userId: String,
+    val title: String,
+    val ingredients: List<RecipeIngredientPublishPayload>,
+    val steps: List<String>,
+    val servings: Int,
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("instagram_url") val instagramUrl: String? = null,
+    @SerialName("tiktok_url") val tiktokUrl: String? = null,
+    @SerialName("source_url") val sourceUrl: String? = null,
+    @SerialName("source_name") val sourceName: String? = null,
+    @SerialName("source_type") val sourceType: String? = null,
+    @SerialName("created_at") val createdAt: String,
 )
 
 @Serializable

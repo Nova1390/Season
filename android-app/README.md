@@ -40,6 +40,7 @@ Current implementation:
 - Smart Import draft mapping preserves title, servings, ingredient quantities/units, steps, parser confidence, and catalog match hints.
 - Smart Import dedupes ingredients by catalog id, normalized name, quantity, and unit before showing the draft.
 - Smart Import blocks publish-ready messaging when title, ingredients, or preparation steps are missing, but keeps the draft visible for correction.
+- Smart Import publish inserts validated drafts into Supabase dev `recipes` with `source_type = user_generated`.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -49,7 +50,7 @@ Not implemented yet:
 
 - Home imagery/richer feed ranking.
 - Richer recipes-from-fridge scoring.
-- Smart Import publish.
+- Smart Import richer manual draft editing before publish.
 
 ## Recipe State Sync
 
@@ -116,7 +117,8 @@ The Android `Crea` tab now exposes the first Smart Import creator flow:
 - Android calls `parse-recipe-caption` through Supabase Edge Functions using the current authenticated session and anon key only.
 - The draft shows title, portions, quality, ingredients, quantities, catalog match state, and preparation steps.
 - Missing steps, title, or structured ingredients keep the draft editable but not publish-ready.
-- Publish is intentionally deferred to the next Android task so draft parsing can be validated before introducing recipe mutations.
+- Publish writes validated drafts to `recipes` with the authenticated user id, ingredient quantities/units, steps, servings, optional source URL, and no catalog mutations.
+- After publish, Android shows a confirmation with the new recipe id. Opening the published recipe detail directly is deferred until Android has fetch-by-id/deep-link support.
 
 ## Setup
 

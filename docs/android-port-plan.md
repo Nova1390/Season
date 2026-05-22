@@ -335,7 +335,7 @@ Initial foundation status:
 - Edge Function integration: Android calls `parse-recipe-caption` with authenticated user session.
 - Draft composer: initial read/edit-from-caption preview wired with title, servings, quantities, steps, and quality status.
 - Manual correction.
-- Publish path.
+- Publish path: validated drafts insert into Supabase dev `recipes`; direct open-after-publish remains later.
 - Regression captions from iOS.
 
 ### Phase 6: QA and Staging

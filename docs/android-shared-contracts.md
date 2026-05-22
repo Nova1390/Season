@@ -256,8 +256,9 @@ Android mapping rules:
 Current Android MVP status:
 
 - Draft creation is wired from the `Crea` tab.
-- Publish is deferred to the next task.
-- Manual correction is still limited to re-running import from edited caption/link input; dedicated draft field editing comes with publish validation.
+- Publish is wired for validated drafts and inserts into `recipes` with `source_type = user_generated`.
+- Manual correction is still limited to re-running import from edited caption/link input; dedicated draft field editing remains a follow-up.
+- Publish confirmation currently returns the created recipe id. Direct navigation to the newly created detail requires the later fetch-by-id/deep-link path.
 
 Regression captions are listed in `docs/android-mvp-parity-checklist.md`.
 

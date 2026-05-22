@@ -1,6 +1,7 @@
 package it.seasonapp.season.features.smartimport
 
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.from
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.header
@@ -16,6 +17,8 @@ import it.seasonapp.season.core.backend.SeasonSupabaseClient
 import it.seasonapp.season.core.env.SeasonEnvironment
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.Instant
+import java.util.UUID
 
 class SmartImportRepository(
     private val httpClient: HttpClient = HttpClient(Android),
@@ -63,5 +66,42 @@ class SmartImportRepository(
             throw IllegalStateException(parsed.error?.message ?: "Smart Import non riuscito.")
         }
         return checkNotNull(parsed.result) { "Smart Import non ha restituito una bozza." }.toDraft()
+    }
+
+    suspend fun publishDraft(draft: SmartImportDraft, sourceUrl: String?): String {
+        val blockReason = draft.publishBlockReason
+        require(blockReason == null) { blockReason ?: "Bozza non pubblicabile." }
+        client.auth.awaitInitialization()
+        checkNotNull(client.auth.currentSessionOrNull()) {
+            "Sessione richiesta per pubblicare."
+        }
+        client.auth.refreshCurrentSession()
+        val user = checkNotNull(client.auth.currentUserOrNull()) {
+            "Utente richiesto per pubblicare."
+        }
+        val recipeId = UUID.randomUUID().toString()
+        val payload = RecipePublishPayload(
+            id = recipeId,
+            userId = user.id,
+            title = draft.title.trim(),
+            ingredients = draft.ingredients.map { ingredient ->
+                RecipeIngredientPublishPayload(
+                    ingredientId = ingredient.matchedIngredientId?.trim()?.takeIf { it.isNotEmpty() },
+                    name = ingredient.name.trim(),
+                    quantityValue = ingredient.quantity?.takeIf { it > 0 },
+                    quantityUnit = ingredient.unit?.trim()?.takeIf { it.isNotEmpty() },
+                )
+            },
+            steps = draft.steps.mapNotNull { it.trim().takeIf(String::isNotEmpty) },
+            servings = draft.servings.coerceAtLeast(1),
+            sourceUrl = sourceUrl?.trim()?.takeIf { it.isNotEmpty() },
+            sourceName = "Season Smart Import",
+            sourceType = "user_generated",
+            createdAt = Instant.now().toString(),
+        )
+        client
+            .from("recipes")
+            .insert(payload)
+        return recipeId
     }
 }

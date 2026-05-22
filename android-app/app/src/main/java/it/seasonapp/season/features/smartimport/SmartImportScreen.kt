@@ -18,6 +18,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,7 +65,15 @@ fun SmartImportScreen(
             }
         }
         state.draft?.let { draft ->
-            item { SmartImportDraftCard(draft = draft) }
+            item {
+                SmartImportDraftCard(
+                    draft = draft,
+                    isPublishing = state.isPublishing,
+                    publishMessage = state.publishMessage,
+                    publishErrorMessage = state.publishErrorMessage,
+                    onPublish = smartImportViewModel::publishDraft,
+                )
+            }
             item { SmartImportIngredientsCard(draft = draft) }
             item { SmartImportStepsCard(draft = draft) }
         }
@@ -130,7 +139,13 @@ private fun SmartImportInputCard(
 }
 
 @Composable
-private fun SmartImportDraftCard(draft: SmartImportDraft) {
+private fun SmartImportDraftCard(
+    draft: SmartImportDraft,
+    isPublishing: Boolean,
+    publishMessage: String?,
+    publishErrorMessage: String?,
+    onPublish: () -> Unit,
+) {
     SmartImportCard {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AssistChip(onClick = {}, label = { Text(draft.qualityLabel) })
@@ -144,8 +159,31 @@ private fun SmartImportDraftCard(draft: SmartImportDraft) {
         val blockReason = draft.publishBlockReason
         SeasonStatusCard(
             title = if (blockReason == null) "Bozza pronta" else "Da completare prima di pubblicare",
-            body = blockReason ?: "Controlla ingredienti e passaggi, poi il publish verrà collegato nel prossimo step.",
+            body = blockReason ?: "Controlla ingredienti e passaggi, poi puoi pubblicare su Season dev.",
         )
+        Button(
+            enabled = blockReason == null && !isPublishing,
+            onClick = onPublish,
+        ) {
+            Text(if (isPublishing) "Pubblico…" else "Pubblica")
+        }
+        publishMessage?.let { message ->
+            SeasonStatusCard(
+                title = "Pubblicazione completata",
+                body = message,
+            )
+        }
+        publishErrorMessage?.let { message ->
+            SeasonStatusCard(
+                title = "Pubblicazione non riuscita",
+                body = message,
+            )
+        }
+        if (blockReason != null) {
+            TextButton(enabled = false, onClick = {}) {
+                Text("Completa la bozza per pubblicare")
+            }
+        }
     }
 }
 
