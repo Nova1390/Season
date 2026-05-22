@@ -17,6 +17,8 @@ class UserRecipeStateViewModel(
     application: Application,
     private val repository: UserRecipeStateRepository = UserRecipeStateRepository(),
 ) : AndroidViewModel(application) {
+    constructor(application: Application) : this(application, UserRecipeStateRepository())
+
     private val outboxStore = RecipeStateOutboxStore(application)
     private val _uiState = MutableStateFlow(UserRecipeStatesUiState())
     val uiState: StateFlow<UserRecipeStatesUiState> = _uiState.asStateFlow()

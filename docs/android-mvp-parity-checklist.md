@@ -30,6 +30,8 @@ Current implementation note:
 - Google Credential Manager, Supabase ID-token exchange, email login/signup, session restore, logout, and username onboarding are wired in code.
 - Google login has been manually validated on the dev emulator through username onboarding and shell entry.
 - Supabase Auth session storage is explicit through `SettingsSessionManager` with auto-load/auto-save enabled.
+- Restore and recipe-state sync refresh the Supabase session before trusting local stored auth state.
+- Supabase SDK logs are disabled in the client; app diagnostics use redacted `SeasonLog`.
 
 ## 2. Home
 

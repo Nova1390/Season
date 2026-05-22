@@ -136,6 +136,7 @@ Android MVP implementation:
 - Pending intents are keyed by `recipe_id + field`; the newest target value wins.
 - The UI applies the intended value immediately, then Supabase confirms through `user_recipe_states`.
 - Foreground/session restore retries pending intents.
+- Before fetching or applying recipe-state mutations, Android refreshes the Supabase session and leaves the intent pending if auth/network refresh fails.
 - Logout clears local user-specific recipe-state cache and pending intents.
 - Fridge and shopping will reuse the same local-first contract later, but are not covered by this recipe-state outbox.
 
@@ -280,6 +281,7 @@ Android must follow the same privacy posture as iOS:
 - No raw Supabase payload dumps in release logs.
 - No recipe/user state debug surfaces in public builds.
 - Debug logs gated by build type or explicit internal flag.
+- Supabase SDK logging is disabled at client creation; domain logs must go through the redacted app logger.
 
 ## 13. Decisions And Remaining Setup
 

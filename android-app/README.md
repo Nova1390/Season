@@ -46,6 +46,8 @@ The Android MVP has a deliberately small outbox for recipe state actions only:
 - The app writes to Supabase `user_recipe_states` with the authenticated user session.
 - If sync fails, the latest intended value for each `recipe_id + field` is kept locally and retried on foreground/session restore.
 - Logout clears local user-specific recipe state and pending recipe-state intents.
+- Recipe-state reads and writes refresh the Supabase session before remote sync, so a stale local session does not silently turn into failed outbox work.
+- Supabase SDK logging is disabled in the Android client; app logs must keep using the redacted `SeasonLog` wrapper.
 - This does not cover fridge, shopping, or Smart Import yet.
 
 ## Setup

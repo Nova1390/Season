@@ -13,10 +13,18 @@ class AuthRepository(
         get() = SeasonSupabaseClient.client
 
     suspend fun restoreSession(): AuthenticatedUser? {
+        client.auth.awaitInitialization()
         val session = client.auth.currentSessionOrNull() ?: return null
+        runCatching {
+            client.auth.refreshCurrentSession()
+        }.onFailure {
+            client.auth.clearSession()
+            return null
+        }
+        val user = client.auth.currentUserOrNull() ?: return null
         return AuthenticatedUser(
-            id = session.user?.id.orEmpty(),
-            displayName = session.user?.userMetadata?.get("full_name")?.toString(),
+            id = user.id,
+            displayName = user.userMetadata?.get("full_name")?.toString(),
         ).takeIf { it.id.isNotBlank() }
     }
 
