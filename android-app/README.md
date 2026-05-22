@@ -27,6 +27,8 @@ Current implementation:
 - Today ingredient rows open an in-screen basic ingredient detail using catalog data already loaded from Supabase.
 - Recipe detail supports save/unsave and crispy/uncrispy against `user_recipe_states`.
 - Recipe state writes use optimistic UI plus a minimal local SharedPreferences outbox with foreground retry.
+- Fridge inventory is wired as a global utility screen from the app bar.
+- Fridge can list the authenticated user's `fridge_items`, add catalog ingredients, add custom fallback ingredients, and remove items on Supabase dev.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -35,7 +37,8 @@ Current implementation:
 Not implemented yet:
 
 - Home imagery/richer feed ranking.
-- Fridge/shopping outbox actions.
+- Fridge local outbox/retry and recipes-from-fridge matching.
+- Shopping outbox actions.
 - Smart Import publish.
 
 ## Recipe State Sync
@@ -49,6 +52,16 @@ The Android MVP has a deliberately small outbox for recipe state actions only:
 - Recipe-state reads and writes refresh the Supabase session before remote sync, so a stale local session does not silently turn into failed outbox work.
 - Supabase SDK logging is disabled in the Android client; app logs must keep using the redacted `SeasonLog` wrapper.
 - This does not cover fridge, shopping, or Smart Import yet.
+
+## Fridge MVP
+
+The Android Fridge is currently remote-backed and intentionally small:
+
+- The global `Frigo` action opens the user's inventory without adding a sixth bottom tab.
+- Catalog ingredients are preferred and stored with `ingredient_id`.
+- Custom fallback ingredients are allowed for user utility but never create catalog truth.
+- Add/remove operations write directly to Supabase `fridge_items` with the authenticated session.
+- Recipes-from-fridge and local outbox/retry are still pending; they will reuse the recipe-state sync pattern once the inventory flow is stable.
 
 ## Setup
 

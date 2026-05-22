@@ -1,6 +1,47 @@
 # Season Android Port Plan
 
-Last updated: 2026-05-18
+Last updated: 2026-05-22
+
+## Porting Goal
+
+Season Android must become an idiomatic, production-quality native Android port of the iOS SwiftUI app.
+
+The iOS app is the product reference for behavior, language, domain logic, visual identity, and backend contracts. Android should not be a blind line-by-line translation: it should use Kotlin, Jetpack Compose, coroutines, Flow, Android lifecycle patterns, and platform-native integrations where they produce a better Android implementation.
+
+Operational rule:
+
+- Work source-guided, screen by screen and domain by domain.
+- For each meaningful iOS source area, identify UI components, state ownership, navigation, models, business logic, Supabase/API dependencies, persistence, and platform-specific behavior.
+- Produce the Android equivalent in the existing `android-app/` structure, preserving user-facing strings and product behavior unless Android conventions require a documented divergence.
+- Flag every iOS-only API or platform assumption with the Android alternative before implementing the dependent feature.
+- Do not invent new product features during porting. Add only what is needed for Android parity or Android platform correctness.
+- Document architectural divergences in this plan, `docs/android-shared-contracts.md`, or the feature-specific checklist before or alongside the code change.
+
+Mapping defaults:
+
+| iOS / SwiftUI | Android target |
+|---|---|
+| `SwiftUI View` | Jetpack Compose `@Composable` screen/component |
+| `@StateObject`, `@ObservedObject`, `@EnvironmentObject` | ViewModel plus `StateFlow` collected by Compose |
+| `@State` | `remember` / `rememberSaveable` state, or ViewModel state when it affects business flow |
+| `NavigationStack`, `NavigationLink`, tabs | Compose navigation and Android back behavior |
+| `Codable` models | Kotlin data classes with `kotlinx.serialization` |
+| `async/await` | suspend functions, coroutines, `viewModelScope` |
+| Combine publishers | Flow / StateFlow |
+| Keychain/session persistence | Supabase `SettingsSessionManager`, DataStore, or Jetpack Security where needed |
+| Supabase service calls | Repository layer with authenticated anon-key client, never service-role |
+
+Execution order remains:
+
+1. Project setup and environment wiring.
+2. Shared data models and backend contracts.
+3. Repository/networking layer.
+4. ViewModels and state holders.
+5. UI screens and components.
+6. Navigation graph and Android back behavior.
+7. Theme, design system, edge-to-edge, accessibility, and QA.
+
+Current implementation note: Android is no longer at zero. The foundation already includes auth, Home, Search, Today, Recipe Detail, and recipe-state save/crispy. Future work should continue from this implementation rather than recreating files from scratch.
 
 ## 1. Decision
 
@@ -261,6 +302,7 @@ Initial foundation status:
 - Home to recipe detail navigation is wired read-only using the already-loaded `SeasonRecipe` snapshot. No recipe mutations or fetch-by-id are introduced in this phase.
 - Search now has a read-only recipe/catalog repository flow with debounce, normalized query cache, and recipe-result navigation into detail.
 - Today now has a read-only seasonal catalog repository flow with current-month phase labels and basic ingredient detail.
+- Fridge inventory now has a remote-backed dev flow for listing, adding catalog ingredients, adding custom fallback ingredients, and removing items.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 
 ### Phase 2: Auth and Session
@@ -282,7 +324,7 @@ Initial foundation status:
 ### Phase 4: Local-First Actions
 
 - Save/crispy: initial Recipe Detail flow wired with optimistic UI, Supabase `user_recipe_states`, and a minimal local outbox.
-- Fridge add/remove.
+- Fridge add/remove: initial remote-backed inventory flow wired; local outbox/retry still pending.
 - Shopping list add/remove.
 - Outbox/retry: recipe state only for now; fridge and shopping still pending.
 - Foreground reconciliation: recipe state only for now.

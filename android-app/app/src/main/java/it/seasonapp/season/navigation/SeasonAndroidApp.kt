@@ -18,6 +18,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -45,6 +46,8 @@ import it.seasonapp.season.features.auth.AuthUiState
 import it.seasonapp.season.features.auth.AuthViewModel
 import it.seasonapp.season.features.auth.SeasonProfile
 import it.seasonapp.season.features.create.CreateScreen
+import it.seasonapp.season.features.fridge.FridgeScreen
+import it.seasonapp.season.features.fridge.FridgeViewModel
 import it.seasonapp.season.features.home.HomeScreen
 import it.seasonapp.season.features.profile.ProfileScreen
 import it.seasonapp.season.features.recipes.RecipeDetailScreen
@@ -80,19 +83,23 @@ fun SeasonAndroidApp() {
 @Composable
 private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
     var selectedDestination by rememberSaveable { mutableStateOf(SeasonDestination.Home) }
+    var showFridge by rememberSaveable { mutableStateOf(false) }
     var selectedRecipe by remember { mutableStateOf<SeasonRecipe?>(null) }
     val activeRecipe = selectedRecipe
     val lifecycleOwner = LocalLifecycleOwner.current
     val recipeStateViewModel: UserRecipeStateViewModel = viewModel()
+    val fridgeViewModel: FridgeViewModel = viewModel()
 
     LaunchedEffect(profile.id) {
         recipeStateViewModel.initialize(profile.id)
+        fridgeViewModel.initialize(profile.id)
     }
 
-    DisposableEffect(lifecycleOwner, recipeStateViewModel) {
+    DisposableEffect(lifecycleOwner, recipeStateViewModel, fridgeViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
                 recipeStateViewModel.flushPendingRecipeStateMutations()
+                fridgeViewModel.refresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -101,16 +108,26 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
         }
     }
 
-    BackHandler(enabled = activeRecipe != null) {
-        selectedRecipe = null
+    BackHandler(enabled = activeRecipe != null || showFridge) {
+        if (activeRecipe != null) {
+            selectedRecipe = null
+        } else {
+            showFridge = false
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    if (activeRecipe != null) {
-                        IconButton(onClick = { selectedRecipe = null }) {
+                    if (activeRecipe != null || showFridge) {
+                        IconButton(onClick = {
+                            if (activeRecipe != null) {
+                                selectedRecipe = null
+                            } else {
+                                showFridge = false
+                            }
+                        }) {
                             Text(
                                 text = "‹",
                                 style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
@@ -120,9 +137,25 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                 },
                 title = {
                     Text(
-                        text = if (activeRecipe != null) "Ricetta" else selectedDestination.title,
+                        text = when {
+                            activeRecipe != null -> "Ricetta"
+                            showFridge -> "Frigo"
+                            else -> selectedDestination.title
+                        },
                         style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
                     )
+                },
+                actions = {
+                    if (activeRecipe == null && !showFridge) {
+                        TextButton(
+                            onClick = {
+                                selectedRecipe = null
+                                showFridge = true
+                            },
+                        ) {
+                            Text("Frigo")
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
@@ -136,6 +169,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                         selected = selectedDestination == destination,
                         onClick = {
                             selectedRecipe = null
+                            showFridge = false
                             selectedDestination = destination
                         },
                         icon = { Text(destination.label.first().toString(), fontWeight = FontWeight.Bold) },
@@ -153,6 +187,8 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
         ) {
             if (activeRecipe != null) {
                 RecipeDetailScreen(recipe = activeRecipe, recipeStateViewModel = recipeStateViewModel)
+            } else if (showFridge) {
+                FridgeScreen(fridgeViewModel = fridgeViewModel)
             } else {
                 when (selectedDestination) {
                     SeasonDestination.Home -> HomeScreen(onRecipeSelected = { selectedRecipe = it })
@@ -163,6 +199,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                         profile = profile,
                         onLogout = {
                             recipeStateViewModel.clearLocalRecipeStateOnLogout()
+                            fridgeViewModel.clearLocalStateOnLogout()
                             onLogout()
                         },
                     )

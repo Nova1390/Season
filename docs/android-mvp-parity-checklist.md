@@ -1,6 +1,6 @@
 # Android MVP Parity Checklist
 
-Last updated: 2026-05-18
+Last updated: 2026-05-22
 
 This checklist defines what Android must match from iOS before it can be considered a useful MVP.
 
@@ -118,12 +118,19 @@ Current implementation note:
 
 | Capability | Priority | Notes |
 |---|---|---|
-| Add catalog ingredient | MVP | Shared catalog identity where available. |
-| Add custom fallback | MVP | Must feed observation path, not catalog truth directly. |
-| Remove ingredient | MVP | Local-first. |
+| Add catalog ingredient | MVP | Shared catalog identity where available; initial dev implementation wired. |
+| Add custom fallback | MVP | Must feed observation path, not catalog truth directly; initial dev implementation wired. |
+| Remove ingredient | MVP | Initial remote-backed dev implementation wired; local outbox pending. |
 | Recipes from fridge | MVP | Must be discoverable, not just one suggestion. |
 | Sync to Supabase | MVP | Outbox/retry. |
 | Advanced categorization | Later | After MVP. |
+
+Current implementation note:
+
+- Fridge inventory is available from the Android app bar as a utility screen.
+- The screen reads `fridge_items` for the authenticated user, enriches catalog rows with `ingredient_catalog_app_summary`, and supports add/remove against Supabase dev.
+- Custom entries remain user-owned fallback data and do not mutate the catalog.
+- Recipes-from-fridge and fridge outbox/retry remain open MVP work.
 
 ## 8. Shopping List
 
@@ -185,7 +192,9 @@ Current foundation note:
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
-- Save/crispy are the first Android local-first mutation path; fridge, shopping, and Smart Import publish still need their own MVP flows.
+- Save/crispy are the first Android local-first mutation path.
+- Fridge inventory add/remove is now wired as a remote-backed MVP flow, but still needs outbox/retry and recipes-from-fridge matching.
+- Shopping and Smart Import publish still need their own MVP flows.
 
 ## 13. Regression Caption Set
 

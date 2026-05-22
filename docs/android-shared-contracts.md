@@ -1,6 +1,6 @@
 # Android Shared Backend Contracts
 
-Last updated: 2026-05-17
+Last updated: 2026-05-22
 
 This document captures the backend contracts Android should reuse from iOS.
 
@@ -159,6 +159,15 @@ Rules:
 - Allow custom fallback for user utility.
 - Custom fallback must feed observation/training paths only.
 - Android must not create canonical catalog items directly.
+
+Android MVP implementation:
+
+- The first Android Fridge screen is remote-backed, not fully local-first yet.
+- It reads the authenticated user's `fridge_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/remove operations through the user's Supabase session.
+- Catalog adds store `ingredient_type = catalog` plus `ingredient_id`, matching the iOS `FridgeViewModel` contract.
+- Custom fallback adds store `ingredient_type = custom` plus `custom_name`.
+- The screen prevents obvious duplicate custom names locally, but backend uniqueness is not assumed.
+- Fridge local outbox/retry and recipes-from-fridge matching are still pending and should reuse the recipe-state outbox semantics when implemented.
 
 ## 7. Shopping List Contract
 
