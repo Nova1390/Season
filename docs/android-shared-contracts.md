@@ -188,6 +188,17 @@ Rules:
 - Catalog IDs should be preserved.
 - Local-first actions need retry/reconciliation.
 
+Android MVP implementation:
+
+- The first Android Shopping List screen is remote-backed, not fully local-first yet.
+- It reads the authenticated user's `shopping_list_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/check/remove operations through the user's Supabase session.
+- Catalog adds store `ingredient_type = catalog` plus `ingredient_id`, matching the iOS shopping contract.
+- Custom fallback adds store `ingredient_type = custom` plus `custom_name`.
+- Manual adds and Recipe Detail adds preserve `quantity` and `unit` when available.
+- Recipe-derived rows keep `source_recipe_id` so future grouping/reconciliation can attribute items back to a recipe.
+- The Android client skips obvious duplicates using `ingredient_id/custom display name + quantity + unit + source_recipe_id`.
+- Shopping local outbox/retry remains pending and should reuse the recipe-state outbox semantics in the next sync-hardening pass.
+
 ## 8. Smart Import Contract
 
 Shared Edge Function:

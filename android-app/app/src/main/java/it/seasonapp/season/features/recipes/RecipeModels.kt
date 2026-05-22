@@ -20,6 +20,7 @@ data class SeasonRecipe(
 }
 
 data class SeasonRecipeIngredient(
+    val ingredientId: String?,
     val name: String,
     val quantityValue: Double?,
     val quantityUnit: String?,

@@ -29,6 +29,9 @@ Current implementation:
 - Recipe state writes use optimistic UI plus a minimal local SharedPreferences outbox with foreground retry.
 - Fridge inventory is wired as a global utility screen from the app bar.
 - Fridge can list the authenticated user's `fridge_items`, add catalog ingredients, add custom fallback ingredients, and remove items on Supabase dev.
+- Shopping List is wired as a global utility screen from the app bar.
+- Shopping can list the authenticated user's `shopping_list_items`, add catalog ingredients, add custom fallback ingredients, check/uncheck items, and remove items on Supabase dev.
+- Recipe Detail can add all recipe ingredients to Shopping List while preserving quantity, unit, source recipe id, and catalog id when present.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -38,7 +41,7 @@ Not implemented yet:
 
 - Home imagery/richer feed ranking.
 - Fridge local outbox/retry and recipes-from-fridge matching.
-- Shopping outbox actions.
+- Shopping local outbox/retry beyond the current direct Supabase MVP.
 - Smart Import publish.
 
 ## Recipe State Sync
@@ -62,6 +65,18 @@ The Android Fridge is currently remote-backed and intentionally small:
 - Custom fallback ingredients are allowed for user utility but never create catalog truth.
 - Add/remove operations write directly to Supabase `fridge_items` with the authenticated session.
 - Recipes-from-fridge and local outbox/retry are still pending; they will reuse the recipe-state sync pattern once the inventory flow is stable.
+
+## Shopping MVP
+
+The Android Shopping List is currently remote-backed and intentionally small:
+
+- The global `Lista` action opens the user's shopping list without adding a sixth bottom tab.
+- Catalog ingredients are stored with `ingredient_type = catalog` plus `ingredient_id`.
+- Custom fallback ingredients are stored with `ingredient_type = custom` plus `custom_name`.
+- Quantity and unit are optional but preserved when added manually or from Recipe Detail.
+- Recipe-derived rows keep `source_recipe_id` for traceability.
+- The Recipe Detail CTA skips obvious duplicates with the same ingredient/custom name, quantity, unit, and source recipe id.
+- Local outbox/retry is still pending; it will reuse the recipe-state sync contract in the next sync-hardening pass.
 
 ## Setup
 

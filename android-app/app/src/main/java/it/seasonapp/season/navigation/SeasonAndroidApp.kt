@@ -54,6 +54,8 @@ import it.seasonapp.season.features.recipes.RecipeDetailScreen
 import it.seasonapp.season.features.recipes.SeasonRecipe
 import it.seasonapp.season.features.recipestate.UserRecipeStateViewModel
 import it.seasonapp.season.features.search.SearchScreen
+import it.seasonapp.season.features.shopping.ShoppingScreen
+import it.seasonapp.season.features.shopping.ShoppingViewModel
 import it.seasonapp.season.features.today.TodayScreen
 
 @Composable
@@ -84,22 +86,26 @@ fun SeasonAndroidApp() {
 private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
     var selectedDestination by rememberSaveable { mutableStateOf(SeasonDestination.Home) }
     var showFridge by rememberSaveable { mutableStateOf(false) }
+    var showShopping by rememberSaveable { mutableStateOf(false) }
     var selectedRecipe by remember { mutableStateOf<SeasonRecipe?>(null) }
     val activeRecipe = selectedRecipe
     val lifecycleOwner = LocalLifecycleOwner.current
     val recipeStateViewModel: UserRecipeStateViewModel = viewModel()
     val fridgeViewModel: FridgeViewModel = viewModel()
+    val shoppingViewModel: ShoppingViewModel = viewModel()
 
     LaunchedEffect(profile.id) {
         recipeStateViewModel.initialize(profile.id)
         fridgeViewModel.initialize(profile.id)
+        shoppingViewModel.initialize(profile.id)
     }
 
-    DisposableEffect(lifecycleOwner, recipeStateViewModel, fridgeViewModel) {
+    DisposableEffect(lifecycleOwner, recipeStateViewModel, fridgeViewModel, shoppingViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
                 recipeStateViewModel.flushPendingRecipeStateMutations()
                 fridgeViewModel.refresh()
+                shoppingViewModel.refresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -108,9 +114,11 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
         }
     }
 
-    BackHandler(enabled = activeRecipe != null || showFridge) {
+    BackHandler(enabled = activeRecipe != null || showFridge || showShopping) {
         if (activeRecipe != null) {
             selectedRecipe = null
+        } else if (showShopping) {
+            showShopping = false
         } else {
             showFridge = false
         }
@@ -120,10 +128,12 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    if (activeRecipe != null || showFridge) {
+                    if (activeRecipe != null || showFridge || showShopping) {
                         IconButton(onClick = {
                             if (activeRecipe != null) {
                                 selectedRecipe = null
+                            } else if (showShopping) {
+                                showShopping = false
                             } else {
                                 showFridge = false
                             }
@@ -139,6 +149,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                     Text(
                         text = when {
                             activeRecipe != null -> "Ricetta"
+                            showShopping -> "Lista"
                             showFridge -> "Frigo"
                             else -> selectedDestination.title
                         },
@@ -146,10 +157,20 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                     )
                 },
                 actions = {
-                    if (activeRecipe == null && !showFridge) {
+                    if (activeRecipe == null && !showFridge && !showShopping) {
                         TextButton(
                             onClick = {
                                 selectedRecipe = null
+                                showFridge = false
+                                showShopping = true
+                            },
+                        ) {
+                            Text("Lista")
+                        }
+                        TextButton(
+                            onClick = {
+                                selectedRecipe = null
+                                showShopping = false
                                 showFridge = true
                             },
                         ) {
@@ -170,6 +191,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                         onClick = {
                             selectedRecipe = null
                             showFridge = false
+                            showShopping = false
                             selectedDestination = destination
                         },
                         icon = { Text(destination.label.first().toString(), fontWeight = FontWeight.Bold) },
@@ -186,7 +208,18 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
             color = androidx.compose.material3.MaterialTheme.colorScheme.background,
         ) {
             if (activeRecipe != null) {
-                RecipeDetailScreen(recipe = activeRecipe, recipeStateViewModel = recipeStateViewModel)
+                RecipeDetailScreen(
+                    recipe = activeRecipe,
+                    recipeStateViewModel = recipeStateViewModel,
+                    shoppingViewModel = shoppingViewModel,
+                    onOpenShopping = {
+                        selectedRecipe = null
+                        showFridge = false
+                        showShopping = true
+                    },
+                )
+            } else if (showShopping) {
+                ShoppingScreen(shoppingViewModel = shoppingViewModel)
             } else if (showFridge) {
                 FridgeScreen(fridgeViewModel = fridgeViewModel)
             } else {
@@ -200,6 +233,7 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                         onLogout = {
                             recipeStateViewModel.clearLocalRecipeStateOnLogout()
                             fridgeViewModel.clearLocalStateOnLogout()
+                            shoppingViewModel.clearLocalStateOnLogout()
                             onLogout()
                         },
                     )

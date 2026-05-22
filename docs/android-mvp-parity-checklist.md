@@ -97,7 +97,8 @@ Current implementation note:
 
 - Read-only detail is wired from Home with title, source/creator, external recipe badge, servings, ingredient quantities, numbered steps, and empty states for missing structured data.
 - Save/crispy are wired from Recipe Detail with optimistic UI, Supabase `user_recipe_states`, and a minimal local outbox for retry.
-- Shopping list CTA and fetch-by-id/deep link remain deferred.
+- Shopping List CTA is wired from Recipe Detail and sends recipe ingredients to `shopping_list_items`, preserving quantity/unit, source recipe id, and catalog id when present.
+- Fetch-by-id/deep link remains deferred.
 
 ## 6. Smart Import
 
@@ -142,6 +143,13 @@ Current implementation note:
 | Quantity/unit display | MVP | Must preserve recipe quantities. |
 | Sync to Supabase | MVP | Outbox/retry. |
 | Multi-recipe grouping | Later | Polish. |
+
+Current implementation note:
+
+- Shopping List is available from the Android app bar as a utility screen, not as a sixth tab.
+- The screen reads `shopping_list_items` for the authenticated user, enriches catalog rows with `ingredient_catalog_app_summary`, and supports add catalog, add custom, check/uncheck, and remove against Supabase dev.
+- Recipe Detail can add recipe ingredients to the list while preserving quantity/unit and `source_recipe_id`.
+- Shopping local outbox/retry remains open MVP work; current writes are direct Supabase operations with client-side duplicate prevention.
 
 ## 9. Profile and Social
 
@@ -194,7 +202,8 @@ Current foundation note:
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
 - Save/crispy are the first Android local-first mutation path.
 - Fridge inventory add/remove is now wired as a remote-backed MVP flow, but still needs outbox/retry and recipes-from-fridge matching.
-- Shopping and Smart Import publish still need their own MVP flows.
+- Shopping List and Recipe Detail add-to-shopping are now wired as remote-backed MVP flows, but still need outbox/retry.
+- Smart Import publish still needs its MVP flow.
 
 ## 13. Regression Caption Set
 

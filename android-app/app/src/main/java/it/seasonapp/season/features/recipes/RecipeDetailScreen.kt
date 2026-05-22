@@ -26,11 +26,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.seasonapp.season.navigation.SeasonStatusCard
 import it.seasonapp.season.features.recipestate.UserRecipeStateUi
 import it.seasonapp.season.features.recipestate.UserRecipeStateViewModel
+import it.seasonapp.season.features.shopping.ShoppingViewModel
 
 @Composable
 fun RecipeDetailScreen(
     recipe: SeasonRecipe,
     recipeStateViewModel: UserRecipeStateViewModel,
+    shoppingViewModel: ShoppingViewModel,
+    onOpenShopping: () -> Unit,
 ) {
     LaunchedEffect(recipe.id) {
         recipeStateViewModel.ensureLoaded(recipe.id)
@@ -39,6 +42,7 @@ fun RecipeDetailScreen(
         recipeStateViewModel.observeRecipeState(recipe.id)
     }
     val recipeState by recipeStateFlow.collectAsStateWithLifecycle()
+    val shoppingState by shoppingViewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -53,8 +57,65 @@ fun RecipeDetailScreen(
                 onToggleCrispy = { recipeStateViewModel.toggleCrispy(recipe.id) },
             )
         }
+        item {
+            RecipeShoppingActions(
+                hasIngredients = recipe.ingredients.isNotEmpty(),
+                isMutating = shoppingState.isMutating,
+                feedbackMessage = shoppingState.feedbackMessage,
+                onAddToShopping = { shoppingViewModel.addRecipeIngredients(recipe) },
+                onOpenShopping = onOpenShopping,
+            )
+        }
         item { RecipeIngredientSection(recipe = recipe) }
         item { RecipeStepsSection(recipe = recipe) }
+    }
+}
+
+@Composable
+private fun RecipeShoppingActions(
+    hasIngredients: Boolean,
+    isMutating: Boolean,
+    feedbackMessage: String?,
+    onAddToShopping: () -> Unit,
+    onOpenShopping: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Lista della spesa",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Aggiunge gli ingredienti della ricetta preservando quantità, unità e origine.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    enabled = hasIngredients && !isMutating,
+                    onClick = onAddToShopping,
+                ) {
+                    Text(if (isMutating) "Aggiungo…" else "Aggiungi alla lista")
+                }
+                OutlinedButton(onClick = onOpenShopping) {
+                    Text("Apri lista")
+                }
+            }
+            feedbackMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

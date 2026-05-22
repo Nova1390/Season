@@ -32,6 +32,9 @@ Done on this branch:
 - Minimal local outbox for save/crispy retry.
 - Fridge inventory screen from the top app bar.
 - Fridge Supabase dev list/add/remove for catalog and custom ingredients.
+- Shopping List utility screen from the top app bar.
+- Shopping Supabase dev list/add catalog/add custom/check/remove.
+- Recipe Detail CTA to add recipe ingredients to the Shopping List while preserving quantity, unit, source recipe id, and catalog id when available.
 - Documentation for Android contracts, MVP checklist, and porting direction.
 
 ## Validated
@@ -43,6 +46,7 @@ Latest validated checks:
 - Emulator smoke: login/session restore, Home, Recipe Detail, Search, Today.
 - Emulator smoke: save/crispy toggle.
 - Emulator smoke: Fridge open, add/remove custom, add/remove catalog ingredient.
+- Build validation: Shopping List and Recipe Detail shopping CTA compile on `debugDev` and `internalStaging`.
 
 ## Known Limits
 
@@ -51,7 +55,8 @@ Not done yet:
 - Home imagery and richer ranking.
 - Fridge local outbox/retry.
 - Recipes-from-fridge matching.
-- Shopping list.
+- Shopping local outbox/retry.
+- Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
 - Smart Import Android draft and publish.
 - Profile saved/published recipe lists.
 - Staging QA and Google Play Internal Testing prep.
@@ -60,15 +65,13 @@ Not done yet:
 
 Recommended next steps:
 
-1. Shopping List MVP with manual add/remove and Supabase sync.
-2. Add-from-recipe CTA from Recipe Detail into Shopping List.
-3. Recipes-from-fridge list.
-4. Fridge and Shopping local outbox/retry.
-5. Smart Import draft flow.
-6. Smart Import publish flow.
-7. Profile saved/published sections.
-8. Full dev QA.
-9. Staging configuration and Play Internal Testing prep.
+1. Recipes-from-fridge list.
+2. Fridge and Shopping local outbox/retry.
+3. Smart Import draft flow.
+4. Smart Import publish flow.
+5. Profile saved/published sections.
+6. Full dev QA.
+7. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 

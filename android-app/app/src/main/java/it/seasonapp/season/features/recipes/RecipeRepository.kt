@@ -83,6 +83,7 @@ private data class RecipeIngredientRow(
 ) {
     fun toDomain(): SeasonRecipeIngredient {
         return SeasonRecipeIngredient(
+            ingredientId = ingredientId.cleanOrNull(),
             name = name.cleanOrNull()
                 ?: ingredientId.cleanOrNull()
                 ?: produceId.cleanOrNull()
