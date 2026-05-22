@@ -9,14 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,6 +37,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.seasonapp.season.core.design.SeasonCanvas
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
+import it.seasonapp.season.core.design.SeasonPill
+import it.seasonapp.season.core.design.SeasonPillEmphasis
 import it.seasonapp.season.core.design.SeasonTheme
 import it.seasonapp.season.core.env.SeasonEnvironment
 import it.seasonapp.season.features.auth.AuthGateScreen
@@ -148,15 +151,24 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                     }
                 },
                 title = {
-                    Text(
-                        text = when {
-                            activeRecipe != null -> "Ricetta"
-                            showShopping -> "Lista"
-                            showFridge -> "Frigo"
-                            else -> selectedDestination.title
-                        },
-                        style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = "Season.",
+                            style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                        )
+                        if (activeRecipe != null || showFridge || showShopping || selectedDestination != SeasonDestination.Home) {
+                            Text(
+                                text = when {
+                                    activeRecipe != null -> "Ricetta"
+                                    showShopping -> "Lista della spesa"
+                                    showFridge -> "Frigo"
+                                    else -> selectedDestination.title
+                                },
+                                style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
                 actions = {
                     if (activeRecipe == null && !showFridge && !showShopping) {
@@ -181,33 +193,48 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background.copy(alpha = 0.96f),
                 ),
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                tonalElevation = 0.dp,
+            ) {
                 SeasonDestination.entries.forEach { destination ->
+                    val selected = selectedDestination == destination
                     NavigationBarItem(
-                        selected = selectedDestination == destination,
+                        selected = selected,
                         onClick = {
                             selectedRecipe = null
                             showFridge = false
                             showShopping = false
                             selectedDestination = destination
                         },
-                        icon = { Text(destination.label.first().toString(), fontWeight = FontWeight.Bold) },
+                        icon = {
+                            Text(
+                                if (selected) "●" else "○",
+                                fontWeight = FontWeight.Bold,
+                            )
+                        },
                         label = { Text(destination.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                            selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            unselectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
         },
     ) { padding ->
-        Surface(
+        SeasonCanvas(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            color = androidx.compose.material3.MaterialTheme.colorScheme.background,
         ) {
             if (activeRecipe != null) {
                 RecipeDetailScreen(
@@ -269,6 +296,7 @@ internal fun SeasonScreenFrame(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text(
+            modifier = Modifier.padding(top = 4.dp),
             text = title,
             style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
         )
@@ -288,41 +316,29 @@ internal fun SeasonStatusCard(
     action: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.outline,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    SeasonPanel(prominent = action != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = title,
-                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = body,
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SeasonKicker(text = title)
+                Text(
+                    text = body,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (action != null && onAction != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
+                Button(
+                    onClick = onAction,
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                 ) {
-                    Button(
-                        onClick = onAction,
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    ) {
-                        Text(action)
-                    }
+                    Text(action)
                 }
             }
         }
@@ -330,14 +346,26 @@ internal fun SeasonStatusCard(
 }
 
 @Composable
+internal fun SeasonMetricPill(label: String, value: String) {
+    SeasonPill(
+        text = "$value $label",
+        emphasis = SeasonPillEmphasis.Primary,
+    )
+}
+
+@Composable
 internal fun EnvironmentCard() {
     val environment = SeasonEnvironment.current
-    SeasonStatusCard(
-        title = "Ambiente ${environment.kind}",
-        body = if (environment.isConfigured) {
-            "Supabase configurato per questo build type."
-        } else {
-            "Configura la anon key con Gradle property o variabile ambiente prima dei test backend."
-        },
-    )
+    SeasonPanel(prominent = true) {
+        SeasonKicker(text = "Ambiente ${environment.kind}")
+        Text(
+            text = if (environment.isConfigured) {
+                "Supabase configurato per questo build type."
+            } else {
+                "Configura la anon key con Gradle property o variabile ambiente prima dei test backend."
+            },
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

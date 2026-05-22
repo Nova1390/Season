@@ -1,6 +1,7 @@
 package it.seasonapp.season.features.auth
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import it.seasonapp.season.core.design.SeasonCanvas
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
 import it.seasonapp.season.navigation.EnvironmentCard
 import it.seasonapp.season.navigation.SeasonStatusCard
 
@@ -33,38 +37,41 @@ fun AuthGateScreen(
     onEmailSignUp: (String, String) -> Unit,
     onSaveUsername: (String) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(28.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
-    ) {
-        Text(
-            text = "Season.",
-            style = androidx.compose.material3.MaterialTheme.typography.displaySmall,
-        )
-        Text(
-            text = "Cook with the land, not against it.",
-            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    SeasonCanvas {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
+        ) {
+            SeasonKicker(text = "Season Android")
+            Text(
+                text = "Season.",
+                style = androidx.compose.material3.MaterialTheme.typography.displaySmall,
+            )
+            Text(
+                text = "Cook with the land, not against it.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-        when (state) {
-            AuthUiState.Loading -> LoadingAuthCard()
-            is AuthUiState.SignedOut -> SignedOutAuthForm(
-                state = state,
-                onGoogleSignIn = onGoogleSignIn,
-                onEmailSignIn = onEmailSignIn,
-                onEmailSignUp = onEmailSignUp,
-            )
-            is AuthUiState.NeedsUsername -> UsernameForm(
-                state = state,
-                onSaveUsername = onSaveUsername,
-            )
-            is AuthUiState.SignedIn -> SeasonStatusCard(
-                title = "Sessione attiva",
-                body = "Stiamo aprendo Season.",
-            )
+            when (state) {
+                AuthUiState.Loading -> LoadingAuthCard()
+                is AuthUiState.SignedOut -> SignedOutAuthForm(
+                    state = state,
+                    onGoogleSignIn = onGoogleSignIn,
+                    onEmailSignIn = onEmailSignIn,
+                    onEmailSignUp = onEmailSignUp,
+                )
+                is AuthUiState.NeedsUsername -> UsernameForm(
+                    state = state,
+                    onSaveUsername = onSaveUsername,
+                )
+                is AuthUiState.SignedIn -> SeasonStatusCard(
+                    title = "Sessione attiva",
+                    body = "Stiamo aprendo Season.",
+                )
+            }
         }
     }
 }
@@ -93,54 +100,58 @@ private fun SignedOutAuthForm(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
-    SeasonStatusCard(
-        title = "Accesso Season-dev",
-        body = state.message ?: "Accedi con Google o email per iniziare i test backend reali.",
-    )
-    EnvironmentCard()
-    Button(
-        onClick = onGoogleSignIn,
-        enabled = state.isBackendConfigured && state.isGoogleConfigured,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Continua con Google")
-    }
-    OutlinedTextField(
-        value = email,
-        onValueChange = { email = it },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Email") },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-    )
-    OutlinedTextField(
-        value = password,
-        onValueChange = { password = it },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Password") },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    SeasonPanel(prominent = true) {
+        SeasonKicker(text = "Accesso Season-dev")
+        Text(
+            text = state.message ?: "Accedi con Google o email per iniziare i test backend reali.",
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Button(
-            onClick = { onEmailSignIn(email, password) },
-            enabled = state.isBackendConfigured && email.isNotBlank() && password.length >= 6,
-            modifier = Modifier.weight(1f),
+            onClick = onGoogleSignIn,
+            enabled = state.isBackendConfigured && state.isGoogleConfigured,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Accedi")
+            Text("Continua con Google")
         }
-        OutlinedButton(
-            onClick = { onEmailSignUp(email, password) },
-            enabled = state.isBackendConfigured && email.isNotBlank() && password.length >= 6,
-            modifier = Modifier.weight(1f),
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Email") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Registrati")
+            Button(
+                onClick = { onEmailSignIn(email, password) },
+                enabled = state.isBackendConfigured && email.isNotBlank() && password.length >= 6,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Accedi")
+            }
+            OutlinedButton(
+                onClick = { onEmailSignUp(email, password) },
+                enabled = state.isBackendConfigured && email.isNotBlank() && password.length >= 6,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Registrati")
+            }
         }
     }
+    EnvironmentCard()
 }
 
 @Composable

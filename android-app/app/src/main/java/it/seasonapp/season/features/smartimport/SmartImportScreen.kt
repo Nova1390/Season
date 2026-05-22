@@ -1,6 +1,5 @@
 package it.seasonapp.season.features.smartimport
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
+import it.seasonapp.season.core.design.SeasonPill
+import it.seasonapp.season.core.design.SeasonPillEmphasis
 import it.seasonapp.season.features.recipes.SeasonRecipe
 import it.seasonapp.season.navigation.SeasonStatusCard
 
@@ -85,6 +86,7 @@ fun SmartImportScreen(
 @Composable
 private fun SmartImportHeader() {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SeasonKicker(text = "Smart Import")
         Text(text = "Crea ricetta", style = MaterialTheme.typography.headlineMedium)
         Text(
             text = "Incolla una caption Instagram/TikTok: Season crea una bozza con titolo, dosi e passaggi.",
@@ -103,7 +105,8 @@ private fun SmartImportInputCard(
     onSourceUrlChange: (String) -> Unit,
     onImport: () -> Unit,
 ) {
-    SmartImportCard {
+    SeasonPanel(prominent = true) {
+        SeasonKicker(text = "Caption")
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = sourceUrl,
@@ -148,10 +151,10 @@ private fun SmartImportDraftCard(
     publishErrorMessage: String?,
     onPublish: () -> Unit,
 ) {
-    SmartImportCard {
+    SeasonPanel(prominent = true) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AssistChip(onClick = {}, label = { Text(draft.qualityLabel) })
-            AssistChip(onClick = {}, label = { Text("Per ${draft.servings}") })
+            SeasonPill(text = draft.qualityLabel, emphasis = SeasonPillEmphasis.Primary)
+            SeasonPill(text = "Per ${draft.servings}", emphasis = SeasonPillEmphasis.Secondary)
         }
         Text(
             text = draft.title,
@@ -191,8 +194,8 @@ private fun SmartImportDraftCard(
 
 @Composable
 private fun SmartImportIngredientsCard(draft: SmartImportDraft) {
-    SmartImportCard {
-        Text(text = "Ingredienti (${draft.ingredients.size})", style = MaterialTheme.typography.titleMedium)
+    SeasonPanel {
+        SeasonKicker(text = "Ingredienti (${draft.ingredients.size})")
         if (draft.ingredients.isEmpty()) {
             Text(
                 text = "Nessun ingrediente strutturato.",
@@ -224,8 +227,8 @@ private fun SmartImportIngredientsCard(draft: SmartImportDraft) {
 
 @Composable
 private fun SmartImportStepsCard(draft: SmartImportDraft) {
-    SmartImportCard {
-        Text(text = "Passaggi (${draft.steps.size})", style = MaterialTheme.typography.titleMedium)
+    SeasonPanel {
+        SeasonKicker(text = "Passaggi (${draft.steps.size})")
         if (draft.steps.isEmpty()) {
             Text(
                 text = "Mancano i passaggi: la bozza resta modificabile ma non è pubblicabile.",
@@ -240,20 +243,5 @@ private fun SmartImportStepsCard(draft: SmartImportDraft) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun SmartImportCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
     }
 }

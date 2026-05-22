@@ -218,6 +218,7 @@ Current implementation note:
 Current foundation note:
 
 - `android-app/` has the initial Compose shell and environment build types.
+- Android has a first Season visual foundation pass: shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
 - Gradle wrapper exists.
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
@@ -236,6 +237,7 @@ Current foundation note:
 - Smart Import live QA on 2026-05-22 imported a pancake caption through `parse-recipe-caption` on `Season-dev` and verified title `Pancake banana e avena x2`, `Per 2`, 5 deduped ingredients, quantity/unit preservation (`1 piece`, `2 piece`, `80 g`, `100 ml`, `1 tsp`), and 1 preparation step.
 - Smart Import live QA on 2026-05-22 imported a chicken-salad caption through `parse-recipe-caption` on `Season-dev` and verified title `Insalata di pollo per 2`, `Per 2`, 7 deduped ingredients, quantity/unit preservation (`250 g`, `120 g`, `150 g`, `80 g`, `40 g`, `1 tsp`, `0.5 piece`), and 1 preparation step.
 - Smart Import live QA logcat showed no app crash or Supabase/PostgREST error; debug HWUI/Choreographer jank warnings appeared during import/render and remain a performance follow-up.
+- Visual QA on 2026-05-22 verified Home light, Home dark, and Create/Smart Import dark on emulator after the visual foundation pass.
 
 ## 13. Regression Caption Set
 

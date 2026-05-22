@@ -23,10 +23,12 @@ object SeasonColors {
     val Leaf = Color(0xFF4E6E3F)
     val LeafSoft = Color(0xFFDDEAD3)
     val Ochre = Color(0xFFC58B35)
+    val Clay = Color(0xFFB96D42)
 
     val Night = Color(0xFF0F140D)
-    val NightSurface = Color(0xFF1B2117)
-    val NightBorder = Color(0xFF34402C)
+    val NightSurface = Color(0xFF1A2016)
+    val NightPanel = Color(0xFF20291B)
+    val NightBorder = Color(0xFF3D4B34)
     val NightText = Color(0xFFF5F0E6)
     val NightMuted = Color(0xFFC1BAAD)
 }
@@ -46,15 +48,15 @@ private val LightSeasonColorScheme: ColorScheme = lightColorScheme(
 )
 
 private val DarkSeasonColorScheme: ColorScheme = darkColorScheme(
-    primary = Color(0xFFA7CF8F),
+    primary = Color(0xFFB8DB9A),
     onPrimary = SeasonColors.Night,
-    secondary = Color(0xFFE3B66B),
+    secondary = Color(0xFFE8BE75),
     onSecondary = SeasonColors.Night,
     background = SeasonColors.Night,
     onBackground = SeasonColors.NightText,
     surface = SeasonColors.NightSurface,
     onSurface = SeasonColors.NightText,
-    surfaceVariant = Color(0xFF242C1F),
+    surfaceVariant = SeasonColors.NightPanel,
     onSurfaceVariant = SeasonColors.NightMuted,
     outline = SeasonColors.NightBorder,
 )
@@ -102,12 +104,18 @@ private val SeasonTypography = Typography(
         fontSize = 14.sp,
         lineHeight = 18.sp,
     ),
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 68.sp,
+        lineHeight = 72.sp,
+    ),
 )
 
 private val SeasonShapes = Shapes(
-    small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-    medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-    large = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+    small = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
 )
 
 @Composable
@@ -122,4 +130,3 @@ fun SeasonTheme(
         content = content,
     )
 }
-

@@ -24,6 +24,7 @@ Done on this branch:
 - Email/password sign-in and sign-up.
 - Session restore, logout, and username onboarding.
 - Main shell with bottom tabs: Home, Scopri, Crea, Oggi, Io.
+- Season visual foundation pass with shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
 - Home read-only Supabase recipe feed.
 - Recipe Detail read-only from Home/Search snapshots.
 - Search read-only for recipes and catalog ingredients with debounce/cache.
@@ -76,12 +77,14 @@ Latest validated checks:
 - Smart Import live pass, 2026-05-22: emulator import through the real dev Edge Function preserved `Pancake banana e avena x2`, `Per 2`, 5 unique ingredients, quantities/units (`1 piece`, `2 piece`, `80 g`, `100 ml`, `1 tsp`), and 1 preparation step.
 - Smart Import live pass, 2026-05-22: emulator import through the real dev Edge Function preserved `Insalata di pollo per 2`, `Per 2`, 7 unique ingredients, quantities/units (`250 g`, `120 g`, `150 g`, `80 g`, `40 g`, `1 tsp`, `0.5 piece`), and 1 preparation step.
 - Smart Import log pass, 2026-05-22: live import logcat showed no crash or Supabase/PostgREST error; debug HWUI/Choreographer jank warnings were observed and should be profiled before broader Android testing.
+- Visual QA pass, 2026-05-22: `debugDev` installed on emulator and verified Home light, Home dark, and Create/Smart Import dark screenshots after the Season visual foundation pass.
 
 ## Known Limits
 
 Not done yet:
 
-- Home imagery and richer ranking.
+- Remote recipe image loading and richer Home ranking.
+- Custom navigation icons and deeper adaptive polish for tablet/foldable layouts.
 - Recipes-from-fridge ranking is MVP-level and still needs richer scoring/visual polish.
 - Fridge/Shopping outbox is MVP-level SharedPreferences JSON; Room can be introduced later if queues become more complex.
 - Delete intents update UI optimistically; failed deletes are retained in outbox but not re-shown as visible rows yet.

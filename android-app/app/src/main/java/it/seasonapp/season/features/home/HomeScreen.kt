@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,8 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +28,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
+import it.seasonapp.season.core.design.SeasonPill
+import it.seasonapp.season.core.design.SeasonPillEmphasis
+import it.seasonapp.season.core.design.SeasonRecipeArtwork
 import it.seasonapp.season.features.recipes.SeasonRecipe
 import it.seasonapp.season.navigation.EnvironmentCard
 import it.seasonapp.season.navigation.SeasonStatusCard
@@ -142,10 +146,7 @@ private fun HomeContent(
 @Composable
 private fun HomeHeader() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Season.",
-            style = MaterialTheme.typography.titleLarge,
-        )
+        SeasonKicker(text = "Maggio · Android MVP")
         Text(
             text = "Il meglio di stagione, proprio ora.",
             style = MaterialTheme.typography.headlineMedium,
@@ -160,63 +161,78 @@ private fun HomeHeader() {
 
 @Composable
 private fun HomeSummaryCard(totalRecipes: Int, externalCount: Int, onRefresh: () -> Unit) {
-    SeasonStatusCard(
-        title = "Ambiente Dev",
-        body = "$totalRecipes ricette caricate. $externalCount da fonti esterne riconosciute.",
-        action = "Aggiorna",
-        onAction = onRefresh,
-    )
-}
-
-@Composable
-private fun HeroRecipeCard(recipe: SeasonRecipe, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(
-            modifier = Modifier.padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+    SeasonPanel(prominent = true) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = recipe.displaySource,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = recipe.title,
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                text = recipeMeta(recipe),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            IngredientPreview(recipe = recipe)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SeasonKicker(text = "Ambiente Dev")
+                Text(
+                    text = "$totalRecipes ricette caricate",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = "$externalCount da fonti esterne riconosciute.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Button(onClick = onRefresh, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
+                Text("Aggiorna")
+            }
         }
     }
 }
 
 @Composable
-private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
-    Card(
+private fun HeroRecipeCard(recipe: SeasonRecipe, onClick: () -> Unit) {
+    SeasonPanel(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+        prominent = true,
+    ) {
+        SeasonRecipeArtwork(title = recipe.title, heightDp = 214)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SeasonPill(text = recipe.displaySource, emphasis = SeasonPillEmphasis.Primary)
+            if (recipe.isExternal) {
+                SeasonPill(text = "Fonte esterna")
+            }
+        }
+        Text(
+            text = recipe.title,
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        Text(
+            text = recipeMeta(recipe),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        IngredientPreview(recipe = recipe)
+    }
+}
+
+@Composable
+private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
+    SeasonPanel(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            SeasonRecipeArtwork(
+                title = recipe.title,
+                modifier = Modifier.width(92.dp),
+                heightDp = 92,
+            )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 Text(
                     text = recipe.title,

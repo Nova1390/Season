@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -23,10 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import it.seasonapp.season.navigation.SeasonStatusCard
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
+import it.seasonapp.season.core.design.SeasonPill
+import it.seasonapp.season.core.design.SeasonPillEmphasis
+import it.seasonapp.season.core.design.SeasonRecipeArtwork
 import it.seasonapp.season.features.recipestate.UserRecipeStateUi
 import it.seasonapp.season.features.recipestate.UserRecipeStateViewModel
 import it.seasonapp.season.features.shopping.ShoppingViewModel
+import it.seasonapp.season.navigation.SeasonStatusCard
 
 @Composable
 fun RecipeDetailScreen(
@@ -79,81 +82,54 @@ private fun RecipeShoppingActions(
     onAddToShopping: () -> Unit,
     onOpenShopping: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SeasonPanel {
+        SeasonKicker(text = "Lista della spesa")
+        Text(
+            text = "Aggiunge gli ingredienti preservando quantità, unità e origine.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                enabled = hasIngredients && !isMutating,
+                onClick = onAddToShopping,
+            ) {
+                Text(if (isMutating) "Aggiungo…" else "Aggiungi alla lista")
+            }
+            OutlinedButton(onClick = onOpenShopping) {
+                Text("Apri lista")
+            }
+        }
+        feedbackMessage?.let {
             Text(
-                text = "Lista della spesa",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Aggiunge gli ingredienti della ricetta preservando quantità, unità e origine.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    enabled = hasIngredients && !isMutating,
-                    onClick = onAddToShopping,
-                ) {
-                    Text(if (isMutating) "Aggiungo…" else "Aggiungi alla lista")
-                }
-                OutlinedButton(onClick = onOpenShopping) {
-                    Text("Apri lista")
-                }
-            }
-            feedbackMessage?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
 
 @Composable
 private fun RecipeDetailHeader(recipe: SeasonRecipe) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(
-            modifier = Modifier.padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = recipe.displaySource,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                if (recipe.isExternal) {
-                    Text(
-                        text = "Ricetta esterna",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+    SeasonPanel(prominent = true) {
+        SeasonRecipeArtwork(title = recipe.title, heightDp = 248)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SeasonPill(text = recipe.displaySource, emphasis = SeasonPillEmphasis.Primary)
+            if (recipe.isExternal) {
+                SeasonPill(text = "Ricetta esterna")
             }
-            Text(
-                text = recipe.title,
-                style = MaterialTheme.typography.displaySmall,
-            )
-            Text(
-                text = "Per ${recipe.servings} persone · ${recipe.ingredients.size} ingredienti · ${recipe.steps.size} passaggi",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            SeasonPill(text = "Per ${recipe.servings}", emphasis = SeasonPillEmphasis.Secondary)
         }
+        Text(
+            text = recipe.title,
+            style = MaterialTheme.typography.displaySmall,
+        )
+        Text(
+            text = "${recipe.ingredients.size} ingredienti · ${recipe.steps.size} passaggi",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -163,43 +139,34 @@ private fun RecipeStateActions(
     onToggleSaved: () -> Unit,
     onToggleCrispy: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (state.isSaved) {
-                    Button(onClick = onToggleSaved) {
-                        Text("Salvata")
-                    }
-                } else {
-                    OutlinedButton(onClick = onToggleSaved) {
-                        Text("Salva")
-                    }
+    SeasonPanel {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (state.isSaved) {
+                Button(onClick = onToggleSaved) {
+                    Text("Salvata")
                 }
+            } else {
+                OutlinedButton(onClick = onToggleSaved) {
+                    Text("Salva")
+                }
+            }
 
-                if (state.isCrispied) {
-                    Button(onClick = onToggleCrispy) {
-                        Text("Crispy")
-                    }
-                } else {
-                    OutlinedButton(onClick = onToggleCrispy) {
-                        Text("Crispy")
-                    }
+            if (state.isCrispied) {
+                Button(onClick = onToggleCrispy) {
+                    Text("Crispy")
+                }
+            } else {
+                OutlinedButton(onClick = onToggleCrispy) {
+                    Text("Crispy")
                 }
             }
-            if (state.isPending || state.isFailed) {
-                Text(
-                    text = if (state.isFailed) "Da sincronizzare" else "Sincronizzazione…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        }
+        if (state.isPending || state.isFailed) {
+            Text(
+                text = if (state.isFailed) "Da sincronizzare" else "Sincronizzazione…",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -226,27 +193,20 @@ private fun RecipeIngredientSection(recipe: SeasonRecipe) {
 
 @Composable
 private fun IngredientRow(ingredient: SeasonRecipeIngredient) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = ingredient.name,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = ingredient.quantityText ?: "Senza quantità",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    SeasonPanel {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = ingredient.name,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = ingredient.quantityText ?: "Senza quantità",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
     }
 }
 
@@ -279,26 +239,15 @@ private fun LazyColumnStepItems(steps: List<String>) {
 
 @Composable
 private fun StepRow(number: Int, step: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                text = number.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                modifier = Modifier.weight(1f),
-                text = step,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+    SeasonPanel {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        SeasonPill(text = number.toString(), emphasis = SeasonPillEmphasis.Primary)
+        Text(
+            modifier = Modifier.weight(1f),
+            text = step,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
     }
 }

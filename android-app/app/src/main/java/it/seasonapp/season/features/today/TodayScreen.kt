@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +28,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import it.seasonapp.season.features.catalog.CatalogIngredient
 import it.seasonapp.season.features.catalog.SeasonalIngredient
 import it.seasonapp.season.features.catalog.SeasonalPhase
+import it.seasonapp.season.core.design.SeasonKicker
+import it.seasonapp.season.core.design.SeasonPanel
+import it.seasonapp.season.core.design.SeasonPill
+import it.seasonapp.season.core.design.SeasonPillEmphasis
 import it.seasonapp.season.navigation.SeasonStatusCard
 import java.time.Month
 import java.time.format.TextStyle
@@ -97,8 +99,9 @@ fun TodayScreen(todayViewModel: TodayViewModel = viewModel()) {
 @Composable
 private fun TodayHeader(currentMonth: Int, total: Int, isLoading: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SeasonKicker(text = "${monthName(currentMonth)} · di stagione")
         Text(
-            text = "Oggi",
+            text = "Il meglio di stagione, ora.",
             style = MaterialTheme.typography.headlineMedium,
         )
         Text(
@@ -122,15 +125,12 @@ private fun TodayHeader(currentMonth: Int, total: Int, isLoading: Boolean) {
 
 @Composable
 private fun SeasonalIngredientRow(seasonal: SeasonalIngredient, onClick: () -> Unit) {
-    Card(
+    SeasonPanel(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -152,10 +152,13 @@ private fun SeasonalIngredientRow(seasonal: SeasonalIngredient, onClick: () -> U
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(
+            SeasonPill(
                 text = seasonal.phase.label,
-                style = MaterialTheme.typography.labelLarge,
-                color = phaseColor(seasonal.phase),
+                emphasis = when (seasonal.phase) {
+                    SeasonalPhase.Early -> SeasonPillEmphasis.Secondary
+                    SeasonalPhase.Peak -> SeasonPillEmphasis.Primary
+                    SeasonalPhase.Ending -> SeasonPillEmphasis.Neutral
+                },
             )
         }
     }
@@ -177,42 +180,33 @@ private fun IngredientDetail(ingredient: CatalogIngredient, onBack: () -> Unit) 
             )
         }
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            ) {
-                Column(
-                    modifier = Modifier.padding(22.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(text = ingredient.displayName, style = MaterialTheme.typography.headlineMedium)
+            SeasonPanel(prominent = true) {
+                Text(text = ingredient.displayName, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = ingredient.type?.replace('_', ' ') ?: "Ingrediente catalogo",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (ingredient.isSeasonal) {
                     Text(
-                        text = ingredient.type?.replace('_', ' ') ?: "Ingrediente catalogo",
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = "Mesi: ${ingredient.seasonMonths.joinToString(", ") { monthName(it) }}",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (ingredient.isSeasonal) {
-                        Text(
-                            text = "Mesi: ${ingredient.seasonMonths.joinToString(", ") { monthName(it) }}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    ingredient.caloriesPer100g?.let {
-                        Text(
-                            text = "${it.toInt()} kcal per 100 g",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    ingredient.proteinPer100g?.let {
-                        Text(
-                            text = "${formatOneDecimal(it)} g proteine per 100 g",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                }
+                ingredient.caloriesPer100g?.let {
+                    Text(
+                        text = "${it.toInt()} kcal per 100 g",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                ingredient.proteinPer100g?.let {
+                    Text(
+                        text = "${formatOneDecimal(it)} g proteine per 100 g",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

@@ -13,6 +13,7 @@ Current implementation:
 - Build types: `debugDev`, `internalStaging`, `release`.
 - Season design tokens baseline.
 - Consumer shell tabs: Home, Scopri, Crea, Oggi, Io.
+- Season visual foundation pass for Android: shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
 - Environment wiring for Supabase dev/staging URLs.
 - Supabase Kotlin Auth/PostgREST client wiring.
 - Google Credential Manager Sign-In wiring.
@@ -54,7 +55,9 @@ Current implementation:
 
 Not implemented yet:
 
-- Home imagery/richer feed ranking.
+- Remote recipe image loading and richer feed ranking.
+- Custom navigation/iconography beyond the current MVP dot-based bottom navigation.
+- Deeper screen-by-screen visual polish for tablet/foldable layouts.
 - Richer recipes-from-fridge scoring.
 - Smart Import richer manual draft editing before publish.
 - Smart Import still needs the full multi-caption live regression pass before Play internal testing.
