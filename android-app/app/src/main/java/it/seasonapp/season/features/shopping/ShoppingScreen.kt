@@ -290,6 +290,12 @@ private fun ShoppingItemRow(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(onClick = {}, label = { Text(item.label) })
+                    if (item.isPending || item.isFailed) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(if (item.isFailed) "Da sincronizzare" else "Sincronizzazione…") },
+                        )
+                    }
                     item.quantityText?.let {
                         AssistChip(onClick = {}, label = { Text(it) })
                     }

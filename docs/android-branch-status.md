@@ -38,6 +38,9 @@ Done on this branch:
 - Fridge “Cosa puoi cucinare” MVP with ready, missing-few, and almost-ready recipe groups.
 - Fridge recipe matching uses catalog `ingredient_id` first and a conservative normalized-name fallback for custom items.
 - Fridge missing-ingredient CTA can send only missing recipe ingredients to Shopping List.
+- Shared JSON outbox store for local-first Android mutation queues.
+- Fridge add/remove now uses local intent + foreground retry.
+- Shopping add/check/remove now uses local intent + foreground retry.
 - Documentation for Android contracts, MVP checklist, and porting direction.
 
 ## Validated
@@ -51,15 +54,16 @@ Latest validated checks:
 - Emulator smoke: Fridge open, add/remove custom, add/remove catalog ingredient.
 - Build validation: Shopping List and Recipe Detail shopping CTA compile on `debugDev` and `internalStaging`.
 - Build validation: Recipes-from-fridge matching and missing-to-shopping CTA compile on `debugDev` and `internalStaging`.
+- Build validation: Fridge/Shopping outbox compile on `debugDev` and `internalStaging`.
 
 ## Known Limits
 
 Not done yet:
 
 - Home imagery and richer ranking.
-- Fridge local outbox/retry.
 - Recipes-from-fridge ranking is MVP-level and still needs richer scoring/visual polish.
-- Shopping local outbox/retry.
+- Fridge/Shopping outbox is MVP-level SharedPreferences JSON; Room can be introduced later if queues become more complex.
+- Delete intents update UI optimistically; failed deletes are retained in outbox but not re-shown as visible rows yet.
 - Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
 - Smart Import Android draft and publish.
 - Profile saved/published recipe lists.
@@ -69,12 +73,11 @@ Not done yet:
 
 Recommended next steps:
 
-1. Fridge and Shopping local outbox/retry.
-2. Smart Import draft flow.
-3. Smart Import publish flow.
-4. Profile saved/published sections.
-5. Full dev QA.
-6. Staging configuration and Play Internal Testing prep.
+1. Smart Import draft flow.
+2. Smart Import publish flow.
+3. Profile saved/published sections.
+4. Full dev QA.
+5. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 

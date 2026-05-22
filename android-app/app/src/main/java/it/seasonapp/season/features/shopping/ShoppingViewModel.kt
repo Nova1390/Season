@@ -1,7 +1,10 @@
 package it.seasonapp.season.features.shopping
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import it.seasonapp.season.core.logging.SeasonLog
 import it.seasonapp.season.features.catalog.CatalogIngredient
 import it.seasonapp.season.features.catalog.CatalogRepository
 import it.seasonapp.season.features.recipes.SeasonRecipe
@@ -10,11 +13,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class ShoppingViewModel(
+    application: Application,
     private val shoppingRepository: ShoppingRepository = ShoppingRepository(),
     private val catalogRepository: CatalogRepository = CatalogRepository(),
-) : ViewModel() {
+) : AndroidViewModel(application) {
+    constructor(application: Application) : this(
+        application = application,
+        shoppingRepository = ShoppingRepository(),
+        catalogRepository = CatalogRepository(),
+    )
+
+    private val outboxStore = ShoppingOutboxStore(application)
     private val _uiState = MutableStateFlow(ShoppingUiState())
     val uiState: StateFlow<ShoppingUiState> = _uiState
 
@@ -23,7 +35,9 @@ class ShoppingViewModel(
             return
         }
         _uiState.update { it.copy(userId = userId) }
+        applyPendingIntentsToUi(outboxStore.load(userId))
         refresh()
+        flushPendingShoppingMutations()
     }
 
     fun refresh() {
@@ -36,12 +50,13 @@ class ShoppingViewModel(
                 catalog to buildStateItems(items = items, catalog = catalog)
             }.onSuccess { (catalog, items) ->
                 _uiState.update {
-                    it.copy(
+                    val withRemote = it.copy(
                         catalogIngredients = catalog,
                         items = items,
                         isLoading = false,
                         errorMessage = null,
                     )
+                    withRemote.copy(items = applyPendingIntentsToItems(withRemote.items, outboxStore.load(userId)))
                 }
             }.onFailure { error ->
                 _uiState.update {
@@ -85,9 +100,7 @@ class ShoppingViewModel(
             _uiState.update { it.copy(feedbackMessage = "Ingrediente già presente nella lista.") }
             return
         }
-        mutateAndRefresh(clearQuery = true, clearQuantity = true) {
-            shoppingRepository.addItem(userId = userId, request = request)
-        }
+        enqueueIntent(userId = userId, intent = request.toAddIntent(), clearQuery = true, clearQuantity = true)
     }
 
     fun addCustomIngredient() {
@@ -110,27 +123,33 @@ class ShoppingViewModel(
             _uiState.update { it.copy(feedbackMessage = "Ingrediente già presente nella lista.") }
             return
         }
-        mutateAndRefresh(clearCustomName = true, clearQuantity = true) {
-            shoppingRepository.addItem(userId = userId, request = request)
-        }
+        enqueueIntent(userId = userId, intent = request.toAddIntent(), clearCustomName = true, clearQuantity = true)
     }
 
     fun toggleChecked(item: ShoppingItemUi) {
         val userId = _uiState.value.userId ?: return
-        mutateAndRefresh {
-            shoppingRepository.updateChecked(
-                userId = userId,
-                itemId = item.item.id,
-                isChecked = !item.item.isChecked,
-            )
-        }
+        val target = !item.item.isChecked
+        enqueueIntent(
+            userId = userId,
+            intent = ShoppingOutboxIntent(
+                action = ShoppingOutboxAction.Check,
+                item = item.item.copy(isChecked = target),
+                targetChecked = target,
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+        )
     }
 
     fun removeItem(item: ShoppingItemUi) {
         val userId = _uiState.value.userId ?: return
-        mutateAndRefresh {
-            shoppingRepository.removeItem(userId = userId, itemId = item.item.id)
-        }
+        enqueueIntent(
+            userId = userId,
+            intent = ShoppingOutboxIntent(
+                action = ShoppingOutboxAction.Delete,
+                item = item.item,
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+        )
     }
 
     fun addRecipeIngredients(recipe: SeasonRecipe) {
@@ -153,62 +172,82 @@ class ShoppingViewModel(
                 if (hasDuplicate(request)) {
                     skipped += 1
                 } else {
-                    runCatching {
-                        shoppingRepository.addItem(userId = userId, request = request)
-                    }.onSuccess {
-                        added += 1
-                    }.onFailure {
-                        failed += 1
-                    }
+                    outboxStore.upsert(userId, request.toAddIntent())
+                    added += 1
                 }
             }
             val result = ShoppingRecipeAddResult(added = added, skipped = skipped, failed = failed)
             _uiState.update {
-                it.copy(
+                val next = it.copy(
                     isMutating = false,
                     feedbackMessage = result.message,
                     errorMessage = if (failed > 0) "Alcuni ingredienti non sono stati sincronizzati." else null,
                 )
+                next.copy(items = applyPendingIntentsToItems(next.items, outboxStore.load(userId)))
             }
-            refresh()
+            flushPendingShoppingMutations()
+        }
+    }
+
+    fun flushPendingShoppingMutations() {
+        val userId = _uiState.value.userId ?: return
+        viewModelScope.launch {
+            val pending = outboxStore.load(userId)
+            if (pending.isEmpty()) return@launch
+            val remaining = mutableListOf<ShoppingOutboxIntent>()
+            var didSync = false
+            pending.forEach { intent ->
+                runCatching {
+                    when (intent.action) {
+                        ShoppingOutboxAction.Add -> shoppingRepository.addItem(userId = userId, item = intent.item)
+                        ShoppingOutboxAction.Check -> shoppingRepository.updateChecked(
+                            userId = userId,
+                            itemId = intent.item.id,
+                            isChecked = intent.targetChecked ?: intent.item.isChecked,
+                        )
+                        ShoppingOutboxAction.Delete -> shoppingRepository.removeItem(userId = userId, itemId = intent.item.id)
+                    }
+                }.onSuccess {
+                    didSync = true
+                }.onFailure { error ->
+                    SeasonLog.warning("shopping_sync_failed ${error::class.simpleName}")
+                    remaining += intent.copy(
+                        attemptCount = intent.attemptCount + 1,
+                        lastErrorType = error::class.simpleName,
+                    )
+                }
+            }
+            outboxStore.replace(userId, remaining)
+            applyPendingIntentsToUi(remaining)
+            if (didSync) refresh()
         }
     }
 
     fun clearLocalStateOnLogout() {
+        _uiState.value.userId?.let(outboxStore::clear)
         _uiState.value = ShoppingUiState()
     }
 
-    private fun mutateAndRefresh(
+    private fun enqueueIntent(
+        userId: String,
+        intent: ShoppingOutboxIntent,
         clearQuery: Boolean = false,
         clearCustomName: Boolean = false,
         clearQuantity: Boolean = false,
-        block: suspend () -> Unit,
     ) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isMutating = true, errorMessage = null, feedbackMessage = null) }
-            runCatching {
-                block()
-            }.onSuccess {
-                _uiState.update { state ->
-                    state.copy(
-                        isMutating = false,
-                        query = if (clearQuery) "" else state.query,
-                        customName = if (clearCustomName) "" else state.customName,
-                        quantity = if (clearQuantity) "" else state.quantity,
-                        unit = if (clearQuantity) "" else state.unit,
-                        feedbackMessage = "Lista aggiornata.",
-                    )
-                }
-                refresh()
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isMutating = false,
-                        errorMessage = error.message ?: "Operazione lista non riuscita.",
-                    )
-                }
-            }
+        outboxStore.upsert(userId, intent)
+        _uiState.update { state ->
+            val next = state.copy(
+                query = if (clearQuery) "" else state.query,
+                customName = if (clearCustomName) "" else state.customName,
+                quantity = if (clearQuantity) "" else state.quantity,
+                unit = if (clearQuantity) "" else state.unit,
+                errorMessage = null,
+                feedbackMessage = "Lista aggiornata.",
+            )
+            next.copy(items = applyPendingIntentsToItems(next.items, outboxStore.load(userId)))
         }
+        flushPendingShoppingMutations()
     }
 
     private fun buildStateItems(
@@ -230,6 +269,56 @@ class ShoppingViewModel(
         }.sortedWith(compareBy<ShoppingItemUi> { it.item.isChecked }.thenBy { it.displayName.lowercase() })
     }
 
+    private fun applyPendingIntentsToUi(intents: List<ShoppingOutboxIntent>) {
+        _uiState.update { state ->
+            state.copy(items = applyPendingIntentsToItems(state.items, intents))
+        }
+    }
+
+    private fun applyPendingIntentsToItems(
+        items: List<ShoppingItemUi>,
+        intents: List<ShoppingOutboxIntent>,
+    ): List<ShoppingItemUi> {
+        if (intents.isEmpty()) return items.map { it.copy(isPending = false, isFailed = false) }
+        val mutable = items.associateBy { it.item.id }.toMutableMap()
+        intents.forEach { intent ->
+            when (intent.action) {
+                ShoppingOutboxAction.Add -> {
+                    val existing = mutable[intent.item.id]
+                    mutable[intent.item.id] = (existing ?: intent.item.toPendingUi()).copy(
+                        isPending = true,
+                        isFailed = intent.attemptCount >= FAILED_ATTEMPT_THRESHOLD,
+                    )
+                }
+                ShoppingOutboxAction.Check -> {
+                    val previous = mutable[intent.item.id] ?: intent.item.toPendingUi()
+                    mutable[intent.item.id] = previous.copy(
+                        item = previous.item.copy(isChecked = intent.targetChecked ?: intent.item.isChecked),
+                        isPending = true,
+                        isFailed = intent.attemptCount >= FAILED_ATTEMPT_THRESHOLD,
+                    )
+                }
+                ShoppingOutboxAction.Delete -> {
+                    mutable.remove(intent.item.id)
+                }
+            }
+        }
+        return mutable.values.sortedWith(compareBy<ShoppingItemUi> { it.item.isChecked }.thenBy { it.displayName.lowercase() })
+    }
+
+    private fun ShoppingItem.toPendingUi(): ShoppingItemUi {
+        val displayName = customName
+            ?: _uiState.value.catalogIngredients.firstOrNull { it.id == ingredientId }?.displayName
+            ?: ingredientId?.replace('_', ' ')
+            ?: "Ingrediente"
+        return ShoppingItemUi(
+            item = this,
+            displayName = displayName,
+            label = if (isCustom) "Custom" else "Catalogo",
+            isPending = true,
+        )
+    }
+
     private fun hasDuplicate(request: ShoppingAddRequest): Boolean {
         return _uiState.value.items.any { item ->
             item.item.sourceRecipeId == request.sourceRecipeId &&
@@ -240,6 +329,29 @@ class ShoppingViewModel(
                     else -> item.displayName.normalized() == request.displayName.normalized()
                 }
         }
+    }
+
+    private fun ShoppingAddRequest.toAddIntent(): ShoppingOutboxIntent {
+        val item = ShoppingItem(
+            id = UUID.randomUUID().toString(),
+            ingredientType = ingredientType,
+            ingredientId = ingredientId,
+            customName = customName,
+            quantity = quantity,
+            unit = unit,
+            sourceRecipeId = sourceRecipeId,
+            isChecked = false,
+            updatedAt = null,
+        )
+        return ShoppingOutboxIntent(
+            action = ShoppingOutboxAction.Add,
+            item = item,
+            createdAtMillis = System.currentTimeMillis(),
+        )
+    }
+
+    companion object {
+        private const val FAILED_ATTEMPT_THRESHOLD = 3
     }
 }
 

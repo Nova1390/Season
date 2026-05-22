@@ -289,6 +289,12 @@ private fun FridgeItemRow(item: FridgeItemUi, isMutating: Boolean, onRemove: () 
                         onClick = {},
                         label = { Text(item.label) },
                     )
+                    if (item.isPending || item.isFailed) {
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(if (item.isFailed) "Da sincronizzare" else "Sincronizzazione…") },
+                        )
+                    }
                     item.item.unit?.let { unit ->
                         AssistChip(
                             onClick = {},

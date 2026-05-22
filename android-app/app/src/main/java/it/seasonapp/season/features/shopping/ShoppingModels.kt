@@ -17,18 +17,51 @@ data class ShoppingItem(
 ) {
     val isCustom: Boolean
         get() = ingredientType == "custom" || ingredientId.isNullOrBlank()
+
+    val stableKey: String
+        get() = listOf(
+            if (isCustom) "custom:${customName.orEmpty().normalized()}" else "catalog:${ingredientId.orEmpty()}",
+            quantity?.cleanFormat().orEmpty(),
+            unit.orEmpty().normalized(),
+            sourceRecipeId.orEmpty(),
+        ).joinToString("|")
 }
 
 data class ShoppingItemUi(
     val item: ShoppingItem,
     val displayName: String,
     val label: String,
+    val isPending: Boolean = false,
+    val isFailed: Boolean = false,
 ) {
     val quantityText: String?
         get() {
             val quantity = item.quantity ?: return item.unit
             val unit = item.unit?.takeIf { it.isNotBlank() }
             return if (unit == null) quantity.cleanFormat() else "${quantity.cleanFormat()} $unit"
+        }
+}
+
+enum class ShoppingOutboxAction {
+    Add,
+    Check,
+    Delete,
+    ;
+}
+
+data class ShoppingOutboxIntent(
+    val action: ShoppingOutboxAction,
+    val item: ShoppingItem,
+    val targetChecked: Boolean? = null,
+    val createdAtMillis: Long,
+    val attemptCount: Int = 0,
+    val lastErrorType: String? = null,
+) {
+    val mergeKey: String
+        get() = when (action) {
+            ShoppingOutboxAction.Check -> "check:${item.id}"
+            ShoppingOutboxAction.Delete -> "delete:${item.id}"
+            ShoppingOutboxAction.Add -> "add:${item.stableKey}"
         }
 }
 

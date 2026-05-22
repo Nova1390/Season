@@ -1,7 +1,10 @@
 package it.seasonapp.season.features.fridge
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import it.seasonapp.season.core.logging.SeasonLog
 import it.seasonapp.season.features.catalog.CatalogIngredient
 import it.seasonapp.season.features.catalog.CatalogRepository
 import it.seasonapp.season.features.recipes.RecipeRepository
@@ -11,12 +14,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class FridgeViewModel(
+    application: Application,
     private val fridgeRepository: FridgeRepository = FridgeRepository(),
     private val catalogRepository: CatalogRepository = CatalogRepository(),
     private val recipeRepository: RecipeRepository = RecipeRepository(),
-) : ViewModel() {
+) : AndroidViewModel(application) {
+    constructor(application: Application) : this(
+        application = application,
+        fridgeRepository = FridgeRepository(),
+        catalogRepository = CatalogRepository(),
+        recipeRepository = RecipeRepository(),
+    )
+
+    private val outboxStore = FridgeOutboxStore(application)
     private val _uiState = MutableStateFlow(FridgeUiState())
     val uiState: StateFlow<FridgeUiState> = _uiState
 
@@ -25,7 +38,9 @@ class FridgeViewModel(
             return
         }
         _uiState.update { it.copy(userId = userId) }
+        applyPendingIntentsToUi(outboxStore.load(userId))
         refresh()
+        flushPendingFridgeMutations()
     }
 
     fun refresh() {
@@ -40,13 +55,14 @@ class FridgeViewModel(
                 Triple(catalog, stateItems, buildRecipeGroups(recipes = recipes, fridgeItems = stateItems))
             }.onSuccess { (catalog, items, recipeGroups) ->
                 _uiState.update {
-                    it.copy(
+                    val withRemote = it.copy(
                         catalogIngredients = catalog,
                         items = items,
                         recipeGroups = recipeGroups,
                         isLoading = false,
                         errorMessage = null,
                     )
+                    withRemote.copy(items = applyPendingIntentsToItems(withRemote.items, outboxStore.load(userId)))
                 }
             }.onFailure { error ->
                 _uiState.update {
@@ -69,9 +85,24 @@ class FridgeViewModel(
 
     fun addCatalogIngredient(ingredient: CatalogIngredient) {
         val userId = _uiState.value.userId ?: return
-        mutateAndRefresh(clearQuery = true) {
-            fridgeRepository.addCatalogItem(userId = userId, ingredient = ingredient)
-        }
+        val item = FridgeItem(
+            id = UUID.randomUUID().toString(),
+            ingredientType = "catalog",
+            ingredientId = ingredient.id,
+            customName = null,
+            quantity = null,
+            unit = null,
+            updatedAt = null,
+        )
+        enqueueIntent(
+            userId = userId,
+            intent = FridgeOutboxIntent(
+                action = FridgeOutboxAction.Add,
+                item = item,
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+            clearQuery = true,
+        )
     }
 
     fun addCustomIngredient() {
@@ -88,51 +119,88 @@ class FridgeViewModel(
             _uiState.update { it.copy(errorMessage = "Ingrediente già presente nel frigo.") }
             return
         }
-        mutateAndRefresh(clearCustomName = true) {
-            fridgeRepository.addCustomItem(userId = userId, name = customName)
-        }
+        val item = FridgeItem(
+            id = UUID.randomUUID().toString(),
+            ingredientType = "custom",
+            ingredientId = null,
+            customName = customName,
+            quantity = null,
+            unit = null,
+            updatedAt = null,
+        )
+        enqueueIntent(
+            userId = userId,
+            intent = FridgeOutboxIntent(
+                action = FridgeOutboxAction.Add,
+                item = item,
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+            clearCustomName = true,
+        )
     }
 
     fun removeItem(item: FridgeItemUi) {
         val userId = _uiState.value.userId ?: return
-        mutateAndRefresh {
-            fridgeRepository.removeItem(userId = userId, itemId = item.item.id)
+        enqueueIntent(
+            userId = userId,
+            intent = FridgeOutboxIntent(
+                action = FridgeOutboxAction.Delete,
+                item = item.item,
+                createdAtMillis = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    fun flushPendingFridgeMutations() {
+        val userId = _uiState.value.userId ?: return
+        viewModelScope.launch {
+            val pending = outboxStore.load(userId)
+            if (pending.isEmpty()) return@launch
+            val remaining = mutableListOf<FridgeOutboxIntent>()
+            var didSync = false
+            pending.forEach { intent ->
+                runCatching {
+                    when (intent.action) {
+                        FridgeOutboxAction.Add -> fridgeRepository.addItem(userId = userId, item = intent.item)
+                        FridgeOutboxAction.Delete -> fridgeRepository.removeItem(userId = userId, itemId = intent.item.id)
+                    }
+                }.onSuccess {
+                    didSync = true
+                }.onFailure { error ->
+                    SeasonLog.warning("fridge_sync_failed ${error::class.simpleName}")
+                    remaining += intent.copy(
+                        attemptCount = intent.attemptCount + 1,
+                        lastErrorType = error::class.simpleName,
+                    )
+                }
+            }
+            outboxStore.replace(userId, remaining)
+            applyPendingIntentsToUi(remaining)
+            if (didSync) refresh()
         }
     }
 
     fun clearLocalStateOnLogout() {
+        _uiState.value.userId?.let(outboxStore::clear)
         _uiState.value = FridgeUiState()
     }
 
-    private fun mutateAndRefresh(
+    private fun enqueueIntent(
+        userId: String,
+        intent: FridgeOutboxIntent,
         clearQuery: Boolean = false,
         clearCustomName: Boolean = false,
-        block: suspend () -> Unit,
     ) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isMutating = true, errorMessage = null) }
-            runCatching {
-                block()
-            }.onSuccess {
-                if (clearQuery || clearCustomName) {
-                    _uiState.update { state ->
-                        state.copy(
-                            query = if (clearQuery) "" else state.query,
-                            customName = if (clearCustomName) "" else state.customName,
-                        )
-                    }
-                }
-                _uiState.update { it.copy(isMutating = false) }
-                refresh()
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isMutating = false,
-                        errorMessage = error.message ?: "Operazione frigo non riuscita.",
-                    )
-                }
-            }
+        outboxStore.upsert(userId, intent)
+        _uiState.update { state ->
+            val next = state.copy(
+                query = if (clearQuery) "" else state.query,
+                customName = if (clearCustomName) "" else state.customName,
+                errorMessage = null,
+            )
+            next.copy(items = applyPendingIntentsToItems(next.items, outboxStore.load(userId)))
         }
+        flushPendingFridgeMutations()
     }
 
     private fun buildStateItems(
@@ -152,6 +220,48 @@ class FridgeViewModel(
                 label = if (item.isCustom) "Custom" else "Catalogo",
             )
         }.sortedWith(compareBy<FridgeItemUi> { it.displayName.lowercase() }.thenBy { it.item.id })
+    }
+
+    private fun applyPendingIntentsToUi(intents: List<FridgeOutboxIntent>) {
+        _uiState.update { state ->
+            state.copy(items = applyPendingIntentsToItems(state.items, intents))
+        }
+    }
+
+    private fun applyPendingIntentsToItems(
+        items: List<FridgeItemUi>,
+        intents: List<FridgeOutboxIntent>,
+    ): List<FridgeItemUi> {
+        if (intents.isEmpty()) return items.map { it.copy(isPending = false, isFailed = false) }
+        val mutable = items.associateBy { it.item.id }.toMutableMap()
+        intents.forEach { intent ->
+            when (intent.action) {
+                FridgeOutboxAction.Add -> {
+                    val existing = mutable[intent.item.id]
+                    mutable[intent.item.id] = (existing ?: intent.item.toPendingUi()).copy(
+                        isPending = true,
+                        isFailed = intent.attemptCount >= FAILED_ATTEMPT_THRESHOLD,
+                    )
+                }
+                FridgeOutboxAction.Delete -> {
+                    mutable.remove(intent.item.id)
+                }
+            }
+        }
+        return mutable.values.sortedWith(compareBy<FridgeItemUi> { it.displayName.lowercase() }.thenBy { it.item.id })
+    }
+
+    private fun FridgeItem.toPendingUi(): FridgeItemUi {
+        val displayName = customName
+            ?: _uiState.value.catalogIngredients.firstOrNull { it.id == ingredientId }?.displayName
+            ?: ingredientId?.replace('_', ' ')
+            ?: "Ingrediente"
+        return FridgeItemUi(
+            item = this,
+            displayName = displayName,
+            label = if (isCustom) "Custom" else "Catalogo",
+            isPending = true,
+        )
     }
 
     private fun buildRecipeGroups(
@@ -204,5 +314,9 @@ class FridgeViewModel(
     ): Boolean {
         val id = ingredientId?.trim()?.takeIf { it.isNotEmpty() }
         return (id != null && id in catalogIds) || name.normalized() in normalizedNames
+    }
+
+    companion object {
+        private const val FAILED_ATTEMPT_THRESHOLD = 3
     }
 }

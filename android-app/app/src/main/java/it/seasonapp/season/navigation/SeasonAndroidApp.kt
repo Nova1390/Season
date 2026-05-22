@@ -104,6 +104,8 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_START) {
                 recipeStateViewModel.flushPendingRecipeStateMutations()
+                fridgeViewModel.flushPendingFridgeMutations()
+                shoppingViewModel.flushPendingShoppingMutations()
                 fridgeViewModel.refresh()
                 shoppingViewModel.refresh()
             }

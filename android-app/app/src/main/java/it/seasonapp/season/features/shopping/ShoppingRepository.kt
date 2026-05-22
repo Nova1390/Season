@@ -6,7 +6,6 @@ import it.seasonapp.season.core.backend.SeasonSupabaseClient
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.Instant
-import java.util.UUID
 
 class ShoppingRepository {
     private val client
@@ -31,21 +30,38 @@ class ShoppingRepository {
     }
 
     suspend fun addItem(userId: String, request: ShoppingAddRequest) {
+        addItem(
+            userId = userId,
+            item = ShoppingItem(
+                id = java.util.UUID.randomUUID().toString(),
+                ingredientType = request.ingredientType,
+                ingredientId = request.ingredientId,
+                customName = request.customName,
+                quantity = request.quantity,
+                unit = request.unit,
+                sourceRecipeId = request.sourceRecipeId,
+                isChecked = false,
+                updatedAt = null,
+            ),
+        )
+    }
+
+    suspend fun addItem(userId: String, item: ShoppingItem) {
         ensureFreshSession()
         val now = Instant.now().toString()
         client
             .from("shopping_list_items")
             .insert(
                 ShoppingItemInsertPayload(
-                    id = UUID.randomUUID().toString(),
+                    id = item.id,
                     userId = userId,
-                    ingredientType = request.ingredientType,
-                    ingredientId = request.ingredientId,
-                    customName = request.customName,
-                    quantity = request.quantity,
-                    unit = request.unit,
-                    sourceRecipeId = request.sourceRecipeId,
-                    isChecked = false,
+                    ingredientType = item.ingredientType,
+                    ingredientId = item.ingredientId,
+                    customName = item.customName,
+                    quantity = item.quantity,
+                    unit = item.unit,
+                    sourceRecipeId = item.sourceRecipeId,
+                    isChecked = item.isChecked,
                     createdAt = now,
                     updatedAt = now,
                 ),

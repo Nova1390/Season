@@ -15,13 +15,39 @@ data class FridgeItem(
 ) {
     val isCustom: Boolean
         get() = ingredientType == "custom" || ingredientId.isNullOrBlank()
+
+    val stableKey: String
+        get() = if (isCustom) {
+            "custom:${customName.orEmpty().normalized()}"
+        } else {
+            "catalog:${ingredientId.orEmpty()}"
+        }
 }
 
 data class FridgeItemUi(
     val item: FridgeItem,
     val displayName: String,
     val label: String,
+    val isPending: Boolean = false,
+    val isFailed: Boolean = false,
 )
+
+enum class FridgeOutboxAction {
+    Add,
+    Delete,
+    ;
+}
+
+data class FridgeOutboxIntent(
+    val action: FridgeOutboxAction,
+    val item: FridgeItem,
+    val createdAtMillis: Long,
+    val attemptCount: Int = 0,
+    val lastErrorType: String? = null,
+) {
+    val mergeKey: String
+        get() = "${action.name}:${item.stableKey}"
+}
 
 data class FridgeUiState(
     val userId: String? = null,

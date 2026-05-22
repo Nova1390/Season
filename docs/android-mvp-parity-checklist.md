@@ -121,7 +121,7 @@ Current implementation note:
 |---|---|---|
 | Add catalog ingredient | MVP | Shared catalog identity where available; initial dev implementation wired. |
 | Add custom fallback | MVP | Must feed observation path, not catalog truth directly; initial dev implementation wired. |
-| Remove ingredient | MVP | Initial remote-backed dev implementation wired; local outbox pending. |
+| Remove ingredient | MVP | Local-first JSON outbox wired for add/remove. |
 | Recipes from fridge | MVP | Must be discoverable, not just one suggestion. |
 | Sync to Supabase | MVP | Outbox/retry. |
 | Advanced categorization | Later | After MVP. |
@@ -135,7 +135,7 @@ Current implementation note:
 - Matching prefers catalog `ingredient_id` and uses normalized names only as a fallback for custom entries.
 - Recipes with fewer than two structured ingredients are ignored to avoid smoke-test/low-signal rows.
 - Missing ingredients can be pushed to Shopping List with source recipe id, quantity, and unit preserved.
-- Fridge outbox/retry remains open MVP work.
+- Fridge add/remove now uses a local JSON outbox with optimistic UI and foreground retry.
 
 ## 8. Shopping List
 
@@ -153,7 +153,7 @@ Current implementation note:
 - Shopping List is available from the Android app bar as a utility screen, not as a sixth tab.
 - The screen reads `shopping_list_items` for the authenticated user, enriches catalog rows with `ingredient_catalog_app_summary`, and supports add catalog, add custom, check/uncheck, and remove against Supabase dev.
 - Recipe Detail can add recipe ingredients to the list while preserving quantity/unit and `source_recipe_id`.
-- Shopping local outbox/retry remains open MVP work; current writes are direct Supabase operations with client-side duplicate prevention.
+- Shopping add/check/remove now uses a local JSON outbox with optimistic UI and foreground retry.
 
 ## 9. Profile and Social
 
@@ -205,8 +205,8 @@ Current foundation note:
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
 - Save/crispy are the first Android local-first mutation path.
-- Fridge inventory add/remove and recipes-from-fridge are now wired as remote-backed MVP flows, but still need outbox/retry and ranking polish.
-- Shopping List and Recipe Detail add-to-shopping are now wired as remote-backed MVP flows, but still need outbox/retry.
+- Fridge inventory add/remove, recipes-from-fridge, Shopping List, and Recipe Detail add-to-shopping are wired as MVP flows.
+- Fridge/Shopping outbox exists, but still needs failure-mode QA with forced network/backend errors before Play internal testing.
 - Smart Import publish still needs its MVP flow.
 
 ## 13. Regression Caption Set

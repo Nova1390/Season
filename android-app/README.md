@@ -34,6 +34,7 @@ Current implementation:
 - Recipe Detail can add all recipe ingredients to Shopping List while preserving quantity, unit, source recipe id, and catalog id when present.
 - Fridge includes a first “Cosa puoi cucinare” mode with ready, missing-few, and almost-ready recipe groups.
 - Fridge recipe matches can add only missing ingredients to Shopping List.
+- Fridge and Shopping use a shared JSON outbox pattern for local-first add/remove/check intents with foreground retry.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -42,8 +43,7 @@ Current implementation:
 Not implemented yet:
 
 - Home imagery/richer feed ranking.
-- Fridge local outbox/retry and richer recipes-from-fridge scoring.
-- Shopping local outbox/retry beyond the current direct Supabase MVP.
+- Richer recipes-from-fridge scoring.
 - Smart Import publish.
 
 ## Recipe State Sync
@@ -56,17 +56,16 @@ The Android MVP has a deliberately small outbox for recipe state actions only:
 - Logout clears local user-specific recipe state and pending recipe-state intents.
 - Recipe-state reads and writes refresh the Supabase session before remote sync, so a stale local session does not silently turn into failed outbox work.
 - Supabase SDK logging is disabled in the Android client; app logs must keep using the redacted `SeasonLog` wrapper.
-- This does not cover fridge, shopping, or Smart Import yet.
+- Smart Import uses its own flow later; fridge and shopping now use the shared JSON outbox described below.
 
 ## Fridge MVP
 
-The Android Fridge is currently remote-backed and intentionally small:
+The Android Fridge is currently local-first for add/remove and intentionally small:
 
 - The global `Frigo` action opens the user's inventory without adding a sixth bottom tab.
 - Catalog ingredients are preferred and stored with `ingredient_id`.
 - Custom fallback ingredients are allowed for user utility but never create catalog truth.
-- Add/remove operations write directly to Supabase `fridge_items` with the authenticated session.
-- Recipes-from-fridge and local outbox/retry are still pending; they will reuse the recipe-state sync pattern once the inventory flow is stable.
+- Add/remove operations enqueue a local intent first, update UI optimistically, and retry Supabase sync on foreground/session restore.
 - Recipes-from-fridge is now available as an MVP section inside Fridge:
   - `Pronte` for recipes with no missing ingredients;
   - `Manca poco` for recipes with one or two missing ingredients;
@@ -78,7 +77,7 @@ The Android Fridge is currently remote-backed and intentionally small:
 
 ## Shopping MVP
 
-The Android Shopping List is currently remote-backed and intentionally small:
+The Android Shopping List is currently local-first for add/check/remove and intentionally small:
 
 - The global `Lista` action opens the user's shopping list without adding a sixth bottom tab.
 - Catalog ingredients are stored with `ingredient_type = catalog` plus `ingredient_id`.
@@ -86,7 +85,23 @@ The Android Shopping List is currently remote-backed and intentionally small:
 - Quantity and unit are optional but preserved when added manually or from Recipe Detail.
 - Recipe-derived rows keep `source_recipe_id` for traceability.
 - The Recipe Detail CTA skips obvious duplicates with the same ingredient/custom name, quantity, unit, and source recipe id.
-- Local outbox/retry is still pending; it will reuse the recipe-state sync contract in the next sync-hardening pass.
+- Local outbox/retry is wired through the shared JSON outbox store.
+- Failed sync after repeated attempts is shown as `Da sincronizzare` for visible pending rows.
+
+## Shared Outbox MVP
+
+Android currently has two local-first mutation layers:
+
+- Recipe state outbox for save/crispy.
+- Shared JSON outbox store reused by Fridge and Shopping.
+
+The Fridge/Shopping outbox is intentionally MVP-sized:
+
+- Add/update/check intents use stable local IDs.
+- UI updates immediately.
+- Foreground/session restore retries pending intents.
+- Logout clears user-specific pending work.
+- Room is deferred until Fridge, Shopping, and Smart Import publish need a richer offline queue.
 
 ## Setup
 

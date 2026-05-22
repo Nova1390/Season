@@ -162,8 +162,7 @@ Rules:
 
 Android MVP implementation:
 
-- The first Android Fridge screen is remote-backed, not fully local-first yet.
-- It reads the authenticated user's `fridge_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/remove operations through the user's Supabase session.
+- The first Android Fridge screen reads the authenticated user's `fridge_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/remove through a local-first JSON outbox.
 - Catalog adds store `ingredient_type = catalog` plus `ingredient_id`, matching the iOS `FridgeViewModel` contract.
 - Custom fallback adds store `ingredient_type = custom` plus `custom_name`.
 - The screen prevents obvious duplicate custom names locally, but backend uniqueness is not assumed.
@@ -172,7 +171,8 @@ Android MVP implementation:
 - Recipes with fewer than two structured ingredients are ignored so smoke-test/low-signal rows do not dominate the user-facing groups.
 - Recipes are grouped as ready, missing-few, and almost-ready; this is user utility scoring, not catalog truth.
 - Missing recipe ingredients can be sent to Shopping List with `source_recipe_id`, quantity, unit, and catalog id when available.
-- Fridge local outbox/retry is still pending and should reuse the recipe-state outbox semantics when implemented.
+- Fridge add/remove uses a local JSON outbox with optimistic UI and foreground retry.
+- Delete intents are retained until synced, but the MVP UI removes the row immediately and does not re-show failed deletes yet.
 
 ## 7. Shopping List Contract
 
@@ -195,14 +195,29 @@ Rules:
 
 Android MVP implementation:
 
-- The first Android Shopping List screen is remote-backed, not fully local-first yet.
-- It reads the authenticated user's `shopping_list_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/check/remove operations through the user's Supabase session.
+- The first Android Shopping List screen reads the authenticated user's `shopping_list_items`, enriches catalog rows through `ingredient_catalog_app_summary`, and writes add/check/remove through a local-first JSON outbox.
 - Catalog adds store `ingredient_type = catalog` plus `ingredient_id`, matching the iOS shopping contract.
 - Custom fallback adds store `ingredient_type = custom` plus `custom_name`.
 - Manual adds and Recipe Detail adds preserve `quantity` and `unit` when available.
 - Recipe-derived rows keep `source_recipe_id` so future grouping/reconciliation can attribute items back to a recipe.
 - The Android client skips obvious duplicates using `ingredient_id/custom display name + quantity + unit + source_recipe_id`.
-- Shopping local outbox/retry remains pending and should reuse the recipe-state outbox semantics in the next sync-hardening pass.
+- Shopping add/check/remove uses a local JSON outbox with optimistic UI and foreground retry.
+- Add/check visible pending rows show `Sincronizzazione…` or `Da sincronizzare`.
+- Delete intents are retained until synced, but the MVP UI removes the row immediately and does not re-show failed deletes yet.
+
+## 7.1 Shared Android Outbox Contract
+
+Android now has a reusable SharedPreferences JSON outbox store for lightweight user mutations.
+
+Rules:
+
+- Every pending mutation is scoped by authenticated `user_id`.
+- Each intent exposes a stable merge key so the latest equivalent operation wins.
+- UI applies the user's intent immediately.
+- Foreground/session restore retries pending work.
+- Logout clears user-specific pending work.
+- The outbox stores no secrets, tokens, email addresses, or raw Supabase payloads.
+- Room can replace this implementation later without changing the feature-level contract.
 
 ## 8. Smart Import Contract
 

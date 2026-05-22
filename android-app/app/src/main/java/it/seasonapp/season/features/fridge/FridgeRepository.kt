@@ -7,7 +7,6 @@ import it.seasonapp.season.features.catalog.CatalogIngredient
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.Instant
-import java.util.UUID
 
 class FridgeRepository {
     private val client
@@ -28,41 +27,51 @@ class FridgeRepository {
     }
 
     suspend fun addCatalogItem(userId: String, ingredient: CatalogIngredient) {
-        ensureFreshSession()
-        val now = Instant.now().toString()
-        client
-            .from("fridge_items")
-            .insert(
-                FridgeItemInsertPayload(
-                    id = UUID.randomUUID().toString(),
-                    userId = userId,
-                    ingredientType = "catalog",
-                    ingredientId = ingredient.id,
-                    customName = null,
-                    quantity = null,
-                    unit = null,
-                    createdAt = now,
-                    updatedAt = now,
-                ),
-            )
+        addItem(
+            userId = userId,
+            item = FridgeItem(
+                id = java.util.UUID.randomUUID().toString(),
+                ingredientType = "catalog",
+                ingredientId = ingredient.id,
+                customName = null,
+                quantity = null,
+                unit = null,
+                updatedAt = null,
+            ),
+        )
     }
 
     suspend fun addCustomItem(userId: String, name: String) {
-        ensureFreshSession()
         val cleanName = name.trim()
         require(cleanName.isNotEmpty()) { "Custom ingredient name is required." }
+        addItem(
+            userId = userId,
+            item = FridgeItem(
+                id = java.util.UUID.randomUUID().toString(),
+                ingredientType = "custom",
+                ingredientId = null,
+                customName = cleanName,
+                quantity = null,
+                unit = null,
+                updatedAt = null,
+            ),
+        )
+    }
+
+    suspend fun addItem(userId: String, item: FridgeItem) {
+        ensureFreshSession()
         val now = Instant.now().toString()
         client
             .from("fridge_items")
             .insert(
                 FridgeItemInsertPayload(
-                    id = UUID.randomUUID().toString(),
+                    id = item.id,
                     userId = userId,
-                    ingredientType = "custom",
-                    ingredientId = null,
-                    customName = cleanName,
-                    quantity = null,
-                    unit = null,
+                    ingredientType = item.ingredientType,
+                    ingredientId = item.ingredientId,
+                    customName = item.customName,
+                    quantity = item.quantity,
+                    unit = item.unit,
                     createdAt = now,
                     updatedAt = now,
                 ),
