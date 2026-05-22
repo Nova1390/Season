@@ -29,10 +29,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.seasonapp.season.features.catalog.CatalogIngredient
+import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipes.SeasonRecipeIngredient
+import it.seasonapp.season.features.shopping.ShoppingViewModel
 import it.seasonapp.season.navigation.SeasonStatusCard
 
 @Composable
-fun FridgeScreen(fridgeViewModel: FridgeViewModel) {
+fun FridgeScreen(
+    fridgeViewModel: FridgeViewModel,
+    shoppingViewModel: ShoppingViewModel,
+    onRecipeSelected: (SeasonRecipe) -> Unit,
+    onOpenShopping: () -> Unit,
+) {
     val state by fridgeViewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -102,6 +110,17 @@ fun FridgeScreen(fridgeViewModel: FridgeViewModel) {
                     onRemove = { fridgeViewModel.removeItem(item) },
                 )
             }
+        }
+
+        item {
+            FridgeRecipesSection(
+                groups = state.recipeGroups,
+                onRecipeSelected = onRecipeSelected,
+                onAddMissingToShopping = { recipe, missing ->
+                    shoppingViewModel.addRecipeIngredients(recipe = recipe, ingredients = missing)
+                    onOpenShopping()
+                },
+            )
         }
     }
 }
@@ -283,6 +302,119 @@ private fun FridgeItemRow(item: FridgeItemUi, isMutating: Boolean, onRemove: () 
                 onClick = onRemove,
             ) {
                 Text("Rimuovi")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FridgeRecipesSection(
+    groups: FridgeRecipeGroups,
+    onRecipeSelected: (SeasonRecipe) -> Unit,
+    onAddMissingToShopping: (SeasonRecipe, List<SeasonRecipeIngredient>) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "Cosa puoi cucinare", style = MaterialTheme.typography.titleLarge)
+        if (groups.total == 0) {
+            SeasonStatusCard(
+                title = "Aggiungi qualche ingrediente",
+                body = "Quando il frigo ha abbastanza dati, qui trovi ricette pronte, ricette a cui manca poco e idee quasi pronte.",
+            )
+        } else {
+            RecipeMatchGroup(
+                title = "Pronte",
+                empty = "Nessuna ricetta completa con il frigo attuale.",
+                matches = groups.ready,
+                onRecipeSelected = onRecipeSelected,
+                onAddMissingToShopping = onAddMissingToShopping,
+            )
+            RecipeMatchGroup(
+                title = "Manca poco",
+                empty = "Nessuna ricetta con 1-2 ingredienti mancanti.",
+                matches = groups.missingFew,
+                onRecipeSelected = onRecipeSelected,
+                onAddMissingToShopping = onAddMissingToShopping,
+            )
+            RecipeMatchGroup(
+                title = "Quasi pronte",
+                empty = "Nessuna ricetta abbastanza vicina.",
+                matches = groups.almostReady,
+                onRecipeSelected = onRecipeSelected,
+                onAddMissingToShopping = onAddMissingToShopping,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecipeMatchGroup(
+    title: String,
+    empty: String,
+    matches: List<FridgeRecipeMatch>,
+    onRecipeSelected: (SeasonRecipe) -> Unit,
+    onAddMissingToShopping: (SeasonRecipe, List<SeasonRecipeIngredient>) -> Unit,
+) {
+    FridgeCard {
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
+        if (matches.isEmpty()) {
+            Text(
+                text = empty,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            matches.forEach { match ->
+                RecipeMatchRow(
+                    match = match,
+                    onRecipeSelected = { onRecipeSelected(match.recipe) },
+                    onAddMissingToShopping = {
+                        onAddMissingToShopping(match.recipe, match.missingIngredients)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipeMatchRow(
+    match: FridgeRecipeMatch,
+    onRecipeSelected: () -> Unit,
+    onAddMissingToShopping: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Text(
+                text = match.recipe.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (match.missingCount == 0) {
+                    "${match.progressLabel} · pronta"
+                } else {
+                    "${match.progressLabel} · mancano ${match.missingCount}"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onRecipeSelected) {
+                Text("Apri")
+            }
+            if (match.missingCount > 0) {
+                OutlinedButton(onClick = onAddMissingToShopping) {
+                    Text("Mancanti")
+                }
             }
         }
     }

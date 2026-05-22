@@ -35,6 +35,9 @@ Done on this branch:
 - Shopping List utility screen from the top app bar.
 - Shopping Supabase dev list/add catalog/add custom/check/remove.
 - Recipe Detail CTA to add recipe ingredients to the Shopping List while preserving quantity, unit, source recipe id, and catalog id when available.
+- Fridge “Cosa puoi cucinare” MVP with ready, missing-few, and almost-ready recipe groups.
+- Fridge recipe matching uses catalog `ingredient_id` first and a conservative normalized-name fallback for custom items.
+- Fridge missing-ingredient CTA can send only missing recipe ingredients to Shopping List.
 - Documentation for Android contracts, MVP checklist, and porting direction.
 
 ## Validated
@@ -47,6 +50,7 @@ Latest validated checks:
 - Emulator smoke: save/crispy toggle.
 - Emulator smoke: Fridge open, add/remove custom, add/remove catalog ingredient.
 - Build validation: Shopping List and Recipe Detail shopping CTA compile on `debugDev` and `internalStaging`.
+- Build validation: Recipes-from-fridge matching and missing-to-shopping CTA compile on `debugDev` and `internalStaging`.
 
 ## Known Limits
 
@@ -54,7 +58,7 @@ Not done yet:
 
 - Home imagery and richer ranking.
 - Fridge local outbox/retry.
-- Recipes-from-fridge matching.
+- Recipes-from-fridge ranking is MVP-level and still needs richer scoring/visual polish.
 - Shopping local outbox/retry.
 - Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
 - Smart Import Android draft and publish.
@@ -65,13 +69,12 @@ Not done yet:
 
 Recommended next steps:
 
-1. Recipes-from-fridge list.
-2. Fridge and Shopping local outbox/retry.
-3. Smart Import draft flow.
-4. Smart Import publish flow.
-5. Profile saved/published sections.
-6. Full dev QA.
-7. Staging configuration and Play Internal Testing prep.
+1. Fridge and Shopping local outbox/retry.
+2. Smart Import draft flow.
+3. Smart Import publish flow.
+4. Profile saved/published sections.
+5. Full dev QA.
+6. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 

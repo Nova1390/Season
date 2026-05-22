@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import it.seasonapp.season.features.catalog.CatalogIngredient
 import it.seasonapp.season.features.catalog.CatalogRepository
 import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipes.SeasonRecipeIngredient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -133,8 +134,12 @@ class ShoppingViewModel(
     }
 
     fun addRecipeIngredients(recipe: SeasonRecipe) {
+        addRecipeIngredients(recipe = recipe, ingredients = recipe.ingredients)
+    }
+
+    fun addRecipeIngredients(recipe: SeasonRecipe, ingredients: List<SeasonRecipeIngredient>) {
         val userId = _uiState.value.userId ?: return
-        val requests = recipe.toShoppingRequests()
+        val requests = ingredients.mapNotNull { it.toShoppingRequest(sourceRecipeId = recipe.id) }
         if (requests.isEmpty()) {
             _uiState.update { it.copy(feedbackMessage = "Questa ricetta non ha ingredienti da aggiungere.") }
             return

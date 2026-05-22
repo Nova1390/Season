@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.seasonapp.season.features.catalog.CatalogIngredient
 import it.seasonapp.season.features.catalog.CatalogRepository
+import it.seasonapp.season.features.recipes.RecipeRepository
+import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipes.SeasonRecipeIngredient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -12,6 +15,7 @@ import kotlinx.coroutines.launch
 class FridgeViewModel(
     private val fridgeRepository: FridgeRepository = FridgeRepository(),
     private val catalogRepository: CatalogRepository = CatalogRepository(),
+    private val recipeRepository: RecipeRepository = RecipeRepository(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FridgeUiState())
     val uiState: StateFlow<FridgeUiState> = _uiState
@@ -31,13 +35,15 @@ class FridgeViewModel(
             runCatching {
                 val catalog = catalogRepository.fetchCatalogIngredients(limit = 500)
                 val items = fridgeRepository.fetchItems(userId)
-                buildStateItems(items = items, catalog = catalog)
-                    .let { catalog to it }
-            }.onSuccess { (catalog, items) ->
+                val recipes = recipeRepository.fetchPublishedRecipes(limit = 80)
+                val stateItems = buildStateItems(items = items, catalog = catalog)
+                Triple(catalog, stateItems, buildRecipeGroups(recipes = recipes, fridgeItems = stateItems))
+            }.onSuccess { (catalog, items, recipeGroups) ->
                 _uiState.update {
                     it.copy(
                         catalogIngredients = catalog,
                         items = items,
+                        recipeGroups = recipeGroups,
                         isLoading = false,
                         errorMessage = null,
                     )
@@ -146,5 +152,57 @@ class FridgeViewModel(
                 label = if (item.isCustom) "Custom" else "Catalogo",
             )
         }.sortedWith(compareBy<FridgeItemUi> { it.displayName.lowercase() }.thenBy { it.item.id })
+    }
+
+    private fun buildRecipeGroups(
+        recipes: List<SeasonRecipe>,
+        fridgeItems: List<FridgeItemUi>,
+    ): FridgeRecipeGroups {
+        if (fridgeItems.isEmpty()) return FridgeRecipeGroups()
+        val catalogIds = fridgeItems.mapNotNull { it.item.ingredientId }.toSet()
+        val normalizedNames = fridgeItems.map { it.displayName.normalized() }.toSet()
+        val matches = recipes.mapNotNull { recipe ->
+            recipe.toFridgeMatch(catalogIds = catalogIds, normalizedNames = normalizedNames)
+        }.sortedWith(
+            compareBy<FridgeRecipeMatch> { it.missingCount }
+                .thenByDescending { it.matchedCount }
+                .thenBy { it.recipe.title.lowercase() },
+        )
+
+        return FridgeRecipeGroups(
+            ready = matches.filter { it.missingCount == 0 }.take(8),
+            missingFew = matches.filter { it.missingCount in 1..2 }.take(8),
+            almostReady = matches
+                .filter { it.missingCount > 2 && it.matchedCount >= (it.totalCount / 2).coerceAtLeast(1) }
+                .take(8),
+        )
+    }
+
+    private fun SeasonRecipe.toFridgeMatch(
+        catalogIds: Set<String>,
+        normalizedNames: Set<String>,
+    ): FridgeRecipeMatch? {
+        val usefulIngredients = ingredients.filter { it.name.isNotBlank() }
+        if (usefulIngredients.size < 2) return null
+        if (usefulIngredients.isEmpty()) return null
+        val missing = usefulIngredients.filterNot { ingredient ->
+            ingredient.matchesFridge(catalogIds = catalogIds, normalizedNames = normalizedNames)
+        }
+        val matched = usefulIngredients.size - missing.size
+        if (matched == 0) return null
+        return FridgeRecipeMatch(
+            recipe = this,
+            missingIngredients = missing,
+            matchedCount = matched,
+            totalCount = usefulIngredients.size,
+        )
+    }
+
+    private fun SeasonRecipeIngredient.matchesFridge(
+        catalogIds: Set<String>,
+        normalizedNames: Set<String>,
+    ): Boolean {
+        val id = ingredientId?.trim()?.takeIf { it.isNotEmpty() }
+        return (id != null && id in catalogIds) || name.normalized() in normalizedNames
     }
 }

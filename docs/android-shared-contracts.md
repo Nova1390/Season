@@ -167,7 +167,12 @@ Android MVP implementation:
 - Catalog adds store `ingredient_type = catalog` plus `ingredient_id`, matching the iOS `FridgeViewModel` contract.
 - Custom fallback adds store `ingredient_type = custom` plus `custom_name`.
 - The screen prevents obvious duplicate custom names locally, but backend uniqueness is not assumed.
-- Fridge local outbox/retry and recipes-from-fridge matching are still pending and should reuse the recipe-state outbox semantics when implemented.
+- Recipes-from-fridge is available as an MVP derived view using already-fetched published recipes.
+- Matching prefers recipe ingredient `ingredient_id` against catalog fridge rows, then normalized ingredient names against custom fridge rows.
+- Recipes with fewer than two structured ingredients are ignored so smoke-test/low-signal rows do not dominate the user-facing groups.
+- Recipes are grouped as ready, missing-few, and almost-ready; this is user utility scoring, not catalog truth.
+- Missing recipe ingredients can be sent to Shopping List with `source_recipe_id`, quantity, unit, and catalog id when available.
+- Fridge local outbox/retry is still pending and should reuse the recipe-state outbox semantics when implemented.
 
 ## 7. Shopping List Contract
 

@@ -32,6 +32,8 @@ Current implementation:
 - Shopping List is wired as a global utility screen from the app bar.
 - Shopping can list the authenticated user's `shopping_list_items`, add catalog ingredients, add custom fallback ingredients, check/uncheck items, and remove items on Supabase dev.
 - Recipe Detail can add all recipe ingredients to Shopping List while preserving quantity, unit, source recipe id, and catalog id when present.
+- Fridge includes a first “Cosa puoi cucinare” mode with ready, missing-few, and almost-ready recipe groups.
+- Fridge recipe matches can add only missing ingredients to Shopping List.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -40,7 +42,7 @@ Current implementation:
 Not implemented yet:
 
 - Home imagery/richer feed ranking.
-- Fridge local outbox/retry and recipes-from-fridge matching.
+- Fridge local outbox/retry and richer recipes-from-fridge scoring.
 - Shopping local outbox/retry beyond the current direct Supabase MVP.
 - Smart Import publish.
 
@@ -65,6 +67,14 @@ The Android Fridge is currently remote-backed and intentionally small:
 - Custom fallback ingredients are allowed for user utility but never create catalog truth.
 - Add/remove operations write directly to Supabase `fridge_items` with the authenticated session.
 - Recipes-from-fridge and local outbox/retry are still pending; they will reuse the recipe-state sync pattern once the inventory flow is stable.
+- Recipes-from-fridge is now available as an MVP section inside Fridge:
+  - `Pronte` for recipes with no missing ingredients;
+  - `Manca poco` for recipes with one or two missing ingredients;
+  - `Quasi pronte` for recipes where at least half of the ingredients match.
+- Matching uses catalog `ingredient_id` first, then a conservative normalized-name fallback for custom entries.
+- Recipes with fewer than two structured ingredients are ignored to keep dev/test rows out of the user-facing groups.
+- Missing ingredients can be sent to Shopping List with recipe context and quantity/unit preserved.
+- The ranking is intentionally simple; richer iOS-style scoring can follow after Android MVP stability.
 
 ## Shopping MVP
 

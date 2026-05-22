@@ -131,7 +131,11 @@ Current implementation note:
 - Fridge inventory is available from the Android app bar as a utility screen.
 - The screen reads `fridge_items` for the authenticated user, enriches catalog rows with `ingredient_catalog_app_summary`, and supports add/remove against Supabase dev.
 - Custom entries remain user-owned fallback data and do not mutate the catalog.
-- Recipes-from-fridge and fridge outbox/retry remain open MVP work.
+- Recipes-from-fridge is wired as an MVP section with `Pronte`, `Manca poco`, and `Quasi pronte` groups.
+- Matching prefers catalog `ingredient_id` and uses normalized names only as a fallback for custom entries.
+- Recipes with fewer than two structured ingredients are ignored to avoid smoke-test/low-signal rows.
+- Missing ingredients can be pushed to Shopping List with source recipe id, quantity, and unit preserved.
+- Fridge outbox/retry remains open MVP work.
 
 ## 8. Shopping List
 
@@ -201,7 +205,7 @@ Current foundation note:
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.
 - Search and Today read-only flows have been smoke-tested on the dev emulator after login restore: recipe query filtering, recipe detail from Search, and seasonal catalog loading all work against `Season-dev`.
 - Save/crispy are the first Android local-first mutation path.
-- Fridge inventory add/remove is now wired as a remote-backed MVP flow, but still needs outbox/retry and recipes-from-fridge matching.
+- Fridge inventory add/remove and recipes-from-fridge are now wired as remote-backed MVP flows, but still need outbox/retry and ranking polish.
 - Shopping List and Recipe Detail add-to-shopping are now wired as remote-backed MVP flows, but still need outbox/retry.
 - Smart Import publish still needs its MVP flow.
 

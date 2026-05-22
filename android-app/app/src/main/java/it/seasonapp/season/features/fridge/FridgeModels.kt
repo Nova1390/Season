@@ -1,6 +1,8 @@
 package it.seasonapp.season.features.fridge
 
 import it.seasonapp.season.features.catalog.CatalogIngredient
+import it.seasonapp.season.features.recipes.SeasonRecipe
+import it.seasonapp.season.features.recipes.SeasonRecipeIngredient
 
 data class FridgeItem(
     val id: String,
@@ -25,6 +27,7 @@ data class FridgeUiState(
     val userId: String? = null,
     val items: List<FridgeItemUi> = emptyList(),
     val catalogIngredients: List<CatalogIngredient> = emptyList(),
+    val recipeGroups: FridgeRecipeGroups = FridgeRecipeGroups(),
     val query: String = "",
     val customName: String = "",
     val isLoading: Boolean = false,
@@ -44,6 +47,28 @@ data class FridgeUiState(
                 .take(12)
                 .toList()
         }
+}
+
+data class FridgeRecipeGroups(
+    val ready: List<FridgeRecipeMatch> = emptyList(),
+    val missingFew: List<FridgeRecipeMatch> = emptyList(),
+    val almostReady: List<FridgeRecipeMatch> = emptyList(),
+) {
+    val total: Int
+        get() = ready.size + missingFew.size + almostReady.size
+}
+
+data class FridgeRecipeMatch(
+    val recipe: SeasonRecipe,
+    val missingIngredients: List<SeasonRecipeIngredient>,
+    val matchedCount: Int,
+    val totalCount: Int,
+) {
+    val missingCount: Int
+        get() = missingIngredients.size
+
+    val progressLabel: String
+        get() = "$matchedCount/$totalCount ingredienti"
 }
 
 internal fun String.normalized(): String {

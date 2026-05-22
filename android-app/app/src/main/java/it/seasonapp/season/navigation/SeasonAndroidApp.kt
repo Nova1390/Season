@@ -221,7 +221,15 @@ private fun SeasonShell(profile: SeasonProfile, onLogout: () -> Unit) {
             } else if (showShopping) {
                 ShoppingScreen(shoppingViewModel = shoppingViewModel)
             } else if (showFridge) {
-                FridgeScreen(fridgeViewModel = fridgeViewModel)
+                FridgeScreen(
+                    fridgeViewModel = fridgeViewModel,
+                    shoppingViewModel = shoppingViewModel,
+                    onRecipeSelected = { selectedRecipe = it },
+                    onOpenShopping = {
+                        showFridge = false
+                        showShopping = true
+                    },
+                )
             } else {
                 when (selectedDestination) {
                     SeasonDestination.Home -> HomeScreen(onRecipeSelected = { selectedRecipe = it })
