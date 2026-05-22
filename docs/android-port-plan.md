@@ -324,16 +324,16 @@ Initial foundation status:
 ### Phase 4: Local-First Actions
 
 - Save/crispy: initial Recipe Detail flow wired with optimistic UI, Supabase `user_recipe_states`, and a minimal local outbox.
-- Fridge add/remove: initial remote-backed inventory flow wired; local outbox/retry still pending.
-- Shopping list add/remove.
-- Outbox/retry: recipe state only for now; fridge and shopping still pending.
-- Foreground reconciliation: recipe state only for now.
+- Fridge add/remove: initial inventory flow wired with optimistic UI and shared JSON outbox/retry.
+- Shopping list add/check/remove: initial flow wired with optimistic UI and shared JSON outbox/retry.
+- Outbox/retry: recipe state, fridge, and shopping now have MVP foreground retry.
+- Foreground reconciliation: recipe state, fridge, and shopping MVP flows now retry pending work.
 
 ### Phase 5: Smart Import
 
-- Caption import screen.
-- Edge Function integration.
-- Draft composer.
+- Caption import screen: initial draft flow wired.
+- Edge Function integration: Android calls `parse-recipe-caption` with authenticated user session.
+- Draft composer: initial read/edit-from-caption preview wired with title, servings, quantities, steps, and quality status.
 - Manual correction.
 - Publish path.
 - Regression captions from iOS.

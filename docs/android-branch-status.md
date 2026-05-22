@@ -41,6 +41,9 @@ Done on this branch:
 - Shared JSON outbox store for local-first Android mutation queues.
 - Fridge add/remove now uses local intent + foreground retry.
 - Shopping add/check/remove now uses local intent + foreground retry.
+- Smart Import draft flow from the `Crea` tab.
+- Smart Import calls `parse-recipe-caption` with the authenticated Supabase session and maps the response into an editable draft.
+- Smart Import draft dedupes ingredients and preserves title, servings, quantity/unit, steps, confidence, and catalog match hints.
 - Documentation for Android contracts, MVP checklist, and porting direction.
 
 ## Validated
@@ -55,6 +58,7 @@ Latest validated checks:
 - Build validation: Shopping List and Recipe Detail shopping CTA compile on `debugDev` and `internalStaging`.
 - Build validation: Recipes-from-fridge matching and missing-to-shopping CTA compile on `debugDev` and `internalStaging`.
 - Build validation: Fridge/Shopping outbox compile on `debugDev` and `internalStaging`.
+- Build validation: Smart Import draft flow compiles on `debugDev` and `internalStaging`.
 
 ## Known Limits
 
@@ -65,7 +69,8 @@ Not done yet:
 - Fridge/Shopping outbox is MVP-level SharedPreferences JSON; Room can be introduced later if queues become more complex.
 - Delete intents update UI optimistically; failed deletes are retained in outbox but not re-shown as visible rows yet.
 - Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
-- Smart Import Android draft and publish.
+- Smart Import publish.
+- Smart Import draft still needs broader live caption QA on emulator/device before Play internal testing.
 - Profile saved/published recipe lists.
 - Staging QA and Google Play Internal Testing prep.
 
@@ -73,11 +78,10 @@ Not done yet:
 
 Recommended next steps:
 
-1. Smart Import draft flow.
-2. Smart Import publish flow.
-3. Profile saved/published sections.
-4. Full dev QA.
-5. Staging configuration and Play Internal Testing prep.
+1. Smart Import publish flow.
+2. Profile saved/published sections.
+3. Full dev QA, including Smart Import regression captions.
+4. Staging configuration and Play Internal Testing prep.
 
 ## Guardrails
 

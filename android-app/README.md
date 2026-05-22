@@ -35,6 +35,11 @@ Current implementation:
 - Fridge includes a first “Cosa puoi cucinare” mode with ready, missing-few, and almost-ready recipe groups.
 - Fridge recipe matches can add only missing ingredients to Shopping List.
 - Fridge and Shopping use a shared JSON outbox pattern for local-first add/remove/check intents with foreground retry.
+- Smart Import draft is wired behind the `Crea` tab.
+- Smart Import calls the shared Supabase Edge Function `parse-recipe-caption` with the authenticated user session.
+- Smart Import draft mapping preserves title, servings, ingredient quantities/units, steps, parser confidence, and catalog match hints.
+- Smart Import dedupes ingredients by catalog id, normalized name, quantity, and unit before showing the draft.
+- Smart Import blocks publish-ready messaging when title, ingredients, or preparation steps are missing, but keeps the draft visible for correction.
 - No service-role secrets and no catalog admin surfaces.
 - Gradle wrapper is available.
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
@@ -102,6 +107,16 @@ The Fridge/Shopping outbox is intentionally MVP-sized:
 - Foreground/session restore retries pending intents.
 - Logout clears user-specific pending work.
 - Room is deferred until Fridge, Shopping, and Smart Import publish need a richer offline queue.
+
+## Smart Import Draft MVP
+
+The Android `Crea` tab now exposes the first Smart Import creator flow:
+
+- The user can paste a caption and optional media URL.
+- Android calls `parse-recipe-caption` through Supabase Edge Functions using the current authenticated session and anon key only.
+- The draft shows title, portions, quality, ingredients, quantities, catalog match state, and preparation steps.
+- Missing steps, title, or structured ingredients keep the draft editable but not publish-ready.
+- Publish is intentionally deferred to the next Android task so draft parsing can be validated before introducing recipe mutations.
 
 ## Setup
 

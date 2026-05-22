@@ -115,6 +115,15 @@ Current implementation note:
 | Publish recipe | MVP | Remote insert path. |
 | URL import | Later | Existing iOS admin/history use case, not first Android MVP. |
 
+Current implementation note:
+
+- The Android `Crea` tab now hosts the first Smart Import draft flow.
+- It calls the shared Supabase Edge Function `parse-recipe-caption` with the authenticated user session.
+- The draft view shows title, servings, quality, ingredients with quantity/unit, catalog match hints, and numbered steps.
+- The mapper dedupes ingredients by catalog id, normalized name, quantity, and unit.
+- Missing title, ingredients, or steps keep the draft visible but block publish-ready messaging.
+- Publish and manual field editing are still deferred to the next Smart Import task.
+
 ## 7. Fridge
 
 | Capability | Priority | Notes |

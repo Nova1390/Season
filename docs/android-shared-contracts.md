@@ -250,6 +250,14 @@ Android mapping rules:
 - Missing steps should block publish but not invalidate ingredients.
 - Ingredient-only captions should produce a draft with clear missing-step guidance.
 - Promo/low-signal captions should not be marked as publish-ready.
+- Android draft creation uses the authenticated Supabase session and anon key only; no service role or catalog-admin path is available in the client.
+- Android keeps catalog match hints as draft context. It does not create canonical ingredients, aliases, or catalog truth from Smart Import.
+
+Current Android MVP status:
+
+- Draft creation is wired from the `Crea` tab.
+- Publish is deferred to the next task.
+- Manual correction is still limited to re-running import from edited caption/link input; dedicated draft field editing comes with publish validation.
 
 Regression captions are listed in `docs/android-mvp-parity-checklist.md`.
 
