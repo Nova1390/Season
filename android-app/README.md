@@ -50,7 +50,7 @@ Current implementation:
 - `:app:assembleDebugDev` has been validated locally with Android Studio JBR.
 - `:app:assembleInternalStaging` has been validated locally with Android Studio JBR.
 - Dev emulator smoke QA on 2026-05-22 covered Home, Search, Today, Create entry, Profile, Shopping List, and Fridge inventory with clean app-process logcat.
-- Smart Import live QA on 2026-05-22 imported risotto and pancake captions through the real dev Edge Function and verified title, servings, unique ingredients, preserved quantities/units, and detected preparation steps in the Android UI.
+- Smart Import live QA on 2026-05-22 imported risotto, pancake, and chicken-salad captions through the real dev Edge Function and verified title, servings, unique ingredients, preserved quantities/units, and detected preparation steps in the Android UI.
 
 Not implemented yet:
 
@@ -58,6 +58,7 @@ Not implemented yet:
 - Richer recipes-from-fridge scoring.
 - Smart Import richer manual draft editing before publish.
 - Smart Import still needs the full multi-caption live regression pass before Play internal testing.
+- Debug emulator logcat showed no Smart Import crash or Supabase/PostgREST error during live imports, but did show Compose/HWUI jank warnings that should be profiled before widening Android testing.
 
 ## Recipe State Sync
 

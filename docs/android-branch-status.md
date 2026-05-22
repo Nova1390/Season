@@ -74,6 +74,8 @@ Latest validated checks:
 - Smart Import unit pass, 2026-05-22: `testDebugDevUnitTest` validates risotto quantity preservation, duplicate merge, fallback title, and publish blocking.
 - Smart Import live pass, 2026-05-22: emulator import through the real dev Edge Function preserved `Risotto ai funghi per 2`, `Per 2`, 5 unique ingredients, quantities/units (`180 g`, `250 g`, `700 ml`, `20 g`, `30 g`), and 1 preparation step.
 - Smart Import live pass, 2026-05-22: emulator import through the real dev Edge Function preserved `Pancake banana e avena x2`, `Per 2`, 5 unique ingredients, quantities/units (`1 piece`, `2 piece`, `80 g`, `100 ml`, `1 tsp`), and 1 preparation step.
+- Smart Import live pass, 2026-05-22: emulator import through the real dev Edge Function preserved `Insalata di pollo per 2`, `Per 2`, 7 unique ingredients, quantities/units (`250 g`, `120 g`, `150 g`, `80 g`, `40 g`, `1 tsp`, `0.5 piece`), and 1 preparation step.
+- Smart Import log pass, 2026-05-22: live import logcat showed no crash or Supabase/PostgREST error; debug HWUI/Choreographer jank warnings were observed and should be profiled before broader Android testing.
 
 ## Known Limits
 
@@ -85,7 +87,8 @@ Not done yet:
 - Delete intents update UI optimistically; failed deletes are retained in outbox but not re-shown as visible rows yet.
 - Shopping duplicate prevention is currently an MVP client-side guard, not a full offline reconciliation layer.
 - Smart Import manual field editing before publish is still minimal; the user currently edits the source caption and re-imports.
-- Smart Import draft has one successful live Edge Function pass; it still needs the full multi-caption live regression pass before Play internal testing.
+- Smart Import draft has three successful live Edge Function passes; it still needs the full multi-caption live regression pass before Play internal testing.
+- Smart Import live imports are functionally passing on sample captions, but debug jank warnings mean performance profiling is still recommended before Play Internal Testing.
 - Profile recipe lists are capped by the current 100-recipe MVP fetch window.
 - Recipes-from-fridge still needs controlled-data QA before Play internal testing.
 - Staging QA and Google Play Internal Testing prep.

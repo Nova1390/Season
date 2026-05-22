@@ -234,6 +234,8 @@ Current foundation note:
 - Dev QA gate on 2026-05-22 smoke-tested Home, Search, Today, Create entry, Profile, Shopping List, and Fridge inventory on emulator with no app-process crash/error logs.
 - Smart Import live QA on 2026-05-22 imported a risotto caption through `parse-recipe-caption` on `Season-dev` and verified the Android draft showed title `Risotto ai funghi per 2`, `Per 2`, 5 deduped ingredients, quantity/unit preservation (`180 g`, `250 g`, `700 ml`, `20 g`, `30 g`), and 1 preparation step.
 - Smart Import live QA on 2026-05-22 imported a pancake caption through `parse-recipe-caption` on `Season-dev` and verified title `Pancake banana e avena x2`, `Per 2`, 5 deduped ingredients, quantity/unit preservation (`1 piece`, `2 piece`, `80 g`, `100 ml`, `1 tsp`), and 1 preparation step.
+- Smart Import live QA on 2026-05-22 imported a chicken-salad caption through `parse-recipe-caption` on `Season-dev` and verified title `Insalata di pollo per 2`, `Per 2`, 7 deduped ingredients, quantity/unit preservation (`250 g`, `120 g`, `150 g`, `80 g`, `40 g`, `1 tsp`, `0.5 piece`), and 1 preparation step.
+- Smart Import live QA logcat showed no app crash or Supabase/PostgREST error; debug HWUI/Choreographer jank warnings appeared during import/render and remain a performance follow-up.
 
 ## 13. Regression Caption Set
 
