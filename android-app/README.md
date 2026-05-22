@@ -112,6 +112,7 @@ If `JAVA_HOME` is already configured, the shorter commands are:
 
 Follow:
 
+- `../docs/android-branch-status.md`
 - `../docs/android-port-plan.md`
 - `../docs/android-mvp-parity-checklist.md`
 - `../docs/android-shared-contracts.md`
