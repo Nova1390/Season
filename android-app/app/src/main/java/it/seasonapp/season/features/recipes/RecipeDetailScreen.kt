@@ -113,7 +113,7 @@ private fun RecipeShoppingActions(
 @Composable
 private fun RecipeDetailHeader(recipe: SeasonRecipe) {
     SeasonPanel(prominent = true) {
-        SeasonRecipeArtwork(title = recipe.title, heightDp = 248)
+        SeasonRecipeArtwork(title = recipe.title, imageUrl = recipe.imageUrl, heightDp = 248)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SeasonPill(text = recipe.displaySource, emphasis = SeasonPillEmphasis.Primary)
             if (recipe.isExternal) {

@@ -17,6 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import java.util.Locale
 
 @Composable
@@ -132,11 +138,15 @@ fun SeasonKicker(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun SeasonRecipeArtwork(
     title: String,
+    imageUrl: String? = null,
     modifier: Modifier = Modifier,
     heightDp: Int = 210,
 ) {
     val colors = MaterialTheme.colorScheme
     val letter = title.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "S"
+    val cleanImageUrl = imageUrl?.trim()?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+    var imageFailed by remember(cleanImageUrl) { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -153,18 +163,46 @@ fun SeasonRecipeArtwork(
             )
             .padding(18.dp),
     ) {
-        Text(
-            text = letter,
-            modifier = Modifier.align(Alignment.Center),
-            style = MaterialTheme.typography.displayLarge,
-            color = colors.onSurface.copy(alpha = 0.22f),
-            textAlign = TextAlign.Center,
-        )
+        if (cleanImageUrl != null && !imageFailed) {
+            AsyncImage(
+                model = cleanImageUrl,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(MaterialTheme.shapes.large),
+                onError = { imageFailed = true },
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                colors.background.copy(alpha = 0.04f),
+                                colors.background.copy(alpha = 0.28f),
+                            ),
+                        ),
+                    ),
+            )
+        } else {
+            Text(
+                text = letter,
+                modifier = Modifier.align(Alignment.Center),
+                style = MaterialTheme.typography.displayLarge,
+                color = colors.onSurface.copy(alpha = 0.22f),
+                textAlign = TextAlign.Center,
+            )
+        }
         Row(
             modifier = Modifier.align(Alignment.BottomStart),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SeasonPill(text = "Season", emphasis = SeasonPillEmphasis.Primary)
+            SeasonPill(
+                text = if (cleanImageUrl != null && !imageFailed) "Foto" else "Season",
+                emphasis = SeasonPillEmphasis.Primary,
+            )
         }
     }
 }

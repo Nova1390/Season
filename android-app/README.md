@@ -20,6 +20,7 @@ Current implementation:
 - Email/password auth, session restore, logout, and username onboarding.
 - Home read-only recipe loading from Supabase dev.
 - Remote recipe domain mapping for title, source, servings, ingredients, steps, and image URL.
+- Remote recipe images render in Home cards and Recipe Detail through the shared Season artwork component, with editorial fallback when the URL is missing or fails.
 - Recipe detail read-only navigation from the Home hero and remote rows.
 - Recipe detail renders source, external badge, servings, ingredients with quantities, and numbered steps from the already-loaded recipe snapshot.
 - Search read-only for recipes and catalog ingredients, with 300ms debounce and normalized query cache.
@@ -55,7 +56,7 @@ Current implementation:
 
 Not implemented yet:
 
-- Remote recipe image loading and richer feed ranking.
+- Richer feed ranking.
 - Custom navigation/iconography beyond the current MVP dot-based bottom navigation.
 - Deeper screen-by-screen visual polish for tablet/foldable layouts.
 - Richer recipes-from-fridge scoring.

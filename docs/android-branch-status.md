@@ -25,6 +25,7 @@ Done on this branch:
 - Session restore, logout, and username onboarding.
 - Main shell with bottom tabs: Home, Scopri, Crea, Oggi, Io.
 - Season visual foundation pass with shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
+- Remote recipe image loading through the shared Season artwork component for Home and Recipe Detail, with graceful fallback when an image URL is unavailable.
 - Home read-only Supabase recipe feed.
 - Recipe Detail read-only from Home/Search snapshots.
 - Search read-only for recipes and catalog ingredients with debounce/cache.
@@ -83,7 +84,7 @@ Latest validated checks:
 
 Not done yet:
 
-- Remote recipe image loading and richer Home ranking.
+- Richer Home ranking.
 - Custom navigation icons and deeper adaptive polish for tablet/foldable layouts.
 - Recipes-from-fridge ranking is MVP-level and still needs richer scoring/visual polish.
 - Fridge/Shopping outbox is MVP-level SharedPreferences JSON; Room can be introduced later if queues become more complex.

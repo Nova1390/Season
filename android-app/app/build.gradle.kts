@@ -104,6 +104,8 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.ktor.client.android)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.ktor3)
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)

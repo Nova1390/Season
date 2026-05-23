@@ -194,7 +194,7 @@ private fun HeroRecipeCard(recipe: SeasonRecipe, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         prominent = true,
     ) {
-        SeasonRecipeArtwork(title = recipe.title, heightDp = 214)
+        SeasonRecipeArtwork(title = recipe.title, imageUrl = recipe.imageUrl, heightDp = 214)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SeasonPill(text = recipe.displaySource, emphasis = SeasonPillEmphasis.Primary)
             if (recipe.isExternal) {
@@ -227,6 +227,7 @@ private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
         ) {
             SeasonRecipeArtwork(
                 title = recipe.title,
+                imageUrl = recipe.imageUrl,
                 modifier = Modifier.width(92.dp),
                 heightDp = 92,
             )
