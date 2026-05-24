@@ -14,6 +14,7 @@ Current implementation:
 - Season design tokens baseline.
 - Consumer shell tabs: Home, Scopri, Crea, Oggi, Io.
 - Season visual foundation pass for Android: shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
+- iOS visual assets are mirrored into Android `drawable-nodpi` for ingredient/product imagery, auth background, and app icon reuse.
 - Environment wiring for Supabase dev/staging URLs.
 - Supabase Kotlin Auth/PostgREST client wiring.
 - Google Credential Manager Sign-In wiring.
@@ -21,6 +22,7 @@ Current implementation:
 - Home read-only recipe loading from Supabase dev.
 - Remote recipe domain mapping for title, source, servings, ingredients, steps, and image URL.
 - Remote recipe images render in Home cards and Recipe Detail through the shared Season artwork component, with editorial fallback when the URL is missing or fails.
+- Home has an iOS-inspired editorial layout: compact seasonal kicker, greeting headline, image-led hero recipe card, source/status badges, primary cooking CTA, and seasonal asset rail.
 - Recipe detail read-only navigation from the Home hero and remote rows.
 - Recipe detail renders source, external badge, servings, ingredients with quantities, and numbered steps from the already-loaded recipe snapshot.
 - Search read-only for recipes and catalog ingredients, with 300ms debounce and normalized query cache.

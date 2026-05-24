@@ -25,7 +25,9 @@ Done on this branch:
 - Session restore, logout, and username onboarding.
 - Main shell with bottom tabs: Home, Scopri, Crea, Oggi, Io.
 - Season visual foundation pass with shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
+- iOS image assets mirrored into Android resources for ingredient/product imagery, auth background, and app icon reuse.
 - Remote recipe image loading through the shared Season artwork component for Home and Recipe Detail, with graceful fallback when an image URL is unavailable.
+- Home layout moved closer to Season iOS with a compact editorial greeting, image-led hero recipe card, cooking CTA, and seasonal asset rail.
 - Home read-only Supabase recipe feed.
 - Recipe Detail read-only from Home/Search snapshots.
 - Search read-only for recipes and catalog ingredients with debounce/cache.
@@ -86,6 +88,7 @@ Not done yet:
 
 - Richer Home ranking.
 - Custom navigation icons and deeper adaptive polish for tablet/foldable layouts.
+- The mirrored iOS asset catalog is available in Android resources, but most non-Home screens still need targeted asset usage passes.
 - Recipes-from-fridge ranking is MVP-level and still needs richer scoring/visual polish.
 - Fridge/Shopping outbox is MVP-level SharedPreferences JSON; Room can be introduced later if queues become more complex.
 - Delete intents update UI optimistically; failed deletes are retained in outbox but not re-shown as visible rows yet.

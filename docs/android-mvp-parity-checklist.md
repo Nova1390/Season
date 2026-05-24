@@ -219,7 +219,9 @@ Current foundation note:
 
 - `android-app/` has the initial Compose shell and environment build types.
 - Android has a first Season visual foundation pass: shared editorial panels, pill badges, recipe artwork placeholders, refined light/dark palette, and edge-to-edge system bar handling.
+- Android now mirrors iOS image assets into `drawable-nodpi` and uses them in the Home seasonal rail; broader screen-by-screen asset adoption remains a follow-up.
 - Remote recipe images now render in Home and Recipe Detail when `image_url` is available, with graceful fallback to editorial artwork placeholders.
+- Home is closer to iOS: seasonal kicker, greeting headline, image-first hero recipe, badges, CTA, and compact trend list structure.
 - Gradle wrapper exists.
 - Supabase Kotlin Auth/PostGREST and Google Credential Manager dependencies are installed.
 - `:app:assembleDebugDev` and `:app:assembleInternalStaging` have been validated locally with Android Studio JBR after auth wiring.

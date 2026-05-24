@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -141,6 +143,7 @@ fun SeasonRecipeArtwork(
     imageUrl: String? = null,
     modifier: Modifier = Modifier,
     heightDp: Int = 210,
+    badgeText: String? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val letter = title.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "S"
@@ -160,8 +163,7 @@ fun SeasonRecipeArtwork(
                         colors.secondary.copy(alpha = 0.14f),
                     ),
                 ),
-            )
-            .padding(18.dp),
+            ),
     ) {
         if (cleanImageUrl != null && !imageFailed) {
             AsyncImage(
@@ -199,10 +201,33 @@ fun SeasonRecipeArtwork(
             modifier = Modifier.align(Alignment.BottomStart),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SeasonPill(
-                text = if (cleanImageUrl != null && !imageFailed) "Foto" else "Season",
-                emphasis = SeasonPillEmphasis.Primary,
-            )
+            val resolvedBadge = badgeText ?: if (cleanImageUrl != null && !imageFailed) "Foto" else "Season"
+            if (resolvedBadge.isNotBlank()) {
+                Surface(
+                    modifier = Modifier.padding(14.dp),
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color.Black.copy(alpha = 0.70f),
+                    contentColor = Color.White,
+                ) {
+                    Text(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        text = resolvedBadge,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+fun SeasonDot(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(6.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.primary),
+    )
 }

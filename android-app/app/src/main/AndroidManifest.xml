@@ -6,9 +6,9 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/season_app_icon"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/season_app_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Season">
         <activity

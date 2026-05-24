@@ -1,6 +1,8 @@
 package it.seasonapp.season.features.home
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,26 +10,35 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.painterResource
+import it.seasonapp.season.R
+import it.seasonapp.season.core.design.SeasonDot
 import it.seasonapp.season.core.design.SeasonKicker
 import it.seasonapp.season.core.design.SeasonPanel
 import it.seasonapp.season.core.design.SeasonPill
@@ -96,17 +107,10 @@ private fun HomeContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item { HomeHeader() }
-        item {
-            HomeSummaryCard(
-                totalRecipes = snapshot.totalCount,
-                externalCount = snapshot.externalCount,
-                onRefresh = onRefresh,
-            )
-        }
 
         val hero = snapshot.hero
         if (hero == null) {
@@ -119,22 +123,20 @@ private fun HomeContent(
                 )
             }
         } else {
+            item { HeroRecipeCard(recipe = hero, onClick = { onRecipeSelected(hero) }) }
+            item { HomeIngredientRail() }
             item {
-                Text(
-                    text = "Scelta per ora",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                HomeActivityCard(
+                    totalRecipes = snapshot.totalCount,
+                    externalCount = snapshot.externalCount,
+                    onRefresh = onRefresh,
                 )
             }
-            item { HeroRecipeCard(recipe = hero, onClick = { onRecipeSelected(hero) }) }
         }
 
         if (snapshot.recommended.isNotEmpty()) {
             item {
-                Text(
-                    text = "Da Supabase",
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                SectionHeader(title = "Di tendenza ora", count = "${snapshot.recommended.size} ricette")
             }
             items(snapshot.recommended, key = { it.id }) { recipe ->
                 RecipeRowCard(recipe = recipe, onClick = { onRecipeSelected(recipe) })
@@ -145,72 +147,97 @@ private fun HomeContent(
 
 @Composable
 private fun HomeHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SeasonKicker(text = "Maggio · Android MVP")
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SeasonDot()
+            SeasonKicker(text = "Maggio · Settimana 21")
+        }
         Text(
-            text = "Il meglio di stagione, proprio ora.",
+            text = "Buongiorno, cosa cuciniamo con quello che hai?",
             style = MaterialTheme.typography.headlineMedium,
         )
-        Text(
-            text = "Ricette reali da Supabase dev, senza seed locali come source of truth.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun HomeSummaryCard(totalRecipes: Int, externalCount: Int, onRefresh: () -> Unit) {
-    SeasonPanel(prominent = true) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SeasonKicker(text = "Ambiente Dev")
-                Text(
-                    text = "$totalRecipes ricette caricate",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text = "$externalCount da fonti esterne riconosciute.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Button(onClick = onRefresh, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
-                Text("Aggiorna")
-            }
-        }
     }
 }
 
 @Composable
 private fun HeroRecipeCard(recipe: SeasonRecipe, onClick: () -> Unit) {
-    SeasonPanel(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        prominent = true,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.62f)),
     ) {
-        SeasonRecipeArtwork(title = recipe.title, imageUrl = recipe.imageUrl, heightDp = 214)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SeasonPill(text = recipe.displaySource, emphasis = SeasonPillEmphasis.Primary)
-            if (recipe.isExternal) {
-                SeasonPill(text = "Fonte esterna")
+        Column {
+            SeasonRecipeArtwork(
+                title = recipe.title,
+                imageUrl = recipe.imageUrl,
+                heightDp = 214,
+                badgeText = "Perfetta per stasera",
+            )
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SeasonPill(text = "Di tendenza", emphasis = SeasonPillEmphasis.Primary)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = recipe.displaySource,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = if (recipe.isExternal) "Fonte esterna" else "Creator Season",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = recipe.title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "Ricetta esterna · Per ${recipe.servings} persone",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                IngredientPreview(recipe = recipe, maxLines = 1)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Button(
+                        onClick = onClick,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.onSurface,
+                            contentColor = MaterialTheme.colorScheme.surface,
+                        ),
+                        contentPadding = PaddingValues(vertical = 15.dp),
+                    ) {
+                        Text("Inizia a cucinare  →")
+                    }
+                    Surface(
+                        modifier = Modifier.size(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("♡", style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
+                }
             }
         }
-        Text(
-            text = recipe.title,
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        Text(
-            text = recipeMeta(recipe),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        IngredientPreview(recipe = recipe)
     }
 }
 
@@ -230,6 +257,7 @@ private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
                 imageUrl = recipe.imageUrl,
                 modifier = Modifier.width(92.dp),
                 heightDp = 92,
+                badgeText = "",
             )
             Column(
                 modifier = Modifier.weight(1f),
@@ -259,7 +287,84 @@ private fun RecipeRowCard(recipe: SeasonRecipe, onClick: () -> Unit) {
 }
 
 @Composable
-private fun IngredientPreview(recipe: SeasonRecipe) {
+private fun HomeIngredientRail() {
+    val assets = listOf(
+        R.drawable.basil to "Basilico",
+        R.drawable.tomato to "Pomodori",
+        R.drawable.zucchini to "Zucchine",
+        R.drawable.potato to "Patate",
+        R.drawable.arugula to "Rucola",
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        assets.forEach { (asset, label) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(asset),
+                        contentDescription = label,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeActivityCard(totalRecipes: Int, externalCount: Int, onRefresh: () -> Unit) {
+    SeasonPanel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SeasonKicker(text = "In cucina ora")
+                Text(
+                    text = "$totalRecipes ricette attive",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "$externalCount fonti esterne riconosciute oggi",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Button(onClick = onRefresh, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
+                Text("Aggiorna")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, count: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        SeasonKicker(text = count)
+    }
+}
+
+@Composable
+private fun IngredientPreview(recipe: SeasonRecipe, maxLines: Int = 2) {
     val preview = recipe.ingredients
         .take(3)
         .joinToString(separator = " · ") { ingredient ->
@@ -272,7 +377,7 @@ private fun IngredientPreview(recipe: SeasonRecipe) {
             text = preview,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
         )
     }
